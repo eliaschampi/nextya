@@ -1,13 +1,12 @@
 <script lang="ts">
+	import LogoHead from '$lib/components/LogoHead.svelte';
+
 	let { data } = $props();
 </script>
 
 <div class="card bg-base-200 w-96 shadow">
-	<figure>
-		<img
-			src="/loginheader.svg"
-			alt="Login"
-		/>
+	<figure class="ring-2 ring-gray-500/50">
+		<LogoHead />
 	</figure>
 	<div class="card-body">
 		<fieldset class="fieldset w-xs bg-base-200 border border-base-300 p-4 rounded-box space-y-4">
