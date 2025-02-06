@@ -1,5 +1,5 @@
 export const load = () => {
-  return {
-    title: "Iniciar sesion"
-  }
+	return {
+		title: 'Iniciar sesion'
+	};
 };

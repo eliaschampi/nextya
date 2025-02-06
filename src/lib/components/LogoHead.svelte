@@ -14,9 +14,9 @@
 			fill: var(--logo-primary);
 			opacity: 0.5;
 		}
-        .logo-text {
+		.logo-text {
 			fill: var(--color-base-content);
-            opacity: 0.5;
+			opacity: 0.5;
 		}
 	</style>
 

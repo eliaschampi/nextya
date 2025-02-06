@@ -1,7 +1,5 @@
 <script lang="ts">
 	import LogoHead from '$lib/components/LogoHead.svelte';
-
-	let { data } = $props();
 </script>
 
 <div class="card bg-base-200 w-96 shadow">
