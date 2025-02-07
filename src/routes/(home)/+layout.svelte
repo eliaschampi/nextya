@@ -1,5 +1,6 @@
 <script>
 	import LogoHead from '$lib/components/LogoHead.svelte';
+	import { Bird, ChartArea, FolderPen, House, Settings, UserRound } from 'lucide-svelte';
 
 	let { children } = $props();
 </script>
@@ -74,11 +75,9 @@
 						/>
 					</svg>
 				</label>
-
 				<label for="drawer-toggle" class="btn btn-primary drawer-button lg:hidden"> ☰ </label>
 			</div>
 		</nav>
-
 		<main class="flex-1 p-6">
 			{@render children()}
 		</main>
@@ -88,22 +87,49 @@
 	<div class="drawer-side">
 		<!-- Clicking this label closes the sidebar on mobile -->
 		<label for="drawer-toggle" aria-label="Close sidebar" class="drawer-overlay"></label>
-		<aside class="menu bg-base-200 text-base-content min-h-full w-80 flex flex-col">
+		<aside class="bg-base-200 text-base-content min-h-full w-80 flex flex-col">
 			<LogoHead />
-
 			<div class="p-4 flex-1 overflow-y-auto">
 				<ul class="menu rounded-box w-full space-y-2">
-					<li><a href="/">🏠 Home</a></li>
-					<li><a href="/">👤 Profile</a></li>
-					<li><a href="/">⚙️ Settings</a></li>
-					<!-- Add more links as needed -->
+					<li><a href="/"><House size="16" /> Inicio</a></li>
+					<li class="menu-title">Administración</li>
+					<li>
+						<details>
+							<summary><ChartArea size="16" /> Reportes</summary>
+							<ul>
+								<li><a href="/dashboard">Cursos</a></li>
+								<li><a href="/student">Estudiantes</a></li>
+							</ul>
+						</details>
+					</li>
+					<li>
+						<details>
+							<summary><Bird size="16" /> Registros</summary>
+							<ul>
+								<li><a href="/">Escuelas</a></li>
+								<li><a href="/">Grupos</a></li>
+								<li><a href="/">Estudiantes</a></li>
+							</ul>
+						</details>
+					</li>
+					<li>
+						<details>
+							<summary><FolderPen size="16" /> Evaluaciones</summary>
+							<ul>
+								<li><a href="/">Reporte</a></li>
+								<li><a href="/">Ajustes</a></li>
+							</ul>
+						</details>
+					</li>
+					<li class="menu-title">Sistema</li>
+					<li><a href="/"><UserRound size="16" /> Usuarios</a></li>
+					<li><a href="/"><Settings size="16" /> Configuración</a></li>
 				</ul>
 			</div>
-
 			<div class="p-4">
 				<a href="/" class="flex items-center p-2 hover:bg-base-300 rounded">
-					<span class="mr-2 text-lg">👤</span>
-					<span>My Account</span>
+					<span class="mr-2 text-lg">🧑</span>
+					<span>Elias Champi</span>
 				</a>
 			</div>
 		</aside>
