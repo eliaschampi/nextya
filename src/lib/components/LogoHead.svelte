@@ -1,12 +1,9 @@
 <svg viewBox="0 0 618 274" xmlns="http://www.w3.org/2000/svg">
 	<style>
 		:root {
-			--logo-bg: var(--color-base-100);
 			--logo-primary: var(--color-primary);
 		}
-		.logo-background {
-			fill: var(--logo-bg);
-		}
+
 		.logo-primary {
 			fill: var(--logo-primary);
 		}
@@ -16,12 +13,8 @@
 		}
 		.logo-text {
 			fill: var(--color-base-content);
-			opacity: 0.5;
 		}
 	</style>
-
-	<!-- Background -->
-	<rect width="618" height="274" class="logo-background" />
 
 	<!-- Shapes -->
 	<path

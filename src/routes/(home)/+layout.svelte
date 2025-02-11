@@ -1,6 +1,17 @@
 <script>
 	import LogoHead from '$lib/components/LogoHead.svelte';
-	import { Bird, ChartArea, FolderPen, House, Settings, UserRound } from 'lucide-svelte';
+	import {
+		Bird,
+		ChartArea,
+		ChevronsUpDown,
+		FolderPen,
+		House,
+		LogOut,
+		MessageCircleQuestion,
+		Settings,
+		UserCog,
+		UserRound
+	} from 'lucide-svelte';
 
 	let { children } = $props();
 </script>
@@ -126,11 +137,51 @@
 					<li><a href="/"><Settings size="16" /> Configuración</a></li>
 				</ul>
 			</div>
+			<!--
 			<div class="p-4">
 				<a href="/" class="flex items-center p-2 hover:bg-base-300 rounded">
 					<span class="mr-2 text-lg">🧑</span>
 					<span>Elias Champi</span>
 				</a>
+			</div>-->
+			<div class="dropdown dropdown-top dropdown-end w-full p-4">
+				<div
+					tabindex="0"
+					role="button"
+					class="bg-base-100 hover:bg-base-300 rounded-box mx-2 mt-0 flex cursor-pointer items-center gap-2.5 px-3 py-2 transition-all"
+				>
+					<div class="avatar">
+						<div class="bg-base-200 mask mask-squircle w-8">
+							<img alt="Avatar" src="/avatar.svg" />
+						</div>
+					</div>
+					<div class="grow -space-y-0.5">
+						<p class="text-sm font-medium">Elias Champi Hancco</p>
+						<p class="text-base-content/60 text-xs">Administrador</p>
+					</div>
+					<ChevronsUpDown size="16" />
+				</div>
+				<ul
+					role="menu"
+					tabindex="0"
+					class="dropdown-content menu bg-base-100 rounded-box shadow-base-content/4 mb-1 w-48 p-1 shadow-[0px_-10px_40px_0px]"
+				>
+					<li>
+						<div><UserCog size="16" /><span>Mi perfil</span></div>
+					</li>
+					<li>
+						<div><Settings size="16" /><span>Configuración</span></div>
+					</li>
+					<li>
+						<div><MessageCircleQuestion size="16" /><span>Ayuda</span></div>
+					</li>
+					<li>
+						<form action="/logout" method="POST">
+							<LogOut size="16" />
+							<button type="submit" class="text-left">Cerrar sesión</button>
+						</form>
+					</li>
+				</ul>
 			</div>
 		</aside>
 	</div>

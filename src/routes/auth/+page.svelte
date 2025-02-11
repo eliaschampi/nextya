@@ -3,7 +3,7 @@
 </script>
 
 <div class="card bg-base-200 w-96 shadow">
-	<figure class="ring-2 ring-gray-500/50">
+	<figure>
 		<LogoHead />
 	</figure>
 	<form action="?/login" method="POST" class="card-body">
@@ -12,7 +12,7 @@
 
 			<div>
 				<label class="fieldset-label" for="email">Correo</label>
-				<input id="email" name="email" type="text" class="input" placeholder="Correo" />
+				<input id="email" name="email" type="text" class="input" placeholder="Correo" required/>
 			</div>
 
 			<div>
@@ -23,6 +23,7 @@
 					type="password"
 					class="input"
 					placeholder="Contraseña"
+					required
 				/>
 			</div>
 
