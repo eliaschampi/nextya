@@ -1,5 +1,9 @@
 @import 'tailwindcss';
-@plugin "daisyui";
+
+@plugin "daisyui" {
+	themes: false;
+	exclude: rootscrollgutter;
+}
 
 @plugin "daisyui/theme" {
 	name: 'dark';
@@ -7,8 +11,8 @@
 	prefersdark: true;
 	color-scheme: 'dark';
 	--color-base-100: oklch(14% 0.005 285.823);
-	--color-base-200: oklch(18.79% 0.0103 276.44);
-	--color-base-300: oklch(28.95% 0.0111 300.87);
+	--color-base-200: oklch(18.22% 0 0);
+	--color-base-300: oklch(23.5% 0 0);
 	--color-base-content: oklch(96% 0.001 286.375);
 	--color-primary: oklch(72% 0.219 149.579);
 	--color-primary-content: oklch(98% 0.022 95.277);
@@ -16,7 +20,7 @@
 	--color-secondary-content: oklch(98% 0.014 180.72);
 	--color-accent: oklch(71.38% 0.179 27.617);
 	--color-accent-content: oklch(96% 0.018 272.314);
-	--color-neutral: oklch(28.95% 0.0111 300.87);
+	--color-neutral: oklch(23.5% 0 0);
 	--color-neutral-content: oklch(98% 0 0);
 	--color-info: oklch(78% 0.154 211.53);
 	--color-info-content: oklch(30% 0.056 229.695);
@@ -69,4 +73,12 @@
 	--border: 1.5px;
 	--depth: 0;
 	--noise: 0;
+}
+
+.input {
+	&:focus,
+	&:focus-within {
+		--input-color: var(--color-neutral);
+		outline: 2px dashed var(--input-color);
+	}
 }

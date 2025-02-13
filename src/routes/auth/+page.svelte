@@ -1,35 +1,62 @@
 <script lang="ts">
 	import LogoHead from '$lib/components/LogoHead.svelte';
+	const passPattern = '{8,}';
 </script>
 
 <div class="card bg-base-200 w-96 shadow">
 	<figure>
 		<LogoHead />
 	</figure>
-	<form action="?/login" method="POST" class="card-body">
-		<fieldset class="fieldset w-xs bg-base-200 border border-base-300 p-4 rounded-box space-y-4">
-			<legend class="fieldset-legend">Ingrese sus credenciales para iniciar sesión</legend>
-
-			<div>
-				<label class="fieldset-label" for="email">Correo</label>
-				<input id="email" name="email" type="text" class="input" placeholder="Correo" required/>
-			</div>
-
-			<div>
-				<label class="fieldset-label" for="password">Contraseña</label>
+	<form action="?/login" method="POST" class="card-body flex flex-col pt-0 space-y-4">
+		<div>
+			<label class="input validator" for="email">
+				<svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+					><g
+						stroke-linejoin="round"
+						stroke-linecap="round"
+						stroke-width="2.5"
+						fill="none"
+						stroke="currentColor"
+					>
+						<rect width="20" height="16" x="2" y="4" rx="2"></rect>
+						<path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+					</g>
+				</svg>
+				<input type="email" id="email" name="email" placeholder="admin@nextya.com" required />
+			</label>
+			<div class="validator-hint hidden">Ingrese un correo valido</div>
+		</div>
+		<div>
+			<label class="input validator" for="email">
+				<svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+					><g
+						stroke-linejoin="round"
+						stroke-linecap="round"
+						stroke-width="2.5"
+						fill="none"
+						stroke="currentColor"
+					>
+						<path
+							d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"
+						>
+						</path>
+						<circle cx="16.5" cy="7.5" r=".5" fill="currentColor"></circle>
+					</g>
+				</svg>
 				<input
-					id="password"
-					name="password"
 					type="password"
-					class="input"
-					placeholder="Contraseña"
+					name="password"
 					required
+					placeholder="Password"
+					minlength="8"
+					pattern={passPattern}
+					title="Contraseña"
 				/>
-			</div>
-
-			<div>
-				<button type="submit" class="btn btn-dash btn-secondary btn-block">Iniciar sesión</button>
-			</div>
-		</fieldset>
+			</label>
+			<div class="validator-hint hidden">Ingrese una contraseña válida</div>
+		</div>
+		<div>
+			<button type="submit" class="btn btn-dash btn-secondary btn-block">Iniciar sesión</button>
+		</div>
 	</form>
 </div>

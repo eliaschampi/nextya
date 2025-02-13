@@ -1,9 +1,3 @@
-<article class="card bg-base-200 shadow-sm w-96">
-	<div class="card-body">
-		<h2>✈️ Hello from Home</h2>
-		<div class="flex items-center">
-			<img src="/avatar.svg" alt="Avatar" class="rounded-full w-8 h-8 mr-2" />
-			<div class="text-lg">Elias champi</div>
-		</div>
-	</div>
-</article>
+<div class="max-w-md mx-auto mt-12 h-40 rounded-lg bg-base-200 flex items-center justify-center">
+	hello world
+</div>
