@@ -37,10 +37,10 @@
 			</div>
 			<!-- Navbar Icons -->
 			<div class="flex items-center gap-1">
-				<!-- Search Icon -->
-				<a href="/" class="btn btn-ghost btn-circle" aria-label="search aria" onclick={openModal}>
+				<!-- Search Icon a is not clickable -->
+				<button class="btn btn-ghost btn-circle" aria-label="search aria" onclick={openModal}>
 					<Search class="w-6 h-6" />
-				</a>
+				</button>
 				<!-- Notification Icon -->
 				<a href="/" class="btn btn-ghost btn-circle" aria-label="notification aria">
 					<Bell class="w-6 h-6" />
