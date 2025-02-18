@@ -3,16 +3,16 @@
 	import { onMount } from 'svelte';
 	let { data, children } = $props();
 	import '../style.css';
-
 	let { session, supabase } = $derived(data);
 
 	onMount(() => {
-		const { data } = supabase.auth.onAuthStateChange((_, newSession) => {
-			if (newSession?.expires_at !== session?.expires_at) {
+		const { data: authListener } = supabase.auth.onAuthStateChange((_, newSession) => {
+			if (newSession?.user?.id !== session?.user?.id) {
 				invalidate('supabase:auth');
 			}
 		});
-		return () => data.subscription.unsubscribe();
+
+		return () => authListener.subscription.unsubscribe();
 	});
 </script>
 

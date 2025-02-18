@@ -1,20 +1,27 @@
-import type { Session, SupabaseClient, User } from '@supabase/supabase-js';
+import type { SupabaseClient, User } from '@supabase/supabase-js';
+import type { Database } from './database.types';
 
 declare global {
 	namespace App {
-		// interface Error {}
 		interface Locals {
-			supabase: SupabaseClient;
-			safeGetSession: () => Promise<{ session: Session | null; user: User | null }>;
-			session: Session | null;
+			supabase: SupabaseClient<Database>;
+			safeGetSession: () => Promise<{
+				session: { user: User | null } | null;
+				user: User | null;
+			}>;
+			session: { user: User | null } | null;
 			user: User | null;
+			cookies: { name: string; value: string }[];
 		}
+
 		interface PageData {
-			session: Session | null;
+			session: { user: User | null } | null; // Permitir que `user` sea `null`
 		}
-		// interface PageState {}
-		// interface Platform {}
 	}
 }
+
+export type User = Database['public']['Tables']['users']['Row'];
+export type Profile = Database['public']['Tables']['profiles']['Row'];
+export type Permission = Database['public']['Tables']['permissions']['Row'];
 
 export {};

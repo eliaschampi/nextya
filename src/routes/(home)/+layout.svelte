@@ -30,7 +30,7 @@
 	<div class="drawer-content flex flex-col min-h-screen">
 		<nav class="navbar bg-base-200 shadow-md px-4">
 			<label for="drawer-toggle" class="drawer-button lg:hidden">
-				<Menu class="swap-off w-6 h-6" />
+				<Menu class="w-5 h-5" />
 			</label>
 			<div class="flex-1">
 				<a href="/" class="btn btn-ghost normal-case text-xl">Dashboard</a>
@@ -39,22 +39,17 @@
 			<div class="flex items-center gap-1">
 				<!-- Search Icon a is not clickable -->
 				<button class="btn btn-ghost btn-circle" aria-label="search aria" onclick={openModal}>
-					<Search class="w-6 h-6" />
+					<Search class="w-5 h-5" />
 				</button>
 				<!-- Notification Icon -->
 				<a href="/" class="btn btn-ghost btn-circle" aria-label="notification aria">
-					<Bell class="w-6 h-6" />
+					<Bell class="w-5 h-5" />
 				</a>
 				<!-- Theme Toggle -->
 				<label class="swap swap-rotate ml-1">
-					<!-- this hidden checkbox controls the state -->
 					<input type="checkbox" class="theme-controller" value="light" />
-
-					<!-- sun icon -->
-					<Sun class="swap-off h-6 w-6" />
-
-					<!-- moon icon -->
-					<Moon class="swap-on h-6 w-6" />
+					<Sun class="swap-off h-5 w-5" />
+					<Moon class="swap-on h-5 w-5" />
 				</label>
 
 				<dialog bind:this={modal} class="modal">
@@ -80,11 +75,11 @@
 			<LogoHead />
 			<div class="p-4 flex-1 overflow-y-auto">
 				<ul class="menu rounded-box w-full space-y-2">
-					<li><a href="/"><House size="16" /> Inicio</a></li>
+					<li><a href="/"><House class="h-4 w-4" /> Inicio</a></li>
 					<li class="menu-title">Administración</li>
 					<li>
 						<details>
-							<summary><ChartArea size="16" /> Reportes</summary>
+							<summary><ChartArea class="h-4 w-4" /> Reportes</summary>
 							<ul>
 								<li><a href="/dashboard">Cursos</a></li>
 								<li><a href="/student">Estudiantes</a></li>
@@ -93,7 +88,7 @@
 					</li>
 					<li>
 						<details>
-							<summary><Bird size="16" /> Registros</summary>
+							<summary><Bird class="h-4 w-4" /> Registros</summary>
 							<ul>
 								<li><a href="/">Escuelas</a></li>
 								<li><a href="/">Grupos</a></li>
@@ -103,7 +98,7 @@
 					</li>
 					<li>
 						<details>
-							<summary><FolderPen size="16" /> Evaluaciones</summary>
+							<summary><FolderPen class="h-4 w-4" /> Evaluaciones</summary>
 							<ul>
 								<li><a href="/">Reporte</a></li>
 								<li><a href="/">Ajustes</a></li>
@@ -111,8 +106,8 @@
 						</details>
 					</li>
 					<li class="menu-title">Sistema</li>
-					<li><a href="/"><UserRound size="16" /> Usuarios</a></li>
-					<li><a href="/"><Settings size="16" /> Configuración</a></li>
+					<li><a href="/"><UserRound class="h-4 w-4" /> Usuarios</a></li>
+					<li><a href="/"><Settings class="h-4 w-4" /> Configuración</a></li>
 				</ul>
 			</div>
 			<div class="dropdown dropdown-top dropdown-end w-full p-4">
@@ -130,7 +125,7 @@
 						<p class="text-sm font-medium">Elias Champi Hancco</p>
 						<p class="text-base-content/60 text-xs">Administrador</p>
 					</div>
-					<ChevronsUpDown size="16" />
+					<ChevronsUpDown class="h-4 w-4" />
 				</div>
 				<ul
 					role="menu"
@@ -138,17 +133,17 @@
 					class="dropdown-content menu bg-base-100 rounded-box shadow-base-content/4 mb-1 w-48 p-1 shadow-[0px_-10px_40px_0px]"
 				>
 					<li>
-						<div><UserCog size="16" /><span>Mi perfil</span></div>
+						<div><UserCog class="h-4 w-4" /><span>Mi perfil</span></div>
 					</li>
 					<li>
-						<div><Settings size="16" /><span>Configuración</span></div>
+						<div><Settings class="h-4 w-4" /><span>Configuración</span></div>
 					</li>
 					<li>
-						<div><MessageCircleQuestion size="16" /><span>Ayuda</span></div>
+						<div><MessageCircleQuestion class="h-4 w-4" /><span>Ayuda</span></div>
 					</li>
 					<li>
 						<form action="/logout" method="POST">
-							<LogOut size="16" />
+							<LogOut class="h-4 w-4" />
 							<button type="submit" class="text-left">Cerrar sesión</button>
 						</form>
 					</li>

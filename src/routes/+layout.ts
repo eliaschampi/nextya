@@ -1,24 +1,32 @@
-// routes/+layout.ts
-import { createBrowserClient, createServerClient, isBrowser } from '@supabase/ssr';
-import type { LayoutLoad } from './$types';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { createBrowserClient, createServerClient, isBrowser } from '@supabase/ssr';
+import { permissionsStore } from '$lib/stores/permissions';
+import type { LayoutLoad } from './$types';
 
 export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 	depends('supabase:auth');
-	const supabase = isBrowser()
-		? createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, { global: { fetch } })
-		: createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-				global: { fetch },
-				cookies: { getAll: () => data.cookies }
-			});
 
-	// Use getUser to authenticate the returned user data
-	const {
-		data: { session }
-	} = await supabase.auth.getSession();
+	let supabase = null;
+
+	if (isBrowser()) {
+		supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+			global: { fetch }
+		});
+	} else {
+		supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+			global: { fetch },
+			cookies: { getAll: () => data.cookies }
+		});
+	}
+
 	const {
 		data: { user }
 	} = await supabase.auth.getUser();
 
-	return { session, supabase, user };
+	if (user) {
+		// Cargar permisos del usuario autenticado
+		permissionsStore.fetchPermissions(user.id);
+	}
+
+	return { session: { user }, supabase, user };
 };
