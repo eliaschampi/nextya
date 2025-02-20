@@ -1,4 +1,4 @@
-import type { SupabaseClient, User } from '@supabase/supabase-js';
+import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 
 declare global {
@@ -6,16 +6,13 @@ declare global {
 		interface Locals {
 			supabase: SupabaseClient<Database>;
 			safeGetSession: () => Promise<{
-				session: { user: User | null } | null;
-				user: User | null;
+				session: Session | null;
 			}>;
-			session: { user: User | null } | null;
-			user: User | null;
+			session: Session | null;
 			cookies: { name: string; value: string }[];
 		}
-
 		interface PageData {
-			session: { user: User | null } | null; // Permitir que `user` sea `null`
+			session: Session | null;
 		}
 	}
 }

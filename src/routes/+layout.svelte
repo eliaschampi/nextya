@@ -6,13 +6,13 @@
 	let { session, supabase } = $derived(data);
 
 	onMount(() => {
-		const { data: authListener } = supabase.auth.onAuthStateChange((_, newSession) => {
-			if (newSession?.user?.id !== session?.user?.id) {
+		const { data } = supabase.auth.onAuthStateChange((_, newSession) => {
+			if (newSession?.expires_at !== session?.expires_at) {
 				invalidate('supabase:auth');
 			}
 		});
 
-		return () => authListener.subscription.unsubscribe();
+		return () => data.subscription.unsubscribe();
 	});
 </script>
 

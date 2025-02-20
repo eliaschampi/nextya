@@ -5,7 +5,6 @@ import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/publi
 import { permissionsStore } from '$lib/stores/permissions';
 
 const supabaseHandle: Handle = async ({ event, resolve }) => {
-	// Crear cliente de Supabase
 	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
 		cookies: {
 			getAll: () => event.cookies.getAll(),
@@ -16,26 +15,19 @@ const supabaseHandle: Handle = async ({ event, resolve }) => {
 		}
 	});
 
-	// Función para obtener la sesión segura
 	event.locals.safeGetSession = async () => {
-		if (event.locals.session) {
-			return { session: event.locals.session, user: event.locals.user };
+		const {
+			data: { session },
+			error
+		} = await event.locals.supabase.auth.getSession();
+
+		if (error) {
+			return { session: null };
 		}
 
-		const {
-			data: { user },
-			error
-		} = await event.locals.supabase.auth.getUser();
-		if (error || !user) return { session: null, user: null };
-
-		// Almacenar la sesión y el usuario en locals
-		event.locals.session = { user }; // Solo almacenamos el usuario
-		event.locals.user = user;
-
-		return { session: event.locals.session, user };
+		return { session };
 	};
 
-	// Almacenar cookies en locals
 	event.locals.cookies = event.cookies.getAll();
 
 	return resolve(event, {
@@ -44,11 +36,9 @@ const supabaseHandle: Handle = async ({ event, resolve }) => {
 	});
 };
 
-// Middleware para proteger rutas
 const authGuard: Handle = async ({ event, resolve }) => {
-	const { session, user } = await event.locals.safeGetSession();
+	const { session } = await event.locals.safeGetSession();
 	event.locals.session = session;
-	event.locals.user = user;
 
 	if (!session && event.url.pathname !== '/auth') {
 		permissionsStore.clearPermissions();
