@@ -21,11 +21,7 @@ const supabaseHandle: Handle = async ({ event, resolve }) => {
 			error
 		} = await event.locals.supabase.auth.getSession();
 
-		if (error) {
-			return { session: null };
-		}
-
-		return { session };
+		return error ? { session: null } : { session };
 	};
 
 	event.locals.cookies = event.cookies.getAll();
@@ -44,6 +40,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
 		permissionsStore.clearPermissions();
 		throw redirect(303, '/auth');
 	}
+
 	if (session && event.url.pathname === '/auth') {
 		throw redirect(303, '/');
 	}
