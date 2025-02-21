@@ -14,21 +14,21 @@
 	--color-base-200: oklch(18.22% 0 0);
 	--color-base-300: oklch(23.5% 0 0);
 	--color-base-content: oklch(96% 0.001 286.375);
-	--color-primary: oklch(72% 0.219 149.579);
+	--color-primary: oklch(65% 0.25 250);
 	--color-primary-content: oklch(98% 0.022 95.277);
-	--color-secondary: oklch(76% 0.188 70.08);
+	--color-secondary: oklch(70% 0.2 60);
 	--color-secondary-content: oklch(98% 0.014 180.72);
-	--color-accent: oklch(71.38% 0.179 27.617);
+	--color-accent: oklch(71% 0.18 30);
 	--color-accent-content: oklch(96% 0.018 272.314);
 	--color-neutral: oklch(23.5% 0 0);
 	--color-neutral-content: oklch(98% 0 0);
-	--color-info: oklch(78% 0.154 211.53);
+	--color-info: oklch(78% 0.15 210);
 	--color-info-content: oklch(30% 0.056 229.695);
-	--color-success: oklch(72% 0.219 149.579);
+	--color-success: oklch(72% 0.22 140);
 	--color-success-content: oklch(27% 0.072 132.109);
-	--color-warning: oklch(76% 0.188 70.08);
+	--color-warning: oklch(76% 0.19 90);
 	--color-warning-content: oklch(28% 0.066 53.813);
-	--color-error: oklch(71.38% 0.179 27.617);
+	--color-error: oklch(71% 0.18 0);
 	--color-error-content: oklch(28% 0.109 3.907);
 	--radius-selector: 0.5rem;
 	--radius-field: 0.5rem;
@@ -42,64 +42,28 @@
 
 @plugin "daisyui/theme" {
 	name: 'light';
-	color-scheme: light;
-	default: false;
-	prefersdark: false;
-	--color-base-100: #f5f7ff;
-	--color-base-200: #eaecfa;
-	--color-base-300: #e0e2f8;
-	--color-base-content: oklch(28.95% 0.0111 300.87);
-	--color-primary: oklch(58.91% 0.2029 257.86);
-	--color-primary-content: oklch(100% 0 0);
-	--color-secondary: oklch(71.38% 0.1795 27.62);
-	--color-secondary-content: oklch(100% 0 0);
-	--color-accent: oklch(77.88% 0.18667 156.6353);
-	--color-accent-content: oklch(100% 0 0);
-	--color-neutral: oklch(28.95% 0.0111 300.87);
-	--color-neutral-content: oklch(100% 0 0);
-	--color-info: #14b4ff;
-	--color-info-content: oklch(100% 0 0);
-	--color-success: oklch(77.88% 0.18667 156.6353);
-	--color-success-content: oklch(100% 0 0);
-	--color-warning: #f5a524;
-	--color-warning-content: #150a00;
-	--color-error: oklch(71.38% 0.1795 27.62);
-	--color-error-content: oklch(100% 0 0);
-	--radius-selector: 0.5rem;
-	--radius-field: 0.5rem;
-	--radius-box: 1rem;
-	--rounded-box: 1rem;
-	--size-selector: 0.25rem;
-	--size-field: 0.25rem;
-	--border: 1px;
-	--depth: 0;
-	--noise: 0;
-}
-
-@plugin "daisyui/theme" {
-	name: 'light';
 	default: false;
 	prefersdark: false;
 	color-scheme: 'light';
-	--color-base-100: oklch(96% 0.018 272.314);
-	--color-base-200: oklch(93% 0.034 272.788);
-	--color-base-300: oklch(87% 0.065 274.039);
-	--color-base-content: oklch(35% 0.144 278.697);
-	--color-primary: oklch(76% 0.188 70.08);
-	--color-primary-content: oklch(23.44% 0.0781 27.63);
-	--color-secondary: oklch(70% 0.14 182.503);
-	--color-secondary-content: oklch(21.8% 0.0519 157.04);
-	--color-accent: oklch(77.88% 0.18667 156.6353);
-	--color-accent-content: oklch(21.8% 0.0519 157.04);
-	--color-neutral: oklch(35% 0.144 278.697);
-	--color-neutral-content: oklch(96% 0.018 272.314);
-	--color-info: oklch(73.12% 0.1586 237.93);
-	--color-info-content: oklch(98% 0.019 200.873);
-	--color-success: oklch(77.88% 0.18667 156.6353);
-	--color-success-content: oklch(98% 0.014 180.72);
-	--color-warning: oklch(79% 0.184 86.047);
-	--color-warning-content: oklch(98% 0.026 102.212);
-	--color-error: oklch(65% 0.241 354.308);
+	--color-base-100: oklch(97% 0.014 308.299);
+	--color-base-200: oklch(94% 0.033 307.174);
+	--color-base-300: oklch(90% 0.063 306.703);
+	--color-base-content: oklch(38% 0.176 304.987);
+	--color-primary: oklch(72% 0.219 149.579);
+	--color-primary-content: oklch(98% 0.018 155.826);
+	--color-secondary: oklch(70% 0.213 47.604);
+	--color-secondary-content: oklch(98% 0.016 73.684);
+	--color-accent: oklch(76% 0.233 130.85);
+	--color-accent-content: oklch(98% 0.031 120.757);
+	--color-neutral: oklch(29% 0.149 302.717);
+	--color-neutral-content: oklch(97% 0.014 308.299);
+	--color-info: oklch(58% 0.158 241.966);
+	--color-info-content: oklch(97% 0.013 236.62);
+	--color-success: oklch(59% 0.145 163.225);
+	--color-success-content: oklch(97% 0.021 166.113);
+	--color-warning: oklch(66% 0.179 58.318);
+	--color-warning-content: oklch(98% 0.022 95.277);
+	--color-error: oklch(59% 0.249 0.584);
 	--color-error-content: oklch(97% 0.014 343.198);
 	--radius-selector: 0.5rem;
 	--radius-field: 0.5rem;
@@ -114,7 +78,7 @@
 .input {
 	&:focus,
 	&:focus-within {
-		--input-color: var(--color-neutral);
+		--input-color: var(--color-primary);
 		outline: 2px dashed var(--input-color);
 	}
 }

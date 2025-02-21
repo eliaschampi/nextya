@@ -1,5 +1,5 @@
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
-import { createBrowserClient, createServerClient, isBrowser } from '@supabase/ssr';
+import { createBrowserClient, isBrowser } from '@supabase/ssr';
 import { permissionsStore } from '$lib/stores/permissions';
 import type { LayoutLoad } from './$types';
 
@@ -8,30 +8,35 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 
 	let supabase = null;
 	let session = null;
+	let user = null;
 
+	// Crear cliente de Supabase para el navegador o el servidor
 	if (isBrowser()) {
 		supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-			global: {
-				fetch
-			}
+			global: { fetch }
 		});
-		session = (await supabase.auth.getSession()).data.session;
+
+		// Obtener la sesión en el cliente
+		const { data: sessionData } = await supabase.auth.getSession();
+		session = sessionData.session;
+
+		// Obtener el usuario autenticado si hay sesión
+		if (session) {
+			const { data: userData } = await supabase.auth.getUser();
+			user = userData.user;
+		}
 	} else {
-		supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-			global: {
-				fetch
-			},
-			cookies: {
-				getAll: () => data.cookies
-			}
+		supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+			global: { fetch }
 		});
 		session = data.session;
+		user = data.user;
 	}
 
-	if (session) {
-		// Cargar permisos del usuario autenticado
-		permissionsStore.fetchPermissions(session.user.id);
+	// Cargar permisos si hay sesión y usuario autenticado
+	if (session && user) {
+		permissionsStore.fetchPermissions(user.id);
 	}
 
-	return { session, supabase };
+	return { session, supabase, user };
 };

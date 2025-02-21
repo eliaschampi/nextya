@@ -3,16 +3,20 @@
 	import { onMount } from 'svelte';
 	let { data, children } = $props();
 	import '../style.css';
+
+	// Extraer datos derivados
 	let { session, supabase } = $derived(data);
 
 	onMount(() => {
-		const { data } = supabase.auth.onAuthStateChange((_, newSession) => {
+		// Escuchar cambios de estado de autenticación
+		const { data: subscriptionData } = supabase.auth.onAuthStateChange((_, newSession) => {
 			if (newSession?.expires_at !== session?.expires_at) {
 				invalidate('supabase:auth');
 			}
 		});
 
-		return () => data.subscription.unsubscribe();
+		// Limpiar la suscripción al desmontar el componente
+		return () => subscriptionData.subscription.unsubscribe();
 	});
 </script>
 
