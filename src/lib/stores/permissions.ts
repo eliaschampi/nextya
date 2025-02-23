@@ -1,40 +1,43 @@
+// routes/libs/stores/permissions.ts
 import { writable } from 'svelte/store';
-import { supabase } from '../supabaseClient';
+import { supabase } from '$lib/supabaseClient';
 
-export const permissionsStore = (() => {
-	const { subscribe, set } = writable<{
-		can_create: boolean;
-		can_update: boolean;
-		can_delete: boolean;
-	} | null>(null);
+export interface Permissions {
+	can_create: boolean;
+	can_update: boolean;
+	can_delete: boolean;
+	// Puedes extender con más campos según la entidad
+}
 
+const createPermissionsStore = () => {
+	const { subscribe, set } = writable<Permissions | null>(null);
 	let cachedUserCode: string | null = null;
 
-	// Función para cargar permisos desde Supabase
+	// Función para cargar permisos
 	const fetchPermissions = async (userCode: string) => {
-		if (cachedUserCode === userCode) return; // Evitar llamadas duplicadas si ya están cargados
+		if (cachedUserCode === userCode) return; // Evita llamadas duplicadas
 
-		const { data } = await supabase
+		const { data, error } = await supabase
 			.from('permissions')
 			.select('*')
 			.eq('user_code', userCode)
 			.single();
 
-		if (data) {
-			cachedUserCode = userCode;
-			set(data);
+		if (error) {
+			console.error('Error al cargar permisos:', error);
+			set(null);
+			return;
 		}
+		cachedUserCode = userCode;
+		set(data);
 	};
 
-	// Función para limpiar los permisos (útil al cerrar sesión)
 	const clearPermissions = () => {
 		cachedUserCode = null;
 		set(null);
 	};
 
-	return {
-		subscribe,
-		fetchPermissions,
-		clearPermissions
-	};
-})();
+	return { subscribe, fetchPermissions, clearPermissions };
+};
+
+export const permissionsStore = createPermissionsStore();

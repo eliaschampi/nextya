@@ -106,7 +106,7 @@
 						</details>
 					</li>
 					<li class="menu-title">Sistema</li>
-					<li><a href="/"><UserRound class="h-4 w-4" /> Usuarios</a></li>
+					<li><a href="/users"><UserRound class="h-4 w-4" /> Usuarios</a></li>
 					<li><a href="/"><Settings class="h-4 w-4" /> Configuración</a></li>
 				</ul>
 			</div>

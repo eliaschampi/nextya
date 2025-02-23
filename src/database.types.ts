@@ -1,132 +1,90 @@
 export type Database = {
 	public: {
 		Tables: {
-			activity_log: {
-				Row: {
-					action: string;
-					action_time: string | null;
-					code: string;
-					user_code: string;
-				};
-				Insert: {
-					action: string;
-					action_time?: string | null;
-					code: string;
-					user_code: string;
-				};
-				Update: {
-					action?: string;
-					action_time?: string | null;
-					code?: string;
-					user_code?: string;
-				};
-				Relationships: [
-					{
-						foreignKeyName: 'fk_user_activity';
-						columns: ['user_code'];
-						isOneToOne: false;
-						referencedRelation: 'profiles';
-						referencedColumns: ['code'];
-					}
-				];
-			};
 			permissions: {
 				Row: {
 					can_create: boolean;
 					can_delete: boolean;
-					can_read: boolean;
 					can_update: boolean;
 					code: string;
-					created_at: string | null;
 					entity: string;
-					updated_at: string | null;
 					user_code: string;
 				};
 				Insert: {
 					can_create?: boolean;
 					can_delete?: boolean;
-					can_read?: boolean;
 					can_update?: boolean;
-					code: string;
-					created_at?: string | null;
+					code?: string;
 					entity: string;
-					updated_at?: string | null;
 					user_code: string;
 				};
 				Update: {
 					can_create?: boolean;
 					can_delete?: boolean;
-					can_read?: boolean;
 					can_update?: boolean;
 					code?: string;
-					created_at?: string | null;
 					entity?: string;
-					updated_at?: string | null;
 					user_code?: string;
 				};
 				Relationships: [
 					{
-						foreignKeyName: 'fk_user_permissions';
+						foreignKeyName: 'permissions_user_code_fkey';
 						columns: ['user_code'];
 						isOneToOne: false;
-						referencedRelation: 'profiles';
-						referencedColumns: ['code'];
+						referencedRelation: 'user_profiles';
+						referencedColumns: ['user_id'];
 					}
 				];
 			};
 			profiles: {
 				Row: {
 					code: string;
-					description: string | null;
-					icon_path: string | null;
 					is_active: boolean;
+					last_name: string | null;
+					name: string | null;
+					photo_url: string | null;
 				};
 				Insert: {
 					code: string;
-					description?: string | null;
-					icon_path?: string | null;
 					is_active?: boolean;
+					last_name?: string | null;
+					name?: string | null;
+					photo_url?: string | null;
 				};
 				Update: {
 					code?: string;
-					description?: string | null;
-					icon_path?: string | null;
 					is_active?: boolean;
-				};
-				Relationships: [];
-			};
-			signin_history: {
-				Row: {
-					code: string;
-					ip_address: string;
-					sign_in_time: string | null;
-					user_code: string;
-				};
-				Insert: {
-					code: string;
-					ip_address: string;
-					sign_in_time?: string | null;
-					user_code: string;
-				};
-				Update: {
-					code?: string;
-					ip_address?: string;
-					sign_in_time?: string | null;
-					user_code?: string;
+					last_name?: string | null;
+					name?: string | null;
+					photo_url?: string | null;
 				};
 				Relationships: [
 					{
-						foreignKeyName: 'fk_user_signin';
-						columns: ['user_code'];
-						isOneToOne: false;
-						referencedRelation: 'profiles';
-						referencedColumns: ['code'];
+						foreignKeyName: 'profiles_code_fkey';
+						columns: ['code'];
+						isOneToOne: true;
+						referencedRelation: 'user_profiles';
+						referencedColumns: ['user_id'];
 					}
 				];
 			};
 		};
 		Views: {
-			[_ in never]: never;
+			user_profiles: {
+				Row: {
+					created_at: string | null;
+					email: string | null;
+					is_active: boolean | null;
+					last_name: string | null;
+					last_sign_in_at: string | null;
+					name: string | null;
+					phone: string | null;
+					photo_url: string | null;
+					role: string | null;
+					user_id: string | null;
+				};
+				Relationships: [];
+			};
 		};
 		Functions: {
 			[_ in never]: never;
