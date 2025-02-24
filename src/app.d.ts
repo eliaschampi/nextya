@@ -22,8 +22,17 @@ declare global {
 	}
 }
 
-export type User = Database['public']['Tables']['users']['Row'];
-export type Profile = Database['public']['Tables']['profiles']['Row'];
-export type Permission = Database['public']['Tables']['permissions']['Row'];
+export interface User {
+	user_id: string;
+	role: string;
+	email: string;
+	phone: string | null;
+	created_at: string;
+	last_sign_in_at: string;
+	name: string;
+	last_name: string;
+	photo_url: string | null;
+	is_active: boolean;
+}
 
 export {};
