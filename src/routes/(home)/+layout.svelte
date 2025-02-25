@@ -17,13 +17,20 @@
 		UserCog,
 		UserRound
 	} from 'lucide-svelte';
+	import { page } from '$app/state';
+
 	let { children } = $props();
 	let modal: HTMLDialogElement | null = null;
-
 	function openModal() {
 		modal?.showModal();
 	}
 </script>
+
+<svelte:head>
+	<title>
+		{page.data?.title ? `${page.data.title} | Nextya` : 'Nextya'}
+	</title>
+</svelte:head>
 
 <div class="drawer lg:drawer-open">
 	<input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
@@ -32,8 +39,11 @@
 			<label for="drawer-toggle" class="drawer-button lg:hidden">
 				<Menu class="w-5 h-5" />
 			</label>
-			<div class="flex-1">
-				<a href="/" class="btn btn-ghost normal-case text-xl">Dashboard</a>
+			<div class="flex-1 flex items-center gap-2">
+				<!-- first home icon -->
+				<House class="w-4 h-4" />
+				<!-- second page title -->
+				<div class="text-xl">{page.data.title ?? 'Inicio'}</div>
 			</div>
 			<!-- Navbar Icons -->
 			<div class="flex items-center gap-1">
@@ -71,7 +81,7 @@
 	<div class="drawer-side">
 		<!-- Clicking this label closes the sidebar on mobile -->
 		<label for="drawer-toggle" aria-label="Close sidebar" class="drawer-overlay"></label>
-		<aside class="bg-base-200 text-base-content min-h-full w-80 flex flex-col">
+		<aside class="bg-base-200 text-base-content shadow-md min-h-full w-80 flex flex-col">
 			<LogoHead />
 			<div class="p-4 flex-1 overflow-y-auto">
 				<ul class="menu rounded-box w-full space-y-2">

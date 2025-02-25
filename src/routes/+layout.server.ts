@@ -9,6 +9,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	return {
 		session,
 		user,
-		cookies: locals.cookies
+		cookies: locals.cookies,
+		title: locals.title
 	};
 };

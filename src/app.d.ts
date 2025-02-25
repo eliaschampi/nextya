@@ -14,10 +14,12 @@ declare global {
 			session: Session | null;
 			user: SupabaseUser | null;
 			cookies: { name: string; value: string }[];
+			title?: string;
 		}
 		interface PageData {
 			session: Session | null;
 			user: SupabaseUser | null;
+			title?: string;
 		}
 	}
 }

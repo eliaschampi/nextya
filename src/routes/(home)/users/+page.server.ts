@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		return { users: [] };
 	}
 
-	return { users };
+	return { users, title: 'Usuarios' };
 };
 
 export const actions: Actions = {
@@ -21,10 +21,6 @@ export const actions: Actions = {
 		const name = formData.get('name') as string;
 		const last_name = formData.get('last_name') as string;
 
-		// Verifica permisos en el backend (por ejemplo, leyendo locals o validando token)
-		// Aquí se asume que la validación RLS ya impide inserciones no autorizadas
-
-		// Crear el usuario en Auth (flujo de invitación o creación directa)
 		const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
 			email,
 			password: 'default-password' // En un entorno real: generar contraseña segura o enviar invitación

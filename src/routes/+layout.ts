@@ -38,5 +38,5 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 		permissionsStore.fetchPermissions(user.id);
 	}
 
-	return { session, supabase, user };
+	return { session, supabase, user, title: data.title };
 };
