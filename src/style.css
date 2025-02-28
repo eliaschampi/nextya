@@ -65,9 +65,9 @@
 	--color-warning-content: oklch(98% 0.022 95.277);
 	--color-error: oklch(65% 0.241 354.308);
 	--color-error-content: oklch(97% 0.014 343.198);
-	--radius-selector: 2rem;
-	--radius-field: 2rem;
-	--radius-box: 2rem;
+	--radius-selector: 1rem;
+	--radius-field: 1rem;
+	--radius-box: 1rem;
 	--size-selector: 0.25rem;
 	--size-field: 0.25rem;
 	--border: 1px;
@@ -78,7 +78,7 @@
 .input {
 	&:focus,
 	&:focus-within {
-		--input-color: var(--color-primary);
+		--input-color: var(--color-base-300);
 		outline: 2px dashed var(--input-color);
 	}
 }

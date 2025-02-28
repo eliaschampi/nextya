@@ -39,11 +39,11 @@
 			<label for="drawer-toggle" class="drawer-button lg:hidden">
 				<Menu class="w-5 h-5" />
 			</label>
-			<div class="flex-1 flex items-center gap-2">
-				<!-- first home icon -->
-				<House class="w-4 h-4" />
-				<!-- second page title -->
-				<div class="text-xl">{page.data.title ?? 'Inicio'}</div>
+			<div class="flex-1 flex items-center">
+				<a href="/" class="btn btn-ghost" aria-label="home aria">
+					<House class="w-5 h-5" />
+				</a>
+				<div class="text-lg">{page.data.title ?? 'Inicio'}</div>
 			</div>
 			<!-- Navbar Icons -->
 			<div class="flex items-center gap-1">

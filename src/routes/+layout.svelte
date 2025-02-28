@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	let { data, children } = $props();
 	import '../style.css';
+	import Toast from '$lib/components/Toast.svelte';
 
 	// Extraer datos derivados
 	let { session, supabase } = $derived(data);
@@ -20,4 +21,5 @@
 	});
 </script>
 
+<Toast />
 {@render children()}

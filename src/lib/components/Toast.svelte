@@ -1,0 +1,47 @@
+<script lang="ts">
+	import { fade } from 'svelte/transition';
+	import { toasts, removeToast } from '$lib/stores/Toast';
+	import { Info, X as XIcon } from 'lucide-svelte';
+	import { createPortal } from '$lib/actions/createPortal';
+
+	// Definimos estilos por tipo
+	const themeStyles = {
+		success: {
+			icon: 'text-green-500 bg-green-100 dark:bg-green-800 dark:text-green-200'
+		},
+		danger: {
+			icon: 'text-red-500 bg-red-100 dark:bg-red-800 dark:text-red-200'
+		},
+		warning: {
+			icon: 'text-yellow-500 bg-yellow-100 dark:bg-yellow-800 dark:text-yellow-200'
+		}
+	};
+</script>
+
+<!-- Usamos la acción createPortal para mover el contenedor al nodo en el body -->
+<div use:createPortal class="fixed top-5 right-5 space-y-2">
+	{#each $toasts as toast (toast.id)}
+		<div
+			transition:fade
+			class="flex items-center w-full max-w-xs p-4 rounded-lg shadow-sm bg-base-100 gap-2"
+			role="alert"
+		>
+			<div
+				class={`inline-flex items-center justify-center shrink-0 w-8 h-8 rounded-lg ${themeStyles[toast.type].icon}`}
+			>
+				<Info class="w-4 h-4" />
+			</div>
+			<div class="ml-3 text-sm font-normal">
+				{toast.title}
+			</div>
+			<button
+				type="button"
+				onclick={() => removeToast(toast.id)}
+				class="btn btn-circle"
+				aria-label="Close"
+			>
+				<XIcon class="w-4 h-4" />
+			</button>
+		</div>
+	{/each}
+</div>

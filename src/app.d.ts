@@ -37,4 +37,12 @@ export interface User {
 	is_active: boolean;
 }
 
+export type ToastType = 'success' | 'danger' | 'warning';
+
+export interface ToastState {
+	id: number;
+	title: string;
+	type: ToastType;
+}
+
 export {};
