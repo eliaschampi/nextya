@@ -23,7 +23,7 @@
 	{#each $toasts as toast (toast.id)}
 		<div
 			transition:fade
-			class="flex items-center w-full max-w-xs p-4 rounded-lg shadow-sm bg-base-100 gap-2"
+			class="flex items-center w-full max-w-xs p-4 rounded-lg shadow-sm bg-base-300 gap-2"
 			role="alert"
 		>
 			<div
@@ -37,7 +37,7 @@
 			<button
 				type="button"
 				onclick={() => removeToast(toast.id)}
-				class="btn btn-circle"
+				class="btn btn-ghost btn-circle"
 				aria-label="Close"
 			>
 				<XIcon class="w-4 h-4" />

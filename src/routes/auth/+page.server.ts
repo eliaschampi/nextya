@@ -13,12 +13,14 @@ export const actions: Actions = {
 
 		if (error) {
 			if (error instanceof AuthApiError && error.status === 400) {
-				return fail(400, { error: 'Credenciales incorrectas.' });
+				return fail(400, {
+					error: 'El correo o la contraseña son incorrectos.'
+				});
 			}
-
-			return fail(500, { error: 'Ocurrio algo inesperado.' });
+			return fail(500, {
+				error: 'Ocurrió un error inesperado.'
+			});
 		}
-
 		throw redirect(303, '/');
 	}
 };

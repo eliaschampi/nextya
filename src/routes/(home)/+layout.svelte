@@ -35,7 +35,7 @@
 <div class="drawer lg:drawer-open">
 	<input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
 	<div class="drawer-content flex flex-col min-h-screen">
-		<nav class="navbar bg-base-200 shadow-md px-4">
+		<nav class="navbar bg-base-200 shadow px-4">
 			<label for="drawer-toggle" class="drawer-button lg:hidden">
 				<Menu class="w-5 h-5" />
 			</label>
@@ -78,10 +78,10 @@
 		</main>
 	</div>
 
-	<div class="drawer-side">
+	<div class="drawer-side shadow">
 		<!-- Clicking this label closes the sidebar on mobile -->
 		<label for="drawer-toggle" aria-label="Close sidebar" class="drawer-overlay"></label>
-		<aside class="bg-base-200 text-base-content shadow-md min-h-full w-80 flex flex-col">
+		<aside class="bg-base-200 text-base-content min-h-full w-80 flex flex-col">
 			<LogoHead />
 			<div class="p-4 flex-1 overflow-y-auto">
 				<ul class="menu rounded-box w-full space-y-2">

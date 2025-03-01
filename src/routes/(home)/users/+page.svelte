@@ -15,7 +15,8 @@
 	let loading = $state(false);
 
 	function openModal() {
-		modal?.showModal();
+		showToast('Te amo Kath', 'success');
+		//modal?.showModal();
 	}
 
 	// Datos del formulario (similar a "data" en Vue)
