@@ -5,7 +5,10 @@
 	import { showToast } from '$lib/stores/Toast';
 	import { type ActionResult } from '@sveltejs/kit';
 
+	let isLoading = $state(false);
+
 	const handleEnhance = () => {
+		isLoading = true;
 		return async ({ result }: { result: ActionResult }) => {
 			if (result.type === 'failure' && result.data?.error) {
 				showToast(result.data.error, 'danger');
@@ -13,6 +16,7 @@
 				showToast('Inicio de sesión exitoso', 'success');
 			}
 			applyAction(result);
+			isLoading = false;
 		};
 	};
 </script>
@@ -48,7 +52,9 @@
 			<div class="validator-hint hidden">Ingrese una contraseña válida</div>
 		</div>
 		<div>
-			<button type="submit" class="btn btn-dash btn-secondary btn-block">Iniciar sesión</button>
+			<button type="submit" class="btn btn-dash btn-secondary btn-block" disabled={isLoading}>
+				Iniciar sesión
+			</button>
 		</div>
 	</form>
 </div>

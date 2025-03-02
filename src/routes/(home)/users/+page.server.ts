@@ -20,10 +20,11 @@ export const actions: Actions = {
 		const email = formData.get('email') as string;
 		const name = formData.get('name') as string;
 		const last_name = formData.get('last_name') as string;
+		const password = formData.get('password') as string;
 
-		const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+		const { data: authUser, error: authError,  } = await supabaseAdmin.auth.admin.createUser({
 			email,
-			password: 'default-password' // En un entorno real: generar contraseña segura o enviar invitación
+			password
 		});
 		if (authError) return { error: authError.message };
 
@@ -39,7 +40,7 @@ export const actions: Actions = {
 	},
 	update: async ({ request, locals }) => {
 		const formData = await request.formData();
-		const userId = formData.get('userId') as string;
+		const userId = formData.get('user_id') as string;
 		const name = formData.get('name') as string;
 		const last_name = formData.get('last_name') as string;
 		const email = formData.get('email') as string | null;
