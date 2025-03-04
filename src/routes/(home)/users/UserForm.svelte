@@ -8,10 +8,8 @@
 		onFinish: (message: string, success: boolean) => void;
 	};
 
-	// Desestructuramos las props usando $props
 	let { mode, user, onFinish }: Props = $props();
 
-	// Estado reactivo para los datos del formulario
 	let formData = $state({
 		user_id: '',
 		name: '',
@@ -21,7 +19,6 @@
 		is_active: true
 	});
 
-	// Si se trata de actualizar, precargamos los datos
 	$effect(() => {
 		if (mode === 'update' && user) {
 			formData = {
@@ -29,7 +26,7 @@
 				name: user.name,
 				lastname: user.last_name,
 				email: user.email,
-				password: '', // Nunca se precarga la contraseña
+				password: '',
 				is_active: user.is_active
 			};
 		}
@@ -37,7 +34,6 @@
 
 	let loading = $state(false);
 
-	// Función para resetear el formulario
 	function resetForm() {
 		formData = {
 			user_id: '',
@@ -49,11 +45,9 @@
 		};
 	}
 
-	// Manejo del envío del formulario
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
 
-		// Validación simple: campos obligatorios
 		if (!formData.name.trim() || !formData.lastname.trim() || !formData.email.trim()) {
 			onFinish('Todos los campos son obligatorios', false);
 			return;
@@ -62,22 +56,15 @@
 		loading = true;
 		const formElement = event.currentTarget as HTMLFormElement;
 		const dataToSend = new FormData(formElement);
-
-		// Para update, se agrega el ID
 		if (mode === 'update') {
 			dataToSend.append('user_id', formData.user_id);
 		}
 
-		// Selecciona el endpoint según el modo
 		const endpoint = mode === 'create' ? '?/create' : '?/update';
+		const response = await fetch(endpoint, { method: 'POST', body: dataToSend });
 
-		const response = await fetch(endpoint, {
-			method: 'POST',
-			body: dataToSend
-		});
 		const res = await response.json();
-		console.log(res);
-		if (res.success) {
+		if (res.type === 'success') {
 			onFinish(
 				mode === 'create' ? 'Usuario creado exitosamente' : 'Usuario actualizado exitosamente',
 				true
@@ -86,17 +73,16 @@
 		} else {
 			onFinish(res.error || 'Error en la operación', false);
 		}
+
 		loading = false;
 	}
 </script>
 
-<!-- Vista del formulario -->
 <form onsubmit={handleSubmit} method="post" autocomplete="off" class="modal-box">
 	<h3 class="text-lg font-bold">
 		{mode === 'create' ? 'Agregar un nuevo usuario' : 'Actualizar usuario'}
 	</h3>
 
-	<!-- Datos del usuario -->
 	<fieldset class="fieldset bg-base-200 border border-base-300 p-4 rounded-box">
 		<legend class="fieldset-legend">Datos del usuario</legend>
 		<label for="uname" class="w-full">Nombre</label>
@@ -109,7 +95,6 @@
 			bind:value={formData.name}
 			required
 		/>
-
 		<label for="ulastname" class="w-full">Apellidos</label>
 		<input
 			type="text"
@@ -122,7 +107,6 @@
 		/>
 	</fieldset>
 
-	<!-- Datos de acceso -->
 	<fieldset class="fieldset bg-base-200 border border-base-300 p-4 rounded-box">
 		<legend class="fieldset-legend">Datos de acceso</legend>
 		<label for="uemail" class="w-full">Correo electrónico</label>
@@ -157,7 +141,6 @@
 		/>
 	</fieldset>
 
-	<!-- Botones -->
 	<div class="flex justify-end mt-4">
 		<button type="submit" class="btn btn-primary" disabled={loading}>
 			{loading ? 'Cargando...' : mode === 'create' ? 'Guardar' : 'Actualizar'}
