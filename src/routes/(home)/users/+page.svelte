@@ -2,12 +2,16 @@
 	import type { User } from '../../../app';
 	import { showToast } from '$lib/stores/Toast';
 	import UserForm from './UserForm.svelte';
+	import { invalidate } from '$app/navigation';
+	import { Trash } from 'lucide-svelte';
+	import { responseMessage } from '$lib/utils/responseMessage';
 
 	// Recibimos los usuarios mediante props
 	const { data } = $props<{ data: { users: User[] } }>();
 
 	// Referencia al <dialog> que actuará como modal
 	let modal: HTMLDialogElement | null = null;
+	let modal2: HTMLDialogElement | null = null;
 
 	// Variables para controlar el modo y el usuario a editar (si aplica)
 	let formMode: 'create' | 'update' = $state('create');
@@ -27,16 +31,21 @@
 		modal?.showModal();
 	}
 
+	function openDeleteModal(user: User) {
+		selectedUser = user;
+		modal2?.showModal();
+	}
+
 	// Cierra el modal
 	function closeModal() {
 		modal?.close();
 	}
 
 	// Callback que se ejecuta al finalizar la operación en el formulario
-	function handleFormFinish(message: string, success: boolean) {
+	async function handleFormFinish(message: string, success: boolean) {
 		showToast(message, success ? 'success' : 'danger');
 		if (success) {
-			// Aquí podrías refrescar la lista de usuarios, p. ej. llamando a una función load
+			await invalidate('users:load');
 		}
 		closeModal();
 	}
@@ -55,6 +64,24 @@
 			hour: '2-digit',
 			minute: '2-digit'
 		});
+	}
+
+	async function handleDeleteUser(user_id: string | null) {
+		if (!user_id) return;
+		const dataToSend = new FormData();
+		dataToSend.append('user_id', user_id);
+		const response = await fetch('?/delete', {
+			method: 'POST',
+			body: dataToSend
+		});
+		const res = await response.json();
+		modal2?.close();
+		if (res.type === 'success') {
+			showToast('Usuario eliminado exitosamente', 'success');
+			await invalidate('users:load');
+		} else {
+			showToast(responseMessage(res) ?? '', 'danger');
+		}
 	}
 </script>
 
@@ -129,12 +156,39 @@
 					<button class="btn btn-primary btn-sm" onclick={() => openUpdateModal(user)}>
 						Editar
 					</button>
+					<button
+						class="btn btn-error btn-sm"
+						aria-label="delete"
+						onclick={() => openDeleteModal(user)}
+					>
+						<Trash class="w-4" />
+					</button>
 				</div>
 			</div>
 		</div>
 	{/each}
 </div>
-
+<dialog bind:this={modal2} class="modal">
+	<div class="modal-box">
+		<div class="p-4">
+			<h2 class="text-lg font-bold text-base-content">Eliminar usuario</h2>
+			<p class="text-sm">
+				¿Estás seguro de que deseas eliminar el usuario
+				<strong>{selectedUser ? `${selectedUser.name} ${selectedUser.last_name}` : ''}</strong>?
+			</p>
+		</div>
+		<div class="modal-action">
+			<button class="btn btn-error" onclick={() => modal2?.close()}> Cancelar </button>
+			<button
+				class="btn btn-primary"
+				onclick={() => handleDeleteUser(selectedUser ? selectedUser.user_id : '')}
+				disabled={!selectedUser}
+			>
+				Eliminar
+			</button>
+		</div>
+	</div>
+</dialog>
 <!-- Modal: dentro del dialog se renderiza el componente UserForm -->
 <dialog bind:this={modal} class="modal">
 	<UserForm

@@ -3,7 +3,8 @@ import type { Actions, PageServerLoad } from './$types';
 import { supabaseAdmin } from '$lib/supabaseAdmin';
 import { fail } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, depends }) => {
+	depends('users:load');
 	const { data: users, error } = await locals.supabase.from('user_profiles').select('*');
 	if (error) {
 		console.error('Error al cargar usuarios:', error);
@@ -57,10 +58,15 @@ export const actions: Actions = {
 	},
 
 	delete: async ({ request, locals }) => {
-		const formData = await request.formData();
-		const userId = formData.get('userId') as string;
+		const authUser = await locals.supabase.auth.getUser();
 
-		const { error: profileError } = await locals.supabase
+		const formData = await request.formData();
+		const userId = formData.get('user_id') as string;
+		if (authUser.data.user?.id === userId) {
+			return fail(400, { error: 'No puedes eliminar a ti mismo' });
+		}
+
+		const { error: profileError } = await supabaseAdmin
 			.from('profiles')
 			.delete()
 			.eq('code', userId);
