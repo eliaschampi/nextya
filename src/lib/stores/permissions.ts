@@ -1,6 +1,7 @@
 // routes/libs/stores/permissions.ts
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from 'lucide-svelte';
 import { writable } from 'svelte/store';
-import { supabase } from '$lib/supabaseClient';
 
 export interface Permissions {
 	can_create: boolean;
@@ -14,17 +15,15 @@ const createPermissionsStore = () => {
 	let cachedUserCode: string | null = null;
 
 	// Función para cargar permisos
-	const fetchPermissions = async (userCode: string) => {
+	const fetchPermissions = async (SupabaseClient: SupabaseClient<Database>, userCode: string) => {
 		if (cachedUserCode === userCode) return; // Evita llamadas duplicadas
 
-		const { data, error } = await supabase
-			.from('permissions')
+		const { data, error } = await SupabaseClient.from('permissions')
 			.select('*')
 			.eq('user_code', userCode)
 			.single();
 
 		if (error) {
-			console.error('Error al cargar permisos:', error);
 			set(null);
 			return;
 		}

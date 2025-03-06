@@ -186,7 +186,7 @@
 						<div><MessageCircleQuestion class="h-4 w-4" /><span>Ayuda</span></div>
 					</li>
 					<li>
-						<form action="/logout" method="POST">
+						<form action="/api/logout" method="POST">
 							<LogOut class="h-4 w-4" />
 							<button type="submit" class="text-left">Cerrar sesión</button>
 						</form>

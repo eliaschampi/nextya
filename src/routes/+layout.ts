@@ -35,7 +35,7 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 
 	// Cargar permisos si hay sesión y usuario autenticado
 	if (session && user) {
-		permissionsStore.fetchPermissions(user.id);
+		permissionsStore.fetchPermissions(supabase, user.id);
 	}
 
 	return { session, supabase, user, title: data.title };
