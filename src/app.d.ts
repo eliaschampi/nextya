@@ -24,6 +24,8 @@ declare global {
 	}
 }
 
+export type Profile = Database['public']['Tables']['profiles']['Row'];
+
 export interface User {
 	user_id: string;
 	role: string;

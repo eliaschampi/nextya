@@ -23,7 +23,8 @@ export const actions: Actions = {
 
 		const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
 			email,
-			password
+			password,
+			email_confirm: true
 		});
 		if (authError) return fail(400, { error: authError.message });
 

@@ -17,13 +17,28 @@
 		UserCog,
 		UserRound
 	} from 'lucide-svelte';
-	import { page } from '$app/state';
 
+	import { page } from '$app/state';
+	import { onMount } from 'svelte';
+	import type { Profile } from '../../app';
+	import { getInitials } from '$lib/utils/initialName';
+	let profile: Profile | null = $state(null);
 	let { children } = $props();
 	let modal: HTMLDialogElement | null = null;
+
 	function openModal() {
 		modal?.showModal();
 	}
+
+	async function fetchProfile() {
+		const res = await fetch('/api/profile');
+		const data = await res.json();
+		profile = data.profile[0];
+	}
+
+	onMount(() => {
+		fetchProfile();
+	});
 </script>
 
 <svelte:head>
@@ -126,16 +141,35 @@
 					role="button"
 					class="bg-base-100 hover:bg-base-300 rounded-box mx-2 mt-0 flex cursor-pointer items-center gap-2.5 px-3 py-2 transition-all"
 				>
-					<div class="avatar">
-						<div class="bg-base-200 mask mask-squircle w-8">
-							<img alt="Avatar" src="/avatar.svg" />
+					{#if profile}
+						<div class="avatar">
+							<div
+								class="w-8 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2 bg-base-200"
+							>
+								{#if profile.photo_url}
+									<div class="bg-base-200 mask mask-squircle w-8">
+										<img
+											src={profile.photo_url}
+											alt={`Avatar de ${profile.name} ${profile.last_name}`}
+										/>
+									</div>
+								{:else}
+									<div
+										class="flex items-center justify-center h-full bg-primary text-primary-content"
+									>
+										<span class="font-semibold">
+											{getInitials(profile.name || '', profile.last_name || '')}
+										</span>
+									</div>
+								{/if}
+							</div>
 						</div>
-					</div>
-					<div class="grow -space-y-0.5">
-						<p class="text-sm font-medium">Elias Champi Hancco</p>
-						<p class="text-base-content/60 text-xs">Administrador</p>
-					</div>
-					<ChevronsUpDown class="h-4 w-4" />
+						<div class="grow -space-y-0.5">
+							<p class="text-sm font-medium">{profile.name} {profile.last_name}</p>
+							<p class="text-sm">🟢 En linea</p>
+						</div>
+						<ChevronsUpDown class="h-4 w-4" />
+					{/if}
 				</div>
 				<ul
 					role="menu"

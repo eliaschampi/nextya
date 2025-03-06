@@ -10,7 +10,6 @@ export const actions: Actions = {
 		const password = formData.get('password') as string;
 
 		const { error } = await locals.supabase.auth.signInWithPassword({ email, password });
-
 		if (error) {
 			if (error instanceof AuthApiError && error.status === 400) {
 				return fail(400, {

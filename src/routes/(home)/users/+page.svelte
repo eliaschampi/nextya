@@ -5,6 +5,7 @@
 	import { invalidate } from '$app/navigation';
 	import { Trash } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
+	import { getInitials } from '$lib/utils/initialName';
 
 	// Recibimos los usuarios mediante props
 	const { data } = $props<{ data: { users: User[] } }>();
@@ -48,11 +49,6 @@
 			await invalidate('users:load');
 		}
 		closeModal();
-	}
-
-	// Función para obtener las iniciales de nombre y apellido
-	function getInitials(name: string, last_name: string): string {
-		return `${name[0]}${last_name[0]}`.toUpperCase();
 	}
 
 	// Función para formatear fechas de forma legible
