@@ -6,6 +6,7 @@
 	import { Trash } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getInitials } from '$lib/utils/initialName';
+	import PageTitle from '$lib/components/PageTitle.svelte';
 
 	// Recibimos los usuarios mediante props
 	const { data } = $props<{ data: { users: User[] } }>();
@@ -81,11 +82,13 @@
 	}
 </script>
 
-<!-- Encabezado y botón para agregar usuario -->
-<h1 class="text-xl font-bold text-base-content">Usuarios</h1>
-<div class="flex justify-end">
+<PageTitle
+	title="Usuarios"
+	description="Aquí encontrarás todas las usuarios disponibles en la aplicación."
+>
+	<!-- button to add -->
 	<button class="btn btn-primary" onclick={openCreateModal}>Agregar Usuario</button>
-</div>
+</PageTitle>
 
 <!-- Lista de usuarios -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-6">

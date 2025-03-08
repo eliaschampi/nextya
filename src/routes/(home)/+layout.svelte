@@ -106,7 +106,7 @@
 						<details>
 							<summary><ChartArea class="h-4 w-4" /> Reportes</summary>
 							<ul>
-								<li><a href="/dashboard">Cursos</a></li>
+								<li><a href="/dashboard">General</a></li>
 								<li><a href="/student">Estudiantes</a></li>
 							</ul>
 						</details>
@@ -115,8 +115,9 @@
 						<details>
 							<summary><Bird class="h-4 w-4" /> Registros</summary>
 							<ul>
-								<li><a href="/">Escuelas</a></li>
+								<li><a href="/category">Categorias</a></li>
 								<li><a href="/">Grupos</a></li>
+								<li><a href="/">Cursos</a></li>
 								<li><a href="/">Estudiantes</a></li>
 							</ul>
 						</details>
