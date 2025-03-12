@@ -10,26 +10,46 @@
 	default: true;
 	prefersdark: true;
 	color-scheme: 'dark';
-	--color-base-100: oklch(12% 0.042 264.695);
-	--color-base-200: oklch(20% 0.042 265.755);
-	--color-base-300: oklch(27% 0.041 260.031);
-	--color-base-content: oklch(96% 0.007 247.896);
-	--color-primary: oklch(83% 0.128 66.29);
-	--color-primary-content: oklch(26% 0.079 36.259);
-	--color-secondary: oklch(84% 0.143 164.978);
-	--color-secondary-content: oklch(26% 0.051 172.552);
-	--color-accent: oklch(71% 0.194 13.428);
-	--color-accent-content: oklch(28% 0.066 53.813);
-	--color-neutral: oklch(12% 0.042 264.695);
-	--color-neutral-content: oklch(98% 0.003 247.858);
-	--color-info: oklch(62% 0.214 259.815);
-	--color-info-content: oklch(97% 0.014 254.604);
-	--color-success: oklch(72% 0.219 149.579);
-	--color-success-content: oklch(98% 0.018 155.826);
-	--color-warning: oklch(70% 0.213 47.604);
-	--color-warning-content: oklch(98% 0.016 73.684);
-	--color-error: oklch(63% 0.237 25.331);
-	--color-error-content: oklch(97% 0.013 17.38);
+	--color-base-100: oklch(15% 0.02 270);
+	/* Fondo muy oscuro con azul sutil */
+	--color-base-200: oklch(20% 0.015 270);
+	/* Oscuro intermedio */
+	--color-base-300: oklch(25% 0.01 270);
+	/* Oscuro claro para elementos elevados */
+	--color-base-content: oklch(90% 0.01 270);
+	/* Texto claro con toque azul */
+	--color-primary: oklch(60% 0.12 160);
+	/* Verde azulado oscuro para botones */
+	--color-primary-content: oklch(95% 0.01 160);
+	/* Contenido claro */
+	--color-secondary: oklch(55% 0.1 50);
+	/* Amarillo-anaranjado oscuro */
+	--color-secondary-content: oklch(95% 0.01 50);
+	/* Contenido claro */
+	--color-accent: oklch(50% 0.08 10);
+	/* Rojo oscuro para acentos */
+	--color-accent-content: oklch(95% 0.01 10);
+	/* Contenido claro */
+	--color-neutral: oklch(20% 0.02 270);
+	/* Gris oscuro con azul */
+	--color-neutral-content: oklch(90% 0.01 270);
+	/* Contenido claro */
+	--color-info: oklch(50% 0.1 220);
+	/* Azul oscuro para info */
+	--color-info-content: oklch(95% 0.01 220);
+	/* Contenido claro */
+	--color-success: oklch(55% 0.1 140);
+	/* Verde oscuro para éxito */
+	--color-success-content: oklch(95% 0.01 140);
+	/* Contenido claro */
+	--color-warning: oklch(50% 0.1 60);
+	/* Amarillo oscuro para advertencia */
+	--color-warning-content: oklch(95% 0.01 60);
+	/* Contenido claro */
+	--color-error: oklch(45% 0.12 0);
+	/* Rojo oscuro para error */
+	--color-error-content: oklch(95% 0.01 0);
+	/* Contenido claro */
 	--radius-selector: 0rem;
 	--radius-field: 0.25rem;
 	--radius-box: 1rem;
@@ -45,26 +65,46 @@
 	default: false;
 	prefersdark: false;
 	color-scheme: 'light';
-	--color-base-100: oklch(90% 0.065 274.039);
-	--color-base-200: oklch(93% 0.034 272.788);
-	--color-base-300: oklch(96% 0.018 272.314);
-	--color-base-content: oklch(35% 0.144 278.697);
-	--color-primary: oklch(72% 0.219 149.579);
-	--color-primary-content: oklch(97% 0.013 17.38);
-	--color-secondary: oklch(70% 0.213 47.604);
-	--color-secondary-content: oklch(98% 0.016 73.684);
-	--color-accent: oklch(64% 0.246 16.439);
-	--color-accent-content: oklch(98% 0.019 200.873);
-	--color-neutral: oklch(51% 0.262 276.966);
-	--color-neutral-content: oklch(96% 0.018 272.314);
-	--color-info: oklch(71% 0.143 215.221);
-	--color-info-content: oklch(98% 0.019 200.873);
-	--color-success: oklch(70% 0.14 182.503);
-	--color-success-content: oklch(98% 0.014 180.72);
-	--color-warning: oklch(76% 0.188 70.08);
-	--color-warning-content: oklch(98% 0.022 95.277);
-	--color-error: oklch(65% 0.241 354.308);
-	--color-error-content: oklch(97% 0.014 343.198);
+	--color-base-100: oklch(90% 0.03 270);
+	/* Fondo claro con un azul muy sutil */
+	--color-base-200: oklch(94% 0.015 270);
+	/* Intermedio, acercándose al blanco */
+	--color-base-300: oklch(98% 0.005 270);
+	/* Casi blanco puro, toque mínimo de azul */
+	--color-base-content: oklch(25% 0.12 270);
+	/* Texto oscuro con buen contraste */
+	--color-primary: oklch(65% 0.18 160);
+	/* Verde azulado elegante para botones */
+	--color-primary-content: oklch(98% 0.01 160);
+	/* Contenido claro para primary */
+	--color-secondary: oklch(70% 0.15 50);
+	/* Amarillo-anaranjado suave */
+	--color-secondary-content: oklch(98% 0.01 50);
+	/* Contenido claro */
+	--color-accent: oklch(75% 0.12 10);
+	/* Rojo suave para acentos */
+	--color-accent-content: oklch(20% 0.12 10);
+	/* Contenido oscuro */
+	--color-neutral: oklch(60% 0.03 270);
+	/* Gris con toque azul sutil */
+	--color-neutral-content: oklch(98% 0.005 270);
+	/* Contenido claro */
+	--color-info: oklch(70% 0.12 220);
+	/* Azul claro para info */
+	--color-info-content: oklch(98% 0.01 220);
+	/* Contenido claro */
+	--color-success: oklch(70% 0.14 140);
+	/* Verde para éxito */
+	--color-success-content: oklch(98% 0.01 140);
+	/* Contenido claro */
+	--color-warning: oklch(75% 0.15 60);
+	/* Amarillo para advertencia */
+	--color-warning-content: oklch(98% 0.01 60);
+	/* Contenido claro */
+	--color-error: oklch(70% 0.18 0);
+	/* Rojo para error */
+	--color-error-content: oklch(98% 0.01 0);
+	/* Contenido claro */
 	--radius-selector: 1rem;
 	--radius-field: 1rem;
 	--radius-box: 1rem;
