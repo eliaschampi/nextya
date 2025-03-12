@@ -63,10 +63,10 @@
 		});
 	}
 
-	async function handleDeleteUser(user_id: string | null) {
-		if (!user_id) return;
+	async function handleDeleteUser() {
+		if (!selectedUser) return;
 		const dataToSend = new FormData();
-		dataToSend.append('user_id', user_id);
+		dataToSend.append('user_id', selectedUser.user_id);
 		const response = await fetch('?/delete', {
 			method: 'POST',
 			body: dataToSend
@@ -178,11 +178,7 @@
 		</div>
 		<div class="modal-action">
 			<button class="btn btn-error" onclick={() => modal2?.close()}> Cancelar </button>
-			<button
-				class="btn btn-primary"
-				onclick={() => handleDeleteUser(selectedUser ? selectedUser.user_id : '')}
-				disabled={!selectedUser}
-			>
+			<button class="btn btn-primary" onclick={() => handleDeleteUser()} disabled={!selectedUser}>
 				Eliminar
 			</button>
 		</div>

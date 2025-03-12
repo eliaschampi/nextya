@@ -141,7 +141,7 @@
 		/>
 	</fieldset>
 
-	<div class="flex justify-end mt-4">
+	<div class="text-center mt-4">
 		<button type="submit" class="btn btn-primary" disabled={loading}>
 			{loading ? 'Cargando...' : mode === 'create' ? 'Guardar' : 'Actualizar'}
 		</button>

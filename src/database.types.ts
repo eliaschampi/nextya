@@ -1,6 +1,41 @@
 export type Database = {
 	public: {
 		Tables: {
+			levels: {
+				Row: {
+					code: string;
+					created_at: string | null;
+					description: string | null;
+					name: string | null;
+					user_code: string | null;
+					year: number | null;
+				};
+				Insert: {
+					code?: string;
+					created_at?: string | null;
+					description?: string | null;
+					name?: string | null;
+					user_code?: string | null;
+					year?: number | null;
+				};
+				Update: {
+					code?: string;
+					created_at?: string | null;
+					description?: string | null;
+					name?: string | null;
+					user_code?: string | null;
+					year?: number | null;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'levels_user_code_fkey';
+						columns: ['user_code'];
+						isOneToOne: false;
+						referencedRelation: 'user_profiles';
+						referencedColumns: ['user_id'];
+					}
+				];
+			};
 			permissions: {
 				Row: {
 					can_create: boolean;
