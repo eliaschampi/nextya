@@ -4,7 +4,7 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
-	import type { Level } from '../../../app';
+	import type { Course } from '../../../app';
 	import { EllipsisVertical } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 
@@ -13,9 +13,9 @@
 	let confirmModal: HTMLDialogElement | null = $state(null);
 	let isEditing = $state(false);
 	let message = $state('');
-	let selectedLevel = $state<Level | null>(null);
+	let selectedcourse = $state<Course | null>(null);
 
-	const { data } = $props<{ data: { levels: Level[] } }>();
+	const { data } = $props<{ data: { courses: Course[] } }>();
 
 	// Abrir modal para crear
 	function openCreateModal() {
@@ -24,20 +24,20 @@
 	}
 
 	// Abrir modal para editar
-	function openEditModal(level: Level) {
+	function openEditModal(course: Course) {
 		isEditing = true;
-		selectedLevel = level;
+		selectedcourse = course;
 		modal?.showModal();
 
 		const nameInput = modal?.querySelector<HTMLInputElement>('#name');
 		const descriptionInput = modal?.querySelector<HTMLTextAreaElement>('#description');
-		if (nameInput) nameInput.value = level.name || '';
-		if (descriptionInput) descriptionInput.value = level.description || '';
+		if (nameInput) nameInput.value = course.name || '';
+		if (descriptionInput) descriptionInput.value = course.description || '';
 	}
 
 	// Abrir modal para confirmar eliminación
-	function openDeleteConfirmModal(level: Level) {
-		selectedLevel = level;
+	function openDeleteConfirmModal(course: Course) {
+		selectedcourse = course;
 		confirmModal?.showModal();
 	}
 
@@ -63,7 +63,7 @@
 		const action: 'create' | 'update' = isEditing ? 'update' : 'create';
 
 		if (isEditing) {
-			dataToSend.append('code', selectedLevel?.code || '');
+			dataToSend.append('code', selectedcourse?.code || '');
 		}
 
 		if (!validateForm(dataToSend)) return;
@@ -73,21 +73,21 @@
 			const res = await response.json();
 
 			if (res.type === 'success') {
-				showToast(`${isEditing ? 'Nivel actualizado' : 'Nivel creado'} exitosamente`, 'success');
-				await invalidate('levels:load'); // Unificar tag de invalidación
+				showToast(`${isEditing ? 'Curso actualizado' : 'Curso creado'} exitosamente`, 'success');
+				await invalidate('courses:load'); // Unificar tag de invalidación
 				modal?.close();
 				isEditing = false;
 			} else {
-				message = `Ocurrió un error al ${isEditing ? 'actualizar' : 'crear'} el nivel`;
+				message = `Ocurrió un error al ${isEditing ? 'actualizar' : 'crear'} el curso`;
 			}
 		} catch {
-			message = `Ocurrió un error al ${isEditing ? 'actualizar' : 'crear'} el nivel`;
+			message = `Ocurrió un error al ${isEditing ? 'actualizar' : 'crear'} el curso`;
 		}
 	}
 
 	// Reiniciar formulario al cerrar modal
 	function resetFormOnClose() {
-		selectedLevel = null;
+		selectedcourse = null;
 		message = '';
 		const form = modal?.querySelector('form');
 		if (form) form.reset();
@@ -103,10 +103,10 @@
 
 	// Manejar eliminación
 	async function handleDelete() {
-		if (!selectedLevel) return;
+		if (!selectedcourse) return;
 
 		const dataToSend = new FormData();
-		dataToSend.append('code', selectedLevel.code);
+		dataToSend.append('code', selectedcourse.code);
 
 		try {
 			const response = await fetch('?/delete', {
@@ -115,30 +115,27 @@
 			});
 			const res = await response.json();
 			confirmModal?.close();
-			selectedLevel = null;
+			selectedcourse = null;
 
 			if (res.type === 'success') {
-				showToast('Nivel eliminado exitosamente', 'success');
-				await invalidate('levels:load');
+				showToast('Curso eliminado exitosamente', 'success');
+				await invalidate('courses:load');
 			} else {
 				showToast(responseMessage(res) ?? '', 'danger');
 			}
 		} catch {
-			showToast('Error en la eliminación del nivel', 'danger');
+			showToast('Error en la eliminación del curso', 'danger');
 		}
 	}
 </script>
 
-<PageTitle
-	title="Niveles"
-	description="Aquí encontrarás todas las niveles disponibles en la aplicación."
->
+<PageTitle title="Cursos" description="Aquí puedes ver y gestionar los cursos disponibles">
 	<button class="btn btn-primary" onclick={openCreateModal}>Añadir</button>
 </PageTitle>
 
 <div class="space-y-4 p-4">
-	{#each data.levels as level (level.code)}
-		{@render levelItem(level)}
+	{#each data.courses as course (course.code)}
+		{@render courseItem(course)}
 	{/each}
 </div>
 
@@ -146,7 +143,7 @@
 <dialog bind:this={modal} class="modal">
 	<div class="modal-box">
 		<form onsubmit={handleSubmit} autocomplete="off">
-			<h3 class="text-lg font-bold">{isEditing ? 'Editar' : 'Crear'} nivel</h3>
+			<h3 class="text-lg font-bold">{isEditing ? 'Editar' : 'Crear'} curso</h3>
 			<fieldset class="fieldset bg-base-200 border border-base-300 p-4 rounded-box">
 				<label class="fieldset-legend" for="name">Nombre</label>
 				<input
@@ -163,7 +160,7 @@
 					name="description"
 					required
 					class="textarea w-full validator"
-					placeholder="Ejem. Ciclo regular"
+					placeholder="Ejem. Curso preuniversitario"
 				></textarea>
 			</fieldset>
 			{#if message}
@@ -184,7 +181,7 @@
 <dialog bind:this={confirmModal} class="modal bg-base-200">
 	<div class="modal-box">
 		<h3 class="text-lg font-bold">Confirmar eliminación</h3>
-		<p class="py-4">¿Estás seguro que deseas eliminar el nivel "{selectedLevel?.name}"?</p>
+		<p class="py-4">¿Estás seguro que deseas eliminar el curso "{selectedcourse?.name}"?</p>
 		<div class="modal-action flex justify-center gap-2">
 			<button class="btn" onclick={() => confirmModal?.close()}>Cancelar</button>
 			<button class="btn btn-error" onclick={handleDelete}>Eliminar</button>
@@ -192,7 +189,7 @@
 	</div>
 </dialog>
 
-{#snippet levelItem(item: Level)}
+{#snippet courseItem(item: Course)}
 	<div
 		class="rounded-box bg-base-200 py-3 px-4 hover:bg-base-300 transition-colors text-left relative"
 	>
@@ -202,7 +199,6 @@
 				<div class="text-sm text-base-content/70">{item.description}</div>
 			</div>
 			<div class="flex items-center gap-2">
-				<span class="badge badge-dash badge-secondary">{item.year}</span>
 				<div class="dropdown dropdown-end">
 					<div tabindex="0" role="button" class="m-1 cursor-pointer">
 						<EllipsisVertical class="w-4 h-4" />

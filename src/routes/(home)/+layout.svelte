@@ -116,8 +116,7 @@
 							<summary><Bird class="h-4 w-4" /> Registros</summary>
 							<ul>
 								<li><a href="/levels">Niveles</a></li>
-								<li><a href="/">Grupos</a></li>
-								<li><a href="/">Cursos</a></li>
+								<li><a href="/courses">Cursos</a></li>
 								<li><a href="/">Estudiantes</a></li>
 							</ul>
 						</details>

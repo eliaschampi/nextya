@@ -26,6 +26,7 @@ declare global {
 
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Level = Database['public']['Tables']['levels']['Row'];
+export type Course = Database['public']['Tables']['courses']['Row'];
 
 export interface User {
 	user_id: string;

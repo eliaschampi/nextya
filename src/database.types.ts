@@ -1,6 +1,38 @@
 export type Database = {
 	public: {
 		Tables: {
+			courses: {
+				Row: {
+					code: string;
+					created_at: string | null;
+					description: string | null;
+					name: string | null;
+					user_code: string | null;
+				};
+				Insert: {
+					code?: string;
+					created_at?: string | null;
+					description?: string | null;
+					name?: string | null;
+					user_code?: string | null;
+				};
+				Update: {
+					code?: string;
+					created_at?: string | null;
+					description?: string | null;
+					name?: string | null;
+					user_code?: string | null;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'courses_user_code_fkey';
+						columns: ['user_code'];
+						isOneToOne: false;
+						referencedRelation: 'user_profiles';
+						referencedColumns: ['user_id'];
+					}
+				];
+			};
 			levels: {
 				Row: {
 					code: string;

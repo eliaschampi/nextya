@@ -18,6 +18,8 @@
 	/* Oscuro claro para elementos elevados */
 	--color-base-content: oklch(90% 0.01 270);
 	/* Texto claro con toque azul */
+	--color-base-content-rgb: 232, 232, 232;
+	/* RGB equivalent of oklch(90% 0.01 270) */
 	--color-primary: oklch(60% 0.12 160);
 	/* Verde azulado oscuro para botones */
 	--color-primary-content: oklch(95% 0.01 160);
@@ -73,6 +75,8 @@
 	/* Casi blanco puro, toque mínimo de azul */
 	--color-base-content: oklch(25% 0.12 270);
 	/* Texto oscuro con buen contraste */
+	--color-base-content-rgb: 64, 64, 64;
+	/* RGB equivalent of oklch(25% 0.12 270) */
 	--color-primary: oklch(65% 0.18 160);
 	/* Verde azulado elegante para botones */
 	--color-primary-content: oklch(98% 0.01 160);
@@ -119,7 +123,12 @@
 .textarea {
 	&:focus,
 	&:focus-within {
-		--input-color: var(--color-base-300);
-		outline: 2px dashed var(--input-color);
+		outline-width: 3px;
+		outline-style: dashed;
+		outline-color: color-mix(in srgb, var(--color-base-content) 20%, transparent);
 	}
+}
+
+.modal {
+	backdrop-filter: blur(10px);
 }
