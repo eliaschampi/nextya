@@ -107,7 +107,7 @@
 							<summary><ChartArea class="h-4 w-4" /> Reportes</summary>
 							<ul>
 								<li><a href="/dashboard">General</a></li>
-								<li><a href="/student">Estudiantes</a></li>
+								<li><a href="/dashboard">Estudiantes</a></li>
 							</ul>
 						</details>
 					</li>
@@ -117,7 +117,7 @@
 							<ul>
 								<li><a href="/levels">Niveles</a></li>
 								<li><a href="/courses">Cursos</a></li>
-								<li><a href="/">Estudiantes</a></li>
+								<li><a href="/student">Estudiantes</a></li>
 							</ul>
 						</details>
 					</li>

@@ -135,6 +135,50 @@ export type Database = {
 					}
 				];
 			};
+			students: {
+				Row: {
+					code: string;
+					created_at: string | null;
+					email: string;
+					is_active: boolean | null;
+					last_name: string;
+					name: string;
+					phone: string | null;
+					updated_at: string | null;
+					user_code: string | null;
+				};
+				Insert: {
+					code?: string;
+					created_at?: string | null;
+					email: string;
+					is_active?: boolean | null;
+					last_name: string;
+					name: string;
+					phone?: string | null;
+					updated_at?: string | null;
+					user_code?: string | null;
+				};
+				Update: {
+					code?: string;
+					created_at?: string | null;
+					email?: string;
+					is_active?: boolean | null;
+					last_name?: string;
+					name?: string;
+					phone?: string | null;
+					updated_at?: string | null;
+					user_code?: string | null;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'students_user_code_fkey';
+						columns: ['user_code'];
+						isOneToOne: false;
+						referencedRelation: 'user_profiles';
+						referencedColumns: ['user_id'];
+					}
+				];
+			};
 		};
 		Views: {
 			user_profiles: {
