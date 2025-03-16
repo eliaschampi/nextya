@@ -27,7 +27,6 @@ declare global {
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Level = Database['public']['Tables']['levels']['Row'];
 export type Course = Database['public']['Tables']['courses']['Row'];
-export type Student = Database['public']['Tables']['students']['Row'];
 
 export interface User {
 	user_id: string;
@@ -40,6 +39,19 @@ export interface User {
 	last_name: string;
 	photo_url: string | null;
 	is_active: boolean;
+}
+
+export interface Student {
+	student_code: string;
+	register_code: string;
+	name: string;
+	last_name: string;
+	email: string;
+	phone: string | null;
+	roll_code: string;
+	group_name: string;
+	level: string;
+	created_at: string;
 }
 
 export type ToastType = 'success' | 'danger' | 'warning';

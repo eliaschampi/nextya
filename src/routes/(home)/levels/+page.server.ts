@@ -18,11 +18,10 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const name = formData.get('name') as string;
 		const description = formData.get('description') as string;
-		const year = Number(new Date().getFullYear());
 		const userId = locals.session?.user.id;
 		const { error } = await locals.supabase
 			.from('levels')
-			.insert({ name, description, year, user_code: userId });
+			.insert({ name, description, user_code: userId });
 		if (error) return fail(400, { error: error.message });
 		return { success: true };
 	},

@@ -203,7 +203,6 @@
 				<div class="text-sm text-base-content/70">{item.description}</div>
 			</div>
 			<div class="flex items-center gap-2">
-				<span class="badge badge-dash badge-secondary">{item.year}</span>
 				<div class="dropdown dropdown-end">
 					<div tabindex="0" role="button" class="m-1 cursor-pointer">
 						<EllipsisVertical class="w-4 h-4" />

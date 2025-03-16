@@ -40,7 +40,6 @@ export type Database = {
 					description: string | null;
 					name: string | null;
 					user_code: string | null;
-					year: number | null;
 				};
 				Insert: {
 					code?: string;
@@ -48,7 +47,6 @@ export type Database = {
 					description?: string | null;
 					name?: string | null;
 					user_code?: string | null;
-					year?: number | null;
 				};
 				Update: {
 					code?: string;
@@ -56,7 +54,6 @@ export type Database = {
 					description?: string | null;
 					name?: string | null;
 					user_code?: string | null;
-					year?: number | null;
 				};
 				Relationships: [
 					{
@@ -135,12 +132,73 @@ export type Database = {
 					}
 				];
 			};
+			registers: {
+				Row: {
+					code: string;
+					created_at: string | null;
+					group_name: string;
+					is_active: boolean | null;
+					level_code: string;
+					roll_code: string;
+					student_code: string;
+					user_code: string | null;
+				};
+				Insert: {
+					code?: string;
+					created_at?: string | null;
+					group_name: string;
+					is_active?: boolean | null;
+					level_code: string;
+					roll_code: string;
+					student_code: string;
+					user_code?: string | null;
+				};
+				Update: {
+					code?: string;
+					created_at?: string | null;
+					group_name?: string;
+					is_active?: boolean | null;
+					level_code?: string;
+					roll_code?: string;
+					student_code?: string;
+					user_code?: string | null;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'registers_level_code_fkey';
+						columns: ['level_code'];
+						isOneToOne: false;
+						referencedRelation: 'levels';
+						referencedColumns: ['code'];
+					},
+					{
+						foreignKeyName: 'registers_student_code_fkey';
+						columns: ['student_code'];
+						isOneToOne: false;
+						referencedRelation: 'student_registers';
+						referencedColumns: ['student_code'];
+					},
+					{
+						foreignKeyName: 'registers_student_code_fkey';
+						columns: ['student_code'];
+						isOneToOne: false;
+						referencedRelation: 'students';
+						referencedColumns: ['code'];
+					},
+					{
+						foreignKeyName: 'registers_user_code_fkey';
+						columns: ['user_code'];
+						isOneToOne: false;
+						referencedRelation: 'user_profiles';
+						referencedColumns: ['user_id'];
+					}
+				];
+			};
 			students: {
 				Row: {
 					code: string;
 					created_at: string | null;
 					email: string;
-					is_active: boolean | null;
 					last_name: string;
 					name: string;
 					phone: string | null;
@@ -151,7 +209,6 @@ export type Database = {
 					code?: string;
 					created_at?: string | null;
 					email: string;
-					is_active?: boolean | null;
 					last_name: string;
 					name: string;
 					phone?: string | null;
@@ -162,7 +219,6 @@ export type Database = {
 					code?: string;
 					created_at?: string | null;
 					email?: string;
-					is_active?: boolean | null;
 					last_name?: string;
 					name?: string;
 					phone?: string | null;
@@ -181,6 +237,21 @@ export type Database = {
 			};
 		};
 		Views: {
+			student_registers: {
+				Row: {
+					created_at: string | null;
+					email: string | null;
+					group_name: string | null;
+					last_name: string | null;
+					level: string | null;
+					name: string | null;
+					phone: string | null;
+					register_code: string | null;
+					roll_code: string | null;
+					student_code: string | null;
+				};
+				Relationships: [];
+			};
 			user_profiles: {
 				Row: {
 					created_at: string | null;
