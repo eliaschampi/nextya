@@ -17,6 +17,27 @@ export const load: PageServerLoad = async ({ locals, depends }) => {
 };
 
 export const actions: Actions = {
+	// search
+	// search: async ({ url, locals }) => {
+	// 	const searchQuery = url.searchParams.get('search');
+
+	// 	if (!searchQuery) {
+	// 		return { students: [] };
+	// 	}
+
+	// 	const { data: students, error } = await locals.supabase
+	// 		.from('students')
+	// 		.select('*')
+	// 		.ilike('name', `%${searchQuery}%`)
+	// 		.or(`last_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
+
+	// 	if (error) {
+	// 		return { students: [] };
+	// 	}
+
+	// 	return { students };
+	// },
+
 	create: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const name = formData.get('name') as string;

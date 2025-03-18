@@ -23,19 +23,13 @@
 	// Props using Svelte 5 $props
 	const { data } = $props<{ data: { studentRegisters: Student[] } }>();
 
-	// Fetch levels via API on mount
-	onMount(async () => {
-		const response = await fetch('/levels');
-		if (response.ok) levels = await response.json();
-	});
-
 	// Search students via API
 	async function searchStudents() {
 		if (!searchQuery.trim()) {
 			searchResults = [];
 			return;
 		}
-		const response = await fetch(`/student?search=${encodeURIComponent(searchQuery)}`);
+		const response = await fetch(`/api/search?search=${encodeURIComponent(searchQuery)}`);
 		if (response.ok) searchResults = await response.json();
 	}
 
@@ -48,14 +42,12 @@
 
 		// Switch to the new student tab and fill the form
 		activeTab = 'new';
-
-		// The form will be auto-filled via the value bindings
-		// This indicates we're updating an existing student and will create a register
 	}
 
 	// Modal handlers
 	function openCreateModal() {
 		isEditing = false;
+		fetchLevels();
 		selectedStudent = null;
 		activeTab = 'search'; // Default to search tab when creating
 		modal?.showModal();
@@ -63,6 +55,7 @@
 
 	function openEditModal(student: Student) {
 		isEditing = true;
+		fetchLevels();
 		selectedStudent = student;
 		activeTab = 'new'; // Go directly to form when editing
 		modal?.showModal();
@@ -71,6 +64,12 @@
 	function openDeleteConfirmModal(student: Student) {
 		selectedStudent = student;
 		confirmModal?.showModal();
+	}
+
+	async function fetchLevels() {
+		const response = await fetch('/api/levels');
+		const data = await response.json();
+		levels = data.levels;
 	}
 
 	// Form validation
@@ -97,6 +96,7 @@
 		const action = isEditing ? 'update' : 'create';
 
 		if (isEditing && selectedStudent) formData.append('code', selectedStudent.student_code);
+
 		if (!validateForm(formData)) return;
 
 		try {
@@ -171,28 +171,6 @@
 
 <div class="card bg-base-200 w-full shadow rounded-xl">
 	<div class="card-body p-0 sm:p-4">
-		<div class="flex justify-between items-center mb-4 px-4 pt-4">
-			<h2 class="text-xl font-semibold">Listado de Estudiantes</h2>
-			<div class="join">
-				<input
-					type="text"
-					placeholder="Buscar..."
-					class="input input-bordered join-item w-64"
-					bind:value={searchQuery}
-				/>
-				<button
-					class="btn btn-primary join-item"
-					onclick={() => {
-						if (searchQuery) {
-							searchStudents();
-							openCreateModal();
-						}
-					}}
-				>
-					<UserSearch class="w-4 h-4" />
-				</button>
-			</div>
-		</div>
 		<div class="overflow-x-auto">
 			<table class="table table-zebra w-full">
 				<thead>
@@ -313,9 +291,7 @@
 				</button>
 			</div>
 			{#if searchResults.length > 0}
-				<div
-					class="bg-base-200 rounded-lg border border-base-300 mt-2 max-h-48 overflow-y-auto"
-				>
+				<div class="bg-base-200 rounded-lg border border-base-300 mt-2 max-h-48 overflow-y-auto">
 					<ul class="divide-y divide-base-300">
 						{#each searchResults as student (student.student_code)}
 							<li>
@@ -328,7 +304,9 @@
 										<span class="font-medium">{student.name} {student.last_name}</span>
 										<span class="text-sm text-gray-500">{student.email}</span>
 									</div>
-									<span class="badge badge-primary">{student.level}</span>
+									<span class="badge badge-primary">
+										<Edit class="w-4 h-4" />
+									</span>
 								</button>
 							</li>
 						{/each}
@@ -383,7 +361,6 @@
 								value={selectedStudent?.phone || ''}
 							/>
 						</div>
-
 						<div>
 							<label class="fieldset-legend" for="email">Correo Electrónico</label>
 							<input
@@ -396,7 +373,6 @@
 								value={selectedStudent?.email || ''}
 							/>
 						</div>
-
 						<div>
 							<label class="fieldset-legend" for="level">Nivel</label>
 							<select
@@ -412,7 +388,6 @@
 								{/each}
 							</select>
 						</div>
-
 						<div>
 							<label class="fieldset-legend" for="group_name">Grupo</label>
 							<div class="flex flex-wrap gap-4 mt-2">
@@ -422,22 +397,20 @@
 											type="radio"
 											name="group_name"
 											value={option}
-											class="radio radio-primary mr-2"
+											class="radio radio-primary"
 											required
 											checked={selectedStudent?.group_name === option}
 										/>
-										<span class="label-text">Grupo {option}</span>
+										<span class="label-text">{option}</span>
 									</label>
 								{/each}
 							</div>
 						</div>
 					</div>
 				</fieldset>
-
 				{#if message}
 					<Message description={message} type="warning" />
 				{/if}
-
 				<div class="modal-action mt-6">
 					<button class="btn btn-primary" type="submit">
 						{isEditing ? 'Actualizar y Registrar' : 'Guardar'}
