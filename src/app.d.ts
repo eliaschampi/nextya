@@ -46,6 +46,7 @@ export interface Student {
 	register_code: string;
 	name: string;
 	last_name: string;
+	level_code: string;
 	email: string;
 	phone: string | null;
 	roll_code: string;

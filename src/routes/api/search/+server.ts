@@ -11,8 +11,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		.from('students')
 		.select('*')
 		.ilike('name', `%${searchQuery}%`)
-		.or(`last_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
-
+		.or(`last_name.ilike.%${searchQuery}%`);
 	if (error) {
 		return new Response(JSON.stringify({ students: [] }));
 	}
