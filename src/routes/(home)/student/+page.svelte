@@ -5,10 +5,9 @@
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
 	import type { Level, Student } from '../../../app';
-	import { EllipsisVertical, Search, UserPlus } from 'lucide-svelte';
+	import { Pencil, Search, Trash2, UserPlus } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 
-	// Estados con runes
 	let modal: HTMLDialogElement | null = $state(null);
 	let confirmModal: HTMLDialogElement | null = $state(null);
 	let isEditing = $state(false);
@@ -18,10 +17,9 @@
 	let searchResults = $state<Student[]>([]);
 	let activeTab = $state<'search' | 'new'>('search');
 	let selectedLevelCode = $state('');
-	let selectedGroup = $state('C');
+	let selectedGroup = $state('');
 	let students = $state<Student[]>([]);
 
-	// Referencias al DOM para los inputs
 	let nameInput: HTMLInputElement | null = $state(null);
 	let lastNameInput: HTMLInputElement | null = $state(null);
 	let phoneInput: HTMLInputElement | null = $state(null);
@@ -32,18 +30,15 @@
 	const { data } = $props<{ data: { levels: Level[] } }>();
 	const groupOptions = ['A', 'B', 'C', 'D'];
 
-	async function fetchStudents() {
-		// folder is /src/api/student/[level]/[group]
+	async function updateLevelFilter() {
+		if (!selectedLevelCode || !selectedGroup) {
+			students = [];
+			return;
+		}
 		const response = await fetch(`/api/student/${selectedLevelCode}/${selectedGroup}`);
 		if (response.ok) students = await response.json();
-		console.log(students);
 	}
 
-	async function updateLevelFilter() {
-		fetchStudents();
-	}
-
-	// Buscar estudiantes
 	async function searchStudents() {
 		if (!searchQuery.trim()) {
 			searchResults = [];
@@ -53,7 +48,6 @@
 		if (response.ok) searchResults = await response.json();
 	}
 
-	// Seleccionar estudiante de los resultados
 	function selectStudent(student: Student) {
 		selectedStudent = student;
 		isEditing = true;
@@ -63,7 +57,6 @@
 		openEditModal(student);
 	}
 
-	// Abrir modal para crear
 	function openCreateModal() {
 		isEditing = false;
 		selectedStudent = null;
@@ -71,28 +64,27 @@
 		modal?.showModal();
 	}
 
-	// Abrir modal para editar y establecer valores en los inputs
 	function openEditModal(student: Student) {
 		isEditing = true;
 		selectedStudent = student;
 		activeTab = 'new';
 		modal?.showModal();
 
-		if (nameInput) nameInput.value = student.name || '';
-		if (lastNameInput) lastNameInput.value = student.last_name || '';
-		if (phoneInput) phoneInput.value = student.phone || '';
-		if (emailInput) emailInput.value = student.email || '';
-		if (levelSelect) levelSelect.value = student.level_code || '';
-		if (groupSelect) groupSelect.value = student.group_name || '';
+		setTimeout(() => {
+			if (nameInput) nameInput.value = student.name || '';
+			if (lastNameInput) lastNameInput.value = student.last_name || '';
+			if (phoneInput) phoneInput.value = student.phone || '';
+			if (emailInput) emailInput.value = student.email || '';
+			if (levelSelect) levelSelect.value = student.level_code || '';
+			if (groupSelect) groupSelect.value = student.group_name || '';
+		}, 0);
 	}
 
-	// Abrir modal de confirmación para eliminar
 	function openDeleteConfirmModal(student: Student) {
 		selectedStudent = student;
 		confirmModal?.showModal();
 	}
 
-	// Validar formulario
 	function validateForm(): boolean {
 		if (
 			!nameInput?.value.trim() ||
@@ -108,7 +100,6 @@
 		return true;
 	}
 
-	// Enviar formulario
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
 		if (!validateForm()) return;
@@ -131,7 +122,7 @@
 				`${isEditing ? 'Estudiante actualizado' : 'Estudiante registrado'} exitosamente`,
 				'success'
 			);
-			fetchStudents();
+			await updateLevelFilter();
 			modal?.close();
 		} else {
 			message =
@@ -139,7 +130,6 @@
 		}
 	}
 
-	// Reiniciar formulario al cerrar modal
 	function resetFormOnClose() {
 		selectedStudent = null;
 		message = '';
@@ -155,7 +145,6 @@
 	onMount(() => modal?.addEventListener('close', resetFormOnClose));
 	onDestroy(() => modal?.removeEventListener('close', resetFormOnClose));
 
-	// Eliminar estudiante
 	async function handleDelete() {
 		if (!selectedStudent) return;
 		const formData = new FormData();
@@ -174,17 +163,16 @@
 	}
 </script>
 
-<PageTitle title="Estudiantes" description="Selecciona un nivel para ver los estudiantes.">
+<PageTitle title="Estudiantes" description="Selecciona un nivel y grupo para ver los estudiantes.">
 	<button class="btn btn-primary gap-2" onclick={openCreateModal}>
 		<UserPlus class="w-4 h-4" />
 		Registrar Estudiante
 	</button>
 </PageTitle>
 
-<!-- Selector de nivel -->
-<div class="p-4 bg-base-200 rounded-box mb-4">
+<div class="p-4 bg-base-200 rounded-box mb-4 flex flex-col sm:flex-row gap-4">
 	<select
-		class="select select-bordered w-full max-w-xs"
+		class="select select-bordered w-full sm:w-auto"
 		bind:value={selectedLevelCode}
 		onchange={updateLevelFilter}
 	>
@@ -193,59 +181,68 @@
 			<option value={level.code}>{level.name}</option>
 		{/each}
 	</select>
+	<select
+		class="select select-bordered w-full sm:w-auto"
+		bind:value={selectedGroup}
+		disabled={!selectedLevelCode}
+		onchange={updateLevelFilter}
+	>
+		<option value="">Selecciona un grupo</option>
+		{#each groupOptions as group (group)}
+			<option value={group}>{group}</option>
+		{/each}
+	</select>
 </div>
 
-<!-- Tabla de estudiantes -->
 {#if selectedLevelCode && students.length > 0}
-	<div class="overflow-x-auto">
-		<table class="table table-zebra w-full">
-			<thead>
-				<tr class="text-sm font-medium text-gray-600 bg-base-300">
-					<th class="py-3 px-4">Nombre</th>
-					<th class="py-3 px-4">Apellidos</th>
-					<th class="py-3 px-4">Email</th>
-					<th class="py-3 px-4">Teléfono</th>
-					<th class="py-3 px-4">Grupo</th>
-					<th class="py-3 px-4 text-center">Acciones</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.students as student (student.student_code)}
-					<tr class="hover:bg-base-300 transition-colors border-b border-base-300">
-						<td class="py-3 px-4">{student.name}</td>
-						<td class="py-3 px-4">{student.last_name}</td>
-						<td class="py-3 px-4">{student.email}</td>
-						<td class="py-3 px-4">{student.phone || 'N/A'}</td>
-						<td class="py-3 px-4">{student.group_name}</td>
-						<td class="py-3 px-4 text-center">
-							<div class="dropdown dropdown-end">
-								<div tabindex="0" role="button" class="m-1 cursor-pointer">
-									<EllipsisVertical class="w-4 h-4" />
-								</div>
-								<ul class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
-									<li><button onclick={() => openEditModal(student)}>Editar</button></li>
-									<li><button onclick={() => openDeleteConfirmModal(student)}>Eliminar</button></li>
-								</ul>
-							</div>
-						</td>
+	<div class="card bg-base-200 shadow">
+		<div class="card-body">
+			<table class="table table-zebra w-full">
+				<thead>
+					<tr>
+						<th>Name</th>
+						<th>Email</th>
+						<th>Actions</th>
 					</tr>
-				{/each}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{#each students as student (student.student_code)}
+						<tr class="hover:bg-base-200">
+							<td class="py-3 px-4">{student.name}</td>
+							<td class="py-3 px-4">{student.email}</td>
+							<td class="py-3 px-4 text-center space-x-2">
+								<button
+									class="btn btn-ghost btn-sm tooltip"
+									data-tip="Edit"
+									onclick={() => openEditModal(student)}
+								>
+									<Pencil class="w-4 h-4 text-gray-500 hover:text-primary" />
+								</button>
+								<button
+									class="btn btn-ghost btn-sm tooltip"
+									data-tip="Delete"
+									onclick={() => openDeleteConfirmModal(student)}
+								>
+									<Trash2 class="w-4 h-4 text-gray-500 hover:text-error" />
+								</button>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	</div>
 {:else if selectedLevelCode}
-	<p class="text-center py-4">No hay estudiantes en este nivel.</p>
+	<p class="text-center py-4">No hay estudiantes en este nivel y grupo.</p>
 {:else}
-	<p class="text-center py-4">Selecciona un nivel para ver los estudiantes.</p>
+	<p class="text-center py-4">Selecciona un nivel y grupo para ver los estudiantes.</p>
 {/if}
 
-<!-- Modal para crear/editar -->
 <dialog bind:this={modal} class="modal">
-	<div class="modal-box max-w-2xl">
-		<h3 class="text-lg font-bold">{isEditing ? 'Editar' : 'Registrar'} Estudiante</h3>
+	<div class="modal-box max-w-3xl">
+		<h3 class="text-lg font-bold mb-4">{isEditing ? 'Editar' : 'Registrar'} Estudiante</h3>
 
-		<!-- Pestañas -->
-		<div class="tabs tabs-boxed mb-4">
+		<div class="tabs tabs-lifted mb-4">
 			<button
 				class="tab {activeTab === 'search' && !isEditing ? 'tab-active' : ''}"
 				disabled={isEditing}
@@ -261,7 +258,6 @@
 			</button>
 		</div>
 
-		<!-- Pestaña de búsqueda -->
 		{#if activeTab === 'search' && !isEditing}
 			<div class="join w-full mb-4">
 				<input
@@ -269,7 +265,6 @@
 					placeholder="Buscar estudiante por nombre o email..."
 					class="input input-bordered join-item flex-1"
 					bind:value={searchQuery}
-					oninput={searchStudents}
 				/>
 				<button class="btn btn-primary join-item" onclick={searchStudents}>
 					<Search class="w-4 h-4" />
@@ -278,7 +273,9 @@
 			{#if searchResults.length > 0}
 				<ul class="space-y-2 max-h-48 overflow-y-auto">
 					{#each searchResults as student (student.student_code)}
-						<li class="bg-base-200 p-2 rounded-box hover:bg-base-300 transition-colors">
+						<li
+							class="bg-base-200 p-3 rounded-box hover:bg-base-300 transition-colors cursor-pointer"
+						>
 							<button class="w-full text-left" onclick={() => selectStudent(student)}>
 								{student.name}
 								{student.last_name} ({student.email})
@@ -289,14 +286,13 @@
 			{/if}
 		{/if}
 
-		<!-- Pestaña de formulario -->
 		{#if activeTab === 'new'}
 			<form onsubmit={handleSubmit} autocomplete="off">
 				<fieldset
-					class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-base-200 p-4 rounded-box border border-base-300"
+					class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-box border border-base-300 bg-base-200"
 				>
 					<div>
-						<label class="label" for="name">Nombre</label>
+						<label class="label font-medium" for="name">Nombre</label>
 						<input
 							id="name"
 							name="name"
@@ -308,7 +304,7 @@
 						/>
 					</div>
 					<div>
-						<label class="label" for="last_name">Apellidos</label>
+						<label class="label font-medium" for="last_name">Apellidos</label>
 						<input
 							id="last_name"
 							name="last_name"
@@ -320,7 +316,7 @@
 						/>
 					</div>
 					<div>
-						<label class="label" for="phone">Teléfono</label>
+						<label class="label font-medium" for="phone">Teléfono</label>
 						<input
 							id="phone"
 							name="phone"
@@ -331,7 +327,7 @@
 						/>
 					</div>
 					<div>
-						<label class="label" for="email">Email</label>
+						<label class="label font-medium" for="email">Email</label>
 						<input
 							id="email"
 							name="email"
@@ -343,7 +339,7 @@
 						/>
 					</div>
 					<div>
-						<label class="label" for="level">Nivel</label>
+						<label class="label font-medium" for="level">Nivel</label>
 						<select id="level" name="level" class="select w-full" required bind:this={levelSelect}>
 							<option value="">Selecciona un nivel</option>
 							{#each data.levels as level (level.code)}
@@ -352,7 +348,7 @@
 						</select>
 					</div>
 					<div>
-						<label class="label" for="group_name">Grupo</label>
+						<label class="label font-medium" for="group_name">Grupo</label>
 						<select
 							id="group_name"
 							name="group_name"
@@ -372,7 +368,7 @@
 						<Message description={message} type="warning" />
 					</div>
 				{/if}
-				<div class="modal-action flex justify-center gap-2 mt-4">
+				<div class="modal-action flex justify-center gap-4 mt-6">
 					<button class="btn btn-error" type="button" onclick={() => modal?.close()}>
 						Cancelar
 					</button>
@@ -385,15 +381,14 @@
 	</div>
 </dialog>
 
-<!-- Modal de confirmación -->
 <dialog bind:this={confirmModal} class="modal">
 	<div class="modal-box">
 		<h3 class="text-lg font-bold">Confirmar eliminación</h3>
 		<p class="py-4">
-			¿Estás seguro que deseas eliminar a "{selectedStudent?.name}
-			{selectedStudent?.last_name}"?
+			¿Estás seguro que deseas eliminar al estudiante "{selectedStudent?.name}
+			{selectedStudent?.last_name}" (Email: {selectedStudent?.email})?
 		</p>
-		<div class="modal-action flex justify-center gap-2">
+		<div class="modal-action flex justify-center gap-4">
 			<button class="btn" onclick={() => confirmModal?.close()}>Cancelar</button>
 			<button class="btn btn-error" onclick={handleDelete}>Eliminar</button>
 		</div>
