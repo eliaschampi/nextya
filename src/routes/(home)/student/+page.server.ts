@@ -1,45 +1,10 @@
-import type { Student } from '../../../app';
+import { getLevels } from '$lib/data/levels';
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ locals, depends, url }) => {
-	depends('students:load');
-
-	const level_code = url.searchParams.get('level_code') || '';
-	// Cargar todos los niveles
-	const { data: levels, error: levelsError } = await locals.supabase.from('levels').select('*');
-
-	// Cargar estudiantes solo si hay un level_code
-	let studentRegisters: Student[] = [];
-	if (level_code) {
-		const { data, error } = await locals.supabase
-			.from('student_registers')
-			.select('*')
-			.eq('level_code', level_code);
-
-		if (!error && data) {
-			// Mapear los datos a la estructura Student
-			studentRegisters = data.map((item) => ({
-				student_code: item.student_code || '',
-				register_code: item.register_code || '',
-				name: item.name || '',
-				last_name: item.last_name || '',
-				level_code: item.level || '',
-				email: item.email || '',
-				phone: item.phone,
-				roll_code: item.roll_code || '',
-				group_name: item.group_name || '',
-				level: item.level || '',
-				created_at: item.created_at || ''
-			}));
-		}
-	}
-
-	if (levelsError) {
-		return { studentRegisters: [], levels: [], title: 'Estudiantes' };
-	}
-
-	return { studentRegisters, levels, title: 'Estudiantes' };
+export const load: PageServerLoad = async ({ locals }) => {
+	const levels = await getLevels(locals.supabase);
+	return { levels, title: 'Estudiantes' };
 };
 
 export const actions: Actions = {

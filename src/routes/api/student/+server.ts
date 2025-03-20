@@ -4,17 +4,17 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	const searchQuery = url.searchParams.get('search');
 
 	if (!searchQuery) {
-		return new Response(JSON.stringify({ students: [] }));
+		return new Response(JSON.stringify([]));
 	}
 
 	const { data: students, error } = await locals.supabase
 		.from('students')
 		.select('*')
-		.ilike('name', `%${searchQuery}%`)
-		.or(`last_name.ilike.%${searchQuery}%`);
+		.or(`name.ilike.%${searchQuery}%, last_name.ilike.%${searchQuery}%`);
+
 	if (error) {
-		return new Response(JSON.stringify({ students: [] }));
+		return new Response(JSON.stringify([]), { status: 500 });
 	}
 
-	return new Response(JSON.stringify({ students }));
+	return new Response(JSON.stringify(students));
 };

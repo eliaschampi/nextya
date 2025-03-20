@@ -18,6 +18,8 @@
 	let searchResults = $state<Student[]>([]);
 	let activeTab = $state<'search' | 'new'>('search');
 	let selectedLevelCode = $state('');
+	let selectedGroup = $state('C');
+	let students = $state<Student[]>([]);
 
 	// Referencias al DOM para los inputs
 	let nameInput: HTMLInputElement | null = $state(null);
@@ -27,19 +29,18 @@
 	let levelSelect: HTMLSelectElement | null = $state(null);
 	let groupSelect: HTMLSelectElement | null = $state(null);
 
-	const { data } = $props<{ data: { studentRegisters: Student[]; levels: Level[] } }>();
+	const { data } = $props<{ data: { levels: Level[] } }>();
 	const groupOptions = ['A', 'B', 'C', 'D'];
 
-	// Actualizar el nivel seleccionado y recargar datos
-	function updateLevelFilter() {
-		const url = new URL(window.location.href);
-		if (selectedLevelCode) {
-			url.searchParams.set('level_code', selectedLevelCode);
-		} else {
-			url.searchParams.delete('level_code');
-		}
-		window.history.pushState({}, '', url);
-		invalidate('students:load');
+	async function fetchStudents() {
+		// folder is /src/api/student/[level]/[group]
+		const response = await fetch(`/api/student/${selectedLevelCode}/${selectedGroup}`);
+		if (response.ok) students = await response.json();
+		console.log(students);
+	}
+
+	async function updateLevelFilter() {
+		fetchStudents();
 	}
 
 	// Buscar estudiantes
@@ -48,7 +49,7 @@
 			searchResults = [];
 			return;
 		}
-		const response = await fetch(`/api/search?search=${encodeURIComponent(searchQuery)}`);
+		const response = await fetch(`/api/student?search=${encodeURIComponent(searchQuery)}`);
 		if (response.ok) searchResults = await response.json();
 	}
 
@@ -130,7 +131,7 @@
 				`${isEditing ? 'Estudiante actualizado' : 'Estudiante registrado'} exitosamente`,
 				'success'
 			);
-			await invalidate('students:load');
+			fetchStudents();
 			modal?.close();
 		} else {
 			message =
@@ -151,7 +152,6 @@
 		if (levelSelect) levelSelect.value = '';
 		if (groupSelect) groupSelect.value = '';
 	}
-
 	onMount(() => modal?.addEventListener('close', resetFormOnClose));
 	onDestroy(() => modal?.removeEventListener('close', resetFormOnClose));
 
@@ -196,7 +196,7 @@
 </div>
 
 <!-- Tabla de estudiantes -->
-{#if selectedLevelCode && data.studentRegisters.length > 0}
+{#if selectedLevelCode && students.length > 0}
 	<div class="overflow-x-auto">
 		<table class="table table-zebra w-full">
 			<thead>
@@ -210,7 +210,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each data.studentRegisters as student (student.student_code)}
+				{#each data.students as student (student.student_code)}
 					<tr class="hover:bg-base-300 transition-colors border-b border-base-300">
 						<td class="py-3 px-4">{student.name}</td>
 						<td class="py-3 px-4">{student.last_name}</td>
