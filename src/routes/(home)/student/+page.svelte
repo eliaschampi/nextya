@@ -30,14 +30,29 @@
 	const { data } = $props<{ data: { levels: Level[] } }>();
 	const groupOptions = ['A', 'B', 'C', 'D'];
 
-	async function updateLevelFilter() {
+	async function fetchStudentsByFilter(group?: string) {
+		// Update group if provided
+		if (group !== undefined) {
+			selectedGroup = group;
+		}
+
+		// Clear students if either filter is missing
 		if (!selectedLevelCode || !selectedGroup) {
 			students = [];
 			return;
 		}
+
+		// Fetch students with the current filters
 		const response = await fetch(`/api/student/${selectedLevelCode}/${selectedGroup}`);
 		if (response.ok) students = await response.json();
 	}
+
+	function handleKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			searchStudents();
+		}
+	}	
 
 	async function searchStudents() {
 		if (!searchQuery.trim()) {
@@ -122,7 +137,7 @@
 				`${isEditing ? 'Estudiante actualizado' : 'Estudiante registrado'} exitosamente`,
 				'success'
 			);
-			await updateLevelFilter();
+			await fetchStudentsByFilter();
 			modal?.close();
 		} else {
 			message =
@@ -166,32 +181,27 @@
 <PageTitle title="Estudiantes" description="Selecciona un nivel y grupo para ver los estudiantes.">
 	<button class="btn btn-primary gap-2" onclick={openCreateModal}>
 		<UserPlus class="w-4 h-4" />
-		Registrar Estudiante
+		Registrar
 	</button>
 </PageTitle>
 
-<div class="p-4 bg-base-200 rounded-box mb-4 flex flex-col sm:flex-row gap-4">
+<div class="p-4 bg-base-200 rounded-box mb-4 flex flex-col sm:flex-row items-center gap-4">
 	<select
-		class="select select-bordered w-full sm:w-auto"
+		class="select w-full sm:w-auto"
 		bind:value={selectedLevelCode}
-		onchange={updateLevelFilter}
+		onchange={() => fetchStudentsByFilter()}
 	>
-		<option value="">Selecciona un nivel</option>
+		<option value="" disabled selected>Selecciona un nivel</option>
 		{#each data.levels as level (level.code)}
 			<option value={level.code}>{level.name}</option>
 		{/each}
 	</select>
-	<select
-		class="select select-bordered w-full sm:w-auto"
-		bind:value={selectedGroup}
-		disabled={!selectedLevelCode}
-		onchange={updateLevelFilter}
-	>
-		<option value="">Selecciona un grupo</option>
+	<div class="filter">
+		<input class="btn btn-primary btn-sm btn-outline filter-reset" type="radio" name="groups" aria-label="All" onclick={() => fetchStudentsByFilter('')}/>
 		{#each groupOptions as group (group)}
-			<option value={group}>{group}</option>
+			<input class="btn btn-primary btn-sm btn-outline" type="radio" name="groups" aria-label={group} value={group} onclick={() => fetchStudentsByFilter(group)}/>
 		{/each}
-	</select>
+	</div>
 </div>
 
 {#if selectedLevelCode && students.length > 0}
@@ -200,27 +210,29 @@
 			<table class="table table-zebra w-full">
 				<thead>
 					<tr>
-						<th>Name</th>
+						<th>Estudiante</th>
 						<th>Email</th>
-						<th>Actions</th>
+						<th>Grupo</th>
+						<th>Acciones</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each students as student (student.student_code)}
 						<tr class="hover:bg-base-200">
-							<td class="py-3 px-4">{student.name}</td>
+							<td class="py-3 px-4">{student.name} {student.last_name}</td>
 							<td class="py-3 px-4">{student.email}</td>
-							<td class="py-3 px-4 text-center space-x-2">
+							<td class="py-3 px-4">{student.group_name}</td>
+							<td class="py-3 px-4 space-x-2">
 								<button
 									class="btn btn-ghost btn-sm tooltip"
-									data-tip="Edit"
+									data-tip="Modificar"
 									onclick={() => openEditModal(student)}
 								>
 									<Pencil class="w-4 h-4 text-gray-500 hover:text-primary" />
 								</button>
 								<button
 									class="btn btn-ghost btn-sm tooltip"
-									data-tip="Delete"
+									data-tip="Eliminar"
 									onclick={() => openDeleteConfirmModal(student)}
 								>
 									<Trash2 class="w-4 h-4 text-gray-500 hover:text-error" />
@@ -233,9 +245,9 @@
 		</div>
 	</div>
 {:else if selectedLevelCode}
-	<p class="text-center py-4">No hay estudiantes en este nivel y grupo.</p>
+	<p class="text-center py-4 opacity-50">No hay estudiantes en este nivel y grupo.</p>
 {:else}
-	<p class="text-center py-4">Selecciona un nivel y grupo para ver los estudiantes.</p>
+	<p class="text-center py-4 opacity-50">Selecciona un nivel y grupo para ver los estudiantes.</p>
 {/if}
 
 <dialog bind:this={modal} class="modal">
@@ -244,14 +256,18 @@
 
 		<div class="tabs tabs-lifted mb-4">
 			<button
-				class="tab {activeTab === 'search' && !isEditing ? 'tab-active' : ''}"
+				class="tab transition-colors duration-200 {activeTab === 'search' && !isEditing
+					? 'tab-active bg-primary text-white'
+					: 'bg-base-100 text-gray-700'}"
 				disabled={isEditing}
 				onclick={() => !isEditing && (activeTab = 'search')}
 			>
 				Buscar
 			</button>
 			<button
-				class="tab {activeTab === 'new' ? 'tab-active' : ''}"
+				class="tab transition-colors duration-200 {activeTab === 'new'
+					? 'tab-active bg-primary text-white'
+					: 'bg-base-100 text-gray-700'}"
 				onclick={() => (activeTab = 'new')}
 			>
 				{isEditing ? 'Editar' : 'Nuevo'}
@@ -265,6 +281,7 @@
 					placeholder="Buscar estudiante por nombre o email..."
 					class="input input-bordered join-item flex-1"
 					bind:value={searchQuery}
+					onkeydown={handleKeyDown}
 				/>
 				<button class="btn btn-primary join-item" onclick={searchStudents}>
 					<Search class="w-4 h-4" />
@@ -386,7 +403,7 @@
 		<h3 class="text-lg font-bold">Confirmar eliminación</h3>
 		<p class="py-4">
 			¿Estás seguro que deseas eliminar al estudiante "{selectedStudent?.name}
-			{selectedStudent?.last_name}" (Email: {selectedStudent?.email})?
+			{selectedStudent?.last_name}"?
 		</p>
 		<div class="modal-action flex justify-center gap-4">
 			<button class="btn" onclick={() => confirmModal?.close()}>Cancelar</button>
