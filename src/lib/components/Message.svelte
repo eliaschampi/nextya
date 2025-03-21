@@ -13,9 +13,9 @@
 	};
 
 	const styleMap: Record<string, string> = {
-		success: 'rounded-md border border-b-green-500/50 px-4 py-3 text-green-600',
-		warning: 'rounded-md border border-b-yellow-500/50 px-4 py-3 text-yellow-600',
-		danger: 'rounded-md border border-b-red-500/50 px-4 py-3 text-red-600'
+		success: 'rounded-md border-l-4 border-green-500 bg-green-500/10 px-4 py-3 text-green-600',
+		warning: 'rounded-md border-l-4 border-yellow-500 bg-yellow-500/10 px-4 py-3 text-yellow-600',
+		danger: 'rounded-md border-l-4 border-red-500 bg-red-500/10 px-4 py-3 text-red-600'
 	};
 
 	// Fallback to success if an unsupported type is provided
@@ -25,7 +25,7 @@
 
 <div class={classes}>
 	<p class="text-sm">
-		<Icon class="me-3 -mt-0.5 inline-flex opacity-60" size={16} aria-hidden="true" />
+		<Icon class="me-1 -mt-0.5 inline-flex opacity-60" size={16} aria-hidden="true" />
 		{description}
 	</p>
 </div>

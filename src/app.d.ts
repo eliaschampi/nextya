@@ -32,6 +32,7 @@ export interface SelectForDelete {
 	code: string;
 	register_code: string;
 	name: string;
+	affect_student: boolean;
 }
 export interface User {
 	user_id: string;

@@ -10,7 +10,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	const { data: students, error } = await locals.supabase
 		.from('students')
 		.select('*')
-		.or(`name.ilike.%${searchQuery}%, last_name.ilike.%${searchQuery}%`);
+		.or(`name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`);
 
 	if (error) {
 		return new Response(JSON.stringify([]), { status: 500 });

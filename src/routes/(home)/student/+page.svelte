@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { invalidate } from '$app/navigation';
 	import Message from '$lib/components/Message.svelte';
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
@@ -61,20 +60,14 @@
 	}
 
 	function selectStudent(student: Student) {
-		// Clear search state
 		searchQuery = '';
 		searchResults = [];
 
-		// Set the selected student
 		selectedCode = student.code;
 
-		// Switch to the new tab
 		activeTab = 'new';
 
-		// Show the modal
 		modal?.showModal();
-
-		// Populate form fields with student data
 		queueMicrotask(() => {
 			if (nameInput) nameInput.value = student.name || '';
 			if (lastNameInput) lastNameInput.value = student.last_name || '';
@@ -112,7 +105,8 @@
 		selectForDelete = {
 			code: payload.student_code,
 			register_code: payload.register_code,
-			name: payload.name
+			name: payload.name,
+			affect_student: true
 		};
 		confirmModal?.showModal();
 	}
@@ -144,7 +138,6 @@
 		formData.append('level', levelSelect?.value || '');
 		formData.append('group_name', groupSelect?.value || '');
 
-		// If we have a selected student, we're either updating or creating a new register
 		if (selectedCode) {
 			formData.append('code', selectedCode.toString());
 		}
@@ -330,12 +323,16 @@
 			<div class="join w-full mb-4">
 				<input
 					type="text"
-					placeholder="Buscar estudiante por nombre o email..."
+					placeholder="Buscar estudiante por nombre"
 					class="input input-bordered join-item flex-1"
 					bind:value={searchQuery}
 					onkeydown={handleKeyDown}
 				/>
-				<button class="btn btn-primary join-item" onclick={searchStudents} disabled={!searchQuery.trim()}>
+				<button
+					class="btn btn-primary join-item"
+					onclick={searchStudents}
+					disabled={!searchQuery.trim()}
+				>
 					<Search class="w-4 h-4" />
 				</button>
 			</div>
@@ -451,11 +448,41 @@
 </dialog>
 
 <dialog bind:this={confirmModal} class="modal">
-	<div class="modal-box">
-		<h3 class="text-lg font-bold">Confirmar eliminación</h3>
-		<p class="py-4">
-			¿Estás seguro que deseas eliminar al estudiante "{selectForDelete?.name}"?
-		</p>
+	<div class="modal-box bg-base-200">
+		<h3 class="text-lg font-bold mb-4">Confirmar eliminación</h3>
+		<Message
+			type="warning"
+			description={`El estudiante "${selectForDelete?.name}" será eliminado`}
+		/>
+		<fieldset class="fieldset p-4 bg-base-100 border border-base-300 rounded-box w-full">
+			<legend class="fieldset-legend">Opciones de eliminación</legend>
+			<div class="flex flex-col gap-2">
+				<label class="label cursor-pointer justify-start gap-2">
+					<input
+						type="radio"
+						name="delete-option"
+						class="radio radio-primary"
+						checked={selectForDelete?.affect_student === false}
+						onchange={() => {
+							if (selectForDelete) selectForDelete.affect_student = false;
+						}}
+					/>
+					<span class="label-text">Eliminar solo el registro al nivel</span>
+				</label>
+				<label class="label cursor-pointer justify-start gap-2">
+					<input
+						type="radio"
+						name="delete-option"
+						class="radio radio-primary"
+						checked={selectForDelete?.affect_student === true}
+						onchange={() => {
+							if (selectForDelete) selectForDelete.affect_student = true;
+						}}
+					/>
+					<span class="label-text">Eliminar registro y estudiante</span>
+				</label>
+			</div>
+		</fieldset>
 		<div class="modal-action flex justify-center gap-4">
 			<button class="btn" onclick={() => confirmModal?.close()}>Cancelar</button>
 			<button class="btn btn-error" onclick={handleDelete}>Eliminar</button>

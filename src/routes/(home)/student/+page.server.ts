@@ -124,22 +124,26 @@ export const actions: Actions = {
 	delete: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const code = formData.get('code') as string;
+		const register_code = formData.get('register_code') as string;
+		const affect_student = formData.get('affect_student') as unknown as boolean;
 
-		// Delete associated registers first
+		// 1. delete register
 		const { error: registerError } = await locals.supabase
 			.from('registers')
 			.delete()
-			.eq('student_code', code);
+			.eq('code', register_code);
 
 		if (registerError) return fail(400, { error: registerError.message });
 
-		// Delete student
-		const { error: studentError } = await locals.supabase
-			.from('students')
-			.delete()
-			.eq('code', code);
+		// 2. check if we have to delete the student
+		if (affect_student) {
+			const { error: studentError } = await locals.supabase
+				.from('students')
+				.delete()
+				.eq('code', code);
 
-		if (studentError) return fail(400, { error: studentError.message });
+			if (studentError) return fail(400, { error: studentError.message });
+		}
 
 		return { type: 'success' };
 	}
