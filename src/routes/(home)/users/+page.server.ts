@@ -3,9 +3,9 @@ import type { Actions, PageServerLoad } from './$types';
 import { supabaseAdmin } from '$lib/supabaseAdmin';
 import { fail } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ locals, depends }) => {
+export const load: PageServerLoad = async ({ depends }) => {
 	depends('users:load');
-	const { data: users, error } = await locals.supabase.from('user_profiles').select('*');
+	const { data: users, error } = await supabaseAdmin.from('user_profiles').select('*');
 	if (error) {
 		console.error('Error al cargar usuarios:', error);
 		return { users: [] };

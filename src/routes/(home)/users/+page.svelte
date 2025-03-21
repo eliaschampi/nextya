@@ -9,6 +9,7 @@
 	import { Trash } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getInitials } from '$lib/utils/initialName';
+	import { formatDate } from '$lib/utils/formatDate';
 
 	// Estados y referencias
 	let modal: HTMLDialogElement | null = $state(null);
@@ -144,17 +145,6 @@
 		} catch {
 			showToast('Error de red al eliminar el usuario', 'danger');
 		}
-	}
-
-	// Formatear fechas
-	function formatDate(dateString: string): string {
-		return new Date(dateString).toLocaleDateString('es-ES', {
-			year: 'numeric',
-			month: 'long',
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
 	}
 </script>
 

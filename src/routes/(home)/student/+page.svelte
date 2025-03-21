@@ -5,8 +5,9 @@
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
 	import type { Level, Student } from '../../../app';
-	import { Pencil, Search, Trash2, UserPlus } from 'lucide-svelte';
+	import { Book, Pencil, Search, Trash2, UserPlus } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
+	import { formatDate } from '$lib/utils/formatDate';
 
 	let modal: HTMLDialogElement | null = $state(null);
 	let confirmModal: HTMLDialogElement | null = $state(null);
@@ -31,18 +32,13 @@
 	const groupOptions = ['A', 'B', 'C', 'D'];
 
 	async function fetchStudentsByFilter(group?: string) {
-		// Update group if provided
 		if (group !== undefined) {
 			selectedGroup = group;
 		}
-
-		// Clear students if either filter is missing
 		if (!selectedLevelCode || !selectedGroup) {
 			students = [];
 			return;
 		}
-
-		// Fetch students with the current filters
 		const response = await fetch(`/api/student/${selectedLevelCode}/${selectedGroup}`);
 		if (response.ok) students = await response.json();
 	}
@@ -52,7 +48,7 @@
 			event.preventDefault();
 			searchStudents();
 		}
-	}	
+	}
 
 	async function searchStudents() {
 		if (!searchQuery.trim()) {
@@ -64,11 +60,11 @@
 	}
 
 	function selectStudent(student: Student) {
-		selectedStudent = student;
-		isEditing = true;
-		activeTab = 'new';
+		// Clear search state
 		searchQuery = '';
 		searchResults = [];
+
+		// Open the edit modal with the selected student
 		openEditModal(student);
 	}
 
@@ -80,19 +76,25 @@
 	}
 
 	function openEditModal(student: Student) {
+		// Set editing state
 		isEditing = true;
 		selectedStudent = student;
 		activeTab = 'new';
+
+		// Show the modal
 		modal?.showModal();
 
-		setTimeout(() => {
+		// Use queueMicrotask instead of setTimeout for better semantics
+		// This ensures form fields are populated after the modal is in the DOM
+		queueMicrotask(() => {
+			// Populate form fields with student data
 			if (nameInput) nameInput.value = student.name || '';
 			if (lastNameInput) lastNameInput.value = student.last_name || '';
 			if (phoneInput) phoneInput.value = student.phone || '';
 			if (emailInput) emailInput.value = student.email || '';
 			if (levelSelect) levelSelect.value = student.level_code || '';
 			if (groupSelect) groupSelect.value = student.group_name || '';
-		}, 0);
+		});
 	}
 
 	function openDeleteConfirmModal(student: Student) {
@@ -126,9 +128,11 @@
 		formData.append('email', emailInput?.value || '');
 		formData.append('level', levelSelect?.value || '');
 		formData.append('group_name', groupSelect?.value || '');
-		if (isEditing && selectedStudent) formData.append('code', selectedStudent.student_code);
 
+		// why? if student is found by search and is new, we need to edit
+		if (selectedStudent) formData.append('code', selectedStudent.student_code);
 		const action = isEditing ? 'update' : 'create';
+
 		const response = await fetch(`?/${action}`, { method: 'POST', body: formData });
 		const res = await response.json();
 
@@ -196,12 +200,27 @@
 			<option value={level.code}>{level.name}</option>
 		{/each}
 	</select>
-	<div class="filter">
-		<input class="btn btn-primary btn-sm btn-outline filter-reset" type="radio" name="groups" aria-label="All" onclick={() => fetchStudentsByFilter('')}/>
-		{#each groupOptions as group (group)}
-			<input class="btn btn-primary btn-sm btn-outline" type="radio" name="groups" aria-label={group} value={group} onclick={() => fetchStudentsByFilter(group)}/>
-		{/each}
-	</div>
+	{#if selectedLevelCode}
+		<div class="filter">
+			<input
+				class="btn btn-primary btn-sm btn-outline filter-reset"
+				type="radio"
+				name="groups"
+				aria-label="All"
+				onclick={() => fetchStudentsByFilter('')}
+			/>
+			{#each groupOptions as group (group)}
+				<input
+					class="btn btn-primary btn-sm btn-outline"
+					type="radio"
+					name="groups"
+					aria-label={group}
+					value={group}
+					onclick={() => fetchStudentsByFilter(group)}
+				/>
+			{/each}
+		</div>
+	{/if}
 </div>
 
 {#if selectedLevelCode && students.length > 0}
@@ -210,33 +229,49 @@
 			<table class="table table-zebra w-full">
 				<thead>
 					<tr>
-						<th>Estudiante</th>
+						<th>Nombre</th>
+						<th>Apellido</th>
+						<th>Telefono</th>
 						<th>Email</th>
+						<th>Nivel</th>
 						<th>Grupo</th>
 						<th>Acciones</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each students as student (student.student_code)}
-						<tr class="hover:bg-base-200">
-							<td class="py-3 px-4">{student.name} {student.last_name}</td>
-							<td class="py-3 px-4">{student.email}</td>
-							<td class="py-3 px-4">{student.group_name}</td>
-							<td class="py-3 px-4 space-x-2">
-								<button
-									class="btn btn-ghost btn-sm tooltip"
-									data-tip="Modificar"
-									onclick={() => openEditModal(student)}
-								>
-									<Pencil class="w-4 h-4 text-gray-500 hover:text-primary" />
-								</button>
-								<button
-									class="btn btn-ghost btn-sm tooltip"
-									data-tip="Eliminar"
-									onclick={() => openDeleteConfirmModal(student)}
-								>
-									<Trash2 class="w-4 h-4 text-gray-500 hover:text-error" />
-								</button>
+						<tr class="hover:bg-base-300 transition-colors border-b border-base-300">
+							<td class="py-3 px-4 font-medium">{student.name}</td>
+							<td class="py-3 px-4">{student.last_name}</td>
+							<td class="py-3 px-4">{student.phone || 'N/A'}</td>
+							<td class="py-3 px-4 text-accent font-medium">{student.email}</td>
+							<td class="py-3 px-4">
+								<span class="badge badge-primary badge-outline">{student.level}</span>
+							</td>
+							<td class="py-3 px-4 text-center">
+								<span class="badge badge-secondary">{student.group_name}</span>
+							</td>
+							<td class="py-3 px-4 text-sm text-gray-500">{formatDate(student.created_at)}</td>
+							<td class="py-3 px-4">
+								<div class="flex gap-2 justify-center">
+									<button
+										class="btn btn-sm btn-primary btn-outline"
+										onclick={() => openEditModal(student)}
+										aria-label="Editar estudiante"
+									>
+										<Pencil class="w-4 h-4" />
+									</button>
+									<button
+										class="btn btn-sm btn-error btn-outline"
+										onclick={() => openDeleteConfirmModal(student)}
+										aria-label="Eliminar estudiante"
+									>
+										<Trash2 class="w-4 h-4" />
+									</button>
+									<button class="btn btn-sm btn-secondary btn-outline" aria-label="Ver matrículas">
+										<Book class="w-4 h-4" />
+									</button>
+								</div>
 							</td>
 						</tr>
 					{/each}
@@ -253,27 +288,25 @@
 <dialog bind:this={modal} class="modal">
 	<div class="modal-box max-w-3xl">
 		<h3 class="text-lg font-bold mb-4">{isEditing ? 'Editar' : 'Registrar'} Estudiante</h3>
-
-		<div class="tabs tabs-lifted mb-4">
+		<div class="tabs tabs-box mb-4">
 			<button
-				class="tab transition-colors duration-200 {activeTab === 'search' && !isEditing
-					? 'tab-active bg-primary text-white'
-					: 'bg-base-100 text-gray-700'}"
+				role="tab"
+				class="tab {activeTab === 'search' && !isEditing ? 'tab-active' : ''}"
 				disabled={isEditing}
 				onclick={() => !isEditing && (activeTab = 'search')}
+				tabindex={0}
 			>
 				Buscar
 			</button>
 			<button
-				class="tab transition-colors duration-200 {activeTab === 'new'
-					? 'tab-active bg-primary text-white'
-					: 'bg-base-100 text-gray-700'}"
+				role="tab"
+				class="tab {activeTab === 'new' ? 'tab-active' : ''}"
 				onclick={() => (activeTab = 'new')}
+				tabindex={0}
 			>
 				{isEditing ? 'Editar' : 'Nuevo'}
 			</button>
 		</div>
-
 		{#if activeTab === 'search' && !isEditing}
 			<div class="join w-full mb-4">
 				<input
@@ -288,7 +321,7 @@
 				</button>
 			</div>
 			{#if searchResults.length > 0}
-				<ul class="space-y-2 max-h-48 overflow-y-auto">
+				<ul class="space-y-2 max-h-48 overflow-y-auto p-4">
 					{#each searchResults as student (student.student_code)}
 						<li
 							class="bg-base-200 p-3 rounded-box hover:bg-base-300 transition-colors cursor-pointer"

@@ -120,7 +120,8 @@
 }
 
 .input,
-.textarea {
+.textarea,
+.select {
 	&:focus,
 	&:focus-within {
 		outline-width: 3px;
