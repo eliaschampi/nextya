@@ -17,37 +17,72 @@ export const actions: Actions = {
 		const level_code = formData.get('level') as string;
 		const group_name = formData.get('group_name') as string;
 		const user_code = locals.session?.user.id;
+		const existing_student_code = formData.get('code') as string | null;
 
-		// Verificar si el estudiante ya existe por email
-		const { data: existingStudent, error: checkError } = await locals.supabase
-			.from('students')
-			.select('code')
-			.eq('email', email)
-			.single();
-
-		let student_code: string;
-		if (existingStudent && !checkError) {
-			student_code = existingStudent.code;
-		} else {
-			// Crear estudiante si no existe
-			const { data: student, error: studentError } = await locals.supabase
+		// If we have an existing student code, we're updating an existing student
+		if (existing_student_code) {
+			// Update student data
+			const { error: studentError } = await locals.supabase
 				.from('students')
-				.insert({ name, last_name, phone, email, user_code })
+				.update({ name, last_name, phone, email })
+				.eq('code', existing_student_code);
+
+			if (studentError) return fail(400, { error: studentError.message });
+
+			// Check if student already has a register for this level
+			const { data: existingRegister, error: registerCheckError } = await locals.supabase
+				.from('registers')
 				.select('code')
+				.eq('student_code', existing_student_code)
+				.eq('level_code', level_code)
 				.single();
 
-			if (studentError || !student)
-				return fail(400, { error: studentError?.message || 'Error creando estudiante' });
-			student_code = student.code;
+			if (registerCheckError && registerCheckError.code !== 'PGRST116') {
+				return fail(400, { error: registerCheckError.message });
+			}
+
+			if (existingRegister) {
+				// Update existing register
+				const { error: registerError } = await locals.supabase
+					.from('registers')
+					.update({ group_name, level_code })
+					.eq('code', existingRegister.code);
+
+				if (registerError) return fail(400, { error: registerError.message });
+			} else {
+				// Create new register
+				const { error: registerError } = await locals.supabase.from('registers').insert({
+					student_code: existing_student_code,
+					level_code,
+					group_name,
+					user_code,
+					roll_code: '0000' // Default roll code
+				});
+
+				if (registerError) return fail(400, { error: registerError.message });
+			}
+
+			return { type: 'success' };
 		}
 
-		// Crear registro
+		// Create new student
+		const { data: student, error: studentError } = await locals.supabase
+			.from('students')
+			.insert({ name, last_name, phone, email, user_code })
+			.select('code')
+			.single();
+
+		if (studentError || !student) {
+			return fail(400, { error: studentError?.message || 'Error creating student' });
+		}
+
+		// Create new register
 		const { error: registerError } = await locals.supabase.from('registers').insert({
-			student_code,
+			student_code: student.code,
 			level_code,
 			group_name,
 			user_code,
-			roll_code: '0000' // Ajustar según tu lógica
+			roll_code: '0000' // Default roll code
 		});
 
 		if (registerError) return fail(400, { error: registerError.message });
@@ -57,7 +92,7 @@ export const actions: Actions = {
 
 	update: async ({ request, locals }) => {
 		const formData = await request.formData();
-		const code = formData.get('code') as string; // student_code
+		const code = formData.get('code') as string;
 		const name = formData.get('name') as string;
 		const last_name = formData.get('last_name') as string;
 		const phone = formData.get('phone') as string | null;
@@ -65,7 +100,7 @@ export const actions: Actions = {
 		const level_code = formData.get('level') as string;
 		const group_name = formData.get('group_name') as string;
 
-		// Actualizar estudiante
+		// Update student data
 		const { error: studentError } = await locals.supabase
 			.from('students')
 			.update({ name, last_name, phone, email })
@@ -73,7 +108,7 @@ export const actions: Actions = {
 
 		if (studentError) return fail(400, { error: studentError.message });
 
-		// Actualizar registro (asumimos que el último registro es el relevante; ajustar si hay múltiples)
+		// Update register data
 		const { error: registerError } = await locals.supabase
 			.from('registers')
 			.update({ level_code, group_name })
@@ -90,7 +125,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const code = formData.get('code') as string;
 
-		// Eliminar registros asociados
+		// Delete associated registers first
 		const { error: registerError } = await locals.supabase
 			.from('registers')
 			.delete()
@@ -98,7 +133,7 @@ export const actions: Actions = {
 
 		if (registerError) return fail(400, { error: registerError.message });
 
-		// Eliminar estudiante
+		// Delete student
 		const { error: studentError } = await locals.supabase
 			.from('students')
 			.delete()

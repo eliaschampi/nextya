@@ -4,7 +4,7 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
-	import type { Level, Student } from '../../../app';
+	import type { Level, RegisterStudent, SelectForDelete, Student } from '../../../app';
 	import { Book, Pencil, Search, Trash2, UserPlus } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
@@ -13,13 +13,14 @@
 	let confirmModal: HTMLDialogElement | null = $state(null);
 	let isEditing = $state(false);
 	let message = $state('');
-	let selectedStudent = $state<Student | null>(null);
+	let selectedCode = $state<string | null>(null);
+	let selectForDelete = $state<SelectForDelete | null>(null);
 	let searchQuery = $state('');
 	let searchResults = $state<Student[]>([]);
 	let activeTab = $state<'search' | 'new'>('search');
 	let selectedLevelCode = $state('');
 	let selectedGroup = $state('');
-	let students = $state<Student[]>([]);
+	let students = $state<RegisterStudent[]>([]);
 
 	let nameInput: HTMLInputElement | null = $state(null);
 	let lastNameInput: HTMLInputElement | null = $state(null);
@@ -64,41 +65,55 @@
 		searchQuery = '';
 		searchResults = [];
 
-		// Open the edit modal with the selected student
-		openEditModal(student);
-	}
+		// Set the selected student
+		selectedCode = student.code;
 
-	function openCreateModal() {
-		isEditing = false;
-		selectedStudent = null;
-		activeTab = 'search';
-		modal?.showModal();
-	}
-
-	function openEditModal(student: Student) {
-		// Set editing state
-		isEditing = true;
-		selectedStudent = student;
+		// Switch to the new tab
 		activeTab = 'new';
 
 		// Show the modal
 		modal?.showModal();
 
-		// Use queueMicrotask instead of setTimeout for better semantics
-		// This ensures form fields are populated after the modal is in the DOM
+		// Populate form fields with student data
 		queueMicrotask(() => {
-			// Populate form fields with student data
 			if (nameInput) nameInput.value = student.name || '';
 			if (lastNameInput) lastNameInput.value = student.last_name || '';
 			if (phoneInput) phoneInput.value = student.phone || '';
 			if (emailInput) emailInput.value = student.email || '';
-			if (levelSelect) levelSelect.value = student.level_code || '';
-			if (groupSelect) groupSelect.value = student.group_name || '';
+			if (levelSelect) levelSelect.value = '';
+			if (groupSelect) groupSelect.value = '';
 		});
 	}
 
-	function openDeleteConfirmModal(student: Student) {
-		selectedStudent = student;
+	function openCreateModal() {
+		isEditing = false;
+		selectedCode = null;
+		activeTab = 'search';
+		modal?.showModal();
+	}
+
+	function openEditModal(item: RegisterStudent) {
+		isEditing = true;
+		selectedCode = item.student_code;
+		activeTab = 'new';
+		modal?.showModal();
+
+		queueMicrotask(() => {
+			if (nameInput) nameInput.value = item.name || '';
+			if (lastNameInput) lastNameInput.value = item.last_name || '';
+			if (phoneInput) phoneInput.value = item.phone || '';
+			if (emailInput) emailInput.value = item.email || '';
+			if (levelSelect) levelSelect.value = item.level_code || '';
+			if (groupSelect) groupSelect.value = item.group_name || '';
+		});
+	}
+
+	function openDeleteConfirmModal(payload: RegisterStudent) {
+		selectForDelete = {
+			code: payload.student_code,
+			register_code: payload.register_code,
+			name: payload.name
+		};
 		confirmModal?.showModal();
 	}
 
@@ -129,28 +144,29 @@
 		formData.append('level', levelSelect?.value || '');
 		formData.append('group_name', groupSelect?.value || '');
 
-		// why? if student is found by search and is new, we need to edit
-		if (selectedStudent) formData.append('code', selectedStudent.student_code);
-		const action = isEditing ? 'update' : 'create';
+		// If we have a selected student, we're either updating or creating a new register
+		if (selectedCode) {
+			formData.append('code', selectedCode.toString());
+		}
 
-		const response = await fetch(`?/${action}`, { method: 'POST', body: formData });
+		const response = await fetch('?/create', { method: 'POST', body: formData });
 		const res = await response.json();
 
 		if (res.type === 'success') {
 			showToast(
-				`${isEditing ? 'Estudiante actualizado' : 'Estudiante registrado'} exitosamente`,
+				`${selectedCode ? 'Estudiante actualizado' : 'Estudiante registrado'} exitosamente`,
 				'success'
 			);
 			await fetchStudentsByFilter();
 			modal?.close();
 		} else {
 			message =
-				responseMessage(res) || `Error al ${isEditing ? 'actualizar' : 'registrar'} estudiante`;
+				responseMessage(res) || `Error al ${selectedCode ? 'actualizar' : 'registrar'} estudiante`;
 		}
 	}
 
 	function resetFormOnClose() {
-		selectedStudent = null;
+		selectedCode = null;
 		message = '';
 		searchQuery = '';
 		searchResults = [];
@@ -165,17 +181,18 @@
 	onDestroy(() => modal?.removeEventListener('close', resetFormOnClose));
 
 	async function handleDelete() {
-		if (!selectedStudent) return;
+		if (!selectForDelete) return;
 		const formData = new FormData();
-		formData.append('code', selectedStudent.student_code);
+		formData.append('code', selectForDelete.code);
+		formData.append('register_code', selectForDelete.register_code);
 
 		const response = await fetch('?/delete', { method: 'POST', body: formData });
 		const res = await response.json();
 		confirmModal?.close();
-
+		selectForDelete = null;
 		if (res.type === 'success') {
 			showToast('Estudiante eliminado exitosamente', 'success');
-			await invalidate('students:load');
+			await fetchStudentsByFilter();
 		} else {
 			showToast(responseMessage(res) || 'Error eliminando estudiante', 'danger');
 		}
@@ -225,7 +242,7 @@
 
 {#if selectedLevelCode && students.length > 0}
 	<div class="card bg-base-200 shadow">
-		<div class="card-body">
+		<div class="card-body overflow-x-auto">
 			<table class="table table-zebra w-full">
 				<thead>
 					<tr>
@@ -287,13 +304,15 @@
 
 <dialog bind:this={modal} class="modal">
 	<div class="modal-box max-w-3xl">
-		<h3 class="text-lg font-bold mb-4">{isEditing ? 'Editar' : 'Registrar'} Estudiante</h3>
+		<h3 class="text-lg font-bold mb-4">
+			{isEditing ? 'Editar' : selectedCode ? 'Registrar en nuevo nivel' : 'Registrar'} Estudiante
+		</h3>
 		<div class="tabs tabs-box mb-4">
 			<button
 				role="tab"
-				class="tab {activeTab === 'search' && !isEditing ? 'tab-active' : ''}"
-				disabled={isEditing}
-				onclick={() => !isEditing && (activeTab = 'search')}
+				class="tab {activeTab === 'search' && !isEditing && !selectedCode ? 'tab-active' : ''}"
+				disabled={isEditing || selectedCode !== null}
+				onclick={() => !isEditing && !selectedCode && (activeTab = 'search')}
 				tabindex={0}
 			>
 				Buscar
@@ -304,10 +323,10 @@
 				onclick={() => (activeTab = 'new')}
 				tabindex={0}
 			>
-				{isEditing ? 'Editar' : 'Nuevo'}
+				{isEditing ? 'Editar' : selectedCode ? 'Nuevo registro' : 'Nuevo'}
 			</button>
 		</div>
-		{#if activeTab === 'search' && !isEditing}
+		{#if activeTab === 'search' && !isEditing && !selectedCode}
 			<div class="join w-full mb-4">
 				<input
 					type="text"
@@ -316,13 +335,13 @@
 					bind:value={searchQuery}
 					onkeydown={handleKeyDown}
 				/>
-				<button class="btn btn-primary join-item" onclick={searchStudents}>
+				<button class="btn btn-primary join-item" onclick={searchStudents} disabled={!searchQuery.trim()}>
 					<Search class="w-4 h-4" />
 				</button>
 			</div>
 			{#if searchResults.length > 0}
 				<ul class="space-y-2 max-h-48 overflow-y-auto p-4">
-					{#each searchResults as student (student.student_code)}
+					{#each searchResults as student (student.code)}
 						<li
 							class="bg-base-200 p-3 rounded-box hover:bg-base-300 transition-colors cursor-pointer"
 						>
@@ -423,7 +442,7 @@
 						Cancelar
 					</button>
 					<button class="btn btn-primary" type="submit">
-						{isEditing ? 'Actualizar' : 'Guardar'}
+						{isEditing ? 'Actualizar' : selectedCode ? 'Registrar' : 'Guardar'}
 					</button>
 				</div>
 			</form>
@@ -435,8 +454,7 @@
 	<div class="modal-box">
 		<h3 class="text-lg font-bold">Confirmar eliminación</h3>
 		<p class="py-4">
-			¿Estás seguro que deseas eliminar al estudiante "{selectedStudent?.name}
-			{selectedStudent?.last_name}"?
+			¿Estás seguro que deseas eliminar al estudiante "{selectForDelete?.name}"?
 		</p>
 		<div class="modal-action flex justify-center gap-4">
 			<button class="btn" onclick={() => confirmModal?.close()}>Cancelar</button>

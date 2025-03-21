@@ -27,7 +27,12 @@ declare global {
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Level = Database['public']['Tables']['levels']['Row'];
 export type Course = Database['public']['Tables']['courses']['Row'];
-
+export type Student = Database['public']['Tables']['students']['Row'];
+export interface SelectForDelete {
+	code: string;
+	register_code: string;
+	name: string;
+}
 export interface User {
 	user_id: string;
 	role: string;
@@ -41,7 +46,7 @@ export interface User {
 	is_active: boolean;
 }
 
-export interface Student {
+export interface RegisterStudent {
 	student_code: string;
 	register_code: string;
 	name: string;
