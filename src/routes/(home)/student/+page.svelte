@@ -363,7 +363,7 @@
 							id="name"
 							name="name"
 							type="text"
-							class="input w-full"
+							class="input w-full validator"
 							placeholder="Nombre"
 							required
 							bind:this={nameInput}
@@ -375,7 +375,7 @@
 							id="last_name"
 							name="last_name"
 							type="text"
-							class="input w-full"
+							class="input w-full validator"
 							placeholder="Apellidos"
 							required
 							bind:this={lastNameInput}
@@ -387,7 +387,7 @@
 							id="phone"
 							name="phone"
 							type="text"
-							class="input w-full"
+							class="input w-full validator"
 							placeholder="Teléfono"
 							bind:this={phoneInput}
 						/>
@@ -398,7 +398,7 @@
 							id="email"
 							name="email"
 							type="email"
-							class="input w-full"
+							class="input w-full validator"
 							placeholder="Email"
 							required
 							bind:this={emailInput}
@@ -406,7 +406,7 @@
 					</div>
 					<div>
 						<label class="label font-medium" for="level">Nivel</label>
-						<select id="level" name="level" class="select w-full" required bind:this={levelSelect}>
+						<select id="level" name="level" class="select w-full validator" required bind:this={levelSelect}>
 							<option value="">Selecciona un nivel</option>
 							{#each data.levels as level (level.code)}
 								<option value={level.code}>{level.name}</option>
@@ -418,7 +418,7 @@
 						<select
 							id="group_name"
 							name="group_name"
-							class="select w-full"
+							class="select w-full validator"
 							required
 							bind:this={groupSelect}
 						>
