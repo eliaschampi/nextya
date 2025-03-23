@@ -11,6 +11,7 @@ export const actions: Actions = {
 
 		const { error } = await locals.supabase.auth.signInWithPassword({ email, password });
 		if (error) {
+			console.log(error);
 			if (error instanceof AuthApiError && error.status === 400) {
 				return fail(400, {
 					error: 'El correo o la contraseña son incorrectos.'

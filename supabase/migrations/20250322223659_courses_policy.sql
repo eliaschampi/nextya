@@ -1,47 +1,23 @@
 -- SELECT policy (unchanged)
-create policy "Users_can_view_courses" on courses
-for select
-to authenticated
-using (true);
+create policy "Users_can_view_courses" on courses for
+select
+    using (true);
 
 -- INSERT policy (optimized)
-create policy "users_can_insert_course" on courses
-for insert
-to authenticated
-with check (
-  exists (
-    select 1
-    from permissions
-    where user_code = (select auth.uid())
-      and entity = 'courses'
-      and can_create = true
-  )
-);
+create policy "users_can_insert_course" on courses FOR
+INSERT
+    WITH CHECK (public.has_permission ('courses', 'create'));
 
 -- UPDATE policy (optimized)
-create policy "users_can_update_course" on courses
-for update
-to authenticated
-using (
-  exists (
-    select 1
-    from permissions
-    where user_code = (select auth.uid())
-      and entity = 'courses'
-      and can_update = true
-  )
-);
+create policy "users_can_update_course" on courses FOR
+UPDATE
+    USING (
+        user_code = (
+            select
+                auth.uid ()
+        )
+        OR public.has_permission ('courses', 'update')
+    );
 
 -- DELETE policy (optimized)
-create policy "users_can_del_course" on courses
-for delete
-to authenticated
-using (
-  exists (
-    select 1
-    from permissions
-    where user_code = (select auth.uid())
-      and entity = 'courses'
-      and can_delete = true
-  )
-);
+create policy "users_can_del_course" on courses FOR DELETE USING (public.has_permission ('courses', 'delete'));

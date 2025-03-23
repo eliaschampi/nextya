@@ -1,6 +1,3 @@
--- role
-create role admin;
-
 -- tables
 create table public.profiles (
   code uuid not null references auth.users (id) on delete CASCADE,
@@ -11,24 +8,26 @@ create table public.profiles (
   constraint pk_profile primary key (code)
 );
 
-alter table public.profiles ENABLE row LEVEL SECURITY;
+alter table
+  public.profiles ENABLE row LEVEL SECURITY;
 
 -- very important for user management
 create table public.permissions (
   code uuid not null default gen_random_uuid (),
   user_code uuid not null references auth.users (id) on delete CASCADE,
-  entity varchar(100) not null, -- tables name
+  entity varchar(100) not null,
+  -- tables name
   can_create boolean not null default false,
   can_update boolean not null default false,
   can_delete boolean not null default false,
   constraint pk_permission primary key (code)
 );
 
-alter table public.permissions ENABLE row LEVEL SECURITY;
+alter table
+  public.permissions ENABLE row LEVEL SECURITY;
 
 -- view 1: user_profile
-create view public.user_profiles
-WITH (security_barrier) AS
+create view public.user_profiles WITH (security_invoker = true) AS
 select
   u.id as user_id,
   u.role,
@@ -44,84 +43,96 @@ from
   auth.users u
   join public.profiles p on p.code = u.id;
 
--- POLICY 1: Allows all authenticated users to select from profiles
-create policy "select_profiles_all" on profiles for
-select
-  to authenticated using (true);
-
--- POLICY 2: Allows insert into profiles only if user is admin
-create policy "insert_profiles_admin" on public.profiles for insert to authenticated
-with
-  check (
-    (
-      select
-        current_setting('request.jwt.claims.role', true)
-    ) = 'admin'
-  );
-
--- POLICY 3: Allows updates to profiles if user is owner or admin
-create policy "update_profiles_owner" on public.profiles
-for update
-  to authenticated using (
-    code = (
-      select
-        auth.uid ()
-    )
-    or (
-      select
-        current_setting('request.jwt.claims.role', true)
-    ) = 'admin'
-  );
-
--- POLICY 4: Allows deletion of profiles only if user is admin
-create policy "delete_profiles_admin" on public.profiles for delete to authenticated using (
-  (
-    select
-      current_setting('request.jwt.claims.role', true)
-  ) = 'admin'
-);
-
--- POLICY 5: Allows select on permissions if user is owner or admin
-create policy "select_permissions" on public.permissions for
-select
-  to authenticated using (
-    user_code = (
-      select
-        auth.uid ()
-    )
-    or (
-      select
-        current_setting('request.jwt.claims.role', true)
-    ) = 'admin'
-  );
-
--- POLICY 6: Allows insertion into permissions only if user is admin
-create policy "insert_permissions_admin" on public.permissions for insert to authenticated
-with
-  check (
-    (
-      select
-        current_setting('request.jwt.claims.role', true)
-    ) = 'admin'
-  );
-
--- POLICY 7: Allows updates to permissions only if user is admin
-create policy "update_permissions_admin" on public.permissions
-for update
-  to authenticated using (
-    (
-      select
-        current_setting('request.jwt.claims.role', true)
-    ) = 'admin'
-  );
-
--- POLICY 8: Allows deletion of permissions only if user is admin
-create policy "delete_permissions_admin" on public.permissions for delete to authenticated using (
-  (
-    select
-      current_setting('request.jwt.claims.role', true)
-  ) = 'admin'
-);
-
 -- Index for permissions
 create index idx_permissions_user_entity on permissions (user_code, entity);
+
+CREATE INDEX idx_profiles_user_id ON public.profiles(code);
+
+-- policies
+CREATE
+OR REPLACE FUNCTION public.is_super_admin() RETURNS BOOLEAN AS $$ 
+BEGIN RETURN 
+current_setting('request.jwt.claims.email', true) 
+IN ('elias@nextya.com');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Función para verificar permisos
+CREATE
+OR REPLACE FUNCTION public.has_permission(entity_name text, permission text) RETURNS BOOLEAN AS $$ BEGIN -- Super admins siempre tienen todos los permisos
+IF public.is_super_admin() THEN RETURN TRUE;
+
+END IF;
+
+-- Comprobar permiso específico
+RETURN EXISTS (
+  SELECT
+    1
+  FROM
+    permissions
+  WHERE
+    user_code = (
+      SELECT
+        auth.uid()
+    )
+    AND entity = entity_name
+    AND (
+      (
+        permission = 'create'
+        AND can_create = true
+      )
+      OR (
+        permission = 'update'
+        AND can_update = true
+      )
+      OR (
+        permission = 'delete'
+        AND can_delete = true
+      )
+    )
+);
+
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Políticas para permissions
+CREATE POLICY "select_permissions" ON public.permissions FOR
+SELECT
+  USING (
+    user_code = (
+      SELECT
+        auth.uid()
+    )
+    OR public.is_super_admin()
+  );
+
+CREATE POLICY "insert_permissions" ON public.permissions FOR
+INSERT
+  WITH CHECK (public.is_super_admin());
+
+CREATE POLICY "update_permissions" ON public.permissions FOR
+UPDATE
+  USING (public.is_super_admin());
+
+CREATE POLICY "delete_permissions" ON public.permissions FOR DELETE USING (public.is_super_admin());
+
+-- Políticas para profiles
+CREATE POLICY "select_profiles_all" ON profiles FOR
+SELECT
+  USING (true);
+
+CREATE POLICY "insert_profiles" ON public.profiles FOR
+INSERT
+  WITH CHECK (public.has_permission('profiles', 'create'));
+
+CREATE POLICY "update_profiles" ON public.profiles FOR
+UPDATE
+  USING (
+    code = (
+      SELECT
+        auth.uid()
+    )
+    OR public.has_permission('profiles', 'update')
+  );
+
+CREATE POLICY "delete_profiles" ON public.profiles FOR DELETE USING (public.has_permission('profiles', 'delete'));

@@ -22,6 +22,7 @@ export const actions: Actions = {
 		const password = formData.get('password') as string;
 
 		const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+			role: 'admin',
 			email,
 			password,
 			email_confirm: true

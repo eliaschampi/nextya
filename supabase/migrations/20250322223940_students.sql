@@ -11,22 +11,23 @@ CREATE TABLE students (
 );
 
 -- Enable Row Level Security
-ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+    public.students ENABLE ROW LEVEL SECURITY;
 
 -- Create a trigger function to update the updated_at column
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
+CREATE
+OR REPLACE FUNCTION update_updated_at_column() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at = CURRENT_TIMESTAMP;
+
+RETURN NEW;
+
 END;
+
 $$ LANGUAGE plpgsql;
 
 -- Create a trigger that calls the function before an update
-CREATE TRIGGER update_students_updated_at
-BEFORE UPDATE ON students
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_students_updated_at BEFORE
+UPDATE
+    ON students FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Student index
 CREATE INDEX students_name_last_name_gin ON students USING GIN (to_tsvector('english', name || ' ' || last_name));
