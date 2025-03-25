@@ -15,7 +15,10 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const name = formData.get('name') as string;
 		const description = formData.get('description') as string;
+		// Make sure userId is available, otherwise return an error
 		const userId = locals.session?.user.id;
+		if (!userId) return fail(401, { error: 'User not authenticated' });
+
 		const { error } = await locals.supabase
 			.from('levels')
 			.insert({ name, description, user_code: userId });

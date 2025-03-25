@@ -1,69 +1,80 @@
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
 export type Database = {
+	graphql_public: {
+		Tables: {
+			[_ in never]: never;
+		};
+		Views: {
+			[_ in never]: never;
+		};
+		Functions: {
+			graphql: {
+				Args: {
+					operationName?: string;
+					query?: string;
+					variables?: Json;
+					extensions?: Json;
+				};
+				Returns: Json;
+			};
+		};
+		Enums: {
+			[_ in never]: never;
+		};
+		CompositeTypes: {
+			[_ in never]: never;
+		};
+	};
 	public: {
 		Tables: {
 			courses: {
 				Row: {
 					code: string;
 					created_at: string | null;
-					description: string | null;
-					name: string | null;
-					user_code: string | null;
+					description: string;
+					name: string;
+					user_code: string;
 				};
 				Insert: {
 					code?: string;
 					created_at?: string | null;
-					description?: string | null;
-					name?: string | null;
-					user_code?: string | null;
+					description: string;
+					name: string;
+					user_code: string;
 				};
 				Update: {
 					code?: string;
 					created_at?: string | null;
-					description?: string | null;
-					name?: string | null;
-					user_code?: string | null;
+					description?: string;
+					name?: string;
+					user_code?: string;
 				};
-				Relationships: [
-					{
-						foreignKeyName: 'courses_user_code_fkey';
-						columns: ['user_code'];
-						isOneToOne: false;
-						referencedRelation: 'user_profiles';
-						referencedColumns: ['user_id'];
-					}
-				];
+				Relationships: [];
 			};
 			levels: {
 				Row: {
 					code: string;
 					created_at: string | null;
-					description: string | null;
-					name: string | null;
-					user_code: string | null;
+					description: string;
+					name: string;
+					user_code: string;
 				};
 				Insert: {
 					code?: string;
 					created_at?: string | null;
-					description?: string | null;
-					name?: string | null;
-					user_code?: string | null;
+					description: string;
+					name: string;
+					user_code: string;
 				};
 				Update: {
 					code?: string;
 					created_at?: string | null;
-					description?: string | null;
-					name?: string | null;
-					user_code?: string | null;
+					description?: string;
+					name?: string;
+					user_code?: string;
 				};
-				Relationships: [
-					{
-						foreignKeyName: 'levels_user_code_fkey';
-						columns: ['user_code'];
-						isOneToOne: false;
-						referencedRelation: 'user_profiles';
-						referencedColumns: ['user_id'];
-					}
-				];
+				Relationships: [];
 			};
 			permissions: {
 				Row: {
@@ -90,54 +101,13 @@ export type Database = {
 					entity?: string;
 					user_code?: string;
 				};
-				Relationships: [
-					{
-						foreignKeyName: 'permissions_user_code_fkey';
-						columns: ['user_code'];
-						isOneToOne: false;
-						referencedRelation: 'user_profiles';
-						referencedColumns: ['user_id'];
-					}
-				];
-			};
-			profiles: {
-				Row: {
-					code: string;
-					is_active: boolean;
-					last_name: string | null;
-					name: string | null;
-					photo_url: string | null;
-				};
-				Insert: {
-					code: string;
-					is_active?: boolean;
-					last_name?: string | null;
-					name?: string | null;
-					photo_url?: string | null;
-				};
-				Update: {
-					code?: string;
-					is_active?: boolean;
-					last_name?: string | null;
-					name?: string | null;
-					photo_url?: string | null;
-				};
-				Relationships: [
-					{
-						foreignKeyName: 'profiles_code_fkey';
-						columns: ['code'];
-						isOneToOne: true;
-						referencedRelation: 'user_profiles';
-						referencedColumns: ['user_id'];
-					}
-				];
+				Relationships: [];
 			};
 			registers: {
 				Row: {
 					code: string;
 					created_at: string | null;
 					group_name: string;
-					is_active: boolean | null;
 					level_code: string;
 					roll_code: string;
 					student_code: string;
@@ -147,7 +117,6 @@ export type Database = {
 					code?: string;
 					created_at?: string | null;
 					group_name: string;
-					is_active?: boolean | null;
 					level_code: string;
 					roll_code: string;
 					student_code: string;
@@ -157,7 +126,6 @@ export type Database = {
 					code?: string;
 					created_at?: string | null;
 					group_name?: string;
-					is_active?: boolean | null;
 					level_code?: string;
 					roll_code?: string;
 					student_code?: string;
@@ -184,13 +152,6 @@ export type Database = {
 						isOneToOne: false;
 						referencedRelation: 'students';
 						referencedColumns: ['code'];
-					},
-					{
-						foreignKeyName: 'registers_user_code_fkey';
-						columns: ['user_code'];
-						isOneToOne: false;
-						referencedRelation: 'user_profiles';
-						referencedColumns: ['user_id'];
 					}
 				];
 			};
@@ -203,7 +164,7 @@ export type Database = {
 					name: string;
 					phone: string | null;
 					updated_at: string | null;
-					user_code: string | null;
+					user_code: string;
 				};
 				Insert: {
 					code?: string;
@@ -213,7 +174,7 @@ export type Database = {
 					name: string;
 					phone?: string | null;
 					updated_at?: string | null;
-					user_code?: string | null;
+					user_code: string;
 				};
 				Update: {
 					code?: string;
@@ -223,17 +184,9 @@ export type Database = {
 					name?: string;
 					phone?: string | null;
 					updated_at?: string | null;
-					user_code?: string | null;
+					user_code?: string;
 				};
-				Relationships: [
-					{
-						foreignKeyName: 'students_user_code_fkey';
-						columns: ['user_code'];
-						isOneToOne: false;
-						referencedRelation: 'user_profiles';
-						referencedColumns: ['user_id'];
-					}
-				];
+				Relationships: [];
 			};
 		};
 		Views: {
@@ -244,32 +197,32 @@ export type Database = {
 					group_name: string | null;
 					last_name: string | null;
 					level: string | null;
+					level_code: string | null;
 					name: string | null;
 					phone: string | null;
 					register_code: string | null;
 					roll_code: string | null;
 					student_code: string | null;
 				};
-				Relationships: [];
-			};
-			user_profiles: {
-				Row: {
-					created_at: string | null;
-					email: string | null;
-					is_active: boolean | null;
-					last_name: string | null;
-					last_sign_in_at: string | null;
-					name: string | null;
-					phone: string | null;
-					photo_url: string | null;
-					role: string | null;
-					user_id: string | null;
-				};
-				Relationships: [];
+				Relationships: [
+					{
+						foreignKeyName: 'registers_level_code_fkey';
+						columns: ['level_code'];
+						isOneToOne: false;
+						referencedRelation: 'levels';
+						referencedColumns: ['code'];
+					}
+				];
 			};
 		};
 		Functions: {
-			[_ in never]: never;
+			has_permission: {
+				Args: {
+					entity_name: string;
+					permission: string;
+				};
+				Returns: boolean;
+			};
 		};
 		Enums: {
 			[_ in never]: never;

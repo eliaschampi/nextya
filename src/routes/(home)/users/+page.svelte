@@ -36,13 +36,11 @@
 		const lastnameInput = modal?.querySelector<HTMLInputElement>('#last_name');
 		const emailInput = modal?.querySelector<HTMLInputElement>('#email');
 		const passwordInput = modal?.querySelector<HTMLInputElement>('#password');
-		const isActiveInput = modal?.querySelector<HTMLInputElement>('#is_active');
 
 		if (nameInput) nameInput.value = user.name || '';
 		if (lastnameInput) lastnameInput.value = user.last_name || '';
 		if (emailInput) emailInput.value = user.email || '';
 		if (passwordInput) passwordInput.value = '';
-		if (isActiveInput) isActiveInput.checked = user.is_active;
 	}
 
 	// Abrir modal para confirmar eliminación
@@ -83,7 +81,7 @@
 		const action: 'create' | 'update' = isEditing ? 'update' : 'create';
 
 		if (isEditing) {
-			dataToSend.append('user_id', selectedUser?.user_id || '');
+			dataToSend.append('user_id', selectedUser?.id || '');
 		}
 
 		if (!validateForm(dataToSend)) return;
@@ -129,7 +127,7 @@
 		if (!selectedUser) return;
 
 		const dataToSend = new FormData();
-		dataToSend.append('user_id', selectedUser.user_id);
+		dataToSend.append('user_id', selectedUser.id);
 
 		try {
 			const response = await fetch('?/delete', { method: 'POST', body: dataToSend });
@@ -205,8 +203,6 @@
 					required={!isEditing}
 					aria-required={!isEditing}
 				/>
-				<label class="fieldset-legend" for="is_active">Estado</label>
-				<input id="is_active" name="is_active" type="checkbox" class="toggle toggle-primary" />
 			</fieldset>
 			{#if message}
 				<div class="px-2 mt-2">
@@ -260,15 +256,12 @@
 					{/if}
 				</div>
 			</div>
-			<div class="mt-4 flex gap-2">
-				<span class="badge badge-secondary badge-md">{user.role}</span>
-				<span class="badge badge-md {user.is_active ? 'badge-success' : 'badge-error'}">
-					{user.is_active ? 'Activo' : 'Inactivo'}
-				</span>
-			</div>
+			<!-- <div class="mt-4 flex gap-2">
+
+			</div> -->
 			<div class="mt-4 text-sm">
 				<p>Registrado: {formatDate(user.created_at)}</p>
-				<p>Último inicio: {formatDate(user.last_sign_in_at)}</p>
+				<p>Último inicio: {formatDate(user.last_sign_in_at || '')}</p>
 			</div>
 			<div class="card-actions justify-end mt-4">
 				<button class="btn btn-primary btn-sm" onclick={() => openEditModal(user)}>Editar</button>

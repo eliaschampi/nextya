@@ -406,7 +406,13 @@
 					</div>
 					<div>
 						<label class="label font-medium" for="level">Nivel</label>
-						<select id="level" name="level" class="select w-full validator" required bind:this={levelSelect}>
+						<select
+							id="level"
+							name="level"
+							class="select w-full validator"
+							required
+							bind:this={levelSelect}
+						>
 							<option value="">Selecciona un nivel</option>
 							{#each data.levels as level (level.code)}
 								<option value={level.code}>{level.name}</option>

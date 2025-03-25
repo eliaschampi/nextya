@@ -3,9 +3,8 @@ CREATE TABLE registers (
   student_code UUID NOT NULL references public.students (code),
   level_code UUID NOT NULL references public.levels (code),
   group_name CHAR(1) NOT NULL,
-  user_code UUID REFERENCES auth.users (id),
+  user_code UUID REFERENCES auth.users(id),
   roll_code CHAR(4) not null,
-  is_active boolean DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT register_pk PRIMARY KEY (code)
 );
@@ -14,7 +13,6 @@ CREATE TABLE registers (
 ALTER TABLE
   public.registers ENABLE ROW LEVEL SECURITY;
 
--- View 2
 create view public.student_registers with (security_invoker = true) as
 select
   s.code as student_code,

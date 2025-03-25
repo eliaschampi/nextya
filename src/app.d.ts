@@ -24,7 +24,6 @@ declare global {
 	}
 }
 
-export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Level = Database['public']['Tables']['levels']['Row'];
 export type Course = Database['public']['Tables']['courses']['Row'];
 export type Student = Database['public']['Tables']['students']['Row'];
@@ -34,17 +33,12 @@ export interface SelectForDelete {
 	name: string;
 	affect_student: boolean;
 }
-export interface User {
-	user_id: string;
-	role: string;
-	email: string;
-	phone: string | null;
-	created_at: string;
-	last_sign_in_at: string;
+
+// user will be from auth.users
+export interface User extends SupabaseUser {
 	name: string;
 	last_name: string;
 	photo_url: string | null;
-	is_active: boolean;
 }
 
 export interface RegisterStudent {

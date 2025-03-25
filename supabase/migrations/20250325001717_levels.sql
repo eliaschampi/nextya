@@ -3,7 +3,6 @@ CREATE TABLE levels (
     name VARCHAR(100) not null,
     user_code UUID not null REFERENCES auth.users (id),
     description TEXT not null,
-    year INT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT level_pk PRIMARY KEY (code)
 );

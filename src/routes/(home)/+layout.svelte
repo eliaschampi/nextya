@@ -19,26 +19,23 @@
 	} from 'lucide-svelte';
 
 	import { page } from '$app/state';
-	import { onMount } from 'svelte';
-	import type { Profile } from '../../app';
 	import { getInitials } from '$lib/utils/initialName';
-	let profile: Profile | null = $state(null);
 	let { children } = $props();
 	let modal: HTMLDialogElement | null = null;
+
+	// Define interface for user metadata
+	interface UserMetadata {
+		name?: string;
+		last_name?: string;
+		photo_url?: string;
+	}
+
+	// Access user_metadata which contains name, last_name, and photo_url
+	let userMetadata = $state<UserMetadata>((page.data.user?.user_metadata as UserMetadata) || {});
 
 	function openModal() {
 		modal?.showModal();
 	}
-
-	async function fetchProfile() {
-		const res = await fetch('/api/profile');
-		const data = await res.json();
-		profile = data.profile[0];
-	}
-
-	onMount(() => {
-		fetchProfile();
-	});
 </script>
 
 <svelte:head>
@@ -141,16 +138,16 @@
 					role="button"
 					class="bg-base-100 hover:bg-base-300 rounded-box mx-2 mt-0 flex cursor-pointer items-center gap-2.5 px-3 py-2 transition-all"
 				>
-					{#if profile}
+					{#if page.data.user}
 						<div class="avatar">
 							<div
 								class="w-8 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2 bg-base-200"
 							>
-								{#if profile.photo_url}
+								{#if userMetadata.photo_url}
 									<div class="bg-base-200 mask mask-squircle w-8">
 										<img
-											src={profile.photo_url}
-											alt={`Avatar de ${profile.name} ${profile.last_name}`}
+											src={userMetadata.photo_url}
+											alt={`Avatar de ${userMetadata.name} ${userMetadata.last_name}`}
 										/>
 									</div>
 								{:else}
@@ -158,14 +155,14 @@
 										class="flex items-center justify-center h-full bg-primary text-primary-content"
 									>
 										<span class="font-semibold">
-											{getInitials(profile.name || '', profile.last_name || '')}
+											{getInitials(userMetadata.name || '', userMetadata.last_name || '')}
 										</span>
 									</div>
 								{/if}
 							</div>
 						</div>
 						<div class="grow -space-y-0.5">
-							<p class="text-sm font-medium">{profile.name} {profile.last_name}</p>
+							<p class="text-sm font-medium">{userMetadata.name} {userMetadata.last_name}</p>
 							<p class="text-sm">🟢 En linea</p>
 						</div>
 						<ChevronsUpDown class="h-4 w-4" />

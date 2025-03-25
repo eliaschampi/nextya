@@ -17,6 +17,7 @@ export const actions: Actions = {
 		const level_code = formData.get('level') as string;
 		const group_name = formData.get('group_name') as string;
 		const user_code = locals.session?.user.id;
+		if (!user_code) return fail(401, { error: 'User not authenticated' });
 		const existing_student_code = formData.get('code') as string | null;
 
 		// If we have an existing student code, we're updating an existing student
