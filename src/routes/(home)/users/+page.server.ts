@@ -5,11 +5,11 @@ import { fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ depends }) => {
 	depends('users:load');
-	const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
-	if (error) {
-		console.error('Error al cargar usuarios:', error);
-		return { users: [] };
-	}
+	const {
+		data: { users },
+		error
+	} = await supabaseAdmin.auth.admin.listUsers();
+	if (error) return { users: [] };
 	return { users, title: 'Usuarios' };
 };
 
@@ -39,7 +39,19 @@ export const actions: Actions = {
 	update: async ({ request }) => {
 		const formData = await request.formData();
 		const userId = formData.get('user_id') as string;
-		console.log(userId);
+		const email = formData.get('email') as string;
+		const name = formData.get('name') as string;
+		const last_name = formData.get('last_name') as string;
+
+		const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+			email,
+			user_metadata: {
+				name,
+				last_name
+			}
+		});
+		if (updateError) return fail(400, { error: updateError.message });
+
 		return { success: true };
 	},
 

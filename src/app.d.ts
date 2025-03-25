@@ -34,13 +34,6 @@ export interface SelectForDelete {
 	affect_student: boolean;
 }
 
-// user will be from auth.users
-export interface User extends SupabaseUser {
-	name: string;
-	last_name: string;
-	photo_url: string | null;
-}
-
 export interface RegisterStudent {
 	student_code: string;
 	register_code: string;

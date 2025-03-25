@@ -5,11 +5,11 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
-	import type { User } from '../../../app';
-	import { Trash } from 'lucide-svelte';
+	import { Trash, Pencil } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getInitials } from '$lib/utils/initialName';
 	import { formatDate } from '$lib/utils/formatDate';
+	import type { User } from '@supabase/supabase-js';
 
 	// Estados y referencias
 	let modal: HTMLDialogElement | null = $state(null);
@@ -17,7 +17,7 @@
 	let isEditing = $state(false);
 	let message = $state('');
 	let selectedUser = $state<User | null>(null);
-
+	const passwordPattern = '^(?=.*[A-Z])(?=.*\\d).{8,}$';
 	const { data } = $props<{ data: { users: User[] } }>();
 
 	// Abrir modal para crear
@@ -37,8 +37,8 @@
 		const emailInput = modal?.querySelector<HTMLInputElement>('#email');
 		const passwordInput = modal?.querySelector<HTMLInputElement>('#password');
 
-		if (nameInput) nameInput.value = user.name || '';
-		if (lastnameInput) lastnameInput.value = user.last_name || '';
+		if (nameInput) nameInput.value = user.user_metadata?.name || '';
+		if (lastnameInput) lastnameInput.value = user.user_metadata?.last_name || '';
 		if (emailInput) emailInput.value = user.email || '';
 		if (passwordInput) passwordInput.value = '';
 	}
@@ -51,10 +51,10 @@
 
 	// Validar formulario
 	function validateForm(formData: FormData): boolean {
-		const name = (formData.get('name') as string)?.trim();
-		const lastName = (formData.get('last_name') as string)?.trim();
-		const email = (formData.get('email') as string)?.trim();
-		const password = (formData.get('password') as string)?.trim();
+		const fields = ['name', 'last_name', 'email', 'password'];
+		const [name, lastName, email, password] = fields.map((field) =>
+			formData.get(field)?.toString().trim()
+		);
 
 		if (!name || !lastName || !email) {
 			message = 'Todos los campos son obligatorios';
@@ -150,12 +150,11 @@
 	<button class="btn btn-primary" onclick={openCreateModal}>Agregar Usuario</button>
 </PageTitle>
 
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-	{#each data.users as user (user.user_id)}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
+	{#each data.users as user (user.id)}
 		{@render userCard(user)}
 	{/each}
 </div>
-
 <!-- Modal para crear o editar -->
 <dialog bind:this={modal} class="modal">
 	<div class="modal-box">
@@ -198,6 +197,7 @@
 					name="password"
 					type="password"
 					class="input w-full validator"
+					pattern={passwordPattern}
 					placeholder="Contraseña"
 					disabled={isEditing}
 					required={!isEditing}
@@ -211,8 +211,9 @@
 			{/if}
 			<div class="modal-action flex justify-center gap-2">
 				<button class="btn btn-error" type="button" onclick={() => modal?.close()}>Cancelar</button>
-				<button class="btn btn-primary" type="submit">{isEditing ? 'Actualizar' : 'Guardar'}</button
-				>
+				<button class="btn btn-primary" type="submit">
+					{isEditing ? 'Actualizar' : 'Guardar'}
+				</button>
 			</div>
 		</form>
 	</div>
@@ -223,8 +224,8 @@
 	<div class="modal-box">
 		<h3 class="text-lg font-bold">Confirmar eliminación</h3>
 		<p class="py-4">
-			¿Estás seguro de eliminar a "{selectedUser?.name}
-			{selectedUser?.last_name}"?
+			¿Estás seguro de eliminar a "{selectedUser?.user_metadata?.name}
+			{selectedUser?.user_metadata?.last_name}"?
 		</p>
 		<div class="modal-action flex justify-center gap-2">
 			<button class="btn" onclick={() => confirmModal?.close()}>Cancelar</button>
@@ -234,39 +235,84 @@
 </dialog>
 
 {#snippet userCard(user: User)}
-	<div class="card w-full bg-base-200 shadow">
-		<div class="card-body p-6">
-			<div class="flex items-center space-x-4">
-				<div class="avatar">
-					<div class="w-20 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
-						{#if user.photo_url}
-							<img src={user.photo_url} alt={`Avatar de ${user.name} ${user.last_name}`} />
+	<div
+		class="card bg-gradient-to-br from-base-200 to-base-100 shadow hover:shadow-lg transition-shadow duration-300 border border-base-300/30 rounded-xl overflow-hidden"
+	>
+		<div class="card-body p-6 space-y-4">
+			<!-- Header with avatar and name -->
+			<div class="flex items-center gap-4">
+				<div class="avatar relative">
+					<div
+						class="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-r from-primary/20 to-secondary/20 flex items-center justify-center ring-2 ring-offset-2 ring-offset-base-100 ring-primary/50"
+					>
+						{#if user.user_metadata?.photo_url}
+							<img
+								src={user.user_metadata.photo_url}
+								alt="User profile"
+								class="object-cover w-full h-full"
+								loading="lazy"
+							/>
 						{:else}
-							<div class="flex items-center justify-center h-full bg-primary text-primary-content">
-								<span class="text-2xl font-semibold">{getInitials(user.name, user.last_name)}</span>
-							</div>
+							<span class="text-xl font-bold text-primary">
+								{getInitials(user.user_metadata?.name, user.user_metadata?.last_name)}
+							</span>
 						{/if}
 					</div>
+					<!-- Online status indicator -->
+					<div
+						class="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-success border-2 border-base-100"
+					></div>
 				</div>
-				<div class="flex-1">
-					<h2 class="card-title text-2xl font-bold">{user.name} {user.last_name}</h2>
-					<p class="text-sm">{user.email}</p>
-					{#if user.phone}
-						<p class="text-sm">Teléfono: {user.phone}</p>
-					{/if}
-				</div>
-			</div>
-			<!-- <div class="mt-4 flex gap-2">
 
-			</div> -->
-			<div class="mt-4 text-sm">
-				<p>Registrado: {formatDate(user.created_at)}</p>
-				<p>Último inicio: {formatDate(user.last_sign_in_at || '')}</p>
+				<div class="flex-1 min-w-0">
+					<h2 class="text-xl font-bold text-base-content truncate">
+						{user.user_metadata?.name}
+						{user.user_metadata?.last_name}
+					</h2>
+					<p class="text-sm text-base-content/70 truncate">{user.email}</p>
+				</div>
 			</div>
-			<div class="card-actions justify-end mt-4">
-				<button class="btn btn-primary btn-sm" onclick={() => openEditModal(user)}>Editar</button>
-				<button class="btn btn-error btn-sm" onclick={() => openDeleteConfirmModal(user)}>
-					<Trash class="w-4" />
+
+			<!-- Stats with icons -->
+			<div class="grid grid-cols-2 gap-3 text-sm">
+				<div class="flex items-center gap-2 text-base-content/80">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+						></path>
+					</svg>
+					<span>{formatDate(user.created_at)}</span>
+				</div>
+				<div class="flex items-center gap-2 text-base-content/80">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+						></path>
+					</svg>
+					<span>{formatDate(user.last_sign_in_at || '')}</span>
+				</div>
+			</div>
+
+			<!-- Action buttons with subtle hover effects -->
+			<div class="flex justify-end gap-2 pt-2">
+				<button
+					class="btn btn-sm btn-ghost hover:bg-primary/10 text-primary hover:text-primary-focus transition-colors"
+					onclick={() => openEditModal(user)}
+				>
+					<Pencil class="w-4 h-4" />
+					Editar
+				</button>
+				<button
+					class="btn btn-sm btn-ghost hover:bg-error/10 text-error hover:text-error-focus transition-colors"
+					onclick={() => openDeleteConfirmModal(user)}
+				>
+					<Trash class="w-4 h-4" />
 				</button>
 			</div>
 		</div>
