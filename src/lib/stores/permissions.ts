@@ -1,8 +1,8 @@
 // src/lib/stores/permission.ts
 import { writable, derived, type Readable } from 'svelte/store';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from 'lucide-svelte';
 import type { Permission } from '../../app';
+import type { Database } from '../../database.types';
 
 // Define el tipo Permission según tu esquema de base de datos
 
