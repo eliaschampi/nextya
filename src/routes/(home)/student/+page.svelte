@@ -48,6 +48,19 @@
 			event.preventDefault();
 			searchStudents();
 		}
+		if (event.key === 'Tab') {
+			event.preventDefault();
+			activeTab = 'new';
+			queueMicrotask(() => {
+				nameInput?.focus();
+				fillRegisterData();
+			});
+		}
+	}
+
+	function handleOpenNewTab() {
+		activeTab = 'new';
+		fillRegisterData();
 	}
 
 	async function searchStudents() {
@@ -62,9 +75,7 @@
 	function selectStudent(student: Student) {
 		searchQuery = '';
 		searchResults = [];
-
 		selectedCode = student.code;
-
 		activeTab = 'new';
 
 		modal?.showModal();
@@ -78,11 +89,24 @@
 		});
 	}
 
+	function fillRegisterData() {
+		if (selectedLevelCode && levelSelect) {
+			levelSelect.value = selectedLevelCode;
+		}
+		if (selectedGroup && groupSelect) {
+			groupSelect.value = selectedGroup;
+		}
+	}
 	function openCreateModal() {
 		isEditing = false;
 		selectedCode = null;
 		activeTab = 'search';
 		modal?.showModal();
+
+		queueMicrotask(() => {
+			const searchInput = modal?.querySelector<HTMLInputElement>('#searchq');
+			searchInput?.focus();
+		});
 	}
 
 	function openEditModal(item: RegisterStudent) {
@@ -106,7 +130,7 @@
 			code: payload.student_code,
 			register_code: payload.register_code,
 			name: payload.name,
-			affect_student: true
+			mode: 'all'
 		};
 		confirmModal?.showModal();
 	}
@@ -178,7 +202,7 @@
 		const formData = new FormData();
 		formData.append('code', selectForDelete.code);
 		formData.append('register_code', selectForDelete.register_code);
-
+		formData.append('mode', selectForDelete.mode);
 		const response = await fetch('?/delete', { method: 'POST', body: formData });
 		const res = await response.json();
 		confirmModal?.close();
@@ -234,7 +258,9 @@
 </div>
 
 {#if selectedLevelCode && students.length > 0}
-	<div class="card bg-base-200 shadow">
+	<div
+		class="card bg-gradient-to-br from-base-200 to-base-100 shadow hover:shadow-lg transition-shadow duration-300 border border-base-300/30 rounded-xl overflow-hidden"
+	>
 		<div class="card-body overflow-x-auto">
 			<table class="table table-zebra w-full">
 				<thead>
@@ -313,7 +339,7 @@
 			<button
 				role="tab"
 				class="tab {activeTab === 'new' ? 'tab-active' : ''}"
-				onclick={() => (activeTab = 'new')}
+				onclick={() => handleOpenNewTab()}
 				tabindex={0}
 			>
 				{isEditing ? 'Editar' : selectedCode ? 'Nuevo registro' : 'Nuevo'}
@@ -322,6 +348,7 @@
 		{#if activeTab === 'search' && !isEditing && !selectedCode}
 			<div class="join w-full mb-4">
 				<input
+					id="searchq"
 					type="text"
 					placeholder="Buscar estudiante por nombre"
 					class="input input-bordered join-item flex-1"
@@ -344,11 +371,13 @@
 						>
 							<button class="w-full text-left" onclick={() => selectStudent(student)}>
 								{student.name}
-								{student.last_name} ({student.email})
+								{student.last_name}
 							</button>
 						</li>
 					{/each}
 				</ul>
+			{:else}
+				<div class="bg-base-200 p-3 rounded-box text-base-content/20">Estudiante no encontrado</div>
 			{/if}
 		{/if}
 
@@ -463,30 +492,28 @@
 		<fieldset class="fieldset p-4 bg-base-100 border border-base-300 rounded-box w-full">
 			<legend class="fieldset-legend">Opciones de eliminación</legend>
 			<div class="flex flex-col gap-2">
-				<label class="label cursor-pointer justify-start gap-2">
-					<input
-						type="radio"
-						name="delete-option"
-						class="radio radio-primary"
-						checked={selectForDelete?.affect_student === false}
-						onchange={() => {
-							if (selectForDelete) selectForDelete.affect_student = false;
-						}}
-					/>
-					<span class="label-text">Eliminar solo el registro al nivel</span>
-				</label>
-				<label class="label cursor-pointer justify-start gap-2">
-					<input
-						type="radio"
-						name="delete-option"
-						class="radio radio-primary"
-						checked={selectForDelete?.affect_student === true}
-						onchange={() => {
-							if (selectForDelete) selectForDelete.affect_student = true;
-						}}
-					/>
-					<span class="label-text">Eliminar registro y estudiante</span>
-				</label>
+				{#if selectForDelete}
+					<label class="label cursor-pointer justify-start gap-2">
+						<input
+							type="radio"
+							name="delete-option"
+							class="radio radio-primary"
+							value="only_register"
+							bind:group={selectForDelete.mode}
+						/>
+						<span class="label-text">Eliminar solo el registro de matricula</span>
+					</label>
+					<label class="label cursor-pointer justify-start gap-2">
+						<input
+							type="radio"
+							name="delete-option"
+							class="radio radio-primary"
+							value="all"
+							bind:group={selectForDelete.mode}
+						/>
+						<span class="label-text">Eliminar registro y estudiante</span>
+					</label>
+				{/if}
 			</div>
 		</fieldset>
 		<div class="modal-action flex justify-center gap-4">

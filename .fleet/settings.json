@@ -1,0 +1,14 @@
+{
+	"plugins": [
+		{
+			"type": "add",
+			"pluginName": "com.github.catppuccin.fleet"
+		},
+		{
+			"type": "add",
+			"pluginName": "izhangzhihao.fleet.rainbow.brackets"
+		}
+	],
+	"backend.maxHeapSizeMb": 1487,
+	"nodejs.editor.formatOnSave.eslint.mode": "Auto"
+}

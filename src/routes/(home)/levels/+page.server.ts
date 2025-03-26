@@ -14,14 +14,14 @@ export const actions: Actions = {
 	create: async ({ locals, request }) => {
 		const formData = await request.formData();
 		const name = formData.get('name') as string;
-		const description = formData.get('description') as string;
+		const modality = formData.get('modality') as string;
 		// Make sure userId is available, otherwise return an error
 		const userId = locals.session?.user.id;
 		if (!userId) return fail(401, { error: 'User not authenticated' });
 
 		const { error } = await locals.supabase
 			.from('levels')
-			.insert({ name, description, user_code: userId });
+			.insert({ name, modality, user_code: userId });
 		if (error) return fail(400, { error: error.message });
 		return { success: true };
 	},
@@ -31,11 +31,11 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const levelCode = formData.get('code') as string;
 		const name = formData.get('name') as string;
-		const description = formData.get('description') as string;
+		const modality = formData.get('modality') as string;
 
 		const { error } = await locals.supabase
 			.from('levels')
-			.update({ name, description })
+			.update({ name, modality })
 			.eq('code', levelCode);
 		if (error) return fail(400, { error: error.message });
 

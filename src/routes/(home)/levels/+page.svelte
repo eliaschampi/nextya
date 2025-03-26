@@ -8,6 +8,7 @@
 	import type { Level } from '../../../app';
 	import { EllipsisVertical } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
+	import { getModalityTypes } from '$lib/data/modality';
 
 	// Estados y referencias
 	let modal: HTMLDialogElement | null = $state(null);
@@ -15,6 +16,7 @@
 	let isEditing = $state(false);
 	let message = $state('');
 	let selectedLevel = $state<Level | null>(null);
+	const modalities = getModalityTypes();
 
 	const { data } = $props<{ data: { levels: Level[] } }>();
 
@@ -31,9 +33,9 @@
 		modal?.showModal();
 
 		const nameInput = modal?.querySelector<HTMLInputElement>('#name');
-		const descriptionInput = modal?.querySelector<HTMLTextAreaElement>('#description');
+		const modalityInput = modal?.querySelector<HTMLTextAreaElement>('#modality');
 		if (nameInput) nameInput.value = level.name || '';
-		if (descriptionInput) descriptionInput.value = level.description || '';
+		if (modalityInput) modalityInput.value = level.modality || '';
 	}
 
 	// Abrir modal para confirmar eliminación
@@ -45,9 +47,9 @@
 	// Validar formulario
 	function validateForm(formData: FormData): boolean {
 		const name = (formData.get('name') as string)?.trim();
-		const description = (formData.get('description') as string)?.trim();
+		const modality = (formData.get('modality') as string)?.trim();
 
-		if (!name || !description) {
+		if (!name || !modality) {
 			message = 'Todos los campos son obligatorios';
 			return false;
 		}
@@ -158,14 +160,15 @@
 					class="input w-full validator"
 					placeholder="Escribe aquí"
 				/>
-				<label class="fieldset-legend" for="description">Descripción</label>
-				<textarea
-					id="description"
-					name="description"
-					required
-					class="textarea w-full validator"
-					placeholder="Ejem. Ciclo regular"
-				></textarea>
+				<div>
+					<label class="label font-medium" for="group_name">Modalidad</label>
+					<select id="modality" name="modality" class="select w-full validator" required>
+						<option value="">Selecciona una modalidad</option>
+						{#each modalities as modality (modality)}
+							<option value={modality}>{modality}</option>
+						{/each}
+					</select>
+				</div>
 			</fieldset>
 			{#if message}
 				<div class="px-2 mt-2">
@@ -174,8 +177,9 @@
 			{/if}
 			<div class="modal-action flex justify-center gap-2">
 				<button class="btn btn-error" type="button" onclick={() => modal?.close()}>Cancelar</button>
-				<button class="btn btn-primary" type="submit">{isEditing ? 'Actualizar' : 'Guardar'}</button
-				>
+				<button class="btn btn-primary" type="submit">
+					{isEditing ? 'Actualizar' : 'Guardar'}
+				</button>
 			</div>
 		</form>
 	</div>
@@ -200,7 +204,7 @@
 		<div class="flex items-center justify-between">
 			<div class="flex-1">
 				<div class="font-medium text-base-content">{item.name}</div>
-				<div class="text-sm text-base-content/70">{item.description}</div>
+				<div class="text-sm text-base-content/70">{item.modality}</div>
 			</div>
 			<div class="flex items-center gap-2">
 				<div class="dropdown dropdown-end">

@@ -126,9 +126,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const code = formData.get('code') as string;
 		const register_code = formData.get('register_code') as string;
-		const affect_student = formData.get('affect_student') as unknown as boolean;
-
-		// 1. delete register
+		const affect_student = formData.get('mode') as 'all' | 'only_register';
 		const { error: registerError } = await locals.supabase
 			.from('registers')
 			.delete()
@@ -137,7 +135,7 @@ export const actions: Actions = {
 		if (registerError) return fail(400, { error: registerError.message });
 
 		// 2. check if we have to delete the student
-		if (affect_student) {
+		if (affect_student === 'all') {
 			const { error: studentError } = await locals.supabase
 				.from('students')
 				.delete()

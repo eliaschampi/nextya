@@ -32,21 +32,21 @@ export type Database = {
 				Row: {
 					code: string;
 					created_at: string | null;
-					description: string;
+					modality: string;
 					name: string;
 					user_code: string;
 				};
 				Insert: {
 					code?: string;
 					created_at?: string | null;
-					description: string;
+					modality: string;
 					name: string;
 					user_code: string;
 				};
 				Update: {
 					code?: string;
 					created_at?: string | null;
-					description?: string;
+					modality?: string;
 					name?: string;
 					user_code?: string;
 				};
@@ -56,21 +56,21 @@ export type Database = {
 				Row: {
 					code: string;
 					created_at: string | null;
-					description: string;
+					modality: string;
 					name: string;
 					user_code: string;
 				};
 				Insert: {
 					code?: string;
 					created_at?: string | null;
-					description: string;
+					modality: string;
 					name: string;
 					user_code: string;
 				};
 				Update: {
 					code?: string;
 					created_at?: string | null;
-					description?: string;
+					modality?: string;
 					name?: string;
 					user_code?: string;
 				};

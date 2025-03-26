@@ -27,11 +27,13 @@ declare global {
 export type Level = Database['public']['Tables']['levels']['Row'];
 export type Course = Database['public']['Tables']['courses']['Row'];
 export type Student = Database['public']['Tables']['students']['Row'];
+export type Permission = Database['public']['Tables']['permissions']['Row'];
+
 export interface SelectForDelete {
 	code: string;
 	register_code: string;
 	name: string;
-	affect_student: boolean;
+	mode: 'all' | 'only_register';
 }
 
 export interface RegisterStudent {
