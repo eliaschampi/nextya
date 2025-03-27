@@ -27,6 +27,7 @@
 	let emailInput: HTMLInputElement | null = $state(null);
 	let levelSelect: HTMLSelectElement | null = $state(null);
 	let groupSelect: HTMLSelectElement | null = $state(null);
+	let rollCodeInput: HTMLInputElement | null = $state(null);
 
 	const { data } = $props<{ data: { levels: Level[] } }>();
 	const groupOptions = ['A', 'B', 'C', 'D'];
@@ -122,6 +123,7 @@
 			if (emailInput) emailInput.value = item.email || '';
 			if (levelSelect) levelSelect.value = item.level_code || '';
 			if (groupSelect) groupSelect.value = item.group_name || '';
+			if (rollCodeInput) rollCodeInput.value = item.roll_code || '';
 		});
 	}
 
@@ -135,24 +137,8 @@
 		confirmModal?.showModal();
 	}
 
-	function validateForm(): boolean {
-		if (
-			!nameInput?.value.trim() ||
-			!lastNameInput?.value.trim() ||
-			!emailInput?.value.trim() ||
-			!levelSelect?.value ||
-			!groupSelect?.value
-		) {
-			message = 'Todos los campos son obligatorios';
-			return false;
-		}
-		message = '';
-		return true;
-	}
-
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
-		if (!validateForm()) return;
 
 		const formData = new FormData();
 		formData.append('name', nameInput?.value || '');
@@ -161,6 +147,7 @@
 		formData.append('email', emailInput?.value || '');
 		formData.append('level', levelSelect?.value || '');
 		formData.append('group_name', groupSelect?.value || '');
+		formData.append('roll_code', rollCodeInput?.value || '');
 
 		if (selectedCode) {
 			formData.append('code', selectedCode.toString());
@@ -193,6 +180,7 @@
 		if (emailInput) emailInput.value = '';
 		if (levelSelect) levelSelect.value = '';
 		if (groupSelect) groupSelect.value = '';
+		if (rollCodeInput) rollCodeInput.value = '';
 	}
 	onMount(() => modal?.addEventListener('close', resetFormOnClose));
 	onDestroy(() => modal?.removeEventListener('close', resetFormOnClose));
@@ -462,6 +450,21 @@
 								<option value={group}>{group}</option>
 							{/each}
 						</select>
+					</div>
+					<div>
+						<label class="label font-medium" for="roll_code">Código de Matrícula</label>
+						<input
+							id="roll_code"
+							name="roll_code"
+							type="text"
+							class="input w-full validator"
+							placeholder="4 dígitos (ej: 0001)"
+							required
+							maxlength="4"
+							pattern="\d{4}"
+							bind:this={rollCodeInput}
+						/>
+						<small class="text-xs opacity-70 mt-1 block">Ingrese 4 dígitos (ej: 0001, 1234)</small>
 					</div>
 				</fieldset>
 				{#if message}

@@ -1,6 +1,7 @@
 import { getLevels } from '$lib/data/levels';
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
+import { studentSchema } from '$lib/schemas/student';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const levels = await getLevels(locals.supabase);
@@ -16,8 +17,30 @@ export const actions: Actions = {
 		const email = formData.get('email') as string;
 		const level_code = formData.get('level') as string;
 		const group_name = formData.get('group_name') as string;
+		const roll_code = formData.get('roll_code') as string;
 		const user_code = locals.session?.user.id;
+
 		if (!user_code) return fail(401, { error: 'User not authenticated' });
+
+		// Validate data with Zod schema
+		const result = studentSchema.safeParse({
+			name,
+			last_name,
+			phone,
+			email,
+			level_code,
+			group_name,
+			roll_code
+		});
+
+		if (!result.success) {
+			const firstError = result.error.errors[0];
+			return fail(400, {
+				error: firstError.message || 'Validation error',
+				errors: result.error.format()
+			});
+		}
+
 		const existing_student_code = formData.get('code') as string | null;
 
 		// If we have an existing student code, we're updating an existing student
@@ -46,7 +69,7 @@ export const actions: Actions = {
 				// Update existing register
 				const { error: registerError } = await locals.supabase
 					.from('registers')
-					.update({ group_name, level_code })
+					.update({ group_name, level_code, roll_code })
 					.eq('code', existingRegister.code);
 
 				if (registerError) return fail(400, { error: registerError.message });
@@ -57,7 +80,7 @@ export const actions: Actions = {
 					level_code,
 					group_name,
 					user_code,
-					roll_code: '0000' // Default roll code
+					roll_code
 				});
 
 				if (registerError) return fail(400, { error: registerError.message });
@@ -83,7 +106,7 @@ export const actions: Actions = {
 			level_code,
 			group_name,
 			user_code,
-			roll_code: '0000' // Default roll code
+			roll_code
 		});
 
 		if (registerError) return fail(400, { error: registerError.message });
@@ -100,6 +123,26 @@ export const actions: Actions = {
 		const email = formData.get('email') as string;
 		const level_code = formData.get('level') as string;
 		const group_name = formData.get('group_name') as string;
+		const roll_code = formData.get('roll_code') as string;
+
+		// Validate data with Zod schema
+		const result = studentSchema.safeParse({
+			name,
+			last_name,
+			phone,
+			email,
+			level_code,
+			group_name,
+			roll_code
+		});
+
+		if (!result.success) {
+			const firstError = result.error.errors[0];
+			return fail(400, {
+				error: firstError.message || 'Validation error',
+				errors: result.error.format()
+			});
+		}
 
 		// Update student data
 		const { error: studentError } = await locals.supabase
@@ -112,7 +155,7 @@ export const actions: Actions = {
 		// Update register data
 		const { error: registerError } = await locals.supabase
 			.from('registers')
-			.update({ level_code, group_name })
+			.update({ level_code, group_name, roll_code })
 			.eq('student_code', code)
 			.order('created_at', { ascending: false })
 			.limit(1);
