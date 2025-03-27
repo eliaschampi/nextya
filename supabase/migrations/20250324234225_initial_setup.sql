@@ -1,18 +1,17 @@
 -- Tables
 CREATE TABLE public.permissions (
     code UUID NOT NULL DEFAULT gen_random_uuid(),
-    user_code UUID NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
-    entity VARCHAR(100) NOT NULL, -- Tables name
+    user_code UUID NOT NULL,
+    entity VARCHAR(100) NOT NULL,
     can_create BOOLEAN NOT NULL DEFAULT false,
     can_update BOOLEAN NOT NULL DEFAULT false,
     can_delete BOOLEAN NOT NULL DEFAULT false,
-    CONSTRAINT pk_permission PRIMARY KEY (code)
+    CONSTRAINT pk_permission PRIMARY KEY (code),
+    CONSTRAINT fk_permissions_user FOREIGN KEY (user_code) REFERENCES auth.users(id) ON DELETE CASCADE,
+    CONSTRAINT uq_entity_user_code UNIQUE (entity, user_code)
 );
 
 ALTER TABLE public.permissions ENABLE ROW LEVEL SECURITY;
-
--- Indexes for permissions 
-CREATE INDEX idx_permissions_user_entity ON public.permissions (user_code, entity);
 
 
 -- Function to verify permissions

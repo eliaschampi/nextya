@@ -1,17 +1,21 @@
 CREATE TABLE registers (
-  code UUID DEFAULT gen_random_uuid () NOT NULL,
-  student_code UUID NOT NULL references public.students (code),
-  level_code UUID NOT NULL references public.levels (code),
+  code UUID DEFAULT gen_random_uuid(),
+  student_code UUID NOT NULL,
+  level_code UUID NOT NULL,
   group_name CHAR(1) NOT NULL,
-  user_code UUID REFERENCES auth.users(id),
+  user_code UUID NOT NULL,
   roll_code CHAR(4) not null,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT register_pk PRIMARY KEY (code)
+  CONSTRAINT pk_register PRIMARY KEY (code),
+  CONSTRAINT fk_registers_student FOREIGN KEY (student_code) REFERENCES public.students(code) ON DELETE CASCADE,
+  CONSTRAINT fk_registers_level FOREIGN KEY (level_code) REFERENCES public.levels(code) ON DELETE CASCADE,
+  CONSTRAINT fk_registers_user FOREIGN KEY (user_code) REFERENCES auth.users(id) ON DELETE CASCADE,
+  CONSTRAINT uq_student_student_level_group UNIQUE (student_code, level_code, group_name),
+  CONSTRAINT ck_registers_group CHECK (group_name IN ('A','B','C','D'))
 );
 
 -- Enable Row Level Security
-ALTER TABLE
-  public.registers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.registers ENABLE ROW LEVEL SECURITY;
 
 create view public.student_registers with (security_invoker = true) as
 select
