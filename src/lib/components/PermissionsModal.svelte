@@ -199,7 +199,6 @@
 			callback(target.checked);
 		};
 	}
-
 </script>
 
 <dialog bind:this={modal} class="modal">

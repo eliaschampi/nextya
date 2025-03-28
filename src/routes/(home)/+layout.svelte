@@ -20,8 +20,10 @@
 
 	import { page } from '$app/state';
 	import { getInitials } from '$lib/utils/initialName';
+	import { theme } from '$lib/stores/theme';
 	let { children } = $props();
 	let modal: HTMLDialogElement | null = null;
+	let isDarkTheme = $derived($theme === 'dark');
 
 	// Define interface for user metadata
 	interface UserMetadata {
@@ -35,6 +37,11 @@
 
 	function openModal() {
 		modal?.showModal();
+	}
+
+	// Theme toggle function
+	function toggleTheme() {
+		theme.toggle();
 	}
 </script>
 
@@ -69,7 +76,12 @@
 				</a>
 				<!-- Theme Toggle -->
 				<label class="swap swap-rotate ml-1">
-					<input type="checkbox" class="theme-controller" value="light" />
+					<input
+						type="checkbox"
+						class="theme-controller"
+						checked={isDarkTheme}
+						onchange={toggleTheme}
+					/>
 					<Sun class="swap-off h-5 w-5" />
 					<Moon class="swap-on h-5 w-5" />
 				</label>

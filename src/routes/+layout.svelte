@@ -5,18 +5,15 @@
 	import '../style.css';
 	import Toast from '$lib/components/Toast.svelte';
 
-	// Extraer datos derivados
 	let { session, supabase } = $derived(data);
 
 	onMount(() => {
-		// Escuchar cambios de estado de autenticación
 		const { data: subscriptionData } = supabase.auth.onAuthStateChange((_, newSession) => {
 			if (newSession?.expires_at !== session?.expires_at) {
 				invalidate('supabase:auth');
 			}
 		});
 
-		// Limpiar la suscripción al desmontar el componente
 		return () => subscriptionData.subscription.unsubscribe();
 	});
 </script>
