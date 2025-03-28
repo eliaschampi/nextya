@@ -125,7 +125,6 @@ export const actions: Actions = {
 		const group_name = formData.get('group_name') as string;
 		const roll_code = formData.get('roll_code') as string;
 
-		// Validate data with Zod schema
 		const result = studentSchema.safeParse({
 			name,
 			last_name,
@@ -144,7 +143,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Update student data
 		const { error: studentError } = await locals.supabase
 			.from('students')
 			.update({ name, last_name, phone, email })
@@ -152,7 +150,6 @@ export const actions: Actions = {
 
 		if (studentError) return fail(400, { error: studentError.message });
 
-		// Update register data
 		const { error: registerError } = await locals.supabase
 			.from('registers')
 			.update({ level_code, group_name, roll_code })
@@ -177,7 +174,6 @@ export const actions: Actions = {
 
 		if (registerError) return fail(400, { error: registerError.message });
 
-		// 2. check if we have to delete the student
 		if (affect_student === 'all') {
 			const { error: studentError } = await locals.supabase
 				.from('students')

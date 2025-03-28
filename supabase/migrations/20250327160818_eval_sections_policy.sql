@@ -11,18 +11,9 @@ INSERT TO authenticated
 -- UPDATE policy
 CREATE POLICY "users_can_update_eval_section" ON eval_sections FOR
 UPDATE TO authenticated
-    USING (
-        eval_code IN (
-            SELECT code FROM public.evals WHERE user_code = (SELECT auth.uid())
-        )
-        OR public.has_permission('eval_sections', 'update')
-    );
+    USING (public.has_permission('eval_sections', 'update'));
 
 -- DELETE policy
 CREATE POLICY "users_can_del_eval_section" ON eval_sections FOR DELETE TO authenticated
-    USING (
-        eval_code IN (
-            SELECT code FROM public.evals WHERE user_code = (SELECT auth.uid())
-        )
-        OR public.has_permission('eval_sections', 'delete')
-    );
+    USING (public.has_permission('eval_sections', 'delete'));
+

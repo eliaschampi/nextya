@@ -154,9 +154,9 @@
 					required
 					type="text"
 					class="input w-full validator"
-					placeholder="Escribe aquí"
+					placeholder="Ej: Matemática, Química, etc."
 				/>
-				<div>
+				<div class="mt-2">
 					<label class="label font-medium" for="modality">Modalidad</label>
 					<select id="modality" name="modality" class="select w-full validator" required>
 						<option value="">Selecciona una modalidad</option>

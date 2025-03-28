@@ -11,7 +11,6 @@ CREATE TABLE public.eval_sections (
     CONSTRAINT uq_eval_sections_eval_order UNIQUE (eval_code, order_in_eval) 
 );
 
-
 ALTER TABLE public.eval_sections ENABLE ROW LEVEL SECURITY;
 
 

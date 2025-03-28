@@ -11,6 +11,7 @@ CREATE TABLE registers (
   CONSTRAINT fk_registers_level FOREIGN KEY (level_code) REFERENCES public.levels(code) ON DELETE CASCADE,
   CONSTRAINT fk_registers_user FOREIGN KEY (user_code) REFERENCES auth.users(id) ON DELETE CASCADE,
   CONSTRAINT uq_student_student_level_group UNIQUE (student_code, level_code, group_name),
+  CONSTRAINT uq_registers_roll_code UNIQUE (level_code, roll_code),
   CONSTRAINT ck_registers_group CHECK (group_name IN ('A','B','C','D'))
 );
 

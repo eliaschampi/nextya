@@ -44,6 +44,12 @@
 		if (response.ok) students = await response.json();
 	}
 
+	function handleFillEmail() {
+		if (nameInput?.value && emailInput) {
+			emailInput.value = `${nameInput.value.toLowerCase()}@nextya.com`;
+		}
+	}
+
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Enter') {
 			event.preventDefault();
@@ -61,7 +67,10 @@
 
 	function handleOpenNewTab() {
 		activeTab = 'new';
-		fillRegisterData();
+		queueMicrotask(() => {
+			nameInput?.focus();
+			fillRegisterData();
+		});
 	}
 
 	async function searchStudents() {
@@ -256,7 +265,7 @@
 						<th>Nombre</th>
 						<th>Apellido</th>
 						<th>Telefono</th>
-						<th>Email</th>
+						<th>Codigo</th>
 						<th>Nivel</th>
 						<th>Grupo</th>
 						<th>Acciones</th>
@@ -268,7 +277,7 @@
 							<td class="py-3 px-4 font-medium">{student.name}</td>
 							<td class="py-3 px-4">{student.last_name}</td>
 							<td class="py-3 px-4">{student.phone || 'N/A'}</td>
-							<td class="py-3 px-4 text-accent font-medium">{student.email}</td>
+							<td class="py-3 px-4 text-accent font-medium">{student.roll_code}</td>
 							<td class="py-3 px-4">
 								<span class="badge badge-primary badge-outline">{student.level}</span>
 							</td>
@@ -384,6 +393,7 @@
 							placeholder="Nombre"
 							required
 							bind:this={nameInput}
+							onblur={() => handleFillEmail()}
 						/>
 					</div>
 					<div>
@@ -461,7 +471,7 @@
 							placeholder="4 dígitos (ej: 0001)"
 							required
 							maxlength="4"
-							pattern="\d{4}"
+							pattern="\d*"
 							bind:this={rollCodeInput}
 						/>
 						<small class="text-xs opacity-70 mt-1 block">Ingrese 4 dígitos (ej: 0001, 1234)</small>

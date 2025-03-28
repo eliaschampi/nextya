@@ -3,9 +3,10 @@
 	import { invalidate } from '$app/navigation';
 	import Message from '$lib/components/Message.svelte';
 	import PageTitle from '$lib/components/PageTitle.svelte';
+	import PermissionsModal from '$lib/components/PermissionsModal.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
-	import { Trash, Pencil } from 'lucide-svelte';
+	import { Trash, Pencil, Shield } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getInitials } from '$lib/utils/initialName';
 	import { formatDate } from '$lib/utils/formatDate';
@@ -17,6 +18,7 @@
 	let isEditing = $state(false);
 	let message = $state('');
 	let selectedUser = $state<User | null>(null);
+	let showPermissionsModal = $state(false);
 	const passwordPattern = '^(?=.*[A-Z])(?=.*\\d).{8,}$';
 	const { data } = $props<{ data: { users: User[] } }>();
 
@@ -48,6 +50,23 @@
 		selectedUser = user;
 		confirmModal?.showModal();
 	}
+
+	// Abrir modal de permisos
+	function openPermissionsModal(user: User) {
+		selectedUser = user;
+		showPermissionsModal = true;
+	}
+
+	// Reset permissions modal state when it's closed
+	$effect(() => {
+		if (!showPermissionsModal) {
+			setTimeout(() => {
+				if (!showPermissionsModal) {
+					selectedUser = null;
+				}
+			}, 300); // Small delay to ensure the modal is properly closed
+		}
+	});
 
 	// Validar formulario
 	function validateForm(formData: FormData): boolean {
@@ -234,6 +253,15 @@
 	</div>
 </dialog>
 
+<!-- Componente modal de permisos -->
+{#if selectedUser}
+	<PermissionsModal
+		user={selectedUser}
+		open={showPermissionsModal}
+		onClose={() => (showPermissionsModal = false)}
+	/>
+{/if}
+
 {#snippet userCard(user: User)}
 	<div
 		class="card bg-gradient-to-br from-base-200 to-base-100 shadow hover:shadow-lg transition-shadow duration-300 border border-base-300/30 rounded-xl overflow-hidden"
@@ -274,8 +302,8 @@
 			</div>
 
 			<!-- Stats with icons -->
-			<div class="grid grid-cols-2 gap-3 text-sm">
-				<div class="flex items-center gap-2 text-base-content/80">
+			<ul class="text-sm">
+				<li class="flex items-center gap-2 text-base-content/50">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path
 							stroke-linecap="round"
@@ -284,9 +312,9 @@
 							d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
 						></path>
 					</svg>
-					<span>{formatDate(user.created_at)}</span>
-				</div>
-				<div class="flex items-center gap-2 text-base-content/80">
+					<span>Creado: {formatDate(user.created_at)}</span>
+				</li>
+				<li class="flex items-center gap-2 text-base-content/50">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path
 							stroke-linecap="round"
@@ -295,9 +323,9 @@
 							d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
 						></path>
 					</svg>
-					<span>{formatDate(user.last_sign_in_at || '')}</span>
-				</div>
-			</div>
+					<span>Ultimo Login: {formatDate(user.last_sign_in_at || '')}</span>
+				</li>
+			</ul>
 
 			<!-- Action buttons with subtle hover effects -->
 			<div class="flex justify-end gap-2 pt-2">
@@ -307,6 +335,13 @@
 				>
 					<Pencil class="w-4 h-4" />
 					Editar
+				</button>
+				<button
+					class="btn btn-sm btn-ghost hover:bg-primary/10 text-primary hover:text-primary-focus transition-colors"
+					onclick={() => openPermissionsModal(user)}
+					title="Gestionar Permisos"
+				>
+					<Shield class="w-4 h-4" />
 				</button>
 				<button
 					class="btn btn-sm btn-ghost hover:bg-error/10 text-error hover:text-error-focus transition-colors"

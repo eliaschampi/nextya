@@ -1,8 +1,21 @@
+-- All my tables, except permissions and users.
+CREATE TYPE public.entity_enum AS ENUM (
+    'levels',
+    'courses',
+    'students',
+    'registers',
+    'evals', 
+    'eval_sections',
+    'eval_questions',
+    'eval_answers',
+    'eval_results'
+);
+
 -- Tables
 CREATE TABLE public.permissions (
     code UUID NOT NULL DEFAULT gen_random_uuid(),
     user_code UUID NOT NULL,
-    entity VARCHAR(100) NOT NULL,
+    entity entity_enum NOT NULL,
     can_create BOOLEAN NOT NULL DEFAULT false,
     can_update BOOLEAN NOT NULL DEFAULT false,
     can_delete BOOLEAN NOT NULL DEFAULT false,
@@ -30,8 +43,3 @@ BEGIN
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Policies for permissions
-CREATE POLICY read_permissions ON public.permissions 
-    FOR SELECT TO authenticated
-    USING (true);
