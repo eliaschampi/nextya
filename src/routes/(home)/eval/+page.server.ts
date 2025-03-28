@@ -2,7 +2,7 @@ import { getLevels } from '$lib/data/levels';
 import { getCourses } from '$lib/data/courses';
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
-import { evalSchema } from '$lib/schemas/eval';
+import { evalSchema, evalSectionSchema } from '$lib/schemas/eval';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const levels = await getLevels(locals.supabase);
@@ -38,7 +38,31 @@ export const actions: Actions = {
 			});
 		}
 
-		// Check if we're updating an existing eval
+		// Validate sections
+		if (!sections.length) {
+			return fail(400, { error: 'Debe agregar al menos una sección al examen' });
+		}
+
+		const sectionsValidation = sections.map((section: Record<string, unknown>) => {
+			const sectionResult = evalSectionSchema.safeParse({
+				course_code: section.course_code,
+				question_count: Number(section.question_count)
+			});
+
+			if (!sectionResult.success) {
+				return sectionResult.error.errors[0].message;
+			}
+
+			return null;
+		});
+
+		const sectionErrors = sectionsValidation.filter(
+			(error: string | null): error is string => error !== null
+		);
+		if (sectionErrors.length > 0) {
+			return fail(400, { error: sectionErrors[0] });
+		}
+
 		const existing_eval_code = formData.get('code') as string | null;
 
 		if (existing_eval_code) {
@@ -50,7 +74,7 @@ export const actions: Actions = {
 
 			if (evalError) return fail(400, { error: evalError.message });
 
-			// Delete existing sections to recreate them
+			// Delete existing sections
 			const { error: deleteError } = await locals.supabase
 				.from('eval_sections')
 				.delete()
@@ -58,7 +82,7 @@ export const actions: Actions = {
 
 			if (deleteError) return fail(400, { error: deleteError.message });
 
-			// Create new sections
+			// Insert new sections
 			if (sections.length > 0) {
 				const sectionsToInsert = sections.map((section: Record<string, unknown>) => ({
 					eval_code: existing_eval_code,
@@ -73,49 +97,55 @@ export const actions: Actions = {
 
 				if (sectionsError) return fail(400, { error: sectionsError.message });
 			}
+		} else {
+			// Create new eval
+			const { error: evalError, data: evalData } = await locals.supabase
+				.from('evals')
+				.insert({ name, level_code, group_name, eval_date, user_code })
+				.select('code');
 
-			return { type: 'success' };
+			if (evalError) return fail(400, { error: evalError.message });
+
+			const evalCode = evalData?.[0]?.code;
+			if (!evalCode) return fail(500, { error: 'Failed to create exam' });
+
+			// Insert sections
+			if (sections.length > 0) {
+				const sectionsToInsert = sections.map((section: Record<string, unknown>) => ({
+					eval_code: evalCode,
+					course_code: section.course_code as string,
+					order_in_eval: Number(section.order_in_eval),
+					question_count: Number(section.question_count)
+				}));
+
+				const { error: sectionsError } = await locals.supabase
+					.from('eval_sections')
+					.insert(sectionsToInsert);
+
+				if (sectionsError) return fail(400, { error: sectionsError.message });
+			}
 		}
 
-		// Create new eval
-		const { data: eval_data, error: evalError } = await locals.supabase
-			.from('evals')
-			.insert({ name, level_code, group_name, eval_date, user_code })
-			.select('code')
-			.single();
-
-		if (evalError || !eval_data) {
-			return fail(400, { error: evalError?.message || 'Error creating exam' });
-		}
-
-		// Create sections
-		if (sections.length > 0) {
-			const sectionsToInsert = sections.map((section: Record<string, unknown>) => ({
-				eval_code: eval_data.code,
-				course_code: section.course_code as string,
-				order_in_eval: Number(section.order_in_eval),
-				question_count: Number(section.question_count)
-			}));
-
-			const { error: sectionsError } = await locals.supabase
-				.from('eval_sections')
-				.insert(sectionsToInsert);
-
-			if (sectionsError) return fail(400, { error: sectionsError.message });
-		}
-
-		return { type: 'success' };
+		return { success: true };
 	},
 
 	delete: async ({ request, locals }) => {
 		const formData = await request.formData();
-		const code = formData.get('code') as string;
+		const evalCode = formData.get('code') as string;
 
-		// Delete the eval (cascade will delete sections)
-		const { error } = await locals.supabase.from('evals').delete().eq('code', code);
+		// Delete sections first
+		const { error: sectionsError } = await locals.supabase
+			.from('eval_sections')
+			.delete()
+			.eq('eval_code', evalCode);
 
-		if (error) return fail(400, { error: error.message });
+		if (sectionsError) return fail(400, { error: sectionsError.message });
 
-		return { type: 'success' };
+		// Delete eval
+		const { error: evalError } = await locals.supabase.from('evals').delete().eq('code', evalCode);
+
+		if (evalError) return fail(400, { error: evalError.message });
+
+		return { success: true };
 	}
 };

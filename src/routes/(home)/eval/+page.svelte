@@ -29,6 +29,7 @@
 	let nameInput: HTMLInputElement | null = $state(null);
 	let levelSelect: HTMLSelectElement | null = $state(null);
 	let dateInput: HTMLInputElement | null = $state(null);
+	let groupSelect: HTMLSelectElement | null = $state(null);
 
 	const { data } = $props<{ data: { levels: Level[]; courses: Course[] } }>();
 
@@ -95,6 +96,8 @@
 
 			if (dateInput && item.eval_date)
 				dateInput.value = typeof item.eval_date === 'string' ? item.eval_date.substring(0, 10) : '';
+
+			if (groupSelect) groupSelect.value = (item.group_name as string) || '';
 
 			// Cargar secciones
 			fetchSections(item.code as string);
@@ -173,7 +176,7 @@
 		const formData = new FormData();
 		formData.append('name', nameInput?.value || '');
 		formData.append('level_code', levelSelect?.value || '');
-		formData.append('group_name', 'A'); // Valor por defecto
+		formData.append('group_name', groupSelect?.value || '');
 		formData.append('eval_date', dateInput?.value || '');
 		formData.append('sections', JSON.stringify(sections));
 
@@ -204,6 +207,7 @@
 		if (nameInput) nameInput.value = '';
 		if (levelSelect) levelSelect.value = '';
 		if (dateInput) dateInput.value = '';
+		if (groupSelect) groupSelect.value = '';
 		availableCourses = [];
 	}
 	onMount(() => {
@@ -238,24 +242,22 @@
 </PageTitle>
 
 <div class="p-5 bg-base-200 rounded-xl mb-6 shadow-sm">
-	<div class="flex items-center gap-4">
-		<div class="w-full">
-			<label class="label">
-				<span class="label-text flex items-center gap-1">
-					<BookOpen class="w-4 h-4" /> Nivel
-				</span>
-			</label>
-			<select
-				class="select select-bordered w-full"
-				bind:value={selectedLevelCode}
-				onchange={() => fetchEvalsByLevel()}
-			>
-				<option value="" disabled selected>Selecciona un nivel</option>
-				{#each data.levels as level (level.code)}
-					<option value={level.code}>{level.name}</option>
-				{/each}
-			</select>
-		</div>
+	<div class="flex items-center justify-between flex-col sm:flex-row">
+		<label class="label">
+			<span class="label-text flex items-center gap-1">
+				<BookOpen class="w-4 h-4" /> Nivel
+			</span>
+		</label>
+		<select
+			class="select select-bordered w-[200px]"
+			bind:value={selectedLevelCode}
+			onchange={() => fetchEvalsByLevel()}
+		>
+			<option value="" disabled selected>Selecciona un nivel</option>
+			{#each data.levels as level (level.code)}
+				<option value={level.code}>{level.name}</option>
+			{/each}
+		</select>
 	</div>
 </div>
 
@@ -289,9 +291,9 @@
 								{formatDate(evalItem.eval_date as string)}
 							</td>
 							<td class="py-3 px-4 text-center">
-								<span class="badge badge-accent"
-									>{(evalItem.eval_sections as unknown[])?.length || 0}</span
-								>
+								<span class="badge badge-accent">
+									{(evalItem.eval_sections as unknown[])?.length || 0}
+								</span>
 							</td>
 							<td class="py-3 px-4">
 								<div class="flex gap-2 justify-center">
@@ -335,7 +337,7 @@
 				Registrar Nuevo Examen
 			{/if}
 		</h3>
-		<form onsubmit={handleSubmit} class="mt-6">
+		<form onsubmit={handleSubmit} class="mt-6" autocomplete="off">
 			{#if message}
 				<div class="alert alert-error mb-4">
 					<AlertCircle class="w-5 h-5" />
@@ -343,156 +345,155 @@
 				</div>
 			{/if}
 
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-				<div class="form-control">
-					<label class="label" for="name">
-						<span class="label-text font-medium">Nombre del Examen</span>
-					</label>
-					<input
-						id="name"
-						bind:this={nameInput}
-						type="text"
-						class="input input-bordered w-full"
-						placeholder="Ej. Examen Parcial 1"
-						required
-					/>
-				</div>
-
-				<div class="form-control">
-					<label class="label" for="level">
-						<span class="label-text flex items-center gap-1">
-							<BookOpen class="w-4 h-4" /> Nivel
-						</span>
+            
+			<div class="mb-6 grid grid-cols-2 gap-4">
+                <div>
+                    <label class="label" for="name">
+                        <span class="label-text">Nombre del Examen</span>
+                    </label>
+                    <input
+                        id="name"
+                        bind:this={nameInput}
+                        type="text"
+                        class="input input-bordered w-full"
+                        placeholder="Nombre del examen"
+                        required
+                        minlength="3"
+                        maxlength="100"
+                    />
+                </div>
+                <div>
+                    <label class="label" for="eval_date">
+                        <span class="label-text">Fecha del Examen</span>
+                    </label>
+                    <input
+                        id="eval_date"
+                        bind:this={dateInput}
+                        type="date"
+                        class="input input-bordered w-full"
+                        required
+                        min={new Date().toISOString().split('T')[0]}
+                    />
+                </div>
+				<div>
+					<label class="label" for="level_code">
+						<span class="label-text">Nivel</span>
 					</label>
 					<select
-						id="level"
+						id="level_code"
 						bind:this={levelSelect}
 						class="select select-bordered w-full"
-						onchange={() => updateAvailableCourses()}
 						required
+						onchange={updateAvailableCourses}
 					>
-						<option value="" disabled selected>Selecciona un nivel</option>
+						<option value="">Seleccionar nivel</option>
 						{#each data.levels as level (level.code)}
 							<option value={level.code}>{level.name}</option>
 						{/each}
 					</select>
 				</div>
 
-				<div class="form-control">
-					<label class="label" for="date">
-						<span class="label-text flex items-center gap-1">
-							<Calendar class="w-4 h-4" /> Fecha del Examen
-						</span>
+				<div>
+					<label class="label" for="group_name">
+						<span class="label-text">Grupo</span>
 					</label>
-					<input
-						id="date"
-						bind:this={dateInput}
-						type="date"
-						class="input input-bordered w-full"
+					<select
+						id="group_name"
+						bind:this={groupSelect}
+						class="select select-bordered w-full"
 						required
-					/>
+					>
+						<option value="">Seleccionar grupo</option>
+						<option value="A">A</option>
+						<option value="B">B</option>
+						<option value="C">C</option>
+						<option value="D">D</option>
+					</select>
 				</div>
 			</div>
 
-			<!-- Secciones del examen -->
-			<div class="mt-8">
-				<div class="flex justify-between items-center mb-4 border-b pb-2">
-					<h4 class="font-semibold text-md flex items-center gap-2">
-						<BookOpen class="w-5 h-5 text-primary" />
-						Secciones del Examen
-					</h4>
-					<button type="button" class="btn btn-sm btn-primary gap-1" onclick={addSection}>
+		
+
+			<div class="mb-6">
+				<label class="label" for="sections">
+					<span class="label-text">Secciones</span>
+				</label>
+				<div class="space-y-4" id="sections">
+					{#if sections.length === 0}
+						<div class="text-center py-4 text-gray-500">
+							No hay secciones. Agrega una sección para continuar.
+						</div>
+					{:else}
+						<div class="overflow-x-auto">
+							<table class="table w-full">
+								<thead>
+									<tr>
+										<th>Curso</th>
+										<th>Preguntas</th>
+										<th>Orden</th>
+										<th>Acciones</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each sections as section, i (section.course_code)}
+										<tr>
+											<td>{section.course_name}</td>
+											<td>
+												<input
+													type="number"
+													class="input input-bordered w-24"
+													min="1"
+													max="100"
+													bind:value={section.question_count}
+													required
+												/>
+											</td>
+											<td>
+												<button
+													type="button"
+													class="btn btn-ghost btn-xs"
+													onclick={() => moveSection(i, 'up')}
+												>
+													{#if i > 0}
+														<ChevronUp class="w-4 h-4" />
+													{/if}
+												</button>
+												<button
+													type="button"
+													class="btn btn-ghost btn-xs"
+													onclick={() => moveSection(i, 'down')}
+												>
+													{#if i < sections.length - 1}
+														<ChevronDown class="w-4 h-4" />
+													{/if}
+												</button>
+											</td>
+											<td>
+												<button
+													type="button"
+													class="btn btn-error btn-xs"
+													onclick={() => removeSection(i)}
+												>
+													<Trash2 class="w-4 h-4" />
+												</button>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{/if}
+				</div>
+
+				<div class="flex gap-2 mt-4">
+					<button type="button" class="btn btn-primary" onclick={addSection}>
 						<Plus class="w-4 h-4" />
 						Agregar Sección
 					</button>
+					<div class="text-sm text-gray-500">
+						{sections.length} de {availableCourses.length} cursos disponibles
+					</div>
 				</div>
-
-				{#if sections.length === 0}
-					<div class="text-center py-6 bg-base-200 rounded-lg border border-base-300">
-						<p class="text-sm opacity-70 flex flex-col items-center gap-2">
-							<AlertCircle class="w-5 h-5" />
-							No hay secciones. Agrega al menos una sección al examen.
-						</p>
-					</div>
-				{:else}
-					<div class="overflow-x-auto">
-						<table class="table table-zebra w-full">
-							<thead>
-								<tr>
-									<th class="text-center">Orden</th>
-									<th>Curso</th>
-									<th class="text-center">Preguntas</th>
-									<th class="text-center">Acciones</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each sections as section, i (i)}
-									<tr>
-										<td class="text-center font-medium">{section.order_in_eval}</td>
-										<td>
-											<select
-												class="select select-bordered select-sm w-full max-w-xs"
-												bind:value={section.course_code}
-												onchange={(e) => {
-													const selectedCourse = availableCourses.find(
-														(c: Course) => c.code === e.currentTarget.value
-													);
-													if (selectedCourse) {
-														section.course_name = selectedCourse.name;
-														sections = [...sections];
-													}
-												}}
-											>
-												{#each availableCourses.filter((c: Course) => c.code === section.course_code || !sections.some((s) => s !== section && s.course_code === c.code)) as course (course.code)}
-													<option value={course.code}>{course.name}</option>
-												{/each}
-											</select>
-										</td>
-										<td class="text-center">
-											<input
-												type="number"
-												class="input input-bordered input-sm w-20 text-center mx-auto"
-												min="1"
-												max="50"
-												bind:value={section.question_count}
-											/>
-										</td>
-										<td class="text-center">
-											<div class="flex gap-1 justify-center">
-												<button
-													type="button"
-													class="btn btn-xs btn-outline"
-													disabled={i === 0}
-													onclick={() => moveSection(i, 'up')}
-													aria-label="Mover arriba"
-												>
-													<ChevronUp class="w-3 h-3" />
-												</button>
-												<button
-													type="button"
-													class="btn btn-xs btn-outline"
-													disabled={i === sections.length - 1}
-													onclick={() => moveSection(i, 'down')}
-													aria-label="Mover abajo"
-												>
-													<ChevronDown class="w-3 h-3" />
-												</button>
-												<button
-													type="button"
-													class="btn btn-xs btn-error btn-outline"
-													onclick={() => removeSection(i)}
-													aria-label="Eliminar sección"
-												>
-													<Trash2 class="w-3 h-3" />
-												</button>
-											</div>
-										</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
-				{/if}
 			</div>
 
 			<div class="modal-action mt-8">
@@ -502,8 +503,8 @@
 						<ClipboardEdit class="w-4 h-4" />
 						Actualizar
 					{:else}
-						<Plus class="w-4 h-4" />
-						Registrar
+						<BookOpen class="w-4 h-4" />
+						Crear
 					{/if}
 				</button>
 			</div>
