@@ -9,7 +9,6 @@
 		House,
 		LogOut,
 		Menu,
-		MessageCircleQuestion,
 		Moon,
 		Search,
 		Settings,
@@ -134,14 +133,14 @@
 						<details>
 							<summary><FolderPen class="h-4 w-4" /> Evaluaciones</summary>
 							<ul>
-								<li><a href="/">Reporte</a></li>
-								<li><a href="/">Ajustes</a></li>
+								<li><a href="/eval">Registrar</a></li>
+								<li><a href="/result">Resultados</a></li>
 							</ul>
 						</details>
 					</li>
 					<li class="menu-title">Sistema</li>
 					<li><a href="/users"><UserRound class="h-4 w-4" /> Usuarios</a></li>
-					<li><a href="/"><Settings class="h-4 w-4" /> Configuración</a></li>
+					<li><a href="/"><Settings class="h-4 w-4" /> Ajustes</a></li>
 				</ul>
 			</div>
 			<div class="dropdown dropdown-top dropdown-end w-full p-4">
@@ -189,10 +188,7 @@
 						<div><UserCog class="h-4 w-4" /><span>Mi perfil</span></div>
 					</li>
 					<li>
-						<div><Settings class="h-4 w-4" /><span>Configuración</span></div>
-					</li>
-					<li>
-						<div><MessageCircleQuestion class="h-4 w-4" /><span>Ayuda</span></div>
+						<div><Settings class="h-4 w-4" /><span>Ajustes</span></div>
 					</li>
 					<li>
 						<form action="/api/logout" method="POST">

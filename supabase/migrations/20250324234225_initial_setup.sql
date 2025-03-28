@@ -1,10 +1,11 @@
--- All my tables, except permissions and users.
+
 CREATE TYPE public.entity_enum AS ENUM (
+    'users', -- include permissions
     'levels',
     'courses',
     'students',
     'registers',
-    'evals', 
+    'evals',
     'eval_sections',
     'eval_questions',
     'eval_answers',

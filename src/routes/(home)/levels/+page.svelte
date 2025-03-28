@@ -206,14 +206,16 @@
 				<div class="font-medium text-base-content">{item.name}</div>
 				<div class="text-sm text-base-content/70">{item.modality}</div>
 			</div>
-			<div class="flex items-center gap-2">
+			<div class="flex items-center gap-1">
+				{#if item.created_at}
+					<div class="badge badge-soft badge-primary">{new Date(item.created_at).getFullYear()}</div>
+				{/if}
+				<div class="divider divider-horizontal"></div>
 				<div class="dropdown dropdown-end">
 					<div tabindex="0" role="button" class="m-1 cursor-pointer">
 						<EllipsisVertical class="w-4 h-4" />
 					</div>
-					<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 					<ul
-						tabindex="0"
 						class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
 					>
 						<li><button onclick={() => openEditModal(item)}>Editar</button></li>

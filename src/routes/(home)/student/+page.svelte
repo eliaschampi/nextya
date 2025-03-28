@@ -262,22 +262,23 @@
 			<table class="table table-zebra w-full">
 				<thead>
 					<tr>
+						<th>Codigo</th>
 						<th>Nombre</th>
 						<th>Apellido</th>
 						<th>Telefono</th>
-						<th>Codigo</th>
 						<th>Nivel</th>
 						<th>Grupo</th>
-						<th>Acciones</th>
+						<th>Fecha de registro</th>
+						<th class="text-center">Acciones</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each students as student (student.student_code)}
 						<tr class="hover:bg-base-300 transition-colors border-b border-base-300">
+							<td class="py-3 px-4 text-accent font-medium">{student.roll_code}</td>
 							<td class="py-3 px-4 font-medium">{student.name}</td>
 							<td class="py-3 px-4">{student.last_name}</td>
 							<td class="py-3 px-4">{student.phone || 'N/A'}</td>
-							<td class="py-3 px-4 text-accent font-medium">{student.roll_code}</td>
 							<td class="py-3 px-4">
 								<span class="badge badge-primary badge-outline">{student.level}</span>
 							</td>
