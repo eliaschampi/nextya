@@ -4,10 +4,9 @@
 	import Message from '$lib/components/Message.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { entities } from '$lib/data/entities';
-	import { Shield, CheckCircle2, XCircle } from 'lucide-svelte';
+	import { Shield } from 'lucide-svelte';
 	import type { User } from '@supabase/supabase-js';
 
-	// Define permission types
 	type PermissionValue = {
 		can_create: boolean;
 		can_update: boolean;
@@ -23,7 +22,6 @@
 		can_delete: boolean;
 	};
 
-	// Props definition with defaults
 	const {
 		user,
 		open = false,
@@ -41,6 +39,27 @@
 	let error = $state('');
 	let saving = $state(false);
 	let allEntities = $derived(entities);
+
+	let allCanCreate = $derived(
+		Object.keys(permissions).length > 0 && Object.values(permissions).every((p) => p.can_create)
+	);
+	let allCanUpdate = $derived(
+		Object.keys(permissions).length > 0 && Object.values(permissions).every((p) => p.can_update)
+	);
+	let allCanDelete = $derived(
+		Object.keys(permissions).length > 0 && Object.values(permissions).every((p) => p.can_delete)
+	);
+
+	let allPermissionsGloballyEnabled = $derived(allCanCreate && allCanUpdate && allCanDelete);
+
+	let entityStates = $derived(
+		Object.fromEntries(
+			Object.entries(permissions).map(([entity, p]) => [
+				entity,
+				p.can_create && p.can_update && p.can_delete
+			])
+		)
+	);
 
 	// Modal control
 	$effect(() => {
@@ -153,6 +172,7 @@
 
 	// Batch permission operations
 	function setAllPermissions(type: 'can_create' | 'can_update' | 'can_delete', value: boolean) {
+		// Create a new object to ensure reactivity
 		permissions = Object.fromEntries(
 			Object.entries(permissions).map(([key, perms]) => [key, { ...perms, [type]: value }])
 		);
@@ -160,6 +180,7 @@
 
 	function setEntityPermissions(entity: string, value: boolean) {
 		if (permissions[entity]) {
+			// Create a new object to ensure reactivity
 			permissions = {
 				...permissions,
 				[entity]: {
@@ -170,6 +191,15 @@
 			};
 		}
 	}
+
+	// Event handler helpers with proper typing
+	function handleToggleChange(callback: (value: boolean) => void): (e: Event) => void {
+		return (e: Event) => {
+			const target = e.target as HTMLInputElement;
+			callback(target.checked);
+		};
+	}
+
 </script>
 
 <dialog bind:this={modal} class="modal">
@@ -180,46 +210,6 @@
 				Permisos de Usuario: {user.user_metadata?.name}
 				{user.user_metadata?.last_name}
 			</h3>
-			<!-- Quick actions for bulk operations -->
-			{#if !loading}
-				<div class="flex gap-2">
-					<div class="dropdown dropdown-end">
-						<div tabindex="0" role="button" class="btn btn-sm">Acciones rápidas</div>
-						<ul class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-52">
-							<li>
-								<button onclick={() => setAllPermissions('can_create', true)}>
-									Activar Creación
-								</button>
-							</li>
-							<li>
-								<button onclick={() => setAllPermissions('can_update', true)}>
-									Activar Edición
-								</button>
-							</li>
-							<li>
-								<button onclick={() => setAllPermissions('can_delete', true)}>
-									Activar Eliminación
-								</button>
-							</li>
-							<li>
-								<button onclick={() => setAllPermissions('can_create', false)}>
-									Desact. Creación
-								</button>
-							</li>
-							<li>
-								<button onclick={() => setAllPermissions('can_update', false)}>
-									Desact. Edición
-								</button>
-							</li>
-							<li>
-								<button onclick={() => setAllPermissions('can_delete', false)}>
-									Desact. Eliminación
-								</button>
-							</li>
-						</ul>
-					</div>
-				</div>
-			{/if}
 		</div>
 
 		{#if loading}
@@ -239,13 +229,60 @@
 					<thead>
 						<tr>
 							<th>Entidad</th>
-							<th class="text-center">Crear</th>
-							<th class="text-center">Modificar</th>
-							<th class="text-center">Eliminar</th>
-							<th class="text-center w-24">Acciones</th>
+							<th class="text-center"> Crear </th>
+							<th class="text-center"> Editar </th>
+							<th class="text-center"> Eliminar </th>
+							<th class="text-center align-bottom pb-3">Todos</th>
 						</tr>
 					</thead>
 					<tbody>
+						<tr>
+							<td> <b>Todos</b> </td>
+							<td class="text-center">
+								<input
+									type="checkbox"
+									class="toggle toggle-primary toggle-sm"
+									title="Activar/Desactivar Crear para todos"
+									disabled={loading}
+									checked={allCanCreate}
+									onchange={handleToggleChange((value) => setAllPermissions('can_create', value))}
+								/>
+							</td>
+							<td class="text-center">
+								<input
+									type="checkbox"
+									class="toggle toggle-primary toggle-sm"
+									title="Activar/Desactivar Modificar para todos"
+									disabled={loading}
+									checked={allCanUpdate}
+									onchange={handleToggleChange((value) => setAllPermissions('can_update', value))}
+								/>
+							</td>
+							<td class="text-center">
+								<input
+									type="checkbox"
+									class="toggle toggle-primary toggle-sm"
+									title="Activar/Desactivar Eliminar para todos"
+									disabled={loading}
+									checked={allCanDelete}
+									onchange={handleToggleChange((value) => setAllPermissions('can_delete', value))}
+								/>
+							</td>
+							<td class="text-center">
+								<input
+									type="checkbox"
+									class="toggle toggle-secondary toggle-sm"
+									title="Activar/Desactivar todos los permisos"
+									disabled={loading}
+									checked={allPermissionsGloballyEnabled}
+									onchange={handleToggleChange((value) => {
+										setAllPermissions('can_create', value);
+										setAllPermissions('can_update', value);
+										setAllPermissions('can_delete', value);
+									})}
+								/>
+							</td>
+						</tr>
 						{#each Object.entries(permissions) as [entity, permission] (entity)}
 							<tr>
 								<td>{getEntityName(entity)}</td>
@@ -254,6 +291,7 @@
 										type="checkbox"
 										class="toggle toggle-primary toggle-sm"
 										bind:checked={permission.can_create}
+										disabled={loading}
 									/>
 								</td>
 								<td class="text-center">
@@ -261,6 +299,7 @@
 										type="checkbox"
 										class="toggle toggle-primary toggle-sm"
 										bind:checked={permission.can_update}
+										disabled={loading}
 									/>
 								</td>
 								<td class="text-center">
@@ -268,25 +307,18 @@
 										type="checkbox"
 										class="toggle toggle-primary toggle-sm"
 										bind:checked={permission.can_delete}
+										disabled={loading}
 									/>
 								</td>
 								<td class="text-center">
-									<div class="flex gap-1 justify-center">
-										<button
-											class="btn btn-xs btn-outline btn-success"
-											onclick={() => setEntityPermissions(entity, true)}
-											title="Habilitar todos"
-										>
-											<CheckCircle2 class="w-3 h-3" />
-										</button>
-										<button
-											class="btn btn-xs btn-outline btn-error"
-											onclick={() => setEntityPermissions(entity, false)}
-											title="Deshabilitar todos"
-										>
-											<XCircle class="w-3 h-3" />
-										</button>
-									</div>
+									<input
+										type="checkbox"
+										class="toggle toggle-secondary toggle-sm"
+										title="Activar/Desactivar todos los permisos para esta entidad"
+										disabled={loading}
+										checked={entityStates[entity]}
+										onchange={handleToggleChange((value) => setEntityPermissions(entity, value))}
+									/>
 								</td>
 							</tr>
 						{/each}

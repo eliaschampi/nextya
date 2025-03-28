@@ -29,7 +29,6 @@ export const GET: RequestHandler = async ({ params }) => {
 
 		return json({ permissions: data || [] });
 	} catch (err) {
-		console.error('Error fetching permissions:', err);
 		throw error(500, err instanceof Error ? err.message : 'Error al obtener permisos de usuario');
 	}
 };
@@ -83,7 +82,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			count: permissionsToInsert.length
 		});
 	} catch (err) {
-		console.error('Error saving permissions:', err);
 		throw error(500, err instanceof Error ? err.message : 'Error al guardar permisos');
 	}
 };
