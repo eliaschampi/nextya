@@ -206,9 +206,7 @@
 				<button type="button" class="m-1 cursor-pointer">
 					<EllipsisVertical class="w-4 h-4" />
 				</button>
-				<ul
-					class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-				>
+				<ul class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
 					<li><button onclick={() => openEditModal(item)}>Editar</button></li>
 					<li><button onclick={() => openDeleteConfirmModal(item)}>Eliminar</button></li>
 				</ul>
