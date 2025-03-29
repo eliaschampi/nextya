@@ -11,6 +11,8 @@
 	import { getInitials } from '$lib/utils/initialName';
 	import { formatDate } from '$lib/utils/formatDate';
 	import type { User } from '@supabase/supabase-js';
+	import { permissionsStore } from '$lib/stores/permissions';
+	import { page } from '$app/state';
 
 	// Estados y referencias
 	let modal: HTMLDialogElement | null = $state(null);
@@ -21,6 +23,12 @@
 	let showPermissionsModal = $state(false);
 	const passwordPattern = '^(?=.*[A-Z])(?=.*\\d).{8,}$';
 	const { data } = $props<{ data: { users: User[] } }>();
+
+	// permissions
+	const canCreate = permissionsStore.has({ entity: 'users', action: 'create' });
+	const mySelf = (userId: string) => {
+		return userId === page.data.user?.id;
+	};
 
 	// Abrir modal para crear
 	function openCreateModal() {
@@ -166,7 +174,9 @@
 </script>
 
 <PageTitle title="Usuarios" description="Lista de usuarios disponibles en la aplicación.">
-	<button class="btn btn-primary" onclick={openCreateModal}>Agregar Usuario</button>
+	{#if $canCreate}
+		<button class="btn btn-primary" onclick={openCreateModal}>Agregar Usuario</button>
+	{/if}
 </PageTitle>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
@@ -329,26 +339,30 @@
 
 			<!-- Action buttons with subtle hover effects -->
 			<div class="flex justify-end gap-2 pt-2">
-				<button
-					class="btn btn-sm btn-ghost hover:bg-primary/10 text-primary hover:text-primary-focus transition-colors"
-					onclick={() => openEditModal(user)}
-				>
-					<Pencil class="w-4 h-4" />
-					Editar
-				</button>
-				<button
-					class="btn btn-sm btn-ghost hover:bg-primary/10 text-primary hover:text-primary-focus transition-colors"
-					onclick={() => openPermissionsModal(user)}
-					title="Gestionar Permisos"
-				>
-					<Shield class="w-4 h-4" />
-				</button>
-				<button
-					class="btn btn-sm btn-ghost hover:bg-error/10 text-error hover:text-error-focus transition-colors"
-					onclick={() => openDeleteConfirmModal(user)}
-				>
-					<Trash class="w-4 h-4" />
-				</button>
+				{#if mySelf(user.id) || $canCreate}
+					<button
+						class="btn btn-sm btn-ghost hover:bg-primary/10 text-primary hover:text-primary-focus transition-colors"
+						onclick={() => openEditModal(user)}
+					>
+						<Pencil class="w-4 h-4" />
+						Editar
+					</button>
+				{/if}
+				{#if $canCreate}
+					<button
+						class="btn btn-sm btn-ghost hover:bg-primary/10 text-primary hover:text-primary-focus transition-colors"
+						onclick={() => openPermissionsModal(user)}
+						title="Gestionar Permisos"
+					>
+						<Shield class="w-4 h-4" />
+					</button>
+					<button
+						class="btn btn-sm btn-ghost hover:bg-error/10 text-error hover:text-error-focus transition-colors"
+						onclick={() => openDeleteConfirmModal(user)}
+					>
+						<Trash class="w-4 h-4" />
+					</button>
+				{/if}
 			</div>
 		</div>
 	</div>

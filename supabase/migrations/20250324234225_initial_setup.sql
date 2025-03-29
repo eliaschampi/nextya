@@ -35,7 +35,7 @@ BEGIN
         SELECT 1
         FROM public.permissions
         WHERE user_code = (SELECT auth.uid())
-          AND entity = entity_name
+          AND entity::text = entity_name
           AND (
                 (permission = 'create' AND can_create = true)
              OR (permission = 'update' AND can_update = true)

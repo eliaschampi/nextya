@@ -34,7 +34,7 @@
 	},
 	"dependencies": {
 		"@supabase/ssr": "^0.6.1",
-		"@supabase/supabase-js": "^2.49.3",
+		"@supabase/supabase-js": "^2.49.4",
 		"@tailwindcss/vite": "^4.0.17",
 		"daisyui": "^5.0.9",
 		"lucide-svelte": "^0.483.0",
