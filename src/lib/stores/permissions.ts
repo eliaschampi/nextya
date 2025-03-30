@@ -69,4 +69,3 @@ const createPermissionsStore = () => {
 };
 
 export const permissionsStore = createPermissionsStore();
-

@@ -11,7 +11,8 @@
 		ChevronDown,
 		Calendar,
 		BookOpen,
-		ClipboardList
+		ClipboardList,
+		Key
 	} from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
@@ -274,6 +275,14 @@
 							</td>
 							<td class="py-4 px-6">
 								<div class="flex gap-2 justify-center">
+									<a
+										href={`/eval/keys/${evalItem.code}`}
+										class="btn btn-xs sm:btn-sm btn-accent btn-outline"
+										title="Gestionar claves"
+										aria-label="Gestionar claves para {evalItem.name}"
+									>
+										<Key class="w-4 h-4" />
+									</a>
 									<button
 										class="btn btn-xs sm:btn-sm btn-primary btn-outline"
 										title="Editar examen"
