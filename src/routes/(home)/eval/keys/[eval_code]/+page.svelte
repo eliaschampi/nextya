@@ -4,7 +4,7 @@
 	import Message from '$lib/components/Message.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { responseMessage } from '$lib/utils/responseMessage';
-	import { BookOpen, Save, ArrowLeft, Check } from 'lucide-svelte';
+	import { BookOpen, Save, ArrowLeft, Check, ChevronLeft, ChevronRight } from 'lucide-svelte';
 	import type { EvalQuestion, EvalSection, Eval } from '../../../../../app';
 
 	const { data } = $props<{
@@ -17,8 +17,8 @@
 	}>();
 
 	// Group questions by section and calculate offsets
-	let sectionQuestions = $state<{ [key: string]: EvalQuestion[] }>({});
-	let sectionStarts = $state<{ [key: string]: number }>({});
+	let sectionQuestions = $state<Record<string, EvalQuestion[]>>({});
+	let sectionStarts = $state<Record<string, number>>({});
 
 	// State for tracking form data
 	let activeTab = $state(0);
@@ -28,33 +28,56 @@
 	// Options for radio buttons
 	const options = ['A', 'B', 'C', 'D', 'E'];
 
-	// State to track form validity
+	// Derived values for form validation
 	let isValid = $derived(validateForm());
 	let completionPercentage = $derived(getCompletionPercentage());
 
-	// Default values for new questions
-	const defaultOmitable = false;
-	const defaultScore = 1.0;
+	// Constants
+	const DEFAULT_OMITABLE = false;
+	const DEFAULT_SCORE = 1.0;
 
 	// Initialize form data
 	$effect(() => {
-		// Calcular los puntos de inicio de cada sección
-		calculateSectionStarts();
+		if (Object.keys(sectionStarts).length === 0) {
+			calculateSectionStarts();
+		}
+	});
 
+	$effect(() => {
+		if (Object.keys(sectionQuestions).length === 0) {
+			initializeQuestions();
+		}
+	});
+
+	// Calculate starting points for each section for global numbering
+	function calculateSectionStarts() {
+		const starts: Record<string, number> = {};
+		let currentStart = 1;
+
+		data.sections.forEach((section: EvalSection) => {
+			starts[section.code] = currentStart;
+			currentStart += section.question_count;
+		});
+
+		sectionStarts = starts;
+	}
+
+	// Initialize questions from existing data or create new ones
+	function initializeQuestions() {
 		if (data.existingQuestions.length > 0) {
-			// Agrupar preguntas existentes por sección
+			// Group and sort existing questions by section
 			const grouped = data.existingQuestions.reduce(
-				(acc: { [key: string]: EvalQuestion[] }, question: EvalQuestion) => {
+				(acc: Record<string, EvalQuestion[]>, question: EvalQuestion) => {
 					if (!acc[question.section_code]) {
 						acc[question.section_code] = [];
 					}
 					acc[question.section_code].push(question);
 					return acc;
 				},
-				{} as { [key: string]: EvalQuestion[] }
+				{}
 			);
 
-			// Ordenar preguntas dentro de cada sección
+			// Sort questions within each section
 			for (const sectionCode in grouped) {
 				grouped[sectionCode].sort(
 					(a: EvalQuestion, b: EvalQuestion) => a.order_in_eval - b.order_in_eval
@@ -63,10 +86,10 @@
 
 			sectionQuestions = grouped;
 		} else {
-			// Crear preguntas vacías para cada sección con numeración global
-			const newSectionQuestions: { [key: string]: EvalQuestion[] } = {};
+			// Create empty questions for each section with global numbering
+			const newSectionQuestions: Record<string, EvalQuestion[]> = {};
 
-			data.sections.forEach((section: EvalSection & { course_name: string }) => {
+			data.sections.forEach((section: EvalSection) => {
 				const sectionCode = section.code;
 				const questions: EvalQuestion[] = [];
 				const startNumber = sectionStarts[sectionCode] || 1;
@@ -78,8 +101,8 @@
 						section_code: sectionCode,
 						order_in_eval: startNumber + i,
 						correct_key: '',
-						omitable: defaultOmitable,
-						score_percent: defaultScore
+						omitable: DEFAULT_OMITABLE,
+						score_percent: DEFAULT_SCORE
 					});
 				}
 
@@ -88,22 +111,9 @@
 
 			sectionQuestions = newSectionQuestions;
 		}
-	});
-
-	// Calcular los puntos de inicio de cada sección para numeración global
-	function calculateSectionStarts() {
-		const starts: { [key: string]: number } = {};
-		let currentStart = 1;
-
-		data.sections.forEach((section: EvalSection & { course_name: string }) => {
-			starts[section.code] = currentStart;
-			currentStart += section.question_count;
-		});
-
-		sectionStarts = starts;
 	}
 
-	// Obtener el número de orden interno dentro de la sección
+	// Get the internal order within a section
 	function getSectionQuestionIndex(globalNumber: number, sectionCode: string): number {
 		const start = sectionStarts[sectionCode] || 1;
 		return globalNumber - start + 1;
@@ -130,8 +140,8 @@
 	}
 
 	// Handle form submission
-	async function handleSubmit(event: SubmitEvent) {
-		event.preventDefault();
+	async function handleSubmit(e: SubmitEvent) {
+		e.preventDefault();
 
 		if (!isValid) {
 			message = 'Debe seleccionar una respuesta para cada pregunta.';
@@ -141,31 +151,26 @@
 		isSaving = true;
 
 		try {
-			// Create a FormData from the form
-			const form = event.target as HTMLFormElement;
-			const formData = new FormData(form);
+			const formData = new FormData();
 
-			// Asegurar que se incluyan todas las preguntas de todas las secciones
+			// Include all questions from all sections
 			Object.entries(sectionQuestions).forEach(([sectionCode, questions]) => {
 				questions.forEach((question) => {
-					// El índice local es la posición relativa dentro de la sección
 					const localIndex = getSectionQuestionIndex(question.order_in_eval, sectionCode);
 
-					const questionId = `question_${sectionCode}_${localIndex}`;
-					const omitableId = `omitable_${sectionCode}_${localIndex}`;
-					const scoreId = `score_${sectionCode}_${localIndex}`;
+					const fieldIds = {
+						question: `question_${sectionCode}_${localIndex}`,
+						omitable: `omitable_${sectionCode}_${localIndex}`,
+						score: `score_${sectionCode}_${localIndex}`
+					};
 
-					if (!formData.has(questionId)) {
-						formData.set(questionId, question.correct_key);
+					formData.set(fieldIds.question, question.correct_key);
+
+					if (question.omitable) {
+						formData.set(fieldIds.omitable, 'on');
 					}
 
-					if (question.omitable && !formData.has(omitableId)) {
-						formData.set(omitableId, 'on');
-					}
-
-					if (!formData.has(scoreId)) {
-						formData.set(scoreId, question.score_percent.toString());
-					}
+					formData.set(fieldIds.score, question.score_percent.toString());
 				});
 			});
 
@@ -178,7 +183,6 @@
 
 			if (result.type === 'success') {
 				showToast('Claves guardadas exitosamente', 'success');
-				// Redirigir a la lista de exámenes
 				goto('/eval');
 			} else {
 				message = responseMessage(result) || 'Error al guardar las claves';
@@ -191,40 +195,39 @@
 		}
 	}
 
-	// Handle radio change
-	function handleRadioChange(section: string, question: EvalQuestion, value: string) {
-		const sectionArr = [...sectionQuestions[section]];
+	// Update question answer choice
+	function updateQuestion<K extends keyof EvalQuestion>(
+		sectionCode: string,
+		question: EvalQuestion,
+		field: K,
+		value: EvalQuestion[K]
+	) {
+		const sectionArr = [...(sectionQuestions[sectionCode] || [])];
 		const index = sectionArr.findIndex((q) => q.order_in_eval === question.order_in_eval);
 
 		if (index !== -1) {
+			// Create a new question object with the updated value
 			sectionArr[index] = {
 				...sectionArr[index],
-				correct_key: value
+				[field]: value
 			};
 
+			// Update state
 			sectionQuestions = {
 				...sectionQuestions,
-				[section]: sectionArr
+				[sectionCode]: sectionArr
 			};
 		}
 	}
 
+	// Handle radio change
+	function handleRadioChange(section: string, question: EvalQuestion, value: string) {
+		updateQuestion(section, question, 'correct_key', value);
+	}
+
 	// Handle toggle omitable
 	function handleOmitableChange(section: string, question: EvalQuestion, checked: boolean) {
-		const sectionArr = [...sectionQuestions[section]];
-		const index = sectionArr.findIndex((q) => q.order_in_eval === question.order_in_eval);
-
-		if (index !== -1) {
-			sectionArr[index] = {
-				...sectionArr[index],
-				omitable: checked
-			};
-
-			sectionQuestions = {
-				...sectionQuestions,
-				[section]: sectionArr
-			};
-		}
+		updateQuestion(section, question, 'omitable', checked);
 	}
 
 	// Handle score change
@@ -232,19 +235,15 @@
 		const score = parseFloat(value);
 		if (isNaN(score) || score < 0 || score > 1) return;
 
-		const sectionArr = [...sectionQuestions[section]];
-		const index = sectionArr.findIndex((q) => q.order_in_eval === question.order_in_eval);
+		updateQuestion(section, question, 'score_percent', score);
+	}
 
-		if (index !== -1) {
-			sectionArr[index] = {
-				...sectionArr[index],
-				score_percent: score
-			};
-
-			sectionQuestions = {
-				...sectionQuestions,
-				[section]: sectionArr
-			};
+	// Navigation between tabs
+	function navigateTab(direction: 'next' | 'prev') {
+		if (direction === 'next' && activeTab < data.sections.length - 1) {
+			activeTab++;
+		} else if (direction === 'prev' && activeTab > 0) {
+			activeTab--;
 		}
 	}
 </script>
@@ -253,28 +252,31 @@
 	title={data.eval.name}
 	description={`Asignar claves - ${data.eval.levels.name} - Grupo ${data.eval.group_name}`}
 >
-	<a href="/eval" class="btn btn-outline gap-1">
+	<a href="/eval" class="btn btn-outline gap-1 hover:bg-base-200 transition-all duration-300">
 		<ArrowLeft size={18} />
 		Volver
 	</a>
 </PageTitle>
 
+<!-- Progress and Save Button -->
 <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
-	<div class="card bg-base-100 shadow-sm flex-1 w-full sm:w-auto">
+	<div
+		class="card bg-base-100 shadow hover:shadow-md transition-all duration-300 flex-1 w-full sm:w-auto"
+	>
 		<div class="p-4 flex flex-col">
 			<span class="text-sm text-base-content/70">Progreso Total</span>
 			<div class="flex items-center justify-between mt-1 mb-2">
-				<span class="font-semibold">{Math.round(completionPercentage)}%</span>
-				<span class="text-xs">
+				<span class="font-semibold text-lg">{Math.round(completionPercentage)}%</span>
+				<span class="text-xs badge badge-ghost">
 					{Object.values(sectionQuestions)
 						.flat()
 						.filter((q) => q.correct_key !== '').length} /
 					{Object.values(sectionQuestions).flat().length} preguntas
 				</span>
 			</div>
-			<div class="relative h-2 w-full bg-base-200 rounded-full overflow-hidden">
+			<div class="relative h-3 w-full bg-base-200 rounded-full overflow-hidden">
 				<div
-					class="absolute top-0 left-0 h-full rounded-full transition-all duration-300 ease-out {completionPercentage ===
+					class="absolute top-0 left-0 h-full rounded-full transition-all duration-500 ease-out {completionPercentage ===
 					100
 						? 'bg-success'
 						: 'bg-primary'}"
@@ -287,7 +289,9 @@
 	<button
 		type="submit"
 		form="keysForm"
-		class="btn btn-primary gap-2 w-full sm:w-auto {isValid ? 'btn-success' : ''}"
+		class="btn {isValid
+			? 'btn-success'
+			: 'btn-primary'} gap-2 w-full sm:w-auto shadow hover:shadow-lg transition-all duration-300"
 		disabled={!isValid || isSaving}
 	>
 		{#if isSaving}
@@ -303,11 +307,12 @@
 	</button>
 </div>
 
-<div class="card bg-base-100 shadow-lg mx-auto">
-	<div class="card-body p-6">
+<!-- Main Content -->
+<div class="card bg-base-100 shadow-lg hover:shadow-xl transition-all duration-300 mx-auto">
+	<div class="card-body p-4 sm:p-6">
 		<form id="keysForm" class="space-y-6" onsubmit={handleSubmit}>
-			<!-- Tabs with completion indicators -->
-			<div class="bg-base-200 rounded-lg overflow-hidden">
+			<!-- Section Tabs -->
+			<div class="bg-base-200 rounded-lg overflow-hidden shadow-inner">
 				<div class="tabs tabs-boxed bg-base-300/50 p-1 overflow-x-auto flex flex-nowrap">
 					{#each data.sections as section, i (section.code)}
 						{@const status = getSectionCompletionStatus(section.code)}
@@ -316,9 +321,9 @@
 						{@const sectionEnd = sectionStart + section.question_count - 1}
 						<button
 							type="button"
-							class="tab tab-lifted whitespace-nowrap gap-2 {activeTab === i
-								? 'tab-active'
-								: ''} {isComplete ? 'text-success' : ''}"
+							class="tab tab-lifted whitespace-nowrap gap-2 transition-all duration-300
+								{activeTab === i ? 'tab-active font-medium' : ''} 
+								{isComplete ? 'text-success' : ''}"
 							onclick={() => (activeTab = i)}
 						>
 							<BookOpen size={16} class="inline-block" />
@@ -332,78 +337,88 @@
 				</div>
 			</div>
 
+			<!-- Alert Message -->
 			{#if message}
 				<div class="mt-4">
 					<Message description={message} type="warning" />
 				</div>
 			{/if}
 
-			<!-- Questions for active section -->
+			<!-- Questions for Active Section -->
 			{#each data.sections as section, i (section.code)}
 				{#if activeTab === i}
 					<div class="space-y-6 p-2">
 						<div
 							class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"
 						>
-							<h3 class="text-lg font-semibold text-primary">
+							<h3 class="text-lg font-semibold text-primary flex items-center gap-2">
+								<BookOpen size={20} />
 								{section.course_name}
 							</h3>
-							<div class="text-sm bg-base-200 px-3 py-1 rounded-full">
+							<div class="text-sm bg-base-200 px-4 py-1.5 rounded-full shadow-sm">
 								Seleccione la respuesta correcta para cada pregunta
 							</div>
 						</div>
 
 						<div class="divide-y divide-base-300">
-							{#each sectionQuestions[section.code] || [] as question (question.order_in_eval)}
+							{#each sectionQuestions[section.code] || [] as question (question.code)}
 								{@const localIndex = getSectionQuestionIndex(question.order_in_eval, section.code)}
 								{@const questionId = `question_${section.code}_${localIndex}`}
 								{@const omitableId = `omitable_${section.code}_${localIndex}`}
 								{@const scoreId = `score_${section.code}_${localIndex}`}
+								{@const hasAnswer = question.correct_key !== ''}
 
-								<div class="py-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-center">
+								<div
+									class="py-4 grid grid-cols-1 md:grid-cols-6 gap-4 items-center
+									{hasAnswer ? 'bg-success/5' : ''} rounded-lg p-3 transition-all duration-300"
+								>
+									<!-- Question Number -->
 									<div class="md:col-span-1 flex items-center gap-2">
 										<div class="flex flex-col items-center">
-											<span class="text-lg font-semibold">{question.order_in_eval}</span>
-											{#if localIndex !== question.order_in_eval}
-												<span class="text-xs text-base-content/50">({localIndex})</span>
-											{/if}
+											<span
+												class="text-xl font-semibold
+												{hasAnswer ? 'text-success' : 'text-base-content'}"
+											>
+												{question.order_in_eval}
+											</span>
 										</div>
-
-										{#if question.correct_key}
-											<div class="badge badge-success badge-sm ml-auto md:hidden">
+										{#if hasAnswer}
+											<div class="badge badge-success ml-auto md:hidden">
 												{question.correct_key}
 											</div>
 										{/if}
 									</div>
 
-									<div class="md:col-span-3 flex flex-wrap gap-4 justify-center md:justify-start">
+									<!-- Answer Options -->
+									<div class="md:col-span-3 flex flex-wrap gap-2 justify-center md:justify-start">
 										{#each options as option (option)}
 											<label
-												class="flex items-center gap-2 cursor-pointer hover:bg-base-200 transition-colors p-2 rounded-lg {question.correct_key ===
-												option
-													? 'bg-primary/10 border border-primary/30'
-													: ''}"
+												class="flex items-center gap-2 cursor-pointer p-2 rounded-full
+													transition-all duration-300 hover:bg-base-200
+													{question.correct_key === option
+													? 'bg-primary text-primary-content shadow-md'
+													: 'bg-base-200 hover:shadow'}"
 											>
 												<input
 													type="radio"
 													name={questionId}
 													value={option}
-													class="radio radio-primary"
+													class="radio radio-primary hidden"
 													checked={question.correct_key === option}
 													onchange={() => handleRadioChange(section.code, question, option)}
 												/>
-												<span class="font-medium text-lg">{option}</span>
+												<span class="font-medium text-lg px-3">{option}</span>
 											</label>
 										{/each}
 									</div>
 
+									<!-- Omitable Option -->
 									<div class="md:col-span-1 flex items-center justify-center">
-										<label class="label cursor-pointer gap-2">
-											<span class="label-text">Omitible</span>
+										<label class="swap gap-2 items-center cursor-pointer">
 											<input
 												type="checkbox"
 												name={omitableId}
-												class="checkbox checkbox-sm checkbox-primary"
+												class="swap-input"
 												checked={question.omitable}
 												onchange={(e) =>
 													handleOmitableChange(
@@ -412,18 +427,27 @@
 														(e.target as HTMLInputElement).checked
 													)}
 											/>
+											<div class="swap-on flex gap-2 items-center">
+												<span class="label-text">Omitible</span>
+												<div class="badge badge-primary badge-sm">Sí</div>
+											</div>
+											<div class="swap-off flex gap-2 items-center">
+												<span class="label-text">Omitible</span>
+												<div class="badge badge-outline badge-sm">No</div>
+											</div>
 										</label>
 									</div>
 
+									<!-- Score Value -->
 									<div class="md:col-span-1 flex items-center justify-end gap-2">
-										<span class="text-xs">Valor</span>
+										<span class="text-xs font-medium">Valor</span>
 										<input
 											type="number"
 											name={scoreId}
 											min="0"
 											max="1"
 											step="0.01"
-											class="input input-sm input-bordered w-20"
+											class="input input-sm input-bordered w-20 text-center focus:input-primary transition-all duration-300"
 											value={question.score_percent}
 											oninput={(e) =>
 												handleScoreChange(
@@ -440,52 +464,26 @@
 				{/if}
 			{/each}
 
-			<!-- Navigation buttons -->
+			<!-- Navigation Buttons -->
 			<div class="pt-4 border-t border-base-300 flex justify-between">
 				<button
 					type="button"
-					class="btn btn-outline btn-sm gap-2"
+					class="btn btn-outline btn-sm gap-2 hover:bg-base-200 transition-all duration-300"
 					disabled={activeTab === 0}
-					onclick={() => (activeTab = Math.max(0, activeTab - 1))}
+					onclick={() => navigateTab('prev')}
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-4 w-4"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M15 19l-7-7 7-7"
-						/>
-					</svg>
+					<ChevronLeft size={18} />
 					Anterior
 				</button>
 
 				<button
 					type="button"
-					class="btn btn-outline btn-sm gap-2"
+					class="btn btn-outline btn-sm gap-2 hover:bg-base-200 transition-all duration-300"
 					disabled={activeTab === data.sections.length - 1}
-					onclick={() => (activeTab = Math.min(data.sections.length - 1, activeTab + 1))}
+					onclick={() => navigateTab('next')}
 				>
 					Siguiente
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-4 w-4"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M9 5l7 7-7 7"
-						/>
-					</svg>
+					<ChevronRight size={18} />
 				</button>
 			</div>
 		</form>
@@ -493,18 +491,11 @@
 </div>
 
 <style>
-	/* Smooth tab transitions */
 	.tab {
-		transition: all 0.2s ease;
+		transition: all 0.25s ease;
 	}
 	.tab-active {
-		transform: translateY(-2px);
-	}
-
-	/* Responsive improvements */
-	@media (max-width: 640px) {
-		.card-body {
-			padding: 1rem;
-		}
+		transform: translateY(-3px);
+		font-weight: 500;
 	}
 </style>
