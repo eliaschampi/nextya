@@ -12,7 +12,8 @@
 		Calendar,
 		BookOpen,
 		ClipboardList,
-		Key
+		Key,
+		Edit
 	} from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
@@ -62,8 +63,8 @@
 		formState.selectedCode = null;
 		formState.sections = [];
 		formState.name = '';
-		formState.level_code = '';
-		formState.eval_date = '';
+		formState.level_code = formState.selectedLevelCode || '';
+		formState.eval_date = new Date().toISOString().split('T')[0];
 		formState.group_name = '';
 		formState.message = '';
 		formState.selectedCourseCode = '';
@@ -232,10 +233,8 @@
 </div>
 
 {#if formState.selectedLevelCode && formState.evals.length > 0}
-	<div
-		class="card bg-gradient-to-br from-base-200 to-base-100 shadow-md hover:shadow-lg transition-all duration-300 rounded-xl overflow-hidden mb-6"
-	>
-		<div class="card-body p-0 overflow-x-auto">
+	<div class="card bg-gradient-to-br from-base-200 to-base-100 rounded-xl overflow-hidden mb-6">
+		<div class="card-body p-2 overflow-x-auto">
 			<table class="table table-zebra w-full">
 				<thead class="bg-base-200 sticky top-0 z-10">
 					<tr>
@@ -243,7 +242,7 @@
 						<th class="text-center px-6 py-3">Nivel</th>
 						<th class="text-center px-6 py-3">Grupo</th>
 						<th class="text-center px-6 py-3">Fecha</th>
-						<th class="text-center px-6 py-3">Secciones</th>
+						<th class="text-center px-6 py-3">Claves</th>
 						<th class="text-center px-6 py-3">Acciones</th>
 					</tr>
 				</thead>
@@ -252,7 +251,7 @@
 						<tr
 							class="hover:bg-base-300 transition-colors border-b border-base-200 last:border-b-0"
 						>
-							<td class="py-4 px-6 font-medium text-accent">{evalItem.name}</td>
+							<td class="py-4 px-6 font-bold opacity-70">{evalItem.name}</td>
 							<td class="py-4 px-6 text-center">
 								<span
 									class="badge badge-primary badge-outline flex items-center gap-1 justify-center mx-auto"
@@ -262,7 +261,7 @@
 								</span>
 							</td>
 							<td class="py-4 px-6 text-center">
-								<span class="badge badge-secondary">{evalItem.group_name || 'N/A'}</span>
+								{evalItem.group_name || 'N/A'}
 							</td>
 							<td class="py-4 px-6 text-center">
 								<div class="flex items-center justify-center gap-1 text-sm text-gray-500">
@@ -270,29 +269,28 @@
 									{formatDate(evalItem.eval_date)}
 								</div>
 							</td>
-							<td class="py-4 px-6 text-center">
-								<span class="badge badge-accent">{evalItem.eval_sections?.length || 0}</span>
+							<td class="py-4 px-6 flex justify-center">
+								<a
+									href={`/eval/keys/${evalItem.code}`}
+									class="badge badge-soft flex items-center gap-1 justify-center"
+									aria-label="Gestionar preguntas"
+								>
+									<Key class="w-3 h-3" />
+									{evalItem.eval_sections?.length || 0} Cursos
+								</a>
 							</td>
 							<td class="py-4 px-6">
 								<div class="flex gap-2 justify-center">
-									<a
-										href={`/eval/keys/${evalItem.code}`}
-										class="btn btn-xs sm:btn-sm btn-accent btn-outline"
-										title="Gestionar claves"
-										aria-label="Gestionar claves para {evalItem.name}"
-									>
-										<Key class="w-4 h-4" />
-									</a>
 									<button
-										class="btn btn-xs sm:btn-sm btn-primary btn-outline"
+										class="btn btn-xs sm:btn-sm btn-primary btn-soft"
 										title="Editar examen"
 										onclick={() => openEditModal(evalItem)}
 										aria-label="Editar examen {evalItem.name}"
 									>
-										<ClipboardEdit class="w-4 h-4" />
+										<Edit class="w-4 h-4" />
 									</button>
 									<button
-										class="btn btn-xs sm:btn-sm btn-error btn-outline"
+										class="btn btn-xs sm:btn-sm btn-error btn-soft"
 										title="Eliminar examen"
 										onclick={() => openDeleteConfirmModal(evalItem)}
 										aria-label="Eliminar examen {evalItem.name}"
@@ -360,6 +358,7 @@
 						type="date"
 						class="input input-bordered w-full validator focus:ring-2 focus:ring-primary focus:border-primary"
 						required
+						min={new Date().toISOString().split('T')[0]}
 						bind:value={formState.eval_date}
 					/>
 				</div>

@@ -320,7 +320,7 @@
 {/if}
 
 <dialog bind:this={modal} class="modal">
-	<div class="modal-box max-w-3xl">
+	<div class="modal-box">
 		<h3 class="text-lg font-bold mb-4">
 			{isEditing ? 'Editar' : selectedCode ? 'Registrar en nuevo nivel' : 'Registrar'} Estudiante
 		</h3>

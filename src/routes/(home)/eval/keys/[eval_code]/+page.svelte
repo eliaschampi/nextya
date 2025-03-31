@@ -290,13 +290,13 @@
 						{@const sectionEnd = sectionStart + section.question_count - 1}
 						<button
 							type="button"
-							class="tab flex-shrink-0 whitespace-nowrap gap-2 transition-all duration-300
+							class="tab flex-shrink-0 gap-1 whitespace-nowrap transition-all duration-300
 								{activeTab === i ? 'tab-active font-medium bg-primary/10' : ''} 
 								{isComplete ? 'text-success' : 'text-base-content'}"
 							onclick={() => (activeTab = i)}
 						>
 							<span>{section.course_name}</span>
-							<span class="badge badge-sm {isComplete ? 'badge-success' : 'badge-outline'} ml-1">
+							<span class="badge badge-sm {isComplete ? 'badge-success' : 'badge-outline'}">
 								{status.completed}/{status.total}
 							</span>
 							<span class="text-xs opacity-50 hidden md:inline">({sectionStart}-{sectionEnd})</span>
@@ -433,7 +433,7 @@
 			<div class="pt-4 border-t border-base-300 flex justify-between">
 				<button
 					type="button"
-					class="btn btn-soft btn-accent btn-sm gap-2"
+					class="btn btn-accent btn-sm gap-2"
 					disabled={activeTab === 0}
 					onclick={() => navigateTab('prev')}
 				>
@@ -442,7 +442,7 @@
 				</button>
 				<button
 					type="button"
-					class="btn btn-soft btn-accent btn-sm gap-2"
+					class="btn btn-accent btn-sm gap-2"
 					disabled={activeTab === data.sections.length - 1}
 					onclick={() => navigateTab('next')}
 				>
