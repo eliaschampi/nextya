@@ -13,6 +13,7 @@
 		Search,
 		Settings,
 		Sun,
+		Table,
 		UserCog,
 		UserRound
 	} from 'lucide-svelte';
@@ -115,13 +116,12 @@
 							<summary><ChartArea class="h-4 w-4" /> Reportes</summary>
 							<ul>
 								<li><a href="/dashboard">General</a></li>
-								<li><a href="/dashboard">Estudiantes</a></li>
 							</ul>
 						</details>
 					</li>
 					<li>
 						<details>
-							<summary><Bird class="h-4 w-4" /> Registros</summary>
+							<summary><Settings class="h-4 w-4" /> Configuracion</summary>
 							<ul>
 								<li><a href="/levels">Niveles</a></li>
 								<li><a href="/courses">Cursos</a></li>
@@ -134,13 +134,23 @@
 							<summary><FolderPen class="h-4 w-4" /> Evaluaciones</summary>
 							<ul>
 								<li><a href="/eval">Registrar</a></li>
-								<li><a href="/result">Resultados</a></li>
+								<li><a href="/">Escanear</a></li>
+								<li><a href="/">Cargar Datos</a></li>
+							</ul>
+						</details>
+					</li>
+					<li>
+						<details>
+							<summary><Table class="h-4 w-4" /> Resultados</summary>
+							<ul>
+								<li><a href="/result">Listado</a></li>
+								<li><a href="/">Estudiante</a></li>
 							</ul>
 						</details>
 					</li>
 					<li class="menu-title">Sistema</li>
 					<li><a href="/users"><UserRound class="h-4 w-4" /> Usuarios</a></li>
-					<li><a href="/"><Settings class="h-4 w-4" /> Ajustes</a></li>
+					<li><a href="/"><Bird class="h-4 w-4" /> Sistema</a></li>
 				</ul>
 			</div>
 			<div class="dropdown dropdown-top dropdown-end w-full p-4">
@@ -188,7 +198,7 @@
 						<div><UserCog class="h-4 w-4" /><span>Mi perfil</span></div>
 					</li>
 					<li>
-						<div><Settings class="h-4 w-4" /><span>Ajustes</span></div>
+						<div><Bird class="h-4 w-4" /><span>Sistema</span></div>
 					</li>
 					<li>
 						<form action="/api/logout" method="POST">

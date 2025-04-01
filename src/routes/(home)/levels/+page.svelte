@@ -9,6 +9,7 @@
 	import { EllipsisVertical } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getModalityTypes } from '$lib/data/modality';
+	import { permissionsStore } from '$lib/stores/permissions';
 
 	// Estados y referencias
 	let modal: HTMLDialogElement | null = $state(null);
@@ -19,6 +20,9 @@
 	const modalities = getModalityTypes();
 
 	const { data } = $props<{ data: { levels: Level[] } }>();
+	const canCreate = permissionsStore.has({ entity: 'levels', action: 'create' });
+	const canUpdate = permissionsStore.has({ entity: 'levels', action: 'update' });
+	const canDelete = permissionsStore.has({ entity: 'levels', action: 'delete' });
 
 	// Abrir modal para crear
 	function openCreateModal() {
@@ -136,7 +140,9 @@
 	title="Niveles"
 	description="Aquí encontrarás todas las niveles disponibles en la aplicación."
 >
-	<button class="btn btn-primary" onclick={openCreateModal}>Añadir</button>
+	{#if $canCreate}
+		<button class="btn btn-primary" onclick={openCreateModal}>Añadir</button>
+	{/if}
 </PageTitle>
 
 <div class="space-y-4 p-4">
@@ -218,8 +224,14 @@
 						<EllipsisVertical class="w-4 h-4" />
 					</div>
 					<ul class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
-						<li><button onclick={() => openEditModal(item)}>Editar</button></li>
-						<li><button onclick={() => openDeleteConfirmModal(item)}>Eliminar</button></li>
+						<li>
+							<button onclick={() => openEditModal(item)} disabled={!$canUpdate}>Editar</button>
+						</li>
+						<li>
+							<button onclick={() => openDeleteConfirmModal(item)} disabled={!$canDelete}>
+								Eliminar
+							</button>
+						</li>
 					</ul>
 				</div>
 			</div>

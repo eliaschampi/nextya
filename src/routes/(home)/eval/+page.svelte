@@ -17,9 +17,14 @@
 	} from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
+	import { permissionsStore } from '$lib/stores/permissions';
 
 	let modal: HTMLDialogElement | null = null;
 	let confirmModal: HTMLDialogElement | null = null;
+
+	const canCreate = permissionsStore.has({ entity: 'evals', action: 'create' });
+	const canUpdate = permissionsStore.has({ entity: 'evals', action: 'update' });
+	const canDelete = permissionsStore.has({ entity: 'evals', action: 'delete' });
 
 	const DEFAULT_QUESTIONS_PER_SECTION = 10;
 	const MAX_TOTAL_QUESTIONS = 80;
@@ -207,10 +212,12 @@
 </script>
 
 <PageTitle title="Exámenes" description="Gestión de evaluaciones por nivel y grupo">
-	<button class="btn btn-primary gap-2" onclick={openCreateModal}>
-		<Plus class="w-4 h-4" />
-		Nuevo Examen
-	</button>
+	{#if $canCreate}
+		<button class="btn btn-primary gap-2" onclick={openCreateModal}>
+			<Plus class="w-4 h-4" />
+			Nuevo Examen
+		</button>
+	{/if}
 </PageTitle>
 
 <div
@@ -286,6 +293,7 @@
 										title="Editar examen"
 										onclick={() => openEditModal(evalItem)}
 										aria-label="Editar examen {evalItem.name}"
+										disabled={!$canUpdate}
 									>
 										<Edit class="w-4 h-4" />
 									</button>
@@ -294,6 +302,7 @@
 										title="Eliminar examen"
 										onclick={() => openDeleteConfirmModal(evalItem)}
 										aria-label="Eliminar examen {evalItem.name}"
+										disabled={!$canDelete}
 									>
 										<Trash2 class="w-4 h-4" />
 									</button>

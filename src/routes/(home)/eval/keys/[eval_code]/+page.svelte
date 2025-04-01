@@ -7,6 +7,9 @@
 	import type { EvalQuestion, EvalSection, Eval } from '../../../../../app';
 	import { onMount } from 'svelte';
 	import Message from '$lib/components/Message.svelte';
+	import { permissionsStore } from '$lib/stores/permissions';
+
+	const canCreate = permissionsStore.has({ entity: 'eval_questions', action: 'create' });
 
 	// Props recibidos
 	const { data } = $props<{
@@ -261,7 +264,7 @@
 		class="btn btn-md {isValid
 			? 'btn-success'
 			: 'btn-primary'} gap-2 w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-300"
-		disabled={!isValid || isSaving}
+		disabled={!isValid || isSaving || !$canCreate}
 	>
 		{#if isSaving}
 			<span class="loading loading-spinner loading-sm"></span>

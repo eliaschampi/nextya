@@ -7,6 +7,7 @@
 	import { Book, Pencil, Search, Trash2, UserPlus } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
+	import { permissionsStore } from '$lib/stores/permissions';
 
 	let modal: HTMLDialogElement | null = $state(null);
 	let confirmModal: HTMLDialogElement | null = $state(null);
@@ -28,6 +29,10 @@
 	let levelSelect: HTMLSelectElement | null = $state(null);
 	let groupSelect: HTMLSelectElement | null = $state(null);
 	let rollCodeInput: HTMLInputElement | null = $state(null);
+
+	const canCreate = permissionsStore.has({ entity: 'students', action: 'create' });
+	const canUpdate = permissionsStore.has({ entity: 'students', action: 'update' });
+	const canDelete = permissionsStore.has({ entity: 'students', action: 'delete' });
 
 	const { data } = $props<{ data: { levels: Level[] } }>();
 	const groupOptions = ['A', 'B', 'C', 'D'];
@@ -214,10 +219,12 @@
 </script>
 
 <PageTitle title="Estudiantes" description="Selecciona un nivel y grupo para ver los estudiantes.">
-	<button class="btn btn-primary gap-2" onclick={openCreateModal}>
-		<UserPlus class="w-4 h-4" />
-		Registrar
-	</button>
+	{#if $canCreate}
+		<button class="btn btn-primary gap-2" onclick={openCreateModal}>
+			<UserPlus class="w-4 h-4" />
+			Registrar
+		</button>
+	{/if}
 </PageTitle>
 
 <div class="p-4 bg-base-200 rounded-box mb-4 flex flex-col sm:flex-row items-center gap-4">
@@ -292,6 +299,7 @@
 										class="btn btn-sm btn-primary btn-outline"
 										onclick={() => openEditModal(student)}
 										aria-label="Editar estudiante"
+										disabled={!$canUpdate}
 									>
 										<Pencil class="w-4 h-4" />
 									</button>
@@ -299,6 +307,7 @@
 										class="btn btn-sm btn-error btn-outline"
 										onclick={() => openDeleteConfirmModal(student)}
 										aria-label="Eliminar estudiante"
+										disabled={!$canDelete}
 									>
 										<Trash2 class="w-4 h-4" />
 									</button>
