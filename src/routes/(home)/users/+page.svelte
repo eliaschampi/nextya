@@ -6,7 +6,7 @@
 	import PermissionsModal from '$lib/components/PermissionsModal.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
-	import { Trash, Pencil, Shield } from 'lucide-svelte';
+	import { Pencil, Lock, EllipsisVertical } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getInitials } from '$lib/utils/initialName';
 	import { formatDate } from '$lib/utils/formatDate';
@@ -17,12 +17,24 @@
 	// Estados y referencias
 	let modal: HTMLDialogElement | null = $state(null);
 	let confirmModal: HTMLDialogElement | null = $state(null);
+	let passwordModal: HTMLDialogElement | null = $state(null);
 	let isEditing = $state(false);
 	let message = $state('');
+	let passwordMessage = $state('');
 	let selectedUser = $state<User | null>(null);
 	let showPermissionsModal = $state(false);
+	let selectedAvatar = $state('avatar.svg');
 	const passwordPattern = '^(?=.*[A-Z])(?=.*\\d).{8,}$';
 	const { data } = $props<{ data: { users: User[] } }>();
+
+	// Available avatars
+	const avatars = [
+		{ src: 'avatar.svg', label: 'Default' },
+		{ src: 'woman1.svg', label: 'Woman 1' },
+		{ src: 'woman2.svg', label: 'Woman 2' },
+		{ src: 'man1.svg', label: 'Man 1' },
+		{ src: 'man2.svg', label: 'Man 2' }
+	];
 
 	// permissions
 	const canCreate = permissionsStore.has({ entity: 'users', action: 'create' });
@@ -33,6 +45,7 @@
 	// Abrir modal para crear
 	function openCreateModal() {
 		isEditing = false;
+		selectedAvatar = 'avatar.svg';
 		modal?.showModal();
 	}
 
@@ -40,6 +53,7 @@
 	function openEditModal(user: User) {
 		isEditing = true;
 		selectedUser = user;
+		selectedAvatar = user.user_metadata?.photo_url || 'avatar.svg';
 		modal?.showModal();
 
 		const nameInput = modal?.querySelector<HTMLInputElement>('#name');
@@ -57,6 +71,13 @@
 	function openDeleteConfirmModal(user: User) {
 		selectedUser = user;
 		confirmModal?.showModal();
+	}
+
+	// Abrir modal para cambiar contraseña
+	function openPasswordModal(user: User) {
+		selectedUser = user;
+		passwordMessage = '';
+		passwordModal?.showModal();
 	}
 
 	// Abrir modal de permisos
@@ -99,6 +120,27 @@
 		return true;
 	}
 
+	// Validar formulario de contraseña
+	function validatePasswordForm(formData: FormData): boolean {
+		const password = formData.get('password')?.toString().trim();
+		const confirmPassword = formData.get('confirm_password')?.toString().trim();
+
+		if (!password) {
+			passwordMessage = 'La contraseña es obligatoria';
+			return false;
+		}
+		if (password.length < 8) {
+			passwordMessage = 'La contraseña debe tener al menos 8 caracteres';
+			return false;
+		}
+		if (password !== confirmPassword) {
+			passwordMessage = 'Las contraseñas no coinciden';
+			return false;
+		}
+		passwordMessage = '';
+		return true;
+	}
+
 	// Enviar datos (crear o editar)
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
@@ -106,6 +148,9 @@
 		const formElement = event.currentTarget as HTMLFormElement;
 		const dataToSend = new FormData(formElement);
 		const action: 'create' | 'update' = isEditing ? 'update' : 'create';
+
+		// Add the selected avatar
+		dataToSend.append('photo_url', selectedAvatar);
 
 		if (isEditing) {
 			dataToSend.append('user_id', selectedUser?.id || '');
@@ -130,6 +175,32 @@
 			}
 		} catch {
 			message = 'Error de red al procesar la solicitud';
+		}
+	}
+
+	// Manejar actualización de contraseña
+	async function handlePasswordUpdate(event: Event) {
+		event.preventDefault();
+		if (!selectedUser) return;
+
+		const formElement = event.currentTarget as HTMLFormElement;
+		const dataToSend = new FormData(formElement);
+		dataToSend.append('user_id', selectedUser.id);
+
+		if (!validatePasswordForm(dataToSend)) return;
+
+		try {
+			const response = await fetch('?/updatePassword', { method: 'POST', body: dataToSend });
+			const res = await response.json();
+
+			if (res.type === 'success') {
+				showToast('Contraseña actualizada exitosamente', 'success');
+				passwordModal?.close();
+			} else {
+				passwordMessage = responseMessage(res) || 'Error al actualizar la contraseña';
+			}
+		} catch {
+			passwordMessage = 'Error de red al actualizar la contraseña';
 		}
 	}
 
@@ -220,18 +291,40 @@
 					required
 					aria-required="true"
 				/>
-				<label class="fieldset-legend" for="password">Contraseña</label>
-				<input
-					id="password"
-					name="password"
-					type="password"
-					class="input w-full validator"
-					pattern={passwordPattern}
-					placeholder="Contraseña"
-					disabled={isEditing}
-					required={!isEditing}
-					aria-required={!isEditing}
-				/>
+				{#if !isEditing}
+					<label class="fieldset-legend" for="password">Contraseña</label>
+					<input
+						id="password"
+						name="password"
+						type="password"
+						class="input w-full validator"
+						placeholder="Contraseña"
+						required
+						aria-required="true"
+					/>
+				{/if}
+				<div class="mt-4">
+					<div class="fieldset-legend mb-2 block">Avatar</div>
+					<div class="flex flex-wrap gap-3 justify-center">
+						{#each avatars as avatar (avatar.src)}
+							<label class="flex flex-col items-center cursor-pointer group">
+								<input
+									type="radio"
+									name="avatar"
+									value={avatar.src}
+									class="hidden"
+									checked={selectedAvatar === avatar.src}
+									onchange={() => (selectedAvatar = avatar.src)}
+								/>
+								<div
+									class={`w-16 h-16 rounded-full overflow-hidden border-2 transition-all ${selectedAvatar === avatar.src ? 'border-secondary scale-110' : 'border-base-300 group-hover:border-primary/50'}`}
+								>
+									<img src={avatar.src} alt={avatar.label} class="w-full h-full object-cover" />
+								</div>
+							</label>
+						{/each}
+					</div>
+				</div>
 			</fieldset>
 			{#if message}
 				<div class="px-2 mt-2">
@@ -263,6 +356,56 @@
 	</div>
 </dialog>
 
+<!-- Modal para cambiar contraseña -->
+<dialog bind:this={passwordModal} class="modal">
+	<div class="modal-box">
+		<form onsubmit={handlePasswordUpdate} autocomplete="off">
+			<h3 class="text-lg font-bold">Cambiar contraseña</h3>
+			<p class="text-sm text-base-content/70 mb-4">
+				Establece una nueva contraseña para {selectedUser?.user_metadata?.name}
+				{selectedUser?.user_metadata?.last_name}
+			</p>
+			<fieldset class="fieldset bg-base-200 border border-base-300 p-4 rounded-box">
+				<label class="fieldset-legend" for="new_password">Nueva contraseña</label>
+				<input
+					id="new_password"
+					name="password"
+					type="password"
+					class="input w-full validator"
+					pattern={passwordPattern}
+					placeholder="Nueva contraseña"
+					required
+					aria-required="true"
+				/>
+				<div class="text-xs text-base-content/60 mt-1 mb-2">
+					Mínimo 8 caracteres, al menos 1 mayúscula y 1 número
+				</div>
+				<label class="fieldset-legend" for="confirm_password">Confirmar contraseña</label>
+				<input
+					id="confirm_password"
+					name="confirm_password"
+					type="password"
+					class="input w-full validator"
+					placeholder="Confirmar contraseña"
+					required
+					aria-required="true"
+				/>
+			</fieldset>
+			{#if passwordMessage}
+				<div class="px-2 mt-2">
+					<Message description={passwordMessage} type="warning" />
+				</div>
+			{/if}
+			<div class="modal-action flex justify-center gap-2">
+				<button class="btn btn-ghost" type="button" onclick={() => passwordModal?.close()}>
+					Cancelar
+				</button>
+				<button class="btn btn-primary" type="submit">Actualizar contraseña</button>
+			</div>
+		</form>
+	</div>
+</dialog>
+
 <!-- Componente modal de permisos -->
 {#if selectedUser}
 	<PermissionsModal
@@ -277,6 +420,21 @@
 		class="card bg-gradient-to-br from-base-200 to-base-100 shadow hover:shadow-lg transition-shadow duration-300 border border-base-300/30 rounded-xl overflow-hidden"
 	>
 		<div class="card-body p-6 space-y-4">
+			{#if $canCreate}
+				<div class="absolute top-4 right-4 dropdown dropdown-end">
+					<div tabindex="0" role="button" class="cursor-pointer">
+						<EllipsisVertical class="w-4 h-4" />
+					</div>
+					<ul class="dropdown-content menu bg-base-100 rounded-box z-10 w-52 p-2 shadow-sm">
+						<li>
+							<button onclick={() => openPermissionsModal(user)}>Gestionar Permisos</button>
+						</li>
+						<li>
+							<button onclick={() => openDeleteConfirmModal(user)}>Eliminar</button>
+						</li>
+					</ul>
+				</div>
+			{/if}
 			<!-- Header with avatar and name -->
 			<div class="flex items-center gap-4">
 				<div class="avatar relative">
@@ -340,27 +498,15 @@
 			<!-- Action buttons with subtle hover effects -->
 			<div class="flex justify-end gap-2 pt-2">
 				{#if mySelf(user.id) || $canCreate}
-					<button
-						class="btn btn-sm btn-ghost hover:bg-primary/10 text-primary hover:text-primary-focus transition-colors"
-						onclick={() => openEditModal(user)}
-					>
+					<button class="btn btn-sm btn-soft btn-primary" onclick={() => openEditModal(user)}>
 						<Pencil class="w-4 h-4" />
-						Editar
-					</button>
-				{/if}
-				{#if $canCreate}
-					<button
-						class="btn btn-sm btn-ghost hover:bg-primary/10 text-primary hover:text-primary-focus transition-colors"
-						onclick={() => openPermissionsModal(user)}
-						title="Gestionar Permisos"
-					>
-						<Shield class="w-4 h-4" />
 					</button>
 					<button
-						class="btn btn-sm btn-ghost hover:bg-error/10 text-error hover:text-error-focus transition-colors"
-						onclick={() => openDeleteConfirmModal(user)}
+						class="btn btn-sm btn-soft btn-secondary"
+						onclick={() => openPasswordModal(user)}
+						title="Cambiar Contraseña"
 					>
-						<Trash class="w-4 h-4" />
+						<Lock class="w-4 h-4" />
 					</button>
 				{/if}
 			</div>

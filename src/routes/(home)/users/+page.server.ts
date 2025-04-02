@@ -20,6 +20,7 @@ export const actions: Actions = {
 		const name = formData.get('name') as string;
 		const last_name = formData.get('last_name') as string;
 		const password = formData.get('password') as string;
+		const photo_url = (formData.get('photo_url') as string) || 'avatar.svg';
 
 		const { error: authError } = await supabaseAdmin.auth.admin.createUser({
 			email,
@@ -28,7 +29,7 @@ export const actions: Actions = {
 			user_metadata: {
 				name,
 				last_name,
-				photo_url: 'avatar.svg'
+				photo_url
 			}
 		});
 		if (authError) return fail(400, { error: authError.message });
@@ -42,13 +43,28 @@ export const actions: Actions = {
 		const email = formData.get('email') as string;
 		const name = formData.get('name') as string;
 		const last_name = formData.get('last_name') as string;
+		const photo_url = (formData.get('photo_url') as string) || 'avatar.svg';
 
 		const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
 			email,
 			user_metadata: {
 				name,
-				last_name
+				last_name,
+				photo_url
 			}
+		});
+		if (updateError) return fail(400, { error: updateError.message });
+
+		return { success: true };
+	},
+
+	updatePassword: async ({ request }) => {
+		const formData = await request.formData();
+		const userId = formData.get('user_id') as string;
+		const password = formData.get('password') as string;
+
+		const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+			password
 		});
 		if (updateError) return fail(400, { error: updateError.message });
 
