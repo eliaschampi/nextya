@@ -48,10 +48,10 @@
 	</title>
 </svelte:head>
 
-<div class="drawer lg:drawer-open">
+<div class="drawer lg:drawer-open h-screen overflow-hidden">
 	<input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
-	<div class="drawer-content flex flex-col min-h-screen">
-		<nav class="navbar bg-base-200 shadow-sm px-4 h-16">
+	<div class="drawer-content flex flex-col h-screen overflow-y-auto">
+		<nav class="navbar bg-base-200 shadow-sm px-4 h-16 sticky top-0 z-30">
 			<label for="drawer-toggle" class="drawer-button lg:hidden">
 				<Menu class="w-5 h-5" />
 			</label>
@@ -167,7 +167,7 @@
 	<div class="drawer-side shadow-md z-20">
 		<!-- Clicking this label closes the sidebar on mobile -->
 		<label for="drawer-toggle" aria-label="Close sidebar" class="drawer-overlay"></label>
-		<aside class="bg-base-200 text-base-content min-h-full w-72 flex flex-col">
+		<aside class="bg-base-200 text-base-content h-screen w-72 flex flex-col overflow-y-auto">
 			<LogoHead />
 			<div class="p-3 flex-1 overflow-y-auto">
 				<ul class="menu rounded-box w-full space-y-1.5">
@@ -216,8 +216,7 @@
 							</summary>
 							<ul class="pl-4">
 								<li><a href="/eval">Registrar</a></li>
-								<li><a href="/">Escanear</a></li>
-								<li><a href="/">Cargar Datos</a></li>
+								<li><a href="/eval/check">Procesar</a></li>
 							</ul>
 						</details>
 					</li>

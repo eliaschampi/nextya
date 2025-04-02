@@ -59,6 +59,7 @@ export type FormSection = {
 	order_in_eval: number;
 	question_count: number;
 };
+
 export type EvalWithSections = Eval & {
 	eval_sections: (EvalSection & { course_name: string })[];
 	levels?: { name: string };
