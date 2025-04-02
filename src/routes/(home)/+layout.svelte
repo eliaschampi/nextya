@@ -1,10 +1,9 @@
 <script lang="ts">
 	import LogoHead from '$lib/components/LogoHead.svelte';
 	import {
-		Bell,
 		Bird,
 		ChartArea,
-		ChevronsUpDown,
+		ChevronDown,
 		FolderPen,
 		House,
 		LogOut,
@@ -21,6 +20,7 @@
 	import { page } from '$app/state';
 	import { getInitials } from '$lib/utils/initialName';
 	import { theme } from '$lib/stores/theme';
+	import Background from '$lib/components/background.svelte';
 	let { children } = $props();
 	let modal: HTMLDialogElement | null = null;
 	let isDarkTheme = $derived($theme === 'dark');
@@ -54,126 +54,228 @@
 <div class="drawer lg:drawer-open">
 	<input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
 	<div class="drawer-content flex flex-col min-h-screen">
-		<nav class="navbar bg-base-200 shadow px-4">
+		<nav class="navbar bg-base-200 shadow-sm px-4 h-16">
 			<label for="drawer-toggle" class="drawer-button lg:hidden">
 				<Menu class="w-5 h-5" />
 			</label>
 			<div class="flex-1 flex items-center">
-				<a href="/" class="btn btn-ghost" aria-label="home aria">
+				<a href="/" class="btn btn-ghost btn-sm" aria-label="home">
 					<House class="w-5 h-5" />
 				</a>
-				<div class="text-lg">{page.data.title ?? 'Inicio'}</div>
+				<div class="text-base font-medium">{page.data.title ?? 'Inicio'}</div>
 			</div>
-			<!-- Navbar Icons -->
-			<div class="flex items-center gap-1">
-				<!-- Search Icon a is not clickable -->
-				<button class="btn btn-ghost btn-circle" aria-label="search aria" onclick={openModal}>
-					<Search class="w-5 h-5" />
+			<!-- Navbar Actions -->
+			<div class="flex items-center gap-2">
+				<!-- Search Button -->
+				<button class="btn btn-ghost btn-sm btn-circle" aria-label="search" onclick={openModal}>
+					<Search class="w-4 h-4" />
 				</button>
-				<!-- Notification Icon -->
-				<a href="/" class="btn btn-ghost btn-circle" aria-label="notification aria">
-					<Bell class="w-5 h-5" />
-				</a>
-				<!-- Theme Toggle -->
-				<label class="swap swap-rotate ml-1">
-					<input
-						type="checkbox"
-						class="theme-controller"
-						checked={isDarkTheme}
-						onchange={toggleTheme}
-					/>
-					<Sun class="swap-off h-5 w-5" />
-					<Moon class="swap-on h-5 w-5" />
-				</label>
 
-				<dialog bind:this={modal} class="modal">
+				<!-- Theme Toggle -->
+				<button
+					class="btn btn-ghost btn-sm btn-circle"
+					onclick={toggleTheme}
+					aria-label="toggle theme"
+				>
+					{#if isDarkTheme}
+						<Sun class="w-4 h-4" />
+					{:else}
+						<Moon class="w-4 h-4" />
+					{/if}
+				</button>
+
+				<!-- User Menu Dropdown -->
+				{#if page.data.user}
+					<div class="dropdown dropdown-end">
+						<div
+							tabindex="0"
+							role="button"
+							class="flex items-center gap-1.5 btn btn-ghost btn-sm px-2"
+						>
+							<div class="avatar">
+								<div class="w-6 rounded-full ring ring-primary ring-offset-base-100 ring-offset-1">
+									{#if userMetadata.photo_url}
+										<img
+											src={userMetadata.photo_url}
+											alt={`Avatar de ${userMetadata.name} ${userMetadata.last_name}`}
+											class="mask mask-squircle"
+										/>
+									{:else}
+										<div
+											class="flex items-center justify-center h-full bg-primary text-primary-content mask mask-squircle"
+										>
+											<span class="text-xs font-semibold">
+												{getInitials(userMetadata.name || '', userMetadata.last_name || '')}
+											</span>
+										</div>
+									{/if}
+								</div>
+							</div>
+							<ChevronDown class="h-3.5 w-3.5 opacity-70" />
+						</div>
+						<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+						<ul
+							tabindex="0"
+							class="dropdown-content menu bg-base-100 rounded-box shadow-lg w-52 mt-2 p-2 z-50"
+						>
+							<li class="menu-title pt-0 pb-2">
+								<span class="font-medium">{userMetadata.name} {userMetadata.last_name}</span>
+								<span class="text-xs flex items-center"
+									><span class="w-1.5 h-1.5 bg-success rounded-full mr-1"></span>En línea</span
+								>
+							</li>
+							<li>
+								<a href="/profile" class="flex gap-2"><UserCog class="h-4 w-4" />Mi perfil</a>
+							</li>
+							<li><a href="/config" class="flex gap-2"><Bird class="h-4 w-4" />Sistema</a></li>
+							<li class="mt-1 pt-1 border-t border-base-300">
+								<form action="/api/logout" method="POST">
+									<button type="submit" class="w-full flex gap-2 text-error">
+										<LogOut class="h-4 w-4" />Cerrar sesión
+									</button>
+								</form>
+							</li>
+						</ul>
+					</div>
+				{/if}
+
+				<dialog bind:this={modal} class="modal modal-bottom sm:modal-middle">
 					<div class="modal-box">
-						<h3 class="text-lg font-bold">Hello!</h3>
-						<p class="py-4">Este es mi dialog</p>
+						<h3 class="text-lg font-bold">Búsqueda</h3>
+						<div class="relative my-4">
+							<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+								<Search class="w-4 h-4 text-gray-500" />
+							</div>
+							<input
+								type="search"
+								class="input input-bordered w-full ps-10"
+								placeholder="Buscar..."
+							/>
+						</div>
+						<div class="modal-action">
+							<form method="dialog">
+								<button class="btn">Cerrar</button>
+							</form>
+						</div>
 					</div>
 					<form method="dialog" class="modal-backdrop">
-						<button>close</button>
+						<button>cerrar</button>
 					</form>
 				</dialog>
 			</div>
 		</nav>
 		<main class="flex-1 p-6">
+			<Background />
 			{@render children()}
 		</main>
 	</div>
 
-	<div class="drawer-side shadow">
+	<div class="drawer-side shadow-md z-20">
 		<!-- Clicking this label closes the sidebar on mobile -->
 		<label for="drawer-toggle" aria-label="Close sidebar" class="drawer-overlay"></label>
-		<aside class="bg-base-200 text-base-content min-h-full w-80 flex flex-col">
+		<aside class="bg-base-200 text-base-content min-h-full w-72 flex flex-col">
 			<LogoHead />
-			<div class="p-4 flex-1 overflow-y-auto">
-				<ul class="menu rounded-box w-full space-y-2">
-					<li><a href="/"><House class="h-4 w-4" /> Inicio</a></li>
-					<li class="menu-title">Administración</li>
+			<div class="p-3 flex-1 overflow-y-auto">
+				<ul class="menu rounded-box w-full space-y-1.5">
+					<li>
+						<a href="/" class="flex gap-2.5 py-2.5">
+							<House class="h-4 w-4" />
+							<span>Inicio</span>
+						</a>
+					</li>
+
+					<li class="menu-title pt-2">
+						<span>Administración</span>
+					</li>
+
 					<li>
 						<details>
-							<summary><ChartArea class="h-4 w-4" /> Reportes</summary>
-							<ul>
+							<summary class="flex gap-2.5 py-2">
+								<ChartArea class="h-4 w-4" />
+								<span>Reportes</span>
+							</summary>
+							<ul class="pl-4">
 								<li><a href="/dashboard">General</a></li>
 							</ul>
 						</details>
 					</li>
+
 					<li>
 						<details>
-							<summary><Settings class="h-4 w-4" /> Configuracion</summary>
-							<ul>
+							<summary class="flex gap-2.5 py-2">
+								<Settings class="h-4 w-4" />
+								<span>Configuración</span>
+							</summary>
+							<ul class="pl-4">
 								<li><a href="/levels">Niveles</a></li>
 								<li><a href="/courses">Cursos</a></li>
 								<li><a href="/student">Estudiantes</a></li>
 							</ul>
 						</details>
 					</li>
+
 					<li>
 						<details>
-							<summary><FolderPen class="h-4 w-4" /> Evaluaciones</summary>
-							<ul>
+							<summary class="flex gap-2.5 py-2">
+								<FolderPen class="h-4 w-4" />
+								<span>Evaluaciones</span>
+							</summary>
+							<ul class="pl-4">
 								<li><a href="/eval">Registrar</a></li>
 								<li><a href="/">Escanear</a></li>
 								<li><a href="/">Cargar Datos</a></li>
 							</ul>
 						</details>
 					</li>
+
 					<li>
 						<details>
-							<summary><Table class="h-4 w-4" /> Resultados</summary>
-							<ul>
+							<summary class="flex gap-2.5 py-2">
+								<Table class="h-4 w-4" />
+								<span>Resultados</span>
+							</summary>
+							<ul class="pl-4">
 								<li><a href="/result">Listado</a></li>
 								<li><a href="/">Estudiante</a></li>
 							</ul>
 						</details>
 					</li>
-					<li class="menu-title">Sistema</li>
-					<li><a href="/users"><UserRound class="h-4 w-4" /> Usuarios</a></li>
-					<li><a href="/"><Bird class="h-4 w-4" /> Sistema</a></li>
+
+					<li class="menu-title pt-2">
+						<span>Sistema</span>
+					</li>
+
+					<li>
+						<a href="/users" class="flex gap-2.5 py-2.5">
+							<UserRound class="h-4 w-4" />
+							<span>Usuarios</span>
+						</a>
+					</li>
+
+					<li>
+						<a href="/config" class="flex gap-2.5 py-2.5">
+							<Bird class="h-4 w-4" />
+							<span>Sistema</span>
+						</a>
+					</li>
 				</ul>
 			</div>
-			<div class="dropdown dropdown-top dropdown-end w-full p-4">
-				<div
-					tabindex="0"
-					role="button"
-					class="bg-base-100 hover:bg-base-300 rounded-box mx-2 mt-0 flex cursor-pointer items-center gap-2.5 px-3 py-2 transition-all"
-				>
-					{#if page.data.user}
+
+			<!-- Mobile user profile section -->
+			{#if page.data.user}
+				<div class="border-t border-base-300 p-3">
+					<div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-base-100">
 						<div class="avatar">
-							<div
-								class="w-8 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2 bg-base-200"
-							>
+							<div class="w-9 rounded-full ring ring-primary ring-offset-base-100 ring-offset-1">
 								{#if userMetadata.photo_url}
-									<div class="bg-base-200 mask mask-squircle w-8">
-										<img
-											src={userMetadata.photo_url}
-											alt={`Avatar de ${userMetadata.name} ${userMetadata.last_name}`}
-										/>
-									</div>
+									<img
+										src={userMetadata.photo_url}
+										alt={`Avatar de ${userMetadata.name} ${userMetadata.last_name}`}
+										class="mask mask-squircle"
+									/>
 								{:else}
 									<div
-										class="flex items-center justify-center h-full bg-primary text-primary-content"
+										class="flex items-center justify-center h-full bg-primary text-primary-content mask mask-squircle"
 									>
 										<span class="font-semibold">
 											{getInitials(userMetadata.name || '', userMetadata.last_name || '')}
@@ -182,32 +284,24 @@
 								{/if}
 							</div>
 						</div>
-						<div class="grow -space-y-0.5">
-							<p class="text-sm font-medium">{userMetadata.name} {userMetadata.last_name}</p>
-							<p class="text-sm">🟢 En linea</p>
+						<div class="flex-1 min-w-0">
+							<p class="text-sm font-medium truncate">
+								{userMetadata.name}
+								{userMetadata.last_name}
+							</p>
+							<p class="text-xs flex items-center">
+								<span class="w-1.5 h-1.5 bg-success rounded-full mr-1"></span>
+								<span>En línea</span>
+							</p>
 						</div>
-						<ChevronsUpDown class="h-4 w-4" />
-					{/if}
-				</div>
-				<ul
-					role="menu"
-					tabindex="0"
-					class="dropdown-content menu bg-base-100 rounded-box shadow-base-content/4 mb-1 w-48 p-1 shadow-[0px_-10px_40px_0px]"
-				>
-					<li>
-						<div><UserCog class="h-4 w-4" /><span>Mi perfil</span></div>
-					</li>
-					<li>
-						<div><Bird class="h-4 w-4" /><span>Sistema</span></div>
-					</li>
-					<li>
-						<form action="/api/logout" method="POST">
-							<LogOut class="h-4 w-4" />
-							<button type="submit" class="text-left">Cerrar sesión</button>
+						<form action="/api/logout" method="POST" class="ml-auto">
+							<button type="submit" class="btn btn-ghost btn-xs" aria-label="logout">
+								<LogOut class="h-4 w-4" />
+							</button>
 						</form>
-					</li>
-				</ul>
-			</div>
+					</div>
+				</div>
+			{/if}
 		</aside>
 	</div>
 </div>

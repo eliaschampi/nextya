@@ -221,7 +221,7 @@
 </PageTitle>
 
 <div
-	class="p-5 bg-gradient-to-r from-primary/10 to-base-200 rounded-xl mb-6 shadow-sm flex items-center justify-between flex-wrap gap-4"
+	class="bg-base-200 rounded-xl mb-6 shadow-sm p-4 flex items-center justify-between flex-wrap gap-4"
 >
 	<label class="label font-semibold text-primary flex items-center">
 		<BookOpen class="w-5 h-5 mr-2" /> Selecciona un Nivel

@@ -280,7 +280,7 @@
 </div>
 
 <!-- Contenido Principal -->
-<div class="card bg-base-200/50 border border-base-300 transition-all duration-300 mx-auto">
+<div class="card bg-base-200/90 border border-base-300 transition-all duration-300 mx-auto">
 	<div class="card-body p-4 sm:p-6">
 		<form id="keysForm" class="space-y-8" onsubmit={handleSubmit}>
 			<!-- Pestañas de Secciones -->
