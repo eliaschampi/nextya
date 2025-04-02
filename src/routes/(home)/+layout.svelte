@@ -25,21 +25,18 @@
 	let modal: HTMLDialogElement | null = null;
 	let isDarkTheme = $derived($theme === 'dark');
 
-	// Define interface for user metadata
 	interface UserMetadata {
 		name?: string;
 		last_name?: string;
 		photo_url?: string;
 	}
 
-	// Access user_metadata which contains name, last_name, and photo_url
 	let userMetadata = $state<UserMetadata>((page.data.user?.user_metadata as UserMetadata) || {});
 
 	function openModal() {
 		modal?.showModal();
 	}
 
-	// Theme toggle function
 	function toggleTheme() {
 		theme.toggle();
 	}
@@ -120,9 +117,6 @@
 						>
 							<li class="menu-title pt-0 pb-2">
 								<span class="font-medium">{userMetadata.name} {userMetadata.last_name}</span>
-								<span class="text-xs flex items-center"
-									><span class="w-1.5 h-1.5 bg-success rounded-full mr-1"></span>En línea</span
-								>
 							</li>
 							<li>
 								<a href="/profile" class="flex gap-2"><UserCog class="h-4 w-4" />Mi perfil</a>
@@ -165,7 +159,7 @@
 			</div>
 		</nav>
 		<main class="flex-1 p-6">
-			<Background />
+			<Background zIndex="z-[-10]" />
 			{@render children()}
 		</main>
 	</div>
@@ -285,14 +279,16 @@
 							</div>
 						</div>
 						<div class="flex-1 min-w-0">
-							<p class="text-sm font-medium truncate">
-								{userMetadata.name}
-								{userMetadata.last_name}
-							</p>
-							<p class="text-xs flex items-center">
-								<span class="w-1.5 h-1.5 bg-success rounded-full mr-1"></span>
-								<span>En línea</span>
-							</p>
+							<a href="/profile">
+								<p class="text-sm font-medium truncate">
+									{userMetadata.name}
+									{userMetadata.last_name}
+								</p>
+								<p class="text-xs flex items-center">
+									<span class="w-1.5 h-1.5 bg-success rounded-full mr-1"></span>
+									<span>En línea</span>
+								</p>
+							</a>
 						</div>
 						<form action="/api/logout" method="POST" class="ml-auto">
 							<button type="submit" class="btn btn-ghost btn-xs" aria-label="logout">

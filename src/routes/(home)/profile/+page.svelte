@@ -16,24 +16,11 @@
 			: ''
 	);
 
-	// Login history (mock data - replace with real data)
 	const loginHistory = $state([
 		{
-			date: new Date(Date.now() - 3600000).toLocaleString('es-ES'),
+			date: new Date(page.data.user?.last_sign_in_at || '').toLocaleString('es-ES'),
 			ip: '192.168.1.1',
 			device: 'Chrome en Windows',
-			status: 'success'
-		},
-		{
-			date: new Date(Date.now() - 86400000).toLocaleString('es-ES'),
-			ip: '192.168.1.1',
-			device: 'Firefox en MacOS',
-			status: 'success'
-		},
-		{
-			date: new Date(Date.now() - 172800000).toLocaleString('es-ES'),
-			ip: '192.168.1.100',
-			device: 'Safari en iPhone',
 			status: 'success'
 		}
 	]);
@@ -42,13 +29,13 @@
 	let activeTab = $state(0);
 	const tabs = [
 		{ name: 'Actividades', icon: Activity },
-		{ name: 'Inicios de Sesión', icon: LogIn }
+		{ name: 'Dispositivos', icon: LogIn }
 	];
 </script>
 
 <div class="container mx-auto max-w-4xl px-4">
 	<!-- Profile Card Mejorado -->
-	<div class="card bg-base-200 shadow-lg border border-base-300/30 overflow-hidden mb-8">
+	<div class="card bg-base-200 shadow border border-base-300/30 overflow-hidden mb-8">
 		<div class="card-body p-0">
 			<!-- Cabecera con gradiente -->
 			<div
@@ -78,12 +65,9 @@
 						{userMetadata.name || ''}
 						{userMetadata.last_name || ''}
 					</h2>
-					<div class="flex items-center justify-center gap-2 mt-1">
-						<div class="badge badge-primary badge-outline">Usuario</div>
-						<div class="flex items-center gap-1 text-success text-xs">
-							<span class="w-1.5 h-1.5 bg-success rounded-full"></span>
-							<span>En línea</span>
-						</div>
+					<div class="flex items-center justify-center gap-1 text-success mt-1">
+						<span class="w-1.5 h-1.5 bg-success rounded-full"></span>
+						<span>En línea</span>
 					</div>
 				</div>
 
@@ -97,9 +81,9 @@
 						<div class="stat-figure text-primary opacity-80">
 							<UserRound class="w-5 h-5" />
 						</div>
-						<div class="stat-title">ID</div>
-						<div class="stat-value text-lg font-medium">
-							{page.data.user?.id.substring(0, 8)}...
+						<div class="stat-title">Rol</div>
+						<div class="stat-value text-sm font-medium">
+							{userMetadata.role === 'admin' ? 'Administrador' : 'Usuario'}
 						</div>
 					</div>
 
@@ -108,7 +92,7 @@
 							<Calendar class="w-5 h-5" />
 						</div>
 						<div class="stat-title">Registro</div>
-						<div class="stat-value text-lg font-medium">{createdAt}</div>
+						<div class="stat-value text-sm font-medium">{createdAt}</div>
 					</div>
 
 					<div class="stat">
@@ -116,7 +100,7 @@
 							<BadgeCheck class="w-5 h-5" />
 						</div>
 						<div class="stat-title">Estado</div>
-						<div class="stat-value text-lg font-medium text-success">Activo</div>
+						<div class="stat-value text-sm font-medium text-success">Activo</div>
 					</div>
 				</div>
 			</div>
@@ -158,7 +142,6 @@
 						</p>
 					</div>
 				{:else}
-					<!-- Login History Tab -->
 					<div class="overflow-x-auto">
 						<table class="table table-zebra">
 							<thead>

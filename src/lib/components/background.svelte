@@ -10,7 +10,7 @@
 	let animationId = $state<number | null>(null);
 
 	// opacity and max opacity will use props
-	const { opacity = 0.09, maxOpacity = 0.2 } = $props();
+	const { opacity = 0.09, maxOpacity = 0.2, zIndex = '' } = $props();
 
 	// Configuraciones personalizables
 	const GRID_SPACING = 25;
@@ -83,5 +83,5 @@
 	}
 </script>
 
-<canvas bind:this={canvas} class="absolute inset-0 z-[-2] pointer-events-none" aria-hidden="true"
+<canvas bind:this={canvas} class="absolute inset-0 {zIndex} pointer-events-none" aria-hidden="true"
 ></canvas>

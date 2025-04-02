@@ -37,8 +37,8 @@
 					<span class="font-medium">Svelte 5</span>
 				</div>
 				<div class="flex justify-between py-1 border-b border-base-300/50">
-					<span class="text-base-content/70">Estilos</span>
-					<span class="font-medium">Tailwind 4 + DaisyUI</span>
+					<span class="text-base-content/70">Desarrollador</span>
+					<span class="font-medium">Elias Champi</span>
 				</div>
 				<div class="flex justify-between py-1 border-b border-base-300/50">
 					<span class="text-base-content/70">Última actualización</span>
@@ -49,7 +49,7 @@
 	</div>
 
 	<!-- Theme settings -->
-	<div class="card bg-base-100 shadow border border-base-300/30 mb-6">
+	<div class="card bg-base-200 shadow border border-base-300/30 mb-6">
 		<div class="card-body">
 			<div class="flex items-center gap-4 mb-2">
 				<div
@@ -60,10 +60,16 @@
 				<h2 class="text-xl font-semibold">Tema</h2>
 			</div>
 
-			<p class="text-base-content/80 mb-6">
-				Personaliza la apariencia de la aplicación seleccionando un tema que se adapte a tus
-				preferencias.
-			</p>
+			<div class="bg-base-200/50 p-4 rounded-lg">
+				<p class="text-sm flex items-start gap-2">
+					<InfoIcon class="w-4 h-4 mt-0.5 flex-shrink-0" />
+					<span>
+						Personaliza la apariencia de la aplicación seleccionando un tema que se adapte a tus
+						preferencias. El tema se adaptará automáticamente a tus preferencias, pero puedes
+						cambiarlo en cualquier momento con el botón de arriba o desde el menú superior.
+					</span>
+				</p>
+			</div>
 
 			<div class="flex flex-col gap-6">
 				<!-- Tema actual -->
@@ -83,27 +89,16 @@
 					</div>
 					<button class="btn btn-primary btn-sm" onclick={toggleTheme}> Cambiar tema </button>
 				</div>
-
-				<!-- Explicación -->
-				<div class="bg-base-200/50 p-4 rounded-lg">
-					<p class="text-sm flex items-start gap-2">
-						<InfoIcon class="w-4 h-4 mt-0.5 flex-shrink-0" />
-						<span
-							>El tema se adaptará automáticamente a tus preferencias, pero puedes cambiarlo en
-							cualquier momento con el botón de arriba o desde el menú superior.</span
-						>
-					</p>
-				</div>
 			</div>
 		</div>
 	</div>
 
 	<!-- Help card -->
-	<div class="card bg-base-100 shadow border border-base-300/30">
+	<div class="card bg-base-200 shadow border border-base-300/30">
 		<div class="card-body">
 			<div class="flex items-center gap-4 mb-2">
-				<div class="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
-					<HelpCircle class="w-5 h-5 text-accent" />
+				<div class="w-10 h-10 rounded-full bg-info/20 flex items-center justify-center">
+					<HelpCircle class="w-5 h-5 text-info" />
 				</div>
 				<h2 class="text-xl font-semibold">Ayuda</h2>
 			</div>

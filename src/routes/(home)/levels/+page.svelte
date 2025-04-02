@@ -165,6 +165,7 @@
 					type="text"
 					class="input w-full validator"
 					placeholder="Ej: Ordinario, Secundaria, etc."
+					maxlength={20}
 				/>
 				<div class="mt-2">
 					<label class="label font-medium" for="group_name">Modalidad</label>
