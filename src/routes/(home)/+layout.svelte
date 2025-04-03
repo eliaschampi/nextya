@@ -93,7 +93,7 @@
 								<div class="w-6 rounded-full ring ring-primary ring-offset-base-100 ring-offset-1">
 									{#if userMetadata.photo_url}
 										<img
-											src={userMetadata.photo_url}
+											src={`/${userMetadata.photo_url}`}
 											alt={`Avatar de ${userMetadata.name} ${userMetadata.last_name}`}
 											class="mask mask-squircle"
 										/>
@@ -159,7 +159,7 @@
 			</div>
 		</nav>
 		<main class="flex-1 p-6">
-			<Background zIndex="z-[-10]" />
+			<Background zIndex="z-[-2]" />
 			{@render children()}
 		</main>
 	</div>
@@ -262,7 +262,7 @@
 							<div class="w-9 rounded-full ring ring-primary ring-offset-base-100 ring-offset-1">
 								{#if userMetadata.photo_url}
 									<img
-										src={userMetadata.photo_url}
+										src={`/${userMetadata.photo_url}`}
 										alt={`Avatar de ${userMetadata.name} ${userMetadata.last_name}`}
 										class="mask mask-squircle"
 									/>

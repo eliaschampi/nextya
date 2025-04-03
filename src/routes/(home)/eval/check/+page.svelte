@@ -15,21 +15,23 @@
 	import { formatDate } from '$lib/utils/formatDate';
 	import { showToast } from '$lib/stores/Toast';
 
+	// Props tipados
 	const { data } = $props<{ evals: Eval[]; levels: Level[] }>();
 
-	// Estados principales
-	let evalModal: HTMLDialogElement | null = $state(null);
+	// Estados reactivos con Svelte v5 runes
+	let evalModal = $state<HTMLDialogElement | null>(null);
 	let selectedEval = $state<Eval | null>(null);
 	let uploadedFiles = $state<File[]>([]);
-	let selectedFileIndex = $state<number>(-1);
+	let selectedFileIndex = $state(-1);
 	let evaluations = $state<Eval[]>([]);
 	let verifiedFiles = $state<Record<number, boolean>>({});
 	let selectedLevel = $state('');
 
-	// Estado para el rectángulo de selección
-	let selectionRect = $state({ top: 0, left: 0, width: 0, height: 0 });
+	// Estado del rectángulo de selección en porcentajes (0-100)
+	let selectionRect = $state({ top: 10, left: 10, width: 80, height: 80 });
 	let isDragging = $state(false);
-	let currentDragCorner = $state<string | null>(null);
+	let dragCorner = $state<string | null>(null);
+	let imageRef = $state<HTMLImageElement | null>(null);
 
 	// Previsualización derivada
 	let currentPreview = $derived(
@@ -38,132 +40,133 @@
 			: ''
 	);
 
-	// Efecto para inicializar el rectángulo
-	$effect(() => {
-		if (currentPreview) {
-			setTimeout(initializeSelectionRect, 100);
-		}
-	});
-
-	// Efecto para manejar el resize
-	$effect(() => {
-		const handleResize = () => currentPreview && initializeSelectionRect();
-		window.addEventListener('resize', handleResize);
-		return () => window.removeEventListener('resize', handleResize);
-	});
+	// Rectángulo absoluto derivado
+	let absoluteRect = $derived(imageRef ? getAbsoluteRect(imageRef.getBoundingClientRect()) : null);
 
 	// Funciones para el rectángulo de selección
-	function initializeSelectionRect() {
-		const previewContainer = document.querySelector('.preview-container');
-		if (!previewContainer) return;
-
-		const imageContainer = previewContainer.querySelector('.relative') as HTMLElement;
-		if (!imageContainer) return;
-
-		const imageRect = imageContainer.getBoundingClientRect();
-		const margin = 20;
-		selectionRect = {
-			top: margin,
-			left: margin,
-			width: imageRect.width - 2 * margin,
-			height: imageRect.height - 2 * margin
+	function getAbsoluteRect(imageRect: DOMRect) {
+		return {
+			top: (selectionRect.top / 100) * imageRect.height,
+			left: (selectionRect.left / 100) * imageRect.width,
+			width: (selectionRect.width / 100) * imageRect.width,
+			height: (selectionRect.height / 100) * imageRect.height
 		};
 	}
 
+	let rafId: number;
 	function startDrag(event: MouseEvent, corner: string) {
 		isDragging = true;
-		currentDragCorner = corner;
+		dragCorner = corner;
 		event.preventDefault();
 	}
 
 	function handleDrag(event: MouseEvent) {
-		if (!isDragging || !currentDragCorner || !currentPreview) return;
+		if (!isDragging || !dragCorner || !currentPreview || !imageRef) return;
+		cancelAnimationFrame(rafId);
+		rafId = requestAnimationFrame(() => {
+			if (!imageRef) return;
+			const rect = imageRef.getBoundingClientRect();
+			const x = Math.max(0, Math.min(event.clientX - rect.left, rect.width));
+			const y = Math.max(0, Math.min(event.clientY - rect.top, rect.height));
+			const xPercent = (x / rect.width) * 100;
+			const yPercent = (y / rect.height) * 100;
 
-		const container = event.currentTarget as HTMLElement;
-		const imageContainer = container.querySelector('.relative') as HTMLElement;
-		if (!imageContainer) return;
+			const newRect = { ...selectionRect };
+			const minSize = 5; // Porcentaje mínimo
 
-		const imageRect = imageContainer.getBoundingClientRect();
-		const x = Math.max(0, Math.min(event.clientX - imageRect.left, imageRect.width));
-		const y = Math.max(0, Math.min(event.clientY - imageRect.top, imageRect.height));
-
-		switch (currentDragCorner) {
-			case 'topLeft':
-				selectionRect = {
-					...selectionRect,
-					left: x,
-					top: y,
-					width: selectionRect.width + selectionRect.left - x,
-					height: selectionRect.height + selectionRect.top - y
-				};
-				break;
-			case 'topRight':
-				selectionRect = {
-					...selectionRect,
-					top: y,
-					width: x - selectionRect.left,
-					height: selectionRect.height + selectionRect.top - y
-				};
-				break;
-			case 'bottomLeft':
-				selectionRect = {
-					...selectionRect,
-					left: x,
-					width: selectionRect.width + selectionRect.left - x,
-					height: y - selectionRect.top
-				};
-				break;
-			case 'bottomRight':
-				selectionRect = {
-					...selectionRect,
-					width: x - selectionRect.left,
-					height: y - selectionRect.top
-				};
-				break;
-		}
+			switch (dragCorner) {
+				case 'topLeft':
+					newRect.left = Math.min(xPercent, selectionRect.left + selectionRect.width - minSize);
+					newRect.top = Math.min(yPercent, selectionRect.top + selectionRect.height - minSize);
+					newRect.width = Math.max(
+						minSize,
+						selectionRect.left + selectionRect.width - newRect.left
+					);
+					newRect.height = Math.max(
+						minSize,
+						selectionRect.top + selectionRect.height - newRect.top
+					);
+					break;
+				case 'topRight':
+					newRect.top = Math.min(yPercent, selectionRect.top + selectionRect.height - minSize);
+					newRect.width = Math.max(minSize, xPercent - selectionRect.left);
+					newRect.height = Math.max(
+						minSize,
+						selectionRect.top + selectionRect.height - newRect.top
+					);
+					break;
+				case 'bottomLeft':
+					newRect.left = Math.min(xPercent, selectionRect.left + selectionRect.width - minSize);
+					newRect.height = Math.max(minSize, yPercent - selectionRect.top);
+					newRect.width = Math.max(
+						minSize,
+						selectionRect.left + selectionRect.width - newRect.left
+					);
+					break;
+				case 'bottomRight':
+					newRect.width = Math.max(minSize, xPercent - selectionRect.left);
+					newRect.height = Math.max(minSize, yPercent - selectionRect.top);
+					break;
+			}
+			selectionRect = newRect;
+		});
 	}
 
 	function endDrag() {
 		isDragging = false;
-		currentDragCorner = null;
+		dragCorner = null;
 	}
+
+	// Ajustar el rectángulo cuando cambie la imagen o el tamaño de la ventana
+	function adjustSelectionRect() {
+		if (!imageRef) return;
+		const maxWidth = 100;
+		const maxHeight = 100;
+
+		selectionRect.left = Math.max(0, selectionRect.left);
+		selectionRect.top = Math.max(0, selectionRect.top);
+		selectionRect.width = Math.min(selectionRect.width, maxWidth - selectionRect.left);
+		selectionRect.height = Math.min(selectionRect.height, maxHeight - selectionRect.top);
+	}
+
+	$effect(() => {
+		if (selectedFileIndex >= 0 && imageRef) {
+			adjustSelectionRect();
+		}
+	});
+
+	$effect(() => {
+		const handleResize = () => imageRef && adjustSelectionRect();
+		window.addEventListener('resize', handleResize);
+		return () => window.removeEventListener('resize', handleResize);
+	});
 
 	// Funciones principales
 	async function loadEvaluationsByLevel() {
-		if (!selectedLevel) {
-			evaluations = [];
-			return;
-		}
-		try {
-			const response = await fetch(`/api/eval/${selectedLevel}`);
-			if (response.ok) {
-				evaluations = await response.json();
-			} else {
-				evaluations = [];
-			}
-		} catch {
-			evaluations = [];
-		}
+		if (!selectedLevel) return (evaluations = []);
+		const response = await fetch(`/api/eval/${selectedLevel}`);
+		evaluations = response.ok ? await response.json() : [];
 	}
 
 	function openEvalModal() {
-		evaluations = [];
 		selectedLevel = '';
+		evaluations = [];
 		evalModal?.showModal();
 	}
 
 	function handleFileUpload(event: Event) {
-		const input = event.target as HTMLInputElement;
-		if (input.files) {
-			const newFiles = Array.from(input.files);
-			uploadedFiles = [...uploadedFiles, ...newFiles];
-			selectedFileIndex = uploadedFiles.length - 1;
-			showToast(`${newFiles.length} archivo(s) cargado(s)`, 'success');
+		const files = (event.target as HTMLInputElement).files;
+		if (!files) return;
+		const imageFiles = Array.from(files).filter((file) => file.type.startsWith('image/'));
+		if (imageFiles.length < files.length) {
+			showToast('Algunos archivos no son imágenes y fueron ignorados', 'warning');
 		}
+		uploadedFiles = [...uploadedFiles, ...imageFiles];
+		selectedFileIndex = uploadedFiles.length - 1;
+		showToast(`${imageFiles.length} imagen(es) cargada(s)`, 'success');
 	}
 
 	function clearFiles() {
-		if (!uploadedFiles.length) return;
 		uploadedFiles.forEach((file) => URL.revokeObjectURL(URL.createObjectURL(file)));
 		uploadedFiles = [];
 		selectedFileIndex = -1;
@@ -172,304 +175,251 @@
 	}
 
 	function removeFile(index: number) {
-		if (index < 0 || index >= uploadedFiles.length) return;
 		URL.revokeObjectURL(URL.createObjectURL(uploadedFiles[index]));
 		uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
-		selectedFileIndex =
-			selectedFileIndex === index
-				? uploadedFiles.length
-					? 0
-					: -1
-				: selectedFileIndex > index
-					? selectedFileIndex - 1
-					: selectedFileIndex;
+		selectedFileIndex = uploadedFiles.length
+			? Math.min(selectedFileIndex, uploadedFiles.length - 1)
+			: -1;
 		verifiedFiles = Object.fromEntries(
 			Object.entries(verifiedFiles)
-				.map(([k, v]) => [parseInt(k) > index ? parseInt(k) - 1 : parseInt(k), v])
-				.filter(([k]) => typeof k === 'number' && k < uploadedFiles.length)
+				.filter(([k]) => Number(k) !== index)
+				.map(([k, v]) => [Number(k) > index ? Number(k) - 1 : Number(k), v])
 		);
 	}
 
 	function verifyFiles() {
-		if (!uploadedFiles.length) return;
 		verifiedFiles = Object.fromEntries(uploadedFiles.map((_, i) => [i, true]));
 		showToast('Archivos verificados', 'success');
 	}
 
 	function processFiles() {
-		if (!selectedEval || !uploadedFiles.length) return;
-		if (!uploadedFiles.every((_, i) => verifiedFiles[i])) {
-			showToast('Verifica todos los archivos primero', 'warning');
+		if (
+			!selectedEval ||
+			!uploadedFiles.length ||
+			!uploadedFiles.every((_, i) => verifiedFiles[i])
+		) {
+			showToast('Faltan requisitos para procesar', 'warning');
 			return;
 		}
-		showToast('Procesamiento iniciado (pendiente de implementación)', 'success');
+		showToast('Procesamiento iniciado (pendiente)', 'success');
 	}
 
-	function selectEval(eval_item: Eval) {
-		selectedEval = eval_item;
+	function selectEval(evalItem: Eval) {
+		selectedEval = evalItem;
 		evalModal?.close();
-		showToast(`Evaluación "${eval_item.name}" seleccionada`, 'success');
+		showToast(`Evaluación "${evalItem.name}" seleccionada`, 'success');
 	}
 
+	// Limpiar URLs al desmontar
 	$effect(() => () => currentPreview && URL.revokeObjectURL(currentPreview));
 </script>
 
-<PageTitle title="Verificación de Evaluaciones" description="">
-	<div class="flex-1">
-		<!-- svelte-ignore a11y_interactive_supports_focus -->
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<div
-			class="card bg-base-200 shadow hover:bg-base-300/50 transition-all duration-300 cursor-pointer"
-			role="button"
-			aria-label="Select Evaluation"
-			onclick={openEvalModal}
-		>
-			<div class="card-body p-4">
-				{#if selectedEval}
-					<div class="flex flex-col text-center items-center gap-1">
-						<div class="badge badge-primary badge-soft">
-							{data.levels.find((l: Level) => l.code === selectedEval?.level_code)?.name}
-						</div>
-						<span class="font-bold text-lg">{selectedEval.name}</span>
-						<span class="text-sm opacity-70">
-							Grupo {selectedEval.group_name} • {formatDate(selectedEval.eval_date)}
-						</span>
-					</div>
-				{:else}
-					<div class="text-center p-5">Seleccionar evaluación</div>
-				{/if}
-			</div>
+<PageTitle title="Verificación de Evaluaciones" description="Procesa hojas de respuestas con OMR">
+	<button
+		class="w-full bg-base-200 hover:bg-base-300 transition-all duration-300 rounded-lg"
+		onclick={openEvalModal}
+		aria-label="Seleccionar evaluación"
+	>
+		<div class="p-4 text-center">
+			{#if selectedEval}
+				<div class="badge badge-primary badge-outline mb-2">
+					{data.levels.find((l: Level) => l.code === selectedEval?.level_code)?.name}
+				</div>
+				<span class="block font-bold text-lg">{selectedEval.name}</span>
+				<span class="block text-sm opacity-70">
+					Grupo {selectedEval.group_name} • {formatDate(selectedEval.eval_date)}
+				</span>
+			{:else}
+				<span class="block p-5">Seleccionar evaluación</span>
+			{/if}
 		</div>
-	</div>
+	</button>
 </PageTitle>
 
-<div class="flex flex-col h-full gap-6 p-4">
+<main class="flex flex-col h-full gap-6 p-4">
 	<!-- Barra de herramientas -->
-	<div class="card bg-base-200/70 shadow hover:shadow-md transition-all duration-300">
-		<div class="card-body p-4 sm:p-6">
-			<div class="flex flex-wrap gap-3 justify-between items-center">
-				<div class="flex flex-wrap gap-3">
-					<label for="file-upload" class="btn btn-primary btn-outline gap-2 hover:scale-105">
-						<Upload size={18} /> Subir Archivos
-					</label>
-					<input
-						id="file-upload"
-						type="file"
-						accept="image/*"
-						multiple
-						class="hidden"
-						onchange={handleFileUpload}
-					/>
-					<button
-						class="btn btn-error btn-outline gap-2 hover:scale-105 {uploadedFiles.length
-							? ''
-							: 'btn-disabled'}"
-						onclick={clearFiles}
-					>
-						<Trash2 size={18} /> Limpiar
-					</button>
-				</div>
+	<section class="card bg-base-200/80 shadow">
+		<div class="card-body p-6">
+			<div class="flex gap-2">
+				<label class="btn btn-primary btn-outline">
+					<Upload size={18} /> Subir Archivos
+					<input type="file" accept="image/*" multiple class="hidden" onchange={handleFileUpload} />
+				</label>
+				<button
+					class="btn btn-error btn-outline"
+					disabled={!uploadedFiles.length}
+					onclick={clearFiles}
+				>
+					<Trash2 size={18} /> Limpiar
+				</button>
 			</div>
 		</div>
-	</div>
+	</section>
 
 	<div class="flex flex-col lg:flex-row flex-1 gap-6">
 		<!-- Panel de archivos -->
-		<div
-			class="w-full lg:w-1/3 card bg-base-200/70 shadow hover:shadow-md transition-all duration-300"
-		>
-			<div class="card-body p-4 sm:p-6">
-				<div class="flex items-center justify-between mb-4">
-					<h3 class="card-title text-lg font-bold">Archivos Cargados</h3>
+		<section class="w-full lg:w-1/3 card bg-base-200/80 shadow">
+			<div class="card-body p-6">
+				<header class="flex items-center justify-between mb-4">
+					<h3 class="card-title">Archivos</h3>
 					<div class="flex items-center gap-2">
-						<span class="badge badge-primary badge-outline">{uploadedFiles.length} archivos</span>
+						<span class="badge badge-primary badge-outline">{uploadedFiles.length} Archivos</span>
 						<button
-							class="btn btn-secondary btn-sm gap-1 hover:scale-105 {uploadedFiles.length
-								? ''
-								: 'btn-disabled'}"
+							class="btn btn-secondary btn-sm gap-1"
+							disabled={!uploadedFiles.length}
 							onclick={verifyFiles}
-							title="Verificar todos"
 						>
 							<CheckCircle2 size={16} /> Verificar
 						</button>
 					</div>
-				</div>
-				<div class="overflow-x-auto rounded-lg border border-base-300 bg-base-100/50">
-					<table class="table table-zebra w-full">
-						<thead class="bg-base-300/50">
+				</header>
+				<div class="overflow-x-auto rounded-lg bg-base-200/80">
+					<table class="table table-zebra">
+						<thead>
 							<tr>
-								<th class="text-base font-semibold">Nombre</th>
-								<th class="text-base font-semibold">Estado</th>
-								<th class="text-base font-semibold text-right">Acciones</th>
+								<th>Nombre</th>
+								<th>Estado</th>
+								<th class="text-right">Acción</th>
 							</tr>
 						</thead>
 						<tbody>
 							{#each uploadedFiles as file, index (index)}
 								<tr
-									class="hover:bg-base-300/50 cursor-pointer {selectedFileIndex === index
-										? 'bg-primary/10'
+									class="hover:bg-base-200 cursor-pointer {selectedFileIndex === index
+										? 'bg-primary-100'
 										: ''}"
 									onclick={() => (selectedFileIndex = index)}
 								>
-									<td class="font-medium truncate max-w-[150px]" title={file.name}>
+									<td class="truncate max-w-[150px]" title={file.name}>
 										{file.name}
 										<div class="text-xs opacity-70">{Math.round(file.size / 1024)} KB</div>
 									</td>
 									<td>
 										{#if verifiedFiles[index]}
-											<span class="badge badge-success gap-1"><Check size={12} /> Verificado</span>
+											<span class="badge badge-success gap-1"><Check size={12} /> OK</span>
 										{:else}
 											<span class="badge badge-warning gap-1"
-												><AlertCircle size={12} /> Pendiente
-											</span>
+												><AlertCircle size={12} /> Pendiente</span
+											>
 										{/if}
 									</td>
 									<td class="text-right">
-										<button
-											class="btn btn-ghost btn-xs hover:bg-base-300"
-											onclick={(e) => {
-												e.stopPropagation();
-												removeFile(index);
-											}}
-											title="Eliminar"
-										>
+										<button class="btn btn-ghost btn-xs" onclick={() => removeFile(index)}>
 											<X size={16} />
 										</button>
 									</td>
 								</tr>
 							{:else}
-								<tr
-									><td colspan="3" class="text-center text-base-content/50 py-8"
-										>No hay archivos cargados</td
-									></tr
-								>
+								<tr><td colspan="3" class="text-center py-8 opacity-50">Sin archivos</td></tr>
 							{/each}
 						</tbody>
 					</table>
 				</div>
 			</div>
-		</div>
-		<!-- Panel de previsualización -->
-		<div class="flex-1 card bg-base-200/70 shadow hover:shadow-md transition-all duration-300">
-			<div class="card-body p-4 sm:p-6">
-				<div class="flex items-center justify-between mb-4">
-					<h3 class="card-title text-lg font-bold">Previsualización</h3>
+		</section>
+
+		<!-- Previsualización -->
+		<section class="flex-1 card bg-base-200/80 shadow">
+			<div class="card-body p-6">
+				<header class="flex items-center justify-between mb-4">
+					<h3 class="card-title">Previsualización</h3>
 					{#if currentPreview}
-						<div class="flex items-center gap-2">
-							<span class="badge badge-success gap-2"
-								><Check size={14} /> Archivo {selectedFileIndex + 1} de {uploadedFiles.length}</span
+						<div class="flex gap-2">
+							<span class="badge badge-success gap-2">
+								<Check size={14} />
+								{selectedFileIndex + 1}/{uploadedFiles.length}
+							</span>
+							<span
+								class="badge {verifiedFiles[selectedFileIndex] ? 'badge-success' : 'badge-warning'}"
 							>
-							{#if verifiedFiles[selectedFileIndex]}
-								<span class="badge badge-success gap-1"><Check size={12} /> Verificado</span>
-							{:else}
-								<span class="badge badge-warning gap-1"><AlertCircle size={12} /> Pendiente</span>
-							{/if}
+								{verifiedFiles[selectedFileIndex] ? 'Verificado' : 'Pendiente'}
+							</span>
 						</div>
 					{/if}
-				</div>
-				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+				</header>
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
-					class="flex-1 flex items-center justify-center bg-base-300/50 rounded-lg p-6 border-2 border-base-content/10 min-h-[400px] relative preview-container"
+					class="relative flex-1 flex items-center justify-center bg-base-100 rounded-lg p-6 min-h-[400px]"
 					onmousemove={handleDrag}
 					onmouseup={endDrag}
 					onmouseleave={endDrag}
-					role="application"
-					aria-label="Previsualización"
+					aria-roledescription="Área de selección"
 				>
-					{#if currentPreview}
-						<div class="relative max-w-full max-h-[65vh]">
-							<div
-								class="absolute w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-lg cursor-move"
-								style="top: {selectionRect.top}px; left: {selectionRect.left}px;"
-								onmousedown={(e) => startDrag(e, 'topLeft')}
-								role="button"
-								tabindex="0"
-								aria-label="Ajustar esquina superior izquierda"
-								title="Arrastre para ajustar"
-							></div>
-							<div
-								class="absolute w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-lg cursor-move"
-								style="top: {selectionRect.top}px; left: {selectionRect.left +
-									selectionRect.width}px;"
-								onmousedown={(e) => startDrag(e, 'topRight')}
-								role="button"
-								tabindex="0"
-								aria-label="Ajustar esquina superior derecha"
-								title="Arrastre para ajustar"
-							></div>
-							<div
-								class="absolute w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-lg cursor-move"
-								style="top: {selectionRect.top +
-									selectionRect.height}px; left: {selectionRect.left}px;"
-								onmousedown={(e) => startDrag(e, 'bottomLeft')}
-								role="button"
-								tabindex="0"
-								aria-label="Ajustar esquina inferior izquierda"
-								title="Arrastre para ajustar"
-							></div>
-							<div
-								class="absolute w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-lg cursor-move"
-								style="top: {selectionRect.top +
-									selectionRect.height}px; left: {selectionRect.left + selectionRect.width}px;"
-								onmousedown={(e) => startDrag(e, 'bottomRight')}
-								role="button"
-								tabindex="0"
-								aria-label="Ajustar esquina inferior derecha"
-								title="Arrastre para ajustar"
-							></div>
+					<div class="relative max-w-full max-h-[65vh]">
+						{#if currentPreview}
 							<img
 								src={currentPreview}
-								alt="Vista previa"
-								class="max-w-full max-h-[65vh] object-contain rounded-lg shadow"
+								alt="Previsualización"
+								class="max-w-full max-h-[65vh] object-contain rounded-lg"
+								bind:this={imageRef}
 							/>
-						</div>
-					{:else}
-						<div class="text-center text-base-content/50 space-y-4">
-							<Upload size={48} class="mx-auto opacity-20" />
-							<p class="text-lg">Seleccione un archivo para previsualizar</p>
-						</div>
-					{/if}
-				</div>
-				<div class="flex justify-between items-center mt-6">
-					<div class="text-sm text-base-content/70">
-						{#if currentPreview}<p>Arrastre las esquinas para definir el área de detección.</p>{/if}
+							{#if absoluteRect}
+								<div
+									class="absolute border-2 border-primary bg-primary/10"
+									style="top: {absoluteRect.top}px; left: {absoluteRect.left}px; width: {absoluteRect.width}px; height: {absoluteRect.height}px;"
+								>
+									<button
+										class="absolute -top-2 -left-2 w-4 h-4 bg-primary rounded-full cursor-nw-resize"
+										onmousedown={(e) => startDrag(e, 'topLeft')}
+										aria-label="Ajustar esquina superior izquierda"
+									></button>
+									<button
+										class="absolute -top-2 -right-2 w-4 h-4 bg-primary rounded-full cursor-ne-resize"
+										onmousedown={(e) => startDrag(e, 'topRight')}
+										aria-label="Ajustar esquina superior derecha"
+									></button>
+									<button
+										class="absolute -bottom-2 -left-2 w-4 h-4 bg-primary rounded-full cursor-sw-resize"
+										onmousedown={(e) => startDrag(e, 'bottomLeft')}
+										aria-label="Ajustar esquina inferior izquierda"
+									></button>
+									<button
+										class="absolute -bottom-2 -right-2 w-4 h-4 bg-primary rounded-full cursor-se-resize"
+										onmousedown={(e) => startDrag(e, 'bottomRight')}
+										aria-label="Ajustar esquina inferior derecha"
+									></button>
+								</div>
+							{/if}
+						{:else}
+							<div class="text-center opacity-50 space-y-4">
+								<Upload size={48} class="mx-auto" />
+								<p>Selecciona un archivo</p>
+							</div>
+						{/if}
 					</div>
+				</div>
+				<footer class="flex justify-between mt-6">
+					<p class="text-sm opacity-70">{currentPreview ? 'Ajusta el área de detección' : ''}</p>
 					<button
-						class="btn btn-primary gap-2 hover:scale-105 {selectedEval && uploadedFiles.length
-							? ''
-							: 'btn-disabled'}"
+						class="btn btn-primary gap-2"
+						disabled={!selectedEval || !uploadedFiles.length}
 						onclick={processFiles}
 					>
-						<Play size={20} /> Procesar Archivos
+						<Play size={20} /> Procesar
 					</button>
-				</div>
+				</footer>
 			</div>
-		</div>
+		</section>
 	</div>
-</div>
+</main>
 
-<!-- Modal de selección de evaluación -->
+<!-- Modal -->
 <dialog bind:this={evalModal} class="modal">
-	<div class="modal-box w-11/12 shadow">
-		<div class="flex items-center justify-between mb-6">
-			<h3 class="text-lg font-bold flex items-center gap-2">
-				<School class="w-6 h-6 text-primary" />
-				Seleccionar Evaluación
+	<div class="modal-box">
+		<header class="flex items-center justify-between mb-6">
+			<h3 class="text-lg font-bold flex gap-2">
+				<School class="w-6 h-6 text-primary" /> Seleccionar Evaluación
 			</h3>
-			<button
-				class="btn btn-circle btn-ghost hover:bg-base-200"
-				onclick={() => evalModal?.close()}
-				aria-label="Cerrar"
-			>
+			<button class="btn btn-circle btn-ghost" onclick={() => evalModal?.close()}>
 				<X size={20} />
 			</button>
-		</div>
-		<div class="bg-base-200 rounded-xl p-4 mb-6">
-			<label class="label font-semibold text-primary flex items-center mb-2">
-				<BookOpen class="w-5 h-5 mr-2" /> Selecciona un Nivel
+		</header>
+		<div class="bg-base-100 rounded-xl p-4 mb-6">
+			<label class="label font-semibold flex gap-2">
+				<BookOpen class="w-5 h-5 text-primary" /> Nivel
 			</label>
 			<select
-				class="select select-bordered w-full focus:ring-2 focus:ring-primary"
+				class="select select-bordered w-full"
 				bind:value={selectedLevel}
 				onchange={loadEvaluationsByLevel}
 			>
@@ -479,37 +429,28 @@
 				{/each}
 			</select>
 		</div>
-		<div class="overflow-x-auto rounded-lg border border-base-300 bg-base-200/30">
-			<table class="table table-zebra w-full">
-				<thead class="bg-base-300/50">
+		<div class="overflow-x-auto rounded-lg bg-base-200">
+			<table class="table">
+				<thead>
 					<tr>
-						<th class="font-semibold">Nombre</th>
-						<th class="font-semibold text-center">Grupo</th>
-						<th class="font-semibold text-center">Fecha</th>
+						<th>Nombre</th>
+						<th class="text-center">Grupo</th>
+						<th class="text-center">Fecha</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each evaluations as item (item.code)}
-						<tr class="hover:bg-base-300/30 cursor-pointer" onclick={() => selectEval(item)}>
-							<td class="font-medium">{item.name}</td>
-							<td class="text-center">
-								<span class="badge badge-ghost">{item.group_name}</span>
-							</td>
+						<tr class="hover:bg-base-300 cursor-pointer" onclick={() => selectEval(item)}>
+							<td>{item.name}</td>
+							<td class="text-center"><span class="badge badge-ghost">{item.group_name}</span></td>
 							<td class="text-center text-sm opacity-70">{formatDate(item.eval_date)}</td>
 						</tr>
+					{:else}
+						<tr><td colspan="3" class="text-center py-8 opacity-50">Sin evaluaciones</td></tr>
 					{/each}
-					{#if evaluations.length === 0}
-						<tr>
-							<td colspan="3" class="text-center py-8 text-base-content/50">
-								No hay evaluaciones disponibles
-							</td>
-						</tr>
-					{/if}
 				</tbody>
 			</table>
 		</div>
 	</div>
-	<form method="dialog" class="modal-backdrop">
-		<button>close</button>
-	</form>
+	<form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>

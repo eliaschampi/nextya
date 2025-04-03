@@ -19,7 +19,7 @@
 </script>
 
 <!-- Usamos la acción createPortal para mover el contenedor al nodo en el body -->
-<div use:createPortal class="fixed top-5 right-5 space-y-2">
+<div use:createPortal class="fixed top-5 right-5 space-y-2 z-50">
 	{#each $toasts as toast (toast.id)}
 		<div
 			transition:fade
