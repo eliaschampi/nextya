@@ -6,6 +6,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	return {
 		levels: levels as Level[],
-		title: 'Verificación de Evaluaciones'
+		title: 'Procesar evaluacion'
 	};
 };

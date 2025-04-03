@@ -214,7 +214,7 @@
 	$effect(() => () => currentPreview && URL.revokeObjectURL(currentPreview));
 </script>
 
-<PageTitle title="Verificación de Evaluaciones" description="Procesa hojas de respuestas con OMR">
+<PageTitle title="Proceso de verificacion" description="Procesa hojas de respuestas con OMR">
 	<button
 		class="w-full bg-base-200 hover:bg-base-300 transition-all duration-300 rounded-lg"
 		onclick={openEvalModal}
@@ -242,7 +242,7 @@
 		<div class="card-body p-6">
 			<div class="flex gap-2">
 				<label class="btn btn-primary btn-outline">
-					<Upload size={18} /> Subir Archivos
+					Cargar Respuestas
 					<input type="file" accept="image/*" multiple class="hidden" onchange={handleFileUpload} />
 				</label>
 				<button
@@ -263,7 +263,7 @@
 				<header class="flex items-center justify-between mb-4">
 					<h3 class="card-title">Archivos</h3>
 					<div class="flex items-center gap-2">
-						<span class="badge badge-primary badge-outline">{uploadedFiles.length} Archivos</span>
+						<span class="badge badge-primary badge-outline">{uploadedFiles.length}</span>
 						<button
 							class="btn btn-secondary btn-sm gap-1"
 							disabled={!uploadedFiles.length}
@@ -321,7 +321,7 @@
 		<!-- Previsualización -->
 		<section class="flex-1 card bg-base-200/80 shadow">
 			<div class="card-body p-6">
-				<header class="flex items-center justify-between mb-4">
+				<header class="flex items-center justify-between mb-4 overflow-x-auto">
 					<h3 class="card-title">Previsualización</h3>
 					{#if currentPreview}
 						<div class="flex gap-2">
