@@ -2,21 +2,22 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import {
 		Upload,
-		CheckCircle2,
 		Play,
 		Check,
 		Trash2,
 		X,
 		School,
 		AlertCircle,
-		BookOpen
+		BookOpen,
+		Loader2
 	} from 'lucide-svelte';
 	import type { Eval, Level } from '../../../../app';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { showToast } from '$lib/stores/Toast';
+	import type { AnswerValue } from '$lib/omrProcessor';
 
 	// Props tipados
-	const { data } = $props<{ evals: Eval[]; levels: Level[] }>();
+	const { data } = $props<{ data: { levels: Level[] } }>();
 
 	// Estados reactivos con Svelte v5 runes
 	let evalModal = $state<HTMLDialogElement | null>(null);
@@ -24,14 +25,36 @@
 	let uploadedFiles = $state<File[]>([]);
 	let selectedFileIndex = $state(-1);
 	let evaluations = $state<Eval[]>([]);
-	let verifiedFiles = $state<Record<number, boolean>>({});
+
 	let selectedLevel = $state('');
+	let isProcessing = $state(false);
+	let processingIndex = $state(-1);
+	let processedResults = $state<Record<number, ProcessedResult>>({});
 
 	// Estado del rectángulo de selección en porcentajes (0-100)
 	let selectionRect = $state({ top: 10, left: 10, width: 80, height: 80 });
 	let isDragging = $state(false);
 	let dragCorner = $state<string | null>(null);
 	let imageRef = $state<HTMLImageElement | null>(null);
+
+	// Interfaces para los resultados procesados
+	interface ProcessedResult {
+		status: 'success' | 'error';
+		studentCode?: string;
+		student?: {
+			name: string;
+			lastName: string;
+			rollCode: string;
+		};
+		results?: {
+			correctCount: number;
+			incorrectCount: number;
+			blankCount: number;
+			totalScore: number;
+		};
+		answers?: Record<number, AnswerValue>;
+		message?: string;
+	}
 
 	// Previsualización derivada
 	let currentPreview = $derived(
@@ -170,7 +193,7 @@
 		uploadedFiles.forEach((file) => URL.revokeObjectURL(URL.createObjectURL(file)));
 		uploadedFiles = [];
 		selectedFileIndex = -1;
-		verifiedFiles = {};
+		processedResults = {};
 		showToast('Archivos eliminados', 'success');
 	}
 
@@ -180,74 +203,110 @@
 		selectedFileIndex = uploadedFiles.length
 			? Math.min(selectedFileIndex, uploadedFiles.length - 1)
 			: -1;
-		verifiedFiles = Object.fromEntries(
-			Object.entries(verifiedFiles)
-				.filter(([k]) => Number(k) !== index)
-				.map(([k, v]) => [Number(k) > index ? Number(k) - 1 : Number(k), v])
-		);
+
+		// Actualizar processedResults
+		const newProcessedResults: Record<number, ProcessedResult> = {};
+
+		Object.entries(processedResults).forEach(([k, v]) => {
+			const key = Number(k);
+			if (key !== index) {
+				const newKey = key > index ? key - 1 : key;
+				newProcessedResults[newKey] = v;
+			}
+		});
+
+		processedResults = newProcessedResults;
 	}
 
-	function verifyFiles() {
-		showToast('Archivos verificados', 'success');
-		// verifica, tamanio, proporcio de imagenes, de encontrar proporcion diferente a a5 vertical
-		// mostrar error en el item y no permitir procesar
-		// si no hay errores, marcar como verificado
-		verifiedFiles = Object.fromEntries(uploadedFiles.map((_, i) => [i, true]));
-	}
-
-	async function processFiles() {
-		if (
-			!selectedEval ||
-			!uploadedFiles.length ||
-			!uploadedFiles.every((_, i) => verifiedFiles[i])
-		) {
-			showToast('Faltan requisitos para procesar', 'warning');
+	async function processFile(index: number) {
+		if (!selectedEval || !uploadedFiles[index]) {
+			showToast('No se puede procesar este archivo', 'warning');
 			return;
 		}
 
 		try {
-			for (let i = 0; i < uploadedFiles.length; i++) {
-				const file = uploadedFiles[i];
-				const reader = new FileReader();
+			// Marcar como procesando
+			isProcessing = true;
+			processingIndex = index;
+			selectedFileIndex = index;
 
-				await new Promise((resolve, reject) => {
-					reader.onload = async () => {
-						try {
-							const imageData = reader.result as string;
-							const response = await fetch('/api/omr', {
-								method: 'POST',
-								headers: { 'Content-Type': 'application/json' },
-								body: JSON.stringify({
-									imageData,
-									params: {
-										numQuestions: 20, // TODO: get from eval_sections and selectedEval
-										numOptions: 5,
-										numCodeDigits: 4,
-										selectionRect
-									}
-								})
-							});
+			const file = uploadedFiles[index];
+			const reader = new FileReader();
 
-							const result = await response.json();
+			const imageData = await new Promise<string>((resolve, reject) => {
+				reader.onload = () => resolve(reader.result as string);
+				reader.onerror = reject;
+				reader.readAsDataURL(file);
+			});
 
-							if (result.status === 'success') {
-								showToast(`Procesado: ${file.name} - Código: ${result.studentCode}`, 'success');
-							} else {
-								showToast(`Error en ${file.name}: ${result.message}`, 'warning');
-							}
-							resolve(null);
-						} catch (error) {
-							reject(error);
-						}
-					};
-					reader.onerror = reject;
-					reader.readAsDataURL(file);
-				});
+			// Enviar a la API para procesar
+			const response = await fetch('/api/eval/omr', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					imageData,
+					evalCode: selectedEval.code,
+					selectionRect
+				})
+			});
+
+			const result = await response.json();
+
+			// Guardar el resultado
+			processedResults[index] = result;
+
+			// Mostrar notificación
+			if (result.status === 'success') {
+				showToast(
+					`Procesado: ${file.name} - Estudiante: ${result.student?.name} ${result.student?.lastName} - Nota: ${result.results?.totalScore.toFixed(2)}`,
+					'success'
+				);
+			} else {
+				showToast(`Error en ${file.name}: ${result.message}`, 'warning');
 			}
-			showToast('Procesamiento completado', 'success');
+
+			return result;
 		} catch (error) {
-			console.error('Error processing files:', error);
-			showToast('Error al procesar archivos', 'warning');
+			console.error('Error processing file:', error);
+			showToast(`Error al procesar ${uploadedFiles[index].name}`, 'warning');
+
+			// Guardar el error
+			processedResults[index] = {
+				status: 'error',
+				message: error instanceof Error ? error.message : 'Error desconocido'
+			};
+
+			return null;
+		} finally {
+			isProcessing = false;
+			processingIndex = -1;
+		}
+	}
+
+	async function loadEvalDetails() {
+		if (!selectedEval) return;
+
+		try {
+			const formData = new FormData();
+			formData.append('evalCode', selectedEval.code);
+
+			const response = await fetch('?/getEvalDetails', {
+				method: 'POST',
+				body: formData
+			});
+
+			const result = await response.json();
+
+			if (result.success) {
+				// Actualizar el selectedEval con la información completa
+				selectedEval = result.eval;
+				showToast('Detalles de evaluación cargados', 'success');
+			} else {
+				showToast(`Error: ${result.error}`, 'warning');
+			}
+		} catch (error) {
+			console.error('Error loading eval details:', error);
+			showToast('Error al cargar detalles de la evaluación', 'warning');
 		}
 	}
 
@@ -255,6 +314,9 @@
 		selectedEval = evalItem;
 		evalModal?.close();
 		showToast(`Evaluación "${evalItem.name}" seleccionada`, 'success');
+
+		// Cargar detalles de la evaluación
+		loadEvalDetails();
 	}
 
 	// Limpiar URLs al desmontar
@@ -311,13 +373,6 @@
 					<h3 class="card-title">Archivos</h3>
 					<div class="flex items-center gap-2">
 						<span class="badge badge-primary badge-outline">{uploadedFiles.length}</span>
-						<button
-							class="btn btn-secondary btn-sm gap-1"
-							disabled={!uploadedFiles.length}
-							onclick={verifyFiles}
-						>
-							<CheckCircle2 size={16} /> Verificar
-						</button>
 					</div>
 				</header>
 				<div class="overflow-x-auto rounded-lg bg-base-200/80">
@@ -339,16 +394,33 @@
 								>
 									<td class="truncate max-w-[150px]" title={file.name}>
 										{file.name}
-										<div class="text-xs opacity-70">
-											✅ Nombre del estudiante: <b>
-												<!-- TODO: get from omr result and api to implement -->
-											</b>
-										</div>
+										{#if processedResults[index]?.status === 'success'}
+											<div class="text-xs opacity-70">
+												✅ Estudiante: <b>
+													{processedResults[index].student?.name}
+													{processedResults[index].student?.lastName}
+												</b>
+											</div>
+										{/if}
 									</td>
 									<td>
-										<!-- Existen 3 estados: 1, pendiente, verificado, procesado -->
-										{#if verifiedFiles[index]}
-											<span class="badge badge-success gap-1"><Check size={12} /> OK</span>
+										<!-- Estados: pendiente, cargando, procesado, error -->
+										{#if isProcessing && processingIndex === index}
+											<span class="badge badge-info gap-1"
+												><Loader2 size={12} class="animate-spin" /> Cargando</span
+											>
+										{:else if processedResults[index]?.status === 'success'}
+											<div class="flex flex-col gap-1">
+												<span class="badge badge-success gap-1"><Check size={12} /> Procesado</span>
+												<span class="text-xs">
+													Nota: <b>{processedResults[index].results?.totalScore.toFixed(2)}</b>
+												</span>
+											</div>
+										{:else if processedResults[index]?.status === 'error'}
+											<div class="flex flex-col gap-1">
+												<span class="badge badge-error gap-1"><X size={12} /> Error</span>
+												<span class="text-xs text-error">{processedResults[index].message}</span>
+											</div>
 										{:else}
 											<span class="badge badge-warning gap-1">
 												<AlertCircle size={12} /> Pendiente
@@ -356,9 +428,33 @@
 										{/if}
 									</td>
 									<td class="text-right">
-										<button class="btn btn-ghost btn-xs" onclick={() => removeFile(index)}>
-											<X size={16} />
-										</button>
+										<div class="flex gap-1 justify-end">
+											{#if !processedResults[index] || processedResults[index]?.status === 'error'}
+												<button
+													class="btn btn-primary btn-xs"
+													onclick={(e) => {
+														e.stopPropagation();
+														processFile(index);
+													}}
+													disabled={isProcessing || !selectedEval}
+												>
+													{#if isProcessing && processingIndex === index}
+														<Loader2 size={14} class="animate-spin" />
+													{:else}
+														<Play size={14} />
+													{/if}
+												</button>
+											{/if}
+											<button
+												class="btn btn-ghost btn-xs"
+												onclick={(e) => {
+													e.stopPropagation();
+													removeFile(index);
+												}}
+											>
+												<X size={16} />
+											</button>
+										</div>
 									</td>
 								</tr>
 							{:else}
@@ -381,11 +477,17 @@
 								<Check size={14} />
 								{selectedFileIndex + 1}/{uploadedFiles.length}
 							</span>
-							<span
-								class="badge {verifiedFiles[selectedFileIndex] ? 'badge-success' : 'badge-warning'}"
-							>
-								{verifiedFiles[selectedFileIndex] ? 'Verificado' : 'Pendiente'}
-							</span>
+							{#if isProcessing && processingIndex === selectedFileIndex}
+								<span class="badge badge-info gap-1"
+									><Loader2 size={12} class="animate-spin" /> Cargando</span
+								>
+							{:else if processedResults[selectedFileIndex]?.status === 'success'}
+								<span class="badge badge-success gap-1"><Check size={12} /> Procesado</span>
+							{:else if processedResults[selectedFileIndex]?.status === 'error'}
+								<span class="badge badge-error gap-1"><X size={12} /> Error</span>
+							{:else}
+								<span class="badge badge-warning gap-1"><AlertCircle size={12} /> Pendiente</span>
+							{/if}
 						</div>
 					{/if}
 				</header>
@@ -442,13 +544,9 @@
 				</div>
 				<footer class="flex justify-between mt-6">
 					<p class="text-sm opacity-70">{currentPreview ? 'Ajusta el área de detección' : ''}</p>
-					<button
-						class="btn btn-primary gap-2"
-						disabled={!selectedEval || !uploadedFiles.length}
-						onclick={processFiles}
-					>
-						<Play size={20} /> Procesar
-					</button>
+					<div class="text-sm text-primary">
+						Usa el botón <Play size={14} class="inline" /> en cada fila para procesar individualmente
+					</div>
 				</footer>
 			</div>
 		</section>

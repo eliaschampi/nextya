@@ -315,7 +315,7 @@ export type Database = {
 					can_delete: boolean;
 					can_update: boolean;
 					code: string;
-					entity: string;
+					entity: Database['public']['Enums']['entity_enum'];
 					user_code: string;
 				};
 				Insert: {
@@ -323,7 +323,7 @@ export type Database = {
 					can_delete?: boolean;
 					can_update?: boolean;
 					code?: string;
-					entity: string;
+					entity: Database['public']['Enums']['entity_enum'];
 					user_code: string;
 				};
 				Update: {
@@ -331,7 +331,7 @@ export type Database = {
 					can_delete?: boolean;
 					can_update?: boolean;
 					code?: string;
-					entity?: string;
+					entity?: Database['public']['Enums']['entity_enum'];
 					user_code?: string;
 				};
 				Relationships: [];
@@ -456,9 +456,31 @@ export type Database = {
 				};
 				Returns: boolean;
 			};
+			process_evaluation_results: {
+				Args: {
+					p_register_code: string;
+					p_eval_code: string;
+					p_answers: Json;
+					p_correct_count: number;
+					p_blank_count: number;
+					p_incorrect_count: number;
+					p_score: number;
+				};
+				Returns: undefined;
+			};
 		};
 		Enums: {
-			[_ in never]: never;
+			entity_enum:
+				| 'users'
+				| 'levels'
+				| 'courses'
+				| 'students'
+				| 'registers'
+				| 'evals'
+				| 'eval_sections'
+				| 'eval_questions'
+				| 'eval_answers'
+				| 'eval_results';
 		};
 		CompositeTypes: {
 			[_ in never]: never;
@@ -572,6 +594,19 @@ export const Constants = {
 		Enums: {}
 	},
 	public: {
-		Enums: {}
+		Enums: {
+			entity_enum: [
+				'users',
+				'levels',
+				'courses',
+				'students',
+				'registers',
+				'evals',
+				'eval_sections',
+				'eval_questions',
+				'eval_answers',
+				'eval_results'
+			]
+		}
 	}
 } as const;

@@ -1,7 +1,7 @@
 // src/lib/omrProcessor.ts
 
 import * as cv from '@u4/opencv4nodejs';
-import { Buffer } from 'buffer'; 
+import { Buffer } from 'buffer';
 
 export interface OmrParams {
 	numQuestions: number;
@@ -233,7 +233,6 @@ export async function processOmrImage(
 	omrParams: OmrParams,
 	enableDebug: boolean = false
 ): Promise<OmrResult> {
-
 	const matsToRelease: (cv.Mat | null | undefined)[] = [];
 	const debugImages: Record<string, string | null> = {};
 
