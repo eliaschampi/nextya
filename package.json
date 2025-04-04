@@ -36,6 +36,7 @@
 		"@supabase/ssr": "^0.6.1",
 		"@supabase/supabase-js": "^2.49.4",
 		"@tailwindcss/vite": "^4.1.1",
+		"@u4/opencv4nodejs": "^7.1.2",
 		"daisyui": "^5.0.12",
 		"lucide-svelte": "^0.487.0",
 		"tailwindcss": "^4.1.1",

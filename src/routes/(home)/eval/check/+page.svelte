@@ -188,11 +188,14 @@
 	}
 
 	function verifyFiles() {
-		verifiedFiles = Object.fromEntries(uploadedFiles.map((_, i) => [i, true]));
 		showToast('Archivos verificados', 'success');
+		// verifica, tamanio, proporcio de imagenes, de encontrar proporcion diferente a a5 vertical
+		// mostrar error en el item y no permitir procesar
+		// si no hay errores, marcar como verificado
+		verifiedFiles = Object.fromEntries(uploadedFiles.map((_, i) => [i, true]));
 	}
 
-	function processFiles() {
+	async function processFiles() {
 		if (
 			!selectedEval ||
 			!uploadedFiles.length ||
@@ -201,7 +204,51 @@
 			showToast('Faltan requisitos para procesar', 'warning');
 			return;
 		}
-		showToast('Procesamiento iniciado (pendiente)', 'success');
+
+		try {
+			for (let i = 0; i < uploadedFiles.length; i++) {
+				const file = uploadedFiles[i];
+				const reader = new FileReader();
+
+				await new Promise((resolve, reject) => {
+					reader.onload = async () => {
+						try {
+							const imageData = reader.result as string;
+							const response = await fetch('/api/omr', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify({
+									imageData,
+									params: {
+										numQuestions: 20, // TODO: get from eval_sections and selectedEval
+										numOptions: 5,
+										numCodeDigits: 4,
+										selectionRect
+									}
+								})
+							});
+
+							const result = await response.json();
+
+							if (result.status === 'success') {
+								showToast(`Procesado: ${file.name} - Código: ${result.studentCode}`, 'success');
+							} else {
+								showToast(`Error en ${file.name}: ${result.message}`, 'warning');
+							}
+							resolve(null);
+						} catch (error) {
+							reject(error);
+						}
+					};
+					reader.onerror = reject;
+					reader.readAsDataURL(file);
+				});
+			}
+			showToast('Procesamiento completado', 'success');
+		} catch (error) {
+			console.error('Error processing files:', error);
+			showToast('Error al procesar archivos', 'warning');
+		}
 	}
 
 	function selectEval(evalItem: Eval) {
@@ -292,15 +339,20 @@
 								>
 									<td class="truncate max-w-[150px]" title={file.name}>
 										{file.name}
-										<div class="text-xs opacity-70">{Math.round(file.size / 1024)} KB</div>
+										<div class="text-xs opacity-70">
+											✅ Nombre del estudiante: <b>
+												<!-- TODO: get from omr result and api to implement -->
+											</b>
+										</div>
 									</td>
 									<td>
+										<!-- Existen 3 estados: 1, pendiente, verificado, procesado -->
 										{#if verifiedFiles[index]}
 											<span class="badge badge-success gap-1"><Check size={12} /> OK</span>
 										{:else}
-											<span class="badge badge-warning gap-1"
-												><AlertCircle size={12} /> Pendiente</span
-											>
+											<span class="badge badge-warning gap-1">
+												<AlertCircle size={12} /> Pendiente
+											</span>
 										{/if}
 									</td>
 									<td class="text-right">
