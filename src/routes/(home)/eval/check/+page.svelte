@@ -1,27 +1,24 @@
 <script lang="ts">
 	import PageTitle from '$lib/components/PageTitle.svelte';
-	import {
-		Upload,
-		Play,
-		Check,
-		Trash2,
-		X,
-		School,
-		AlertCircle,
-		BookOpen,
-		Loader2
-	} from 'lucide-svelte';
-	import type { Eval, Level } from '../../../../app';
+	import { Upload, Trash2, X, School, BookOpen } from 'lucide-svelte';
+	import type { Eval, Level, EvalWithSections } from '../../../../app';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { showToast } from '$lib/stores/Toast';
 	import type { AnswerValue } from '$lib/omrProcessor';
+
+	// Componentes personalizados
+	import EvalDetails from '$lib/components/EvalDetails.svelte';
+	import EvalHeader from '$lib/components/EvalHeader.svelte';
+	import FileTable from '$lib/components/FileTable.svelte';
+	import ImagePreview from '$lib/components/ImagePreview.svelte';
+	import BatchProcessing from '$lib/components/BatchProcessing.svelte';
 
 	// Props tipados
 	const { data } = $props<{ data: { levels: Level[] } }>();
 
 	// Estados reactivos con Svelte v5 runes
 	let evalModal = $state<HTMLDialogElement | null>(null);
-	let selectedEval = $state<Eval | null>(null);
+	let selectedEval = $state<EvalWithSections | null>(null);
 	let uploadedFiles = $state<File[]>([]);
 	let selectedFileIndex = $state(-1);
 	let evaluations = $state<Eval[]>([]);
@@ -30,12 +27,10 @@
 	let isProcessing = $state(false);
 	let processingIndex = $state(-1);
 	let processedResults = $state<Record<number, ProcessedResult>>({});
+	let isBatchProcessing = $state(false);
 
 	// Estado del rectángulo de selección en porcentajes (0-100)
 	let selectionRect = $state({ top: 10, left: 10, width: 80, height: 80 });
-	let isDragging = $state(false);
-	let dragCorner = $state<string | null>(null);
-	let imageRef = $state<HTMLImageElement | null>(null);
 
 	// Interfaces para los resultados procesados
 	interface ProcessedResult {
@@ -63,106 +58,22 @@
 			: ''
 	);
 
-	// Rectángulo absoluto derivado
-	let absoluteRect = $derived(imageRef ? getAbsoluteRect(imageRef.getBoundingClientRect()) : null);
+	// Valores derivados para el estado de procesamiento
+	let pendingFilesCount = $derived(
+		uploadedFiles.filter(
+			(_, index) => !processedResults[index] || processedResults[index]?.status === 'error'
+		).length
+	);
 
-	// Funciones para el rectángulo de selección
-	function getAbsoluteRect(imageRect: DOMRect) {
-		return {
-			top: (selectionRect.top / 100) * imageRect.height,
-			left: (selectionRect.left / 100) * imageRect.width,
-			width: (selectionRect.width / 100) * imageRect.width,
-			height: (selectionRect.height / 100) * imageRect.height
-		};
-	}
-
-	let rafId: number;
-	function startDrag(event: MouseEvent, corner: string) {
-		isDragging = true;
-		dragCorner = corner;
-		event.preventDefault();
-	}
-
-	function handleDrag(event: MouseEvent) {
-		if (!isDragging || !dragCorner || !currentPreview || !imageRef) return;
-		cancelAnimationFrame(rafId);
-		rafId = requestAnimationFrame(() => {
-			if (!imageRef) return;
-			const rect = imageRef.getBoundingClientRect();
-			const x = Math.max(0, Math.min(event.clientX - rect.left, rect.width));
-			const y = Math.max(0, Math.min(event.clientY - rect.top, rect.height));
-			const xPercent = (x / rect.width) * 100;
-			const yPercent = (y / rect.height) * 100;
-
-			const newRect = { ...selectionRect };
-			const minSize = 5; // Porcentaje mínimo
-
-			switch (dragCorner) {
-				case 'topLeft':
-					newRect.left = Math.min(xPercent, selectionRect.left + selectionRect.width - minSize);
-					newRect.top = Math.min(yPercent, selectionRect.top + selectionRect.height - minSize);
-					newRect.width = Math.max(
-						minSize,
-						selectionRect.left + selectionRect.width - newRect.left
-					);
-					newRect.height = Math.max(
-						minSize,
-						selectionRect.top + selectionRect.height - newRect.top
-					);
-					break;
-				case 'topRight':
-					newRect.top = Math.min(yPercent, selectionRect.top + selectionRect.height - minSize);
-					newRect.width = Math.max(minSize, xPercent - selectionRect.left);
-					newRect.height = Math.max(
-						minSize,
-						selectionRect.top + selectionRect.height - newRect.top
-					);
-					break;
-				case 'bottomLeft':
-					newRect.left = Math.min(xPercent, selectionRect.left + selectionRect.width - minSize);
-					newRect.height = Math.max(minSize, yPercent - selectionRect.top);
-					newRect.width = Math.max(
-						minSize,
-						selectionRect.left + selectionRect.width - newRect.left
-					);
-					break;
-				case 'bottomRight':
-					newRect.width = Math.max(minSize, xPercent - selectionRect.left);
-					newRect.height = Math.max(minSize, yPercent - selectionRect.top);
-					break;
-			}
-			selectionRect = newRect;
-		});
-	}
-
-	function endDrag() {
-		isDragging = false;
-		dragCorner = null;
-	}
-
-	// Ajustar el rectángulo cuando cambie la imagen o el tamaño de la ventana
-	function adjustSelectionRect() {
-		if (!imageRef) return;
-		const maxWidth = 100;
-		const maxHeight = 100;
-
-		selectionRect.left = Math.max(0, selectionRect.left);
-		selectionRect.top = Math.max(0, selectionRect.top);
-		selectionRect.width = Math.min(selectionRect.width, maxWidth - selectionRect.left);
-		selectionRect.height = Math.min(selectionRect.height, maxHeight - selectionRect.top);
-	}
-
-	$effect(() => {
-		if (selectedFileIndex >= 0 && imageRef) {
-			adjustSelectionRect();
-		}
-	});
-
-	$effect(() => {
-		const handleResize = () => imageRef && adjustSelectionRect();
-		window.addEventListener('resize', handleResize);
-		return () => window.removeEventListener('resize', handleResize);
-	});
+	let previewStatus: 'pending' | 'processing' | 'success' | 'error' | undefined = $derived(
+		isProcessing && processingIndex === selectedFileIndex
+			? 'processing'
+			: processedResults[selectedFileIndex]?.status === 'success'
+				? 'success'
+				: processedResults[selectedFileIndex]?.status === 'error'
+					? 'error'
+					: 'pending'
+	);
 
 	// Funciones principales
 	async function loadEvaluationsByLevel() {
@@ -283,6 +194,37 @@
 		}
 	}
 
+	// Función para procesar todos los archivos pendientes
+	async function processAllFiles() {
+		if (!selectedEval || uploadedFiles.length === 0 || isBatchProcessing) return;
+
+		try {
+			isBatchProcessing = true;
+			let totalPending = pendingFilesCount;
+			let processed = 0;
+
+			// Procesar archivos pendientes uno por uno
+			for (let i = 0; i < uploadedFiles.length; i++) {
+				// Saltar archivos ya procesados correctamente
+				if (processedResults[i]?.status === 'success') continue;
+
+				await processFile(i);
+				processed++;
+
+				// Actualizar progreso
+				const progress = Math.round((processed / totalPending) * 100);
+				showToast(`Procesando lote: ${progress}% completado`, 'success');
+			}
+
+			showToast('Procesamiento por lotes completado', 'success');
+		} catch (error) {
+			console.error('Error en procesamiento por lotes:', error);
+			showToast('Error en procesamiento por lotes', 'warning');
+		} finally {
+			isBatchProcessing = false;
+		}
+	}
+
 	async function loadEvalDetails() {
 		if (!selectedEval) return;
 
@@ -311,7 +253,9 @@
 	}
 
 	function selectEval(evalItem: Eval) {
-		selectedEval = evalItem;
+		// Asignar temporalmente como EvalWithSections para evitar error de tipo
+		// Los detalles completos se cargarán con loadEvalDetails
+		selectedEval = evalItem as unknown as EvalWithSections;
 		evalModal?.close();
 		showToast(`Evaluación "${evalItem.name}" seleccionada`, 'success');
 
@@ -325,237 +269,113 @@
 
 <PageTitle title="Proceso de verificacion" description="Procesa hojas de respuestas con OMR">
 	<button
-		class="w-full bg-base-200 hover:bg-base-300 transition-all duration-300 rounded-lg"
+		class="w-full bg-base-200 hover:bg-base-300 transition-all duration-300 rounded-lg shadow-sm"
 		onclick={openEvalModal}
 		aria-label="Seleccionar evaluación"
 	>
-		<div class="p-4 text-center">
-			{#if selectedEval}
-				<div class="badge badge-primary badge-outline mb-2">
-					{data.levels.find((l: Level) => l.code === selectedEval?.level_code)?.name}
-				</div>
-				<span class="block font-bold text-lg">{selectedEval.name}</span>
-				<span class="block text-sm opacity-70">
-					Grupo {selectedEval.group_name} • {formatDate(selectedEval.eval_date)}
-				</span>
-			{:else}
-				<span class="block p-5">Seleccionar evaluación</span>
-			{/if}
+		<div class="flex items-center justify-center gap-2 p-5">
+			<School size={20} />
+			<span>Seleccionar evaluación</span>
 		</div>
 	</button>
 </PageTitle>
 
 <main class="flex flex-col h-full gap-6 p-4">
+	<!-- Información de la evaluación seleccionada -->
+	{#if selectedEval}
+		<EvalHeader
+			evaluation={selectedEval}
+			level={data.levels.find((l: Level) => l.code === selectedEval?.level_code)}
+		>
+			<EvalDetails evaluation={selectedEval} />
+		</EvalHeader>
+	{/if}
+
 	<!-- Barra de herramientas -->
 	<section class="card bg-base-200/80 shadow">
-		<div class="card-body p-6">
-			<div class="flex gap-2">
-				<label class="btn btn-primary btn-outline">
-					Cargar Respuestas
-					<input type="file" accept="image/*" multiple class="hidden" onchange={handleFileUpload} />
-				</label>
-				<button
-					class="btn btn-error btn-outline"
-					disabled={!uploadedFiles.length}
-					onclick={clearFiles}
-				>
-					<Trash2 size={18} /> Limpiar
-				</button>
+		<div class="card-body p-4">
+			<div class="flex flex-wrap gap-2 justify-between items-center">
+				<div class="flex gap-2">
+					<label class="btn btn-primary">
+						<Upload size={18} class="mr-2" /> Cargar Respuestas
+						<input
+							type="file"
+							accept="image/jpeg,image/jpg"
+							multiple
+							class="hidden"
+							onchange={handleFileUpload}
+						/>
+					</label>
+					<button
+						class="btn btn-error btn-outline"
+						disabled={!uploadedFiles.length || isProcessing || isBatchProcessing}
+						onclick={clearFiles}
+					>
+						<Trash2 size={18} /> Limpiar
+					</button>
+				</div>
+
+				<div class="badge badge-lg">
+					{uploadedFiles.length} archivos • {Object.values(processedResults).filter(
+						(r) => r.status === 'success'
+					).length} procesados
+				</div>
 			</div>
 		</div>
 	</section>
 
+	<!-- Procesamiento por lotes -->
+	{#if uploadedFiles.length > 0 && pendingFilesCount > 0}
+		<BatchProcessing
+			isProcessing={isBatchProcessing}
+			pendingCount={pendingFilesCount}
+			totalCount={uploadedFiles.length}
+			onProcessAll={processAllFiles}
+		/>
+	{/if}
+
 	<div class="flex flex-col lg:flex-row flex-1 gap-6">
 		<!-- Panel de archivos -->
 		<section class="w-full lg:w-1/3 card bg-base-200/80 shadow">
-			<div class="card-body p-6">
+			<div class="card-body p-4">
 				<header class="flex items-center justify-between mb-4">
 					<h3 class="card-title">Archivos</h3>
 					<div class="flex items-center gap-2">
 						<span class="badge badge-primary badge-outline">{uploadedFiles.length}</span>
 					</div>
 				</header>
-				<div class="overflow-x-auto rounded-lg bg-base-200/80">
-					<table class="table table-zebra">
-						<thead>
-							<tr>
-								<th>Nombre</th>
-								<th>Estado</th>
-								<th class="text-right">Acción</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each uploadedFiles as file, index (index)}
-								<tr
-									class="hover:bg-base-200 cursor-pointer {selectedFileIndex === index
-										? 'bg-primary-100'
-										: ''}"
-									onclick={() => (selectedFileIndex = index)}
-								>
-									<td class="truncate max-w-[150px]" title={file.name}>
-										{file.name}
-										{#if processedResults[index]?.status === 'success'}
-											<div class="text-xs opacity-70">
-												✅ Estudiante: <b>
-													{processedResults[index].student?.name}
-													{processedResults[index].student?.lastName}
-												</b>
-											</div>
-										{/if}
-									</td>
-									<td>
-										<!-- Estados: pendiente, cargando, procesado, error -->
-										{#if isProcessing && processingIndex === index}
-											<span class="badge badge-info gap-1"
-												><Loader2 size={12} class="animate-spin" /> Cargando</span
-											>
-										{:else if processedResults[index]?.status === 'success'}
-											<div class="flex flex-col gap-1">
-												<span class="badge badge-success gap-1"><Check size={12} /> Procesado</span>
-												<span class="text-xs">
-													Nota: <b>{processedResults[index].results?.totalScore.toFixed(2)}</b>
-												</span>
-											</div>
-										{:else if processedResults[index]?.status === 'error'}
-											<div class="flex flex-col gap-1">
-												<span class="badge badge-error gap-1"><X size={12} /> Error</span>
-												<span class="text-xs text-error">{processedResults[index].message}</span>
-											</div>
-										{:else}
-											<span class="badge badge-warning gap-1">
-												<AlertCircle size={12} /> Pendiente
-											</span>
-										{/if}
-									</td>
-									<td class="text-right">
-										<div class="flex gap-1 justify-end">
-											{#if !processedResults[index] || processedResults[index]?.status === 'error'}
-												<button
-													class="btn btn-primary btn-xs"
-													onclick={(e) => {
-														e.stopPropagation();
-														processFile(index);
-													}}
-													disabled={isProcessing || !selectedEval}
-												>
-													{#if isProcessing && processingIndex === index}
-														<Loader2 size={14} class="animate-spin" />
-													{:else}
-														<Play size={14} />
-													{/if}
-												</button>
-											{/if}
-											<button
-												class="btn btn-ghost btn-xs"
-												onclick={(e) => {
-													e.stopPropagation();
-													removeFile(index);
-												}}
-											>
-												<X size={16} />
-											</button>
-										</div>
-									</td>
-								</tr>
-							{:else}
-								<tr><td colspan="3" class="text-center py-8 opacity-50">Sin archivos</td></tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
+
+				<FileTable
+					files={uploadedFiles}
+					{processedResults}
+					selectedIndex={selectedFileIndex}
+					{isProcessing}
+					{processingIndex}
+					evalSelected={!!selectedEval}
+					onSelect={(index) => (selectedFileIndex = index)}
+					onProcess={processFile}
+					onRemove={removeFile}
+				/>
 			</div>
 		</section>
 
 		<!-- Previsualización -->
 		<section class="flex-1 card bg-base-200/80 shadow">
-			<div class="card-body p-6">
-				<header class="flex items-center justify-between mb-4 overflow-x-auto">
-					<h3 class="card-title">Previsualización</h3>
-					{#if currentPreview}
-						<div class="flex gap-2">
-							<span class="badge badge-success gap-2">
-								<Check size={14} />
-								{selectedFileIndex + 1}/{uploadedFiles.length}
-							</span>
-							{#if isProcessing && processingIndex === selectedFileIndex}
-								<span class="badge badge-info gap-1"
-									><Loader2 size={12} class="animate-spin" /> Cargando</span
-								>
-							{:else if processedResults[selectedFileIndex]?.status === 'success'}
-								<span class="badge badge-success gap-1"><Check size={12} /> Procesado</span>
-							{:else if processedResults[selectedFileIndex]?.status === 'error'}
-								<span class="badge badge-error gap-1"><X size={12} /> Error</span>
-							{:else}
-								<span class="badge badge-warning gap-1"><AlertCircle size={12} /> Pendiente</span>
-							{/if}
-						</div>
-					{/if}
-				</header>
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div
-					class="relative flex-1 flex items-center justify-center bg-base-100 rounded-lg p-6 min-h-[400px]"
-					onmousemove={handleDrag}
-					onmouseup={endDrag}
-					onmouseleave={endDrag}
-					aria-roledescription="Área de selección"
-				>
-					<div class="relative max-w-full max-h-[65vh]">
-						{#if currentPreview}
-							<img
-								src={currentPreview}
-								alt="Previsualización"
-								class="max-w-full max-h-[65vh] object-contain rounded-lg"
-								bind:this={imageRef}
-							/>
-							{#if absoluteRect}
-								<div
-									class="absolute border-2 border-primary bg-primary/10"
-									style="top: {absoluteRect.top}px; left: {absoluteRect.left}px; width: {absoluteRect.width}px; height: {absoluteRect.height}px;"
-								>
-									<button
-										class="absolute -top-2 -left-2 w-4 h-4 bg-primary rounded-full cursor-nw-resize"
-										onmousedown={(e) => startDrag(e, 'topLeft')}
-										aria-label="Ajustar esquina superior izquierda"
-									></button>
-									<button
-										class="absolute -top-2 -right-2 w-4 h-4 bg-primary rounded-full cursor-ne-resize"
-										onmousedown={(e) => startDrag(e, 'topRight')}
-										aria-label="Ajustar esquina superior derecha"
-									></button>
-									<button
-										class="absolute -bottom-2 -left-2 w-4 h-4 bg-primary rounded-full cursor-sw-resize"
-										onmousedown={(e) => startDrag(e, 'bottomLeft')}
-										aria-label="Ajustar esquina inferior izquierda"
-									></button>
-									<button
-										class="absolute -bottom-2 -right-2 w-4 h-4 bg-primary rounded-full cursor-se-resize"
-										onmousedown={(e) => startDrag(e, 'bottomRight')}
-										aria-label="Ajustar esquina inferior derecha"
-									></button>
-								</div>
-							{/if}
-						{:else}
-							<div class="text-center opacity-50 space-y-4">
-								<Upload size={48} class="mx-auto" />
-								<p>Selecciona un archivo</p>
-							</div>
-						{/if}
-					</div>
-				</div>
-				<footer class="flex justify-between mt-6">
-					<p class="text-sm opacity-70">{currentPreview ? 'Ajusta el área de detección' : ''}</p>
-					<div class="text-sm text-primary">
-						Usa el botón <Play size={14} class="inline" /> en cada fila para procesar individualmente
-					</div>
-				</footer>
-			</div>
+			<ImagePreview
+				imageUrl={currentPreview}
+				{selectionRect}
+				status={previewStatus}
+				fileIndex={selectedFileIndex}
+				totalFiles={uploadedFiles.length}
+				onchange={(rect) => (selectionRect = rect)}
+			/>
 		</section>
 	</div>
 </main>
 
-<!-- Modal -->
+<!-- Modal de selección de evaluación -->
 <dialog bind:this={evalModal} class="modal">
-	<div class="modal-box">
+	<div class="modal-box max-w-2xl">
 		<header class="flex items-center justify-between mb-6">
 			<h3 class="text-lg font-bold flex gap-2">
 				<School class="w-6 h-6 text-primary" /> Seleccionar Evaluación
@@ -564,7 +384,7 @@
 				<X size={20} />
 			</button>
 		</header>
-		<div class="bg-base-100 rounded-xl p-4 mb-6">
+		<div class="bg-base-100 rounded-xl p-4 mb-6 shadow-sm">
 			<label class="label font-semibold flex gap-2">
 				<BookOpen class="w-5 h-5 text-primary" /> Nivel
 			</label>
@@ -579,24 +399,30 @@
 				{/each}
 			</select>
 		</div>
-		<div class="overflow-x-auto rounded-lg bg-base-200">
-			<table class="table">
+		<div class="overflow-x-auto rounded-lg bg-base-200 shadow-sm">
+			<table class="table table-zebra">
 				<thead>
 					<tr>
 						<th>Nombre</th>
 						<th class="text-center">Grupo</th>
 						<th class="text-center">Fecha</th>
+						<th class="text-center">Acción</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each evaluations as item (item.code)}
-						<tr class="hover:bg-base-300 cursor-pointer" onclick={() => selectEval(item)}>
-							<td>{item.name}</td>
+						<tr class="hover:bg-base-300">
+							<td class="font-medium">{item.name}</td>
 							<td class="text-center"><span class="badge badge-ghost">{item.group_name}</span></td>
 							<td class="text-center text-sm opacity-70">{formatDate(item.eval_date)}</td>
+							<td class="text-center">
+								<button class="btn btn-primary btn-sm" onclick={() => selectEval(item)}>
+									Seleccionar
+								</button>
+							</td>
 						</tr>
 					{:else}
-						<tr><td colspan="3" class="text-center py-8 opacity-50">Sin evaluaciones</td></tr>
+						<tr><td colspan="4" class="text-center py-8 opacity-50">Sin evaluaciones</td></tr>
 					{/each}
 				</tbody>
 			</table>
