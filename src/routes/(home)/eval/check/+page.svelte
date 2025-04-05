@@ -150,14 +150,14 @@
 				reader.readAsDataURL(file);
 			});
 
-			// Enviar a la API para procesar
+			// Enviar a la API para procesar con los datos de evaluación y preguntas
 			const response = await fetch('/api/eval/omr', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					imageData,
-					evalCode: selectedEval.code,
-					selectionRect
+					selectionRect,
+					evalData: selectedEval
 				})
 			});
 
@@ -168,10 +168,7 @@
 
 			// Mostrar notificación
 			if (result.status === 'success') {
-				showToast(
-					`Procesado: ${file.name} - Estudiante: ${result.student?.name} ${result.student?.lastName} - Nota: ${result.results?.totalScore.toFixed(2)}`,
-					'success'
-				);
+				showToast(`Correctamennte procesado ${file.name}`, 'success');
 			} else {
 				showToast(`Error en ${file.name}: ${result.message}`, 'warning');
 			}
@@ -225,42 +222,9 @@
 		}
 	}
 
-	async function loadEvalDetails() {
-		if (!selectedEval) return;
-
-		try {
-			const formData = new FormData();
-			formData.append('evalCode', selectedEval.code);
-
-			const response = await fetch('?/getEvalDetails', {
-				method: 'POST',
-				body: formData
-			});
-
-			const result = await response.json();
-
-			if (result.success) {
-				// Actualizar el selectedEval con la información completa
-				selectedEval = result.eval;
-				showToast('Detalles de evaluación cargados', 'success');
-			} else {
-				showToast(`Error: ${result.error}`, 'warning');
-			}
-		} catch (error) {
-			console.error('Error loading eval details:', error);
-			showToast('Error al cargar detalles de la evaluación', 'warning');
-		}
-	}
-
 	function selectEval(evalItem: Eval) {
-		// Asignar temporalmente como EvalWithSections para evitar error de tipo
-		// Los detalles completos se cargarán con loadEvalDetails
 		selectedEval = evalItem as unknown as EvalWithSections;
 		evalModal?.close();
-		showToast(`Evaluación "${evalItem.name}" seleccionada`, 'success');
-
-		// Cargar detalles de la evaluación
-		loadEvalDetails();
 	}
 
 	// Limpiar URLs al desmontar
@@ -296,7 +260,7 @@
 		<div class="card-body p-4">
 			<div class="flex flex-wrap gap-2 justify-between items-center">
 				<div class="flex gap-2">
-					<label class="btn btn-primary">
+					<label class="btn btn-primary btn-sm {!selectedEval?.code ? 'btn-disabled' : ''}">
 						<Upload size={18} class="mr-2" /> Cargar Respuestas
 						<input
 							type="file"
@@ -304,10 +268,11 @@
 							multiple
 							class="hidden"
 							onchange={handleFileUpload}
+							disabled={!selectedEval?.code}
 						/>
 					</label>
 					<button
-						class="btn btn-error btn-outline"
+						class="btn btn-error btn-outline btn-sm"
 						disabled={!uploadedFiles.length || isProcessing || isBatchProcessing}
 						onclick={clearFiles}
 					>

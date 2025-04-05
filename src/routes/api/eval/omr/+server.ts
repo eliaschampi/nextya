@@ -5,35 +5,20 @@ import type { AnswerValue } from '$lib/omrProcessor';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
-		const { imageData, evalCode, selectionRect } = await request.json();
+		const { imageData, evalData, selectionRect } = await request.json();
 
-		if (!imageData || !evalCode) {
+		if (!imageData || !evalData.code) {
 			return json(
 				{
 					status: 'error',
-					message: 'Missing required fields: imageData or evalCode'
+					message: 'Argumentos faltantes'
 				},
 				{ status: 400 }
 			);
 		}
 
-		// 1. Get evaluation details including questions
-		const { data: evalData, error: evalError } = await locals.supabase
-			.from('evals')
-			.select('*, eval_sections(*, courses(name))')
-			.eq('code', evalCode)
-			.single();
-
-		if (evalError || !evalData) {
-			console.error('Error fetching evaluation:', evalError);
-			return json(
-				{
-					status: 'error',
-					message: 'Failed to fetch evaluation details'
-				},
-				{ status: 500 }
-			);
-		}
+		// 1. Get evaluation code
+		const evalCode = evalData.code;
 
 		// 2. Get questions for this evaluation
 		const { data: questionsData, error: questionsError } = await locals.supabase
