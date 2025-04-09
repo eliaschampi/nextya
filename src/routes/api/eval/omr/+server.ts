@@ -1,11 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { processOmrImage } from '$lib/omrProcessor';
+import { omrProcessor as processOmrImage } from '$lib/omrProcessor';
 import type { AnswerValue } from '$lib/omrProcessor';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
-		const { imageData, evalData, selectionRect } = await request.json();
+		const { imageData, evalData } = await request.json();
 
 		if (!imageData || !evalData.code) {
 			return json(
@@ -40,16 +40,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		// Calculate total number of questions
 		const numQuestions = questionsData.length;
+		const buffer = Buffer.from(imageData.replace(/^data:image\/\w+;base64,/, ''), 'base64');
 
 		// 3. Process the image with OMR
-		const omrResult = await processOmrImage(
-			imageData,
-			{
-				numQuestions,
-				selectionRect
-			},
-			true
-		);
+		const omrResult = await processOmrImage(buffer, numQuestions, true);
 
 		if (omrResult.status === 'error') {
 			return json(omrResult);
@@ -69,7 +63,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			return json(
 				{
 					status: 'error',
-					message: `Student with roll code ${studentRollCode} not found in level ${evalData.level_code} and group ${evalData.group_name}`
+					message: `Estudiante no encontrado con código ${studentRollCode}`,
+					details: omrResult
 				},
 				{ status: 404 }
 			);
