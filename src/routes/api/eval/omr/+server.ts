@@ -3,9 +3,14 @@ import type { RequestHandler } from './$types';
 import { omrProcessor as processOmrImage } from '$lib/omrProcessor';
 import type { AnswerValue } from '$lib/omrProcessor';
 
+/**
+ * API endpoint for processing OMR images
+ * This endpoint only processes the image and returns the results
+ * It does not save the results to the database
+ */
 export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
-		const { imageData, evalData } = await request.json();
+		const { imageData, evalData, rollCode = null } = await request.json();
 
 		if (!imageData || !evalData.code) {
 			return json(
@@ -49,46 +54,53 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			return json(omrResult);
 		}
 
-		// 4. Find the student by roll code
-		const studentRollCode = omrResult.studentCode;
-		const { data: registerData, error: registerError } = await locals.supabase
-			.from('registers')
-			.select('*, students(*)')
-			.eq('roll_code', studentRollCode)
-			.eq('level_code', evalData.level_code)
-			.eq('group_name', evalData.group_name)
-			.single();
+		// 4. Use provided roll code or the one from OMR processing
+		const studentRollCode = rollCode || omrResult.studentCode;
 
-		if (registerError || !registerData) {
+		// 5. Check if roll code is valid (4 digits)
+		if (!/^\d{4}$/.test(studentRollCode)) {
 			return json(
 				{
 					status: 'error',
-					message: `Estudiante no encontrado con código ${studentRollCode}`,
-					details: omrResult
+					errorType: 'invalid_roll_code',
+					message: `Código inválido: ${studentRollCode}. Debe ser 4 dígitos numéricos.`,
+					detectedCode: omrResult.studentCode,
+					omrResult
 				},
-				{ status: 404 }
+				{ status: 400 }
 			);
 		}
 
-		// 5. Process answers and calculate score
+		// 6. Check for duplicate roll code in this level/group
+		const { data: duplicateCheck, error: duplicateError } = await locals.supabase
+			.from('registers')
+			.select('code, students(name, last_name)')
+			.eq('roll_code', studentRollCode)
+			.eq('level_code', evalData.level_code)
+			.eq('group_name', evalData.group_name);
+
+		if (duplicateError) {
+			console.error('Error checking for duplicates:', duplicateError);
+			return json(
+				{
+					status: 'error',
+					message: 'Error al verificar duplicados'
+				},
+				{ status: 500 }
+			);
+		}
+
+		// 7. Process answers
 		const answers = omrResult.answers;
 		let correctCount = 0;
 		let incorrectCount = 0;
 		let blankCount = 0;
 		let totalScore = 0;
 
-		// Prepare answers for batch insert
-		const answersToInsert = [];
-
+		// Calculate scores but don't save yet
 		for (const question of questionsData) {
 			const questionIndex = question.order_in_eval - 1; // Convert to 0-based index
 			const studentAnswer = answers[questionIndex];
-
-			// Convert OMR answer format (lowercase) to database format (uppercase)
-			let formattedStudentAnswer: string | null = null;
-			if (studentAnswer && studentAnswer !== 'error_multiple') {
-				formattedStudentAnswer = studentAnswer.toUpperCase();
-			}
 
 			// Calculate score for this question
 			if (!studentAnswer || studentAnswer === null) {
@@ -101,45 +113,31 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			} else {
 				incorrectCount++;
 			}
-
-			// Add to batch insert
-			answersToInsert.push({
-				register_code: registerData.code,
-				question_code: question.code,
-				student_answer: formattedStudentAnswer
-			});
 		}
 
-		// 6. Insert answers in a transaction
-		const { error: insertError } = await locals.supabase.rpc('process_evaluation_results', {
-			p_register_code: registerData.code,
-			p_eval_code: evalCode,
-			p_answers: answersToInsert,
-			p_correct_count: correctCount,
-			p_blank_count: blankCount,
-			p_incorrect_count: incorrectCount,
-			p_score: totalScore
-		});
+		// 8. Return processing results with student info if found
+		const studentInfo =
+			duplicateCheck && duplicateCheck.length > 0
+				? {
+						name: duplicateCheck[0].students.name,
+						lastName: duplicateCheck[0].students.last_name,
+						rollCode: studentRollCode,
+						registerCode: duplicateCheck[0].code
+					}
+				: null;
 
-		if (insertError) {
-			console.error('Error inserting results:', insertError);
-			return json(
-				{
-					status: 'error',
-					message: 'Failed to save evaluation results'
-				},
-				{ status: 500 }
-			);
-		}
-
-		// 7. Return success with student info and results
 		return json({
 			status: 'success',
-			studentCode: studentRollCode,
-			student: {
-				name: registerData.students.name,
-				lastName: registerData.students.last_name,
-				rollCode: registerData.roll_code
+			detectedCode: omrResult.studentCode, // Original detected code
+			studentCode: studentRollCode, // Final code (could be manually provided)
+			student: studentInfo,
+			duplicateFound: duplicateCheck && duplicateCheck.length > 0,
+			validationStatus: {
+				isValid: studentInfo !== null,
+				message:
+					studentInfo === null
+						? `No se encontró estudiante con código ${studentRollCode} en este nivel/grupo`
+						: 'Estudiante encontrado'
 			},
 			results: {
 				correctCount,
@@ -153,7 +151,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					return acc;
 				},
 				{} as Record<number, AnswerValue>
-			)
+			),
+			questions: questionsData
 		});
 	} catch (error) {
 		console.error('OMR API error:', error);

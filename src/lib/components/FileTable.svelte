@@ -1,25 +1,7 @@
 <script lang="ts">
-	import { Play, X, Loader2 } from 'lucide-svelte';
+	import { Play, X, Loader2, Eye } from 'lucide-svelte';
 	import ProcessingStatus from './ProcessingStatus.svelte';
-	import type { AnswerValue } from '$lib/omrProcessor';
-
-	interface ProcessedResult {
-		status: 'success' | 'error';
-		studentCode?: string;
-		student?: {
-			name: string;
-			lastName: string;
-			rollCode: string;
-		};
-		results?: {
-			correctCount: number;
-			incorrectCount: number;
-			blankCount: number;
-			totalScore: number;
-		};
-		answers?: Record<number, AnswerValue>;
-		message?: string;
-	}
+	import type { OmrProcessedResult } from '$lib/types/omrProcessing';
 
 	const {
 		files = [],
@@ -30,10 +12,11 @@
 		evalSelected = false,
 		onSelect = () => {},
 		onProcess = () => {},
-		onRemove = () => {}
+		onRemove = () => {},
+		onViewDetails = () => {}
 	} = $props<{
 		files: File[];
-		processedResults: Record<number, ProcessedResult>;
+		processedResults: Record<number, OmrProcessedResult>;
 		selectedIndex: number;
 		isProcessing: boolean;
 		processingIndex: number;
@@ -41,6 +24,7 @@
 		onSelect?: (index: number) => void;
 		onProcess?: (index: number) => void;
 		onRemove?: (index: number) => void;
+		onViewDetails?: (index: number) => void;
 	}>();
 </script>
 
@@ -98,6 +82,20 @@
 									{/if}
 								</button>
 							{/if}
+
+							{#if processedResults[index]?.status === 'success' && processedResults[index]?.student}
+								<button
+									class="btn btn-ghost btn-xs"
+									onclick={(e) => {
+										e.stopPropagation();
+										onViewDetails(index);
+									}}
+									title="Ver detalles"
+								>
+									<Eye size={14} />
+								</button>
+							{/if}
+
 							<button
 								class="btn btn-ghost btn-xs"
 								onclick={(e) => {

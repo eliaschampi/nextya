@@ -1,10 +1,10 @@
 <script lang="ts">
 	import PageTitle from '$lib/components/PageTitle.svelte';
-	import { Upload, Trash2, X, School, BookOpen, Play, Loader2, Check } from 'lucide-svelte';
+	import { Upload, Trash2, X, School, BookOpen, Play, Loader2, Plus, Save } from 'lucide-svelte';
 	import type { Eval, Level, EvalWithSections } from '../../../../app';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { showToast } from '$lib/stores/Toast';
-	import type { AnswerValue } from '$lib/omrProcessor';
+	// We use OmrProcessedResult instead of direct AnswerValue
 	import { base64ToFile } from '$lib/utils/imageUtils';
 
 	// Componentes personalizados
@@ -12,7 +12,10 @@
 	import EvalHeader from '$lib/components/EvalHeader.svelte';
 	import FileTable from '$lib/components/FileTable.svelte';
 	import ImagePreview from '$lib/components/ImagePreview.svelte';
-	// BatchProcessing functionality integrated directly
+	import Message from '$lib/components/Message.svelte';
+	import OmrResultCard from '$lib/components/OmrResultCard.svelte';
+	import OmrDetailsModal from '$lib/components/OmrDetailsModal.svelte';
+	import type { OmrProcessedResult } from '$lib/types/omrProcessing';
 
 	// Props tipados
 	const { data } = $props<{ data: { levels: Level[] } }>();
@@ -27,27 +30,12 @@
 	let selectedLevel = $state('');
 	let isProcessing = $state(false);
 	let processingIndex = $state(-1);
-	let processedResults = $state<Record<number, ProcessedResult>>({});
+	let processedResults = $state<Record<number, OmrProcessedResult>>({});
 	let isBatchProcessing = $state(false);
-
-	// Interfaces para los resultados procesados
-	interface ProcessedResult {
-		status: 'success' | 'error';
-		studentCode?: string;
-		student?: {
-			name: string;
-			lastName: string;
-			rollCode: string;
-		};
-		results?: {
-			correctCount: number;
-			incorrectCount: number;
-			blankCount: number;
-			totalScore: number;
-		};
-		answers?: Record<number, AnswerValue>;
-		message?: string;
-	}
+	let isSaving = $state(false);
+	let savingIndex = $state(-1);
+	let showDetailsModal = $state(false);
+	let selectedResultForDetails = $state<OmrProcessedResult | null>(null);
 
 	// Previsualización derivada
 	let currentPreview = $derived(
@@ -134,7 +122,7 @@
 			: -1;
 
 		// Actualizar processedResults
-		const newProcessedResults: Record<number, ProcessedResult> = {};
+		const newProcessedResults: Record<number, OmrProcessedResult> = {};
 
 		Object.entries(processedResults).forEach(([k, v]) => {
 			const key = Number(k);
@@ -147,7 +135,7 @@
 		processedResults = newProcessedResults;
 	}
 
-	async function processFile(index: number) {
+	async function processFile(index: number, rollCode: string | null = null) {
 		if (!selectedEval || !uploadedFiles[index]) {
 			showToast('No se puede procesar este archivo', 'warning');
 			return;
@@ -174,7 +162,8 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					imageData,
-					evalData: selectedEval
+					evalData: selectedEval,
+					rollCode // Pasar el código si se proporciona
 				})
 			});
 
@@ -185,7 +174,11 @@
 
 			// Mostrar notificación
 			if (result.status === 'success') {
-				showToast(`Correctamennte procesado ${file.name}`, 'success');
+				if (result.student) {
+					showToast(`Procesado: ${result.student.name} ${result.student.lastName}`, 'success');
+				} else {
+					showToast(`Procesado pero estudiante no encontrado: ${result.studentCode}`, 'warning');
+				}
 			} else {
 				showToast(`Error en ${file.name}: ${result.message}`, 'warning');
 			}
@@ -239,6 +232,175 @@
 		}
 	}
 
+	// Función para guardar un resultado individual
+	async function saveResult(index: number) {
+		if (!selectedEval || !processedResults[index] || !processedResults[index].student) {
+			showToast('No se puede guardar este resultado', 'warning');
+			return;
+		}
+
+		try {
+			isSaving = true;
+			savingIndex = index;
+
+			const result = processedResults[index];
+			const registerCode = result.student?.registerCode;
+
+			if (!registerCode) {
+				showToast('Código de registro no encontrado', 'warning');
+				return;
+			}
+
+			// Preparar datos para guardar
+			const saveData = {
+				evalCode: selectedEval.code,
+				registerCode,
+				answers: result.answers || {},
+				correctCount: result.results?.correctCount || 0,
+				incorrectCount: result.results?.incorrectCount || 0,
+				blankCount: result.results?.blankCount || 0,
+				totalScore: result.results?.totalScore || 0
+			};
+
+			// Enviar a la API para guardar
+			const response = await fetch('/api/eval/save-results', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(saveData)
+			});
+
+			const saveResult = await response.json();
+
+			if (saveResult.status === 'success') {
+				showToast(
+					`Resultados guardados para ${result.student?.name || ''} ${result.student?.lastName || ''}`,
+					'success'
+				);
+
+				// Marcar como guardado en el resultado
+				processedResults[index] = {
+					...result,
+					saved: true
+				};
+			} else {
+				showToast(`Error al guardar: ${saveResult.message}`, 'warning');
+			}
+
+			return saveResult;
+		} catch (error) {
+			console.error('Error saving result:', error);
+			showToast('Error al guardar resultados', 'warning');
+			return null;
+		} finally {
+			isSaving = false;
+			savingIndex = -1;
+		}
+	}
+
+	// Función para guardar todos los resultados en lote
+	async function saveAllResults() {
+		if (!selectedEval) {
+			showToast('No hay evaluación seleccionada', 'warning');
+			return;
+		}
+
+		// Filtrar solo los resultados válidos con estudiante
+		const validResults = Object.entries(processedResults)
+			.filter(([, result]) => result.status === 'success' && result.student && !result.saved)
+			.map(([, result]) => ({
+				registerCode: result.student?.registerCode || '',
+				answers: result.answers || {},
+				correctCount: result.results?.correctCount || 0,
+				incorrectCount: result.results?.incorrectCount || 0,
+				blankCount: result.results?.blankCount || 0,
+				totalScore: result.results?.totalScore || 0
+			}));
+
+		if (validResults.length === 0) {
+			showToast('No hay resultados válidos para guardar', 'warning');
+			return;
+		}
+
+		try {
+			isSaving = true;
+
+			// Preparar datos para guardar en lote
+			const batchData = {
+				evalCode: selectedEval.code,
+				results: validResults
+			};
+
+			// Enviar a la API para guardar en lote
+			const response = await fetch('/api/eval/save-batch', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(batchData)
+			});
+
+			const batchResult = await response.json();
+
+			if (batchResult.status === 'success') {
+				showToast(
+					`${batchResult.processedResults?.length || 0} resultados guardados correctamente`,
+					'success'
+				);
+
+				// Marcar como guardados los resultados exitosos
+				if (batchResult.processedResults) {
+					Object.entries(processedResults).forEach(([index, result]) => {
+						if (
+							result.student &&
+							batchResult.processedResults.some(
+								(pr: { registerCode: string; status: string }) =>
+									pr.registerCode === result.student?.registerCode && pr.status === 'success'
+							)
+						) {
+							processedResults[Number(index)] = {
+								...result,
+								saved: true
+							};
+						}
+					});
+				}
+
+				// Mostrar errores si hay
+				if (batchResult.errors && batchResult.errors.length > 0) {
+					showToast(`${batchResult.errors.length} resultados con error`, 'warning');
+				}
+			} else {
+				showToast(`Error al guardar en lote: ${batchResult.message}`, 'warning');
+			}
+
+			return batchResult;
+		} catch (error) {
+			console.error('Error saving batch results:', error);
+			showToast('Error al guardar resultados en lote', 'warning');
+			return null;
+		} finally {
+			isSaving = false;
+		}
+	}
+
+	// Función para mostrar detalles de un resultado
+	function viewResultDetails(index: number) {
+		if (!processedResults[index] || processedResults[index].status !== 'success') {
+			return;
+		}
+
+		selectedResultForDetails = processedResults[index];
+		showDetailsModal = true;
+	}
+
+	// Función para cerrar el modal de detalles
+	function closeDetailsModal() {
+		showDetailsModal = false;
+	}
+
+	// Función para reprocesar con un código específico
+	async function reprocessWithCode(index: number, rollCode: string) {
+		return processFile(index, rollCode);
+	}
+
 	function selectEval(evalItem: Eval) {
 		selectedEval = evalItem as unknown as EvalWithSections;
 		evalModal?.close();
@@ -248,7 +410,7 @@
 	$effect(() => () => currentPreview && URL.revokeObjectURL(currentPreview));
 </script>
 
-<PageTitle title="Proceso de verificacion" description="Procesa hojas de respuestas con OMR">
+<PageTitle title="Next-OMR" description="Procesa hojas de respuestas de evaluaciones.">
 	<button
 		class="w-full bg-base-200 hover:bg-base-300 transition-all duration-300 rounded-lg shadow-sm"
 		onclick={openEvalModal}
@@ -274,7 +436,6 @@
 
 	<!-- Contenedor principal unificado -->
 	<div class="card bg-base-200/80 shadow overflow-hidden">
-		<!-- Barra de herramientas y procesamiento por lotes unificados -->
 		<div class="card-body p-4 border-b border-base-300/30">
 			<div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
 				<div class="flex flex-wrap gap-2 items-center">
@@ -282,7 +443,7 @@
 						<label
 							class="btn join-item btn-primary btn-sm {!selectedEval?.code ? 'btn-disabled' : ''}"
 						>
-							<Upload size={16} class="mr-2" /> Cargar
+							<Plus size={16} />
 							<input
 								type="file"
 								accept="image/jpeg,image/jpg"
@@ -312,26 +473,10 @@
 								Procesando...
 							{:else}
 								<Play size={16} class="mr-1" />
-								Procesar todos ({pendingFilesCount})
+								Procesar ({pendingFilesCount})
 							{/if}
 						</button>
 					{/if}
-				</div>
-
-				<div
-					class="flex items-center gap-2 bg-base-100/50 px-3 py-1.5 rounded-lg border border-base-300/30"
-				>
-					<div class="flex items-center gap-1.5">
-						<span class="badge badge-primary badge-sm">{uploadedFiles.length}</span>
-						<span class="text-sm">archivos</span>
-					</div>
-					<div class="w-0.5 h-4 bg-base-300/50"></div>
-					<div class="flex items-center gap-1.5">
-						<span class="badge badge-success badge-sm"
-							>{Object.values(processedResults).filter((r) => r.status === 'success').length}</span
-						>
-						<span class="text-sm">procesados</span>
-					</div>
 				</div>
 			</div>
 
@@ -352,10 +497,7 @@
 					</div>
 				</div>
 			{:else if uploadedFiles.length > 0 && pendingFilesCount === 0}
-				<div class="alert alert-success py-2 px-4 mt-2">
-					<Check class="w-5 h-5" />
-					<span>Todos los archivos han sido procesados.</span>
-				</div>
+				<Message description="Todos los archivos han sido procesados." type="success" />
 			{/if}
 		</div>
 
@@ -365,8 +507,21 @@
 			<div class="w-full lg:w-1/2 p-4">
 				<header class="flex items-center justify-between mb-4">
 					<h3 class="font-bold text-lg">Archivos</h3>
-					<div class="flex items-center gap-2">
-						<span class="badge badge-primary badge-outline">{uploadedFiles.length}</span>
+					<div
+						class="flex items-center gap-2 bg-base-100/50 px-3 py-1.5 rounded-lg border border-base-300/30"
+					>
+						<div class="flex items-center gap-1.5">
+							<span class="badge badge-primary badge-sm">{uploadedFiles.length}</span>
+							<span class="text-sm">archivos</span>
+						</div>
+						<div class="w-0.5 h-4 bg-base-300/50"></div>
+						<div class="flex items-center gap-1.5">
+							<span class="badge badge-success badge-sm"
+								>{Object.values(processedResults).filter((r) => r.status === 'success')
+									.length}</span
+							>
+							<span class="text-sm">procesados</span>
+						</div>
 					</div>
 				</header>
 
@@ -381,7 +536,47 @@
 						onSelect={(index) => (selectedFileIndex = index)}
 						onProcess={processFile}
 						onRemove={removeFile}
+						onViewDetails={viewResultDetails}
 					/>
+
+					<!-- Resultados procesados con tarjetas individuales -->
+					<div class="mt-6">
+						<h3 class="font-bold text-lg mb-4">Resultados</h3>
+
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							{#each Object.entries(processedResults) as [index, result] (index)}
+								<OmrResultCard
+									{result}
+									index={Number(index)}
+									isProcessing={isProcessing && processingIndex === Number(index)}
+									isSaving={isSaving && savingIndex === Number(index)}
+									on:reprocess={({ detail }) => reprocessWithCode(detail.index, detail.rollCode)}
+									on:save={({ detail }) => saveResult(detail.index)}
+									on:viewDetails={({ detail }) => viewResultDetails(detail.index)}
+								/>
+							{:else}
+								<div
+									class="col-span-2 text-center p-4 bg-base-100/50 rounded-lg border border-base-300/30"
+								>
+									<p class="text-base-content/70">No hay resultados procesados</p>
+								</div>
+							{/each}
+						</div>
+
+						<!-- Botón para guardar todos los resultados -->
+						{#if Object.values(processedResults).some((r) => r.status === 'success' && r.student && !r.saved)}
+							<div class="mt-4 flex justify-end">
+								<button class="btn btn-primary" onclick={saveAllResults} disabled={isSaving}>
+									{#if isSaving}
+										<span class="loading loading-spinner loading-xs"></span>
+									{:else}
+										<Save size={16} class="mr-2" />
+									{/if}
+									Guardar Todos
+								</button>
+							</div>
+						{/if}
+					</div>
 				{:else}
 					<div
 						class="flex flex-col items-center justify-center p-8 text-center bg-base-100/50 rounded-lg border border-base-300/30"
@@ -431,6 +626,15 @@
 		</div>
 	</div>
 </main>
+
+<!-- Modal de detalles -->
+{#if selectedResultForDetails}
+	<OmrDetailsModal
+		result={selectedResultForDetails}
+		open={showDetailsModal}
+		onClose={closeDetailsModal}
+	/>
+{/if}
 
 <!-- Modal de selección de evaluación -->
 <dialog bind:this={evalModal} class="modal">
