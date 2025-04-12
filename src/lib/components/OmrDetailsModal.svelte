@@ -61,21 +61,35 @@
 	}
 </script>
 
-<dialog bind:this={modal} class="modal modal-bottom sm:modal-middle">
-	<div class="modal-box max-w-3xl">
+<dialog bind:this={modal} class="modal">
+	<div class="modal-box">
 		<h3 class="font-bold text-lg mb-4">Detalles de Respuestas</h3>
 
-		{#if result && result.student}
-			<div class="mb-4">
-				<div class="text-lg font-medium">
-					{result.student.name}
-					{result.student.lastName}
+		{#if result}
+			<!-- Información del estudiante si existe -->
+			{#if result.student}
+				<div class="mb-4">
+					<div class="text-lg font-medium">
+						{result.student.name}
+						{result.student.lastName}
+					</div>
+					<div class="text-sm opacity-70">
+						Código: {result.student.rollCode}
+					</div>
 				</div>
-				<div class="text-sm opacity-70">
-					Código: {result.student.rollCode}
+			{:else}
+				<div class="alert alert-warning mb-4">
+					<AlertCircle size={16} />
+					<span>{result.validationStatus?.message || 'Estudiante no encontrado'}</span>
 				</div>
-			</div>
+				<div class="mb-4">
+					<div class="text-sm opacity-70">
+						Código detectado: {result.studentCode || result.detectedCode || 'N/A'}
+					</div>
+				</div>
+			{/if}
 
+			<!-- Estadísticas si hay resultados -->
 			{#if result.results}
 				<div class="stats shadow mb-4 w-full">
 					<div class="stat">
@@ -108,10 +122,11 @@
 				</div>
 			{/if}
 
+			<!-- Tabla de respuestas -->
 			{#if result.answers && result.questions}
-				<div class="overflow-x-auto">
+				<div class="max-h-[400px] overflow-y-auto border border-base-300 rounded-lg">
 					<table class="table table-zebra w-full">
-						<thead>
+						<thead class="sticky top-0 bg-base-200 z-10">
 							<tr>
 								<th class="w-16">N°</th>
 								<th>Respuesta</th>

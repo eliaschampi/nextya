@@ -13,7 +13,6 @@
 	import FileTable from '$lib/components/FileTable.svelte';
 	import ImagePreview from '$lib/components/ImagePreview.svelte';
 	import Message from '$lib/components/Message.svelte';
-	import OmrResultCard from '$lib/components/OmrResultCard.svelte';
 	import OmrDetailsModal from '$lib/components/OmrDetailsModal.svelte';
 	import type { OmrProcessedResult } from '$lib/types/omrProcessing';
 
@@ -383,7 +382,7 @@
 
 	// Función para mostrar detalles de un resultado
 	function viewResultDetails(index: number) {
-		if (!processedResults[index] || processedResults[index].status !== 'success') {
+		if (!processedResults[index]) {
 			return;
 		}
 
@@ -532,51 +531,30 @@
 						selectedIndex={selectedFileIndex}
 						{isProcessing}
 						{processingIndex}
+						{isSaving}
+						{savingIndex}
 						evalSelected={!!selectedEval}
 						onSelect={(index) => (selectedFileIndex = index)}
-						onProcess={processFile}
+						onProcess={(index, rollCode = null) => processFile(index, rollCode)}
 						onRemove={removeFile}
 						onViewDetails={viewResultDetails}
+						onSave={saveResult}
+						onReprocess={reprocessWithCode}
 					/>
 
-					<!-- Resultados procesados con tarjetas individuales -->
-					<div class="mt-6">
-						<h3 class="font-bold text-lg mb-4">Resultados</h3>
-
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-							{#each Object.entries(processedResults) as [index, result] (index)}
-								<OmrResultCard
-									{result}
-									index={Number(index)}
-									isProcessing={isProcessing && processingIndex === Number(index)}
-									isSaving={isSaving && savingIndex === Number(index)}
-									on:reprocess={({ detail }) => reprocessWithCode(detail.index, detail.rollCode)}
-									on:save={({ detail }) => saveResult(detail.index)}
-									on:viewDetails={({ detail }) => viewResultDetails(detail.index)}
-								/>
-							{:else}
-								<div
-									class="col-span-2 text-center p-4 bg-base-100/50 rounded-lg border border-base-300/30"
-								>
-									<p class="text-base-content/70">No hay resultados procesados</p>
-								</div>
-							{/each}
+					<!-- Botón para guardar todos los resultados -->
+					{#if Object.values(processedResults).some((r) => r.status === 'success' && r.student && !r.saved)}
+						<div class="mt-4 flex justify-end">
+							<button class="btn btn-primary btn-sm" onclick={saveAllResults} disabled={isSaving}>
+								{#if isSaving}
+									<span class="loading loading-spinner loading-xs"></span>
+								{:else}
+									<Save size={14} class="mr-1" />
+								{/if}
+								Guardar Todos los Resultados
+							</button>
 						</div>
-
-						<!-- Botón para guardar todos los resultados -->
-						{#if Object.values(processedResults).some((r) => r.status === 'success' && r.student && !r.saved)}
-							<div class="mt-4 flex justify-end">
-								<button class="btn btn-primary" onclick={saveAllResults} disabled={isSaving}>
-									{#if isSaving}
-										<span class="loading loading-spinner loading-xs"></span>
-									{:else}
-										<Save size={16} class="mr-2" />
-									{/if}
-									Guardar Todos
-								</button>
-							</div>
-						{/if}
-					</div>
+					{/if}
 				{:else}
 					<div
 						class="flex flex-col items-center justify-center p-8 text-center bg-base-100/50 rounded-lg border border-base-300/30"
