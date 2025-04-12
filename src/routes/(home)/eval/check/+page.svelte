@@ -1,11 +1,11 @@
 <script lang="ts">
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { Upload, Trash2, X, School, BookOpen, Play, Loader2, Plus, Save } from 'lucide-svelte';
-	import type { Eval, Level, EvalWithSections } from '../../../../app';
+	import type { Eval, Level, EvalWithSections, EvalQuestion } from '../../../../app';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { showToast } from '$lib/stores/Toast';
-	// We use OmrProcessedResult instead of direct AnswerValue
 	import { base64ToFile } from '$lib/utils/imageUtils';
+	import { goto } from '$app/navigation';
 
 	// Componentes personalizados
 	import EvalDetails from '$lib/components/EvalDetails.svelte';
@@ -17,7 +17,12 @@
 	import type { OmrProcessedResult } from '$lib/types/omrProcessing';
 
 	// Props tipados
-	const { data } = $props<{ data: { levels: Level[] } }>();
+	const { data } = $props<{
+		data: { levels: Level[]; questions: EvalQuestion[]; evalCode?: string };
+	}>();
+
+	// Estado para almacenar las preguntas de la evaluación seleccionada
+	let evalQuestions = $state<EvalQuestion[]>(data.questions || []);
 
 	// Estados reactivos con Svelte v5 runes
 	let evalModal = $state<HTMLDialogElement | null>(null);
@@ -162,7 +167,8 @@
 				body: JSON.stringify({
 					imageData,
 					evalData: selectedEval,
-					rollCode // Pasar el código si se proporciona
+					rollCode, // Pasar el código si se proporciona
+					questions: evalQuestions // Pasar las preguntas para evitar consultas redundantes
 				})
 			});
 
@@ -171,21 +177,27 @@
 			// Guardar el resultado
 			processedResults[index] = result;
 
-			// Mostrar notificación
-			if (result.status === 'success') {
-				if (result.student) {
-					showToast(`Procesado: ${result.student.name} ${result.student.lastName}`, 'success');
+			// Mostrar notificación solo si no estamos en procesamiento por lotes
+			if (!isBatchProcessing) {
+				if (result.status === 'success') {
+					if (result.student) {
+						showToast(`Procesado: ${result.student.name} ${result.student.lastName}`, 'success');
+					} else {
+						showToast(`Procesado pero estudiante no encontrado: ${result.studentCode}`, 'warning');
+					}
 				} else {
-					showToast(`Procesado pero estudiante no encontrado: ${result.studentCode}`, 'warning');
+					showToast(`Error en ${file.name}: ${result.message}`, 'warning');
 				}
-			} else {
-				showToast(`Error en ${file.name}: ${result.message}`, 'warning');
 			}
 
 			return result;
 		} catch (error) {
 			console.error('Error processing file:', error);
-			showToast(`Error al procesar ${uploadedFiles[index].name}`, 'warning');
+
+			// Mostrar notificación solo si no estamos en procesamiento por lotes
+			if (!isBatchProcessing) {
+				showToast(`Error al procesar ${uploadedFiles[index].name}`, 'warning');
+			}
 
 			// Guardar el error
 			processedResults[index] = {
@@ -206,8 +218,6 @@
 
 		try {
 			isBatchProcessing = true;
-			let totalPending = pendingFilesCount;
-			let processed = 0;
 
 			// Procesar archivos pendientes uno por uno
 			for (let i = 0; i < uploadedFiles.length; i++) {
@@ -215,11 +225,9 @@
 				if (processedResults[i]?.status === 'success') continue;
 
 				await processFile(i);
-				processed++;
 
-				// Actualizar progreso
-				const progress = Math.round((processed / totalPending) * 100);
-				showToast(`Procesando lote: ${progress}% completado`, 'success');
+				// No mostrar toast por cada archivo procesado en modo lote
+				// Solo actualizar la barra de progreso visual
 			}
 
 			showToast('Procesamiento por lotes completado', 'success');
@@ -258,7 +266,8 @@
 				correctCount: result.results?.correctCount || 0,
 				incorrectCount: result.results?.incorrectCount || 0,
 				blankCount: result.results?.blankCount || 0,
-				totalScore: result.results?.totalScore || 0
+				totalScore: result.results?.totalScore || 0,
+				questions: evalQuestions // Pasar las preguntas para evitar consultas redundantes
 			};
 
 			// Enviar a la API para guardar
@@ -326,7 +335,8 @@
 			// Preparar datos para guardar en lote
 			const batchData = {
 				evalCode: selectedEval.code,
-				results: validResults
+				results: validResults,
+				questions: evalQuestions // Pasar las preguntas para evitar consultas redundantes
 			};
 
 			// Enviar a la API para guardar en lote
@@ -400,8 +410,29 @@
 		return processFile(index, rollCode);
 	}
 
-	function selectEval(evalItem: Eval) {
+	async function selectEval(evalItem: Eval) {
 		selectedEval = evalItem as unknown as EvalWithSections;
+
+		// Fetch questions for this evaluation if not already loaded
+		if (evalItem.code !== data.evalCode || evalQuestions.length === 0) {
+			try {
+				const response = await fetch(`/api/eval/questions/${evalItem.code}`);
+				if (response.ok) {
+					const data = await response.json();
+					evalQuestions = data;
+					// Update URL with eval code for direct access/refresh
+					goto(`?eval=${evalItem.code}`, { replaceState: true, keepFocus: true });
+				} else {
+					showToast('Error al cargar preguntas de la evaluación', 'warning');
+					evalQuestions = [];
+				}
+			} catch (error) {
+				console.error('Error fetching questions:', error);
+				showToast('Error al cargar preguntas de la evaluación', 'warning');
+				evalQuestions = [];
+			}
+		}
+
 		evalModal?.close();
 	}
 

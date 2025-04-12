@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { omrProcessor as processOmrImage } from '$lib/omrProcessor';
 import type { AnswerValue } from '$lib/omrProcessor';
+import type { EvalQuestion } from '../../../../app';
 
 /**
  * API endpoint for processing OMR images
@@ -10,7 +11,7 @@ import type { AnswerValue } from '$lib/omrProcessor';
  */
 export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
-		const { imageData, evalData, rollCode = null } = await request.json();
+		const { imageData, evalData, rollCode = null, questions = null } = await request.json();
 
 		if (!imageData || !evalData.code) {
 			return json(
@@ -25,22 +26,32 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		// 1. Get evaluation code
 		const evalCode = evalData.code;
 
-		// 2. Get questions for this evaluation
-		const { data: questionsData, error: questionsError } = await locals.supabase
-			.from('eval_questions')
-			.select('*')
-			.eq('eval_code', evalCode)
-			.order('order_in_eval');
+		// 2. Get or use provided questions for this evaluation
+		let questionsData: EvalQuestion[];
 
-		if (questionsError || !questionsData) {
-			console.error('Error fetching questions:', questionsError);
-			return json(
-				{
-					status: 'error',
-					message: 'Failed to fetch evaluation questions'
-				},
-				{ status: 500 }
-			);
+		// Use provided questions if available (to avoid redundant DB calls)
+		if (questions && Array.isArray(questions) && questions.length > 0) {
+			questionsData = questions;
+		} else {
+			// Fallback to fetching questions from database if not provided
+			const { data, error } = await locals.supabase
+				.from('eval_questions')
+				.select('*')
+				.eq('eval_code', evalCode)
+				.order('order_in_eval');
+
+			if (error || !data) {
+				console.error('Error fetching questions:', error);
+				return json(
+					{
+						status: 'error',
+						message: 'Failed to fetch evaluation questions'
+					},
+					{ status: 500 }
+				);
+			}
+
+			questionsData = data;
 		}
 
 		// Calculate total number of questions
@@ -147,7 +158,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			},
 			answers: Object.entries(answers).reduce(
 				(acc, [key, value]) => {
-					acc[Number(key) + 1] = value; // Convert back to 1-based for display
+					acc[Number(key)] = value;
 					return acc;
 				},
 				{} as Record<number, AnswerValue>

@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import type { EvalQuestion } from '../../../../app';
 
 /**
  * API endpoint for saving OMR results after verification
@@ -14,7 +15,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			correctCount,
 			incorrectCount,
 			blankCount,
-			totalScore
+			totalScore,
+			questions = null
 		} = await request.json();
 
 		if (!evalCode || !registerCode || !answers) {
@@ -27,22 +29,32 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			);
 		}
 
-		// Get questions for this evaluation to prepare the answers
-		const { data: questionsData, error: questionsError } = await locals.supabase
-			.from('eval_questions')
-			.select('*')
-			.eq('eval_code', evalCode)
-			.order('order_in_eval');
+		// Get or use provided questions for this evaluation
+		let questionsData: EvalQuestion[];
 
-		if (questionsError || !questionsData) {
-			console.error('Error fetching questions:', questionsError);
-			return json(
-				{
-					status: 'error',
-					message: 'Error al obtener preguntas de la evaluación'
-				},
-				{ status: 500 }
-			);
+		// Use provided questions if available (to avoid redundant DB calls)
+		if (questions && Array.isArray(questions) && questions.length > 0) {
+			questionsData = questions;
+		} else {
+			// Fallback to fetching questions from database if not provided
+			const { data, error } = await locals.supabase
+				.from('eval_questions')
+				.select('*')
+				.eq('eval_code', evalCode)
+				.order('order_in_eval');
+
+			if (error || !data) {
+				console.error('Error fetching questions:', error);
+				return json(
+					{
+						status: 'error',
+						message: 'Error al obtener preguntas de la evaluación'
+					},
+					{ status: 500 }
+				);
+			}
+
+			questionsData = data;
 		}
 
 		// Prepare answers for batch insert

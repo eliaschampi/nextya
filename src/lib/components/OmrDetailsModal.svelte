@@ -62,7 +62,7 @@
 </script>
 
 <dialog bind:this={modal} class="modal">
-	<div class="modal-box">
+	<div class="modal-box  flex flex-col">
 		<h3 class="font-bold text-lg mb-4">Detalles de Respuestas</h3>
 
 		{#if result}
@@ -124,7 +124,7 @@
 
 			<!-- Tabla de respuestas -->
 			{#if result.answers && result.questions}
-				<div class="max-h-[400px] overflow-y-auto border border-base-300 rounded-lg">
+				<div class="max-h-[20rem] overflow-y-auto border border-base-300 rounded-lg">
 					<table class="table table-zebra w-full">
 						<thead class="sticky top-0 bg-base-200 z-10">
 							<tr>
