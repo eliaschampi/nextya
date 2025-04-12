@@ -29,9 +29,6 @@
 	let processedResults = $state<Record<number, ProcessedResult>>({});
 	let isBatchProcessing = $state(false);
 
-	// Estado del rectángulo de selección en porcentajes (0-100)
-	let selectionRect = $state({ top: 10, left: 10, width: 80, height: 80 });
-
 	// Interfaces para los resultados procesados
 	interface ProcessedResult {
 		status: 'success' | 'error';
@@ -156,7 +153,6 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					imageData,
-					selectionRect,
 					evalData: selectedEval
 				})
 			});
@@ -286,7 +282,7 @@
 
 					{#if uploadedFiles.length > 0 && pendingFilesCount > 0}
 						<button
-							class="btn btn-primary btn-sm {isBatchProcessing ? 'btn-disabled' : ''}"
+							class="btn btn-accent btn-sm {isBatchProcessing ? 'btn-disabled' : ''}"
 							onclick={processAllFiles}
 							disabled={isBatchProcessing || pendingFilesCount === 0 || !selectedEval}
 						>
@@ -343,11 +339,9 @@
 		</div>
 
 		<!-- Contenido principal: archivos y previsualización -->
-		<div
-			class="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-base-300/30"
-		>
+		<div class="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-base-300/30">
 			<!-- Panel de archivos -->
-			<div class="lg:col-span-1 p-4">
+			<div class="w-full lg:w-1/2 p-4">
 				<header class="flex items-center justify-between mb-4">
 					<h3 class="font-bold text-lg">Archivos</h3>
 					<div class="flex items-center gap-2">
@@ -392,15 +386,13 @@
 			</div>
 
 			<!-- Previsualización -->
-			<div class="lg:col-span-2">
+			<div class="w-full lg:w-1/2">
 				{#if uploadedFiles.length > 0}
 					<ImagePreview
 						imageUrl={currentPreview}
-						{selectionRect}
 						status={previewStatus}
 						fileIndex={selectedFileIndex}
 						totalFiles={uploadedFiles.length}
-						onchange={(rect) => (selectionRect = rect)}
 					/>
 				{:else}
 					<div class="card-body flex flex-col items-center justify-center p-8 text-center">
@@ -410,23 +402,6 @@
 							<p class="text-base-content/70 mb-4">
 								Carga imágenes de hojas de respuestas para comenzar
 							</p>
-
-							{#if !selectedEval}
-								<button class="btn btn-primary btn-sm" onclick={openEvalModal}>
-									<School size={16} class="mr-2" /> Seleccionar evaluación
-								</button>
-							{:else}
-								<label class="btn btn-primary btn-sm">
-									<Upload size={16} class="mr-2" /> Cargar Imágenes
-									<input
-										type="file"
-										accept="image/jpeg,image/jpg"
-										multiple
-										class="hidden"
-										onchange={handleFileUpload}
-									/>
-								</label>
-							{/if}
 						</div>
 					</div>
 				{/if}
@@ -437,7 +412,7 @@
 
 <!-- Modal de selección de evaluación -->
 <dialog bind:this={evalModal} class="modal">
-	<div class="modal-box max-w-2xl">
+	<div class="modal-box">
 		<header class="flex items-center justify-between mb-6">
 			<h3 class="text-lg font-bold flex gap-2">
 				<School class="w-6 h-6 text-primary" /> Seleccionar Evaluación

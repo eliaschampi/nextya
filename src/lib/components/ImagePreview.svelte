@@ -1,156 +1,71 @@
 <script lang="ts">
-	import { Upload, Check, X, AlertCircle, Loader2 } from 'lucide-svelte';
+	import {
+		Upload,
+		Check,
+		X,
+		AlertCircle,
+		Loader2,
+		RotateCcw,
+		RotateCw,
+		ZoomIn,
+		ZoomOut,
+		Maximize
+	} from 'lucide-svelte';
 
 	const {
 		imageUrl = '',
-		selectionRect,
 		status = 'pending',
 		fileIndex = -1,
-		totalFiles = 0,
-		onchange = undefined
+		totalFiles = 0
 	} = $props<{
 		imageUrl: string;
-		selectionRect: { top: number; left: number; width: number; height: number };
 		status?: 'pending' | 'processing' | 'success' | 'error' | undefined;
 		fileIndex?: number;
 		totalFiles?: number;
-		onchange?: (data: { top: number; left: number; width: number; height: number }) => void;
 	}>();
 
-	// Estado local para el rectángulo
-	let localRect = $state({
-		top: selectionRect.top,
-		left: selectionRect.left,
-		width: selectionRect.width,
-		height: selectionRect.height
-	});
-
+	// Estado para la rotación y zoom
+	let rotation = $state(0);
+	let zoom = $state(1);
 	let imageRef = $state<HTMLImageElement | undefined>(undefined);
-	let isDragging = $state(false);
-	let dragCorner = $state<string | null>(null);
-	let rafId = $state<number>(0);
+	let fullscreen = $state(false);
 
-	// Rectángulo absoluto derivado
-	let absoluteRect = $derived(imageRef ? getAbsoluteRect(imageRef.getBoundingClientRect()) : null);
-
-	// Sincronizar con props cuando cambien
-	$effect(() => {
-		localRect = {
-			top: selectionRect.top,
-			left: selectionRect.left,
-			width: selectionRect.width,
-			height: selectionRect.height
-		};
-	});
-
-	// Funciones para el rectángulo de selección
-	function getAbsoluteRect(imageRect: DOMRect) {
-		return {
-			top: (selectionRect.top / 100) * imageRect.height,
-			left: (selectionRect.left / 100) * imageRect.width,
-			width: (selectionRect.width / 100) * imageRect.width,
-			height: (selectionRect.height / 100) * imageRect.height
-		};
+	// Funciones para rotar la imagen
+	function rotateClockwise() {
+		rotation = (rotation + 90) % 360;
 	}
 
-	function startDrag(event: MouseEvent, corner: string) {
-		isDragging = true;
-		dragCorner = corner;
-		event.preventDefault();
+	function rotateCounterClockwise() {
+		rotation = (rotation - 90 + 360) % 360;
 	}
 
-	function handleDrag(event: MouseEvent) {
-		if (!isDragging || !dragCorner || !imageUrl || !imageRef) return;
-		cancelAnimationFrame(rafId);
-		rafId = requestAnimationFrame(() => {
-			if (!imageRef) return;
-			const rect = imageRef.getBoundingClientRect();
-			const x = Math.max(0, Math.min(event.clientX - rect.left, rect.width));
-			const y = Math.max(0, Math.min(event.clientY - rect.top, rect.height));
-			const xPercent = (x / rect.width) * 100;
-			const yPercent = (y / rect.height) * 100;
-
-			const newRect = { ...localRect };
-			const minSize = 5; // Porcentaje mínimo
-
-			switch (dragCorner) {
-				case 'topLeft':
-					newRect.left = Math.min(xPercent, localRect.left + localRect.width - minSize);
-					newRect.top = Math.min(yPercent, localRect.top + localRect.height - minSize);
-					newRect.width = Math.max(minSize, localRect.left + localRect.width - newRect.left);
-					newRect.height = Math.max(minSize, localRect.top + localRect.height - newRect.top);
-					break;
-				case 'topRight':
-					newRect.top = Math.min(yPercent, localRect.top + localRect.height - minSize);
-					newRect.width = Math.max(minSize, xPercent - localRect.left);
-					newRect.height = Math.max(minSize, localRect.top + localRect.height - newRect.top);
-					break;
-				case 'bottomLeft':
-					newRect.left = Math.min(xPercent, localRect.left + localRect.width - minSize);
-					newRect.height = Math.max(minSize, yPercent - localRect.top);
-					newRect.width = Math.max(minSize, localRect.left + localRect.width - newRect.left);
-					break;
-				case 'bottomRight':
-					newRect.width = Math.max(minSize, xPercent - localRect.left);
-					newRect.height = Math.max(minSize, yPercent - localRect.top);
-					break;
-			}
-
-			// Actualizar el estado local y notificar al componente padre
-			localRect = newRect;
-			onchange?.(localRect);
-		});
+	// Funciones para zoom
+	function zoomIn() {
+		zoom = Math.min(zoom + 0.25, 3);
 	}
 
-	function endDrag() {
-		isDragging = false;
-		dragCorner = null;
+	function zoomOut() {
+		zoom = Math.max(zoom - 0.25, 0.5);
 	}
 
-	// Ajustar el rectángulo cuando cambie la imagen o el tamaño de la ventana
-	function adjustSelectionRect() {
-		if (!imageRef) return;
-		const maxWidth = 100;
-		const maxHeight = 100;
-
-		const newRect = {
-			left: Math.max(0, localRect.left),
-			top: Math.max(0, localRect.top),
-			width: Math.min(localRect.width, maxWidth - localRect.left),
-			height: Math.min(localRect.height, maxHeight - localRect.top)
-		};
-
-		// Solo actualizar y notificar si hay cambios
-		if (
-			newRect.left !== localRect.left ||
-			newRect.top !== localRect.top ||
-			newRect.width !== localRect.width ||
-			newRect.height !== localRect.height
-		) {
-			localRect = newRect;
-			onchange?.(localRect);
-		}
+	function resetView() {
+		rotation = 0;
+		zoom = 1;
 	}
 
-	// Efecto para ajustar el rectángulo cuando cambie la imagen
-	$effect(() => {
-		if (imageUrl && imageRef) {
-			adjustSelectionRect();
-		}
-	});
+	// Función para alternar pantalla completa
+	function toggleFullscreen() {
+		fullscreen = !fullscreen;
+	}
 
-	// Manejar el redimensionamiento de la ventana
-	$effect(() => {
-		window.addEventListener('resize', adjustSelectionRect);
-
-		return () => {
-			window.removeEventListener('resize', adjustSelectionRect);
-			cancelAnimationFrame(rafId);
-		};
-	});
+	// Calcular clases y estilos para la imagen
+	let imageTransform = $derived(`rotate(${rotation}deg) scale(${zoom})`);
+	let imageContainerClass = $derived(
+		`relative max-w-full ${fullscreen ? 'max-h-[85vh]' : 'max-h-[65vh]'}`
+	);
 </script>
 
-<div class="card-body p-6">
+<div class="card-body p-4">
 	<header class="flex items-center justify-between mb-4 overflow-x-auto">
 		<h3 class="card-title">Previsualización</h3>
 		{#if imageUrl}
@@ -173,49 +88,58 @@
 			</div>
 		{/if}
 	</header>
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
+
+	<!-- Controles de imagen -->
+	{#if imageUrl}
+		<div class="flex flex-wrap justify-center gap-2 mb-4">
+			<div class="join">
+				<button
+					class="btn btn-sm join-item"
+					onclick={rotateCounterClockwise}
+					aria-label="Rotar a la izquierda"
+				>
+					<RotateCcw size={16} />
+				</button>
+				<button
+					class="btn btn-sm join-item"
+					onclick={rotateClockwise}
+					aria-label="Rotar a la derecha"
+				>
+					<RotateCw size={16} />
+				</button>
+			</div>
+			<div class="join">
+				<button class="btn btn-sm join-item" onclick={zoomOut} aria-label="Reducir zoom">
+					<ZoomOut size={16} />
+				</button>
+				<button class="btn btn-sm join-item" onclick={zoomIn} aria-label="Aumentar zoom">
+					<ZoomIn size={16} />
+				</button>
+			</div>
+			<button class="btn btn-sm" onclick={resetView} aria-label="Restablecer vista">
+				Restablecer
+			</button>
+			<button class="btn btn-sm" onclick={toggleFullscreen} aria-label="Pantalla completa">
+				<Maximize size={16} />
+				{fullscreen ? 'Reducir' : 'Ampliar'}
+			</button>
+		</div>
+	{/if}
+
+	<!-- Contenedor de imagen -->
 	<div
-		class="relative flex-1 flex items-center justify-center bg-base-100 rounded-lg p-6 min-h-[400px]"
-		onmousemove={handleDrag}
-		onmouseup={endDrag}
-		onmouseleave={endDrag}
-		aria-roledescription="Área de selección"
+		class="relative flex-1 flex items-center justify-center bg-base-100 rounded-lg p-4 min-h-[400px] overflow-hidden"
+		class:min-h-[600px]={fullscreen}
 	>
-		<div class="relative max-w-full max-h-[65vh]">
+		<div class={imageContainerClass}>
 			{#if imageUrl}
 				<img
 					src={imageUrl}
 					alt="Previsualización"
-					class="max-w-full max-h-[65vh] object-contain rounded-lg shadow-md"
+					class="max-w-full h-auto object-contain rounded-lg shadow-md transition-transform duration-300"
+					style="transform: {imageTransform}"
 					bind:this={imageRef}
 				/>
-				{#if absoluteRect}
-					<div
-						class="absolute border-2 border-primary bg-primary/10 transition-all duration-100"
-						style="top: {absoluteRect.top}px; left: {absoluteRect.left}px; width: {absoluteRect.width}px; height: {absoluteRect.height}px;"
-					>
-						<button
-							class="absolute -top-2 -left-2 w-4 h-4 bg-primary rounded-full cursor-nw-resize hover:scale-125 transition-transform"
-							onmousedown={(e) => startDrag(e, 'topLeft')}
-							aria-label="Ajustar esquina superior izquierda"
-						></button>
-						<button
-							class="absolute -top-2 -right-2 w-4 h-4 bg-primary rounded-full cursor-ne-resize hover:scale-125 transition-transform"
-							onmousedown={(e) => startDrag(e, 'topRight')}
-							aria-label="Ajustar esquina superior derecha"
-						></button>
-						<button
-							class="absolute -bottom-2 -left-2 w-4 h-4 bg-primary rounded-full cursor-sw-resize hover:scale-125 transition-transform"
-							onmousedown={(e) => startDrag(e, 'bottomLeft')}
-							aria-label="Ajustar esquina inferior izquierda"
-						></button>
-						<button
-							class="absolute -bottom-2 -right-2 w-4 h-4 bg-primary rounded-full cursor-se-resize hover:scale-125 transition-transform"
-							onmousedown={(e) => startDrag(e, 'bottomRight')}
-							aria-label="Ajustar esquina inferior derecha"
-						></button>
-					</div>
-				{/if}
 			{:else}
 				<div class="text-center opacity-50 space-y-4">
 					<Upload size={48} class="mx-auto" />
@@ -224,14 +148,12 @@
 			{/if}
 		</div>
 	</div>
-	<footer class="flex justify-between mt-6">
-		<p class="text-sm opacity-70">{imageUrl ? 'Ajusta el área de detección' : ''}</p>
-		{#if imageUrl}
-			<div class="text-sm text-primary">
-				Selección: {localRect.left.toFixed(1)}%, {localRect.top.toFixed(1)}%, {localRect.width.toFixed(
-					1
-				)}%, {localRect.height.toFixed(1)}%
+
+	{#if imageUrl}
+		<div class="flex justify-center mt-4">
+			<div class="badge badge-sm">
+				Rotación: {rotation}° | Zoom: {(zoom * 100).toFixed(0)}%
 			</div>
-		{/if}
-	</footer>
+		</div>
+	{/if}
 </div>
