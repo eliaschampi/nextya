@@ -1,8 +1,8 @@
-// src/omrProcessor.ts (works)
+// src/omrProcessor.ts (Refactored with Percentage Calculations)
 import * as cv from '@u4/opencv4nodejs';
 import { Buffer } from 'buffer';
 
-// --- answert types
+// --- Answer types (No changes needed) ---
 export type AnswerValue = 'a' | 'b' | 'c' | 'd' | 'e' | null | 'error_multiple';
 export interface OmrSuccessResult {
 	status: 'success';
@@ -23,10 +23,11 @@ export type OmrErrorCode =
 	| 'ROI_EXTRACTION_FAILED'
 	| 'CODE_ROI_EMPTY'
 	| 'ANSWERS_ROI_EMPTY'
-	| 'BUBBLE_DETECTION_FAILED' 
+	| 'BUBBLE_DETECTION_FAILED'
 	| 'CODE_PROCESSING_FAILED'
 	| 'ANSWER_PROCESSING_FAILED'
 	| 'INVALID_PARAMS'
+	| 'CALCULATION_ERROR' // Added for potential calculation issues
 	| 'UNEXPECTED_ERROR';
 
 export interface OmrErrorResult {
@@ -38,7 +39,7 @@ export interface OmrErrorResult {
 }
 export type OmrResult = OmrSuccessResult | OmrErrorResult;
 
-// --- Constantes de Layout OMR ---
+// --- Constantes de Layout OMR (Base) ---
 const MAX_QUESTIONS_LAYOUT = 80;
 const NUM_ANSWER_OPTIONS = 5;
 const ANSWER_OPTIONS = ['a', 'b', 'c', 'd', 'e'] as const;
@@ -47,70 +48,55 @@ const CODE_OPTIONS_PER_DIGIT = 10;
 const ANSWER_COLUMNS_COUNT = 4;
 const QUESTIONS_PER_COLUMN = MAX_QUESTIONS_LAYOUT / ANSWER_COLUMNS_COUNT; // 20
 
-// --- Constantes de Preprocesamiento ---
+// --- Constantes de Preprocesamiento (No changes needed) ---
 const GAUSSIAN_BLUR_KERNEL_SIZE = new cv.Size(3, 3);
 const ADAPTIVE_THRESH_BLOCK_SIZE = 55;
 const ADAPTIVE_THRESH_C = 3;
-const BINARY_THRESHOLD_TYPE = cv.THRESH_BINARY_INV; 
-const MORPH_OPEN_KERNEL_SIZE = new cv.Size(2.5, 2.5); 
+const BINARY_THRESHOLD_TYPE = cv.THRESH_BINARY_INV;
+const MORPH_OPEN_KERNEL_SIZE = new cv.Size(2.5, 2.5);
 
-// --- Constantes de Fiduciales ---
+// --- Constantes de Fiduciales (No changes needed) ---
 const EXPECTED_FIDUCIAL_COUNT = 4;
 const FIDUCIAL_MIN_AREA_FACTOR = 0.001;
 const FIDUCIAL_MAX_AREA_FACTOR = 0.05;
 const FIDUCIAL_APPROX_EPSILON_FACTOR = 0.04;
 const FIDUCIAL_ASPECT_RATIO_TOLERANCE = 0.3;
 
-// --- Constantes de Warp ---
-const WARPED_IMAGE_WIDTH = 840;
-const WARPED_IMAGE_HEIGHT = 1192;
+// --- Constantes de Warp (Base Dimensions) ---
+const WARPED_IMAGE_WIDTH = 840; // Base width for percentage calculations
+const WARPED_IMAGE_HEIGHT = 1192; // Base height for percentage calculations
 
-// --- Constantes de ROIs ---
-const CODE_ROI_X_PX = 232;
-const CODE_ROI_Y_PX = 48; 
-const CODE_ROI_WIDTH_PX = 342;
-const CODE_ROI_HEIGHT_PX = 163;
+// --- Constantes de Layout Porcentuales (Calculadas desde tus medidas) ---
+// WARPED_W = 840, WARPED_H = 1192
+const CODE_ROI_X_PERCENT = (232 / WARPED_IMAGE_WIDTH) * 100; // ~27.619%
+const CODE_ROI_Y_PERCENT = (50 / WARPED_IMAGE_HEIGHT) * 100; // ~4.195%
+const CODE_ROI_WIDTH_PERCENT = (341.3 / WARPED_IMAGE_WIDTH) * 100; // ~40.631%
+const CODE_ROI_HEIGHT_PERCENT = (162.6 / WARPED_IMAGE_HEIGHT) * 100; // ~13.641%
 
-// --- Constantes de Procesamiento de ROIs ---
-const ANSWERS_MARGIN_LEFT_PX = 21.656; 
-const ANSWERS_MARGIN_RIGHT_PX = 21.656;
-const ANSWERS_GLOBAL_Y_START_PX = 262.7;
+const ANSWERS_GLOBAL_Y_START_PERCENT = (262.7 / WARPED_IMAGE_HEIGHT) * 100; // ~22.039%
+const ANSWERS_MARGIN_LEFT_PERCENT = (21.7 / WARPED_IMAGE_WIDTH) * 100; // ~2.583%
+const ANSWERS_MARGIN_RIGHT_PERCENT = (21.7 / WARPED_IMAGE_WIDTH) * 100; // ~2.583%
 
-// Bubble Dimensions and Spacing (Fixed - From Context)
-const CODE_BUBBLE_WIDTH_PX = 28.4;// px
-const CODE_BUBBLE_HEIGHT_PX = 34.9; // px
-const CODE_HORIZONTAL_SPACING_PX = 6.6; //px
-const CODE_VERTICAL_SPACING_PX = 7.1; // px
+// Bubble dimensions and spacing as percentages of the *warped image* dimensions
+const BUBBLE_WIDTH_PERCENT = (28.4 / WARPED_IMAGE_WIDTH) * 100; // ~3.381%
+const BUBBLE_HEIGHT_PERCENT = (34.9 / WARPED_IMAGE_HEIGHT) * 100; // ~2.928%
+const HORIZONTAL_SPACING_PERCENT = (6.7 / WARPED_IMAGE_WIDTH) * 100; // ~0.798%
+const VERTICAL_SPACING_PERCENT = (7.2 / WARPED_IMAGE_HEIGHT) * 100; // ~0.604%
 
-// Bubble Dimensions for Answers Block
-const ANSWERS_BUBBLE_WIDTH_PX = CODE_BUBBLE_WIDTH_PX; 
-const ANSWERS_BUBBLE_HEIGHT_PX = CODE_BUBBLE_HEIGHT_PX; 
-const ANSWERS_HORIZONTAL_SPACING_PX = CODE_HORIZONTAL_SPACING_PX; 
-const ANSWERS_VERTICAL_SPACING_PX = CODE_VERTICAL_SPACING_PX; 
+// Calculated Pitches (Center-to-Center distances) as percentages
+const HORIZONTAL_PITCH_PERCENT = BUBBLE_WIDTH_PERCENT + HORIZONTAL_SPACING_PERCENT; // ~4.179%
+const VERTICAL_PITCH_PERCENT = BUBBLE_HEIGHT_PERCENT + VERTICAL_SPACING_PERCENT; // ~3.532%
 
-// Calculated Pitches (Center-to-Center distances)
-const CODE_HORIZONTAL_PITCH_PX = CODE_BUBBLE_WIDTH_PX + CODE_HORIZONTAL_SPACING_PX;
-const CODE_VERTICAL_PITCH_PX = CODE_BUBBLE_HEIGHT_PX + CODE_VERTICAL_SPACING_PX;
-const ANSWERS_HORIZONTAL_PITCH_PX = ANSWERS_BUBBLE_WIDTH_PX + ANSWERS_HORIZONTAL_SPACING_PX; 
-const ANSWERS_VERTICAL_PITCH_PX = ANSWERS_BUBBLE_HEIGHT_PX + ANSWERS_VERTICAL_SPACING_PX;
+// Answers group layout as percentages
+const ANSWERS_GROUP_WIDTH_PERCENT = (168 / WARPED_IMAGE_WIDTH) * 100; // 20.0%
+const ANSWERS_INTER_GROUP_SPACING_PERCENT = (41.84 / WARPED_IMAGE_WIDTH) * 100; // ~4.981%
 
-// or the warped image answers group column is 
-const ANSWERS_GROUP_WIDTH_PX = 168;
-const ANSWERS_INTER_GROUP_SPACING_PX = 41.2;
-
-// X coordinate of the *start* of each answer group 
-const ANSWERS_GROUP_X_STARTS_PX = [
-	ANSWERS_MARGIN_LEFT_PX, // Group 1 (Q 1-20)
-	ANSWERS_MARGIN_LEFT_PX + ANSWERS_GROUP_WIDTH_PX + ANSWERS_INTER_GROUP_SPACING_PX, // Group 2 (Q 21-40)
-	ANSWERS_MARGIN_LEFT_PX + 2 * (ANSWERS_GROUP_WIDTH_PX + ANSWERS_INTER_GROUP_SPACING_PX), // Group 3 (Q 41-60)
-	ANSWERS_MARGIN_LEFT_PX + 3 * (ANSWERS_GROUP_WIDTH_PX + ANSWERS_INTER_GROUP_SPACING_PX) // Group 4 (Q 61-80)
-];
-
+// --- Constantes de Procesamiento de ROIs (No changes needed here) ---
 // Ratio of white pixels (mark) needed within the sample area to be considered 'filled'
 const BUBBLE_FILL_THRESHOLD_RATIO = 0.5; // Adjust empirically if needed
-const BUBBLE_SAMPLE_AREA_RATIO = 0.6; // 
+const BUBBLE_SAMPLE_AREA_RATIO = 0.6; //
 
-// --- Clase de Error Personalizada ---
+// --- Clase de Error Personalizada (Added CALCULATION_ERROR) ---
 class OmrError extends Error {
 	readonly code: OmrErrorCode;
 	constructor(
@@ -125,7 +111,7 @@ class OmrError extends Error {
 	}
 }
 
-// --- Funciones Auxiliares 
+// --- Funciones Auxiliares (No changes needed: getCentroid, orderCornerPoints, matToBase64, tryReleaseMat) ---
 function getCentroid(contour: cv.Contour): cv.Point2 {
 	const m = contour.moments();
 	const cx =
@@ -142,6 +128,7 @@ function orderCornerPoints(points: cv.Point2[]): cv.Point2[] {
 			`orderCornerPoints requires ${EXPECTED_FIDUCIAL_COUNT} points, received ${points.length}`
 		);
 	}
+	// Original ordering logic seems robust enough, keeping it.
 	const sortedBySum = [...points].sort((a, b) => a.x + a.y - (b.x + b.y));
 	const sortedByDiff = [...points].sort((a, b) => a.y - a.x - (b.y - b.x));
 	const tl = sortedBySum[0];
@@ -155,10 +142,7 @@ function orderCornerPoints(points: cv.Point2[]): cv.Point2[] {
 	console.warn('orderCornerPoints: Sum/difference heuristic failed. Using angle fallback.');
 	const center = points.reduce(
 		(acc, p) => ({ x: acc.x + p.x / points.length, y: acc.y + p.y / points.length }),
-		{
-			x: 0,
-			y: 0
-		}
+		{ x: 0, y: 0 }
 	);
 	return points.sort((a, b) => {
 		const angleA = Math.atan2(a.y - center.y, a.x - center.x);
@@ -188,8 +172,8 @@ function tryReleaseMat(mat: cv.Mat | null | undefined): void {
 	}
 }
 
-// --- create Error Result ---
-function createErrorResult (
+// --- create Error Result (Updated mapping) ---
+function createErrorResult(
 	error: Error | OmrError | unknown,
 	defaultCode: OmrErrorCode = 'UNEXPECTED_ERROR',
 	defaultMessage: string = 'Unexpected OMR processing error',
@@ -224,7 +208,7 @@ function createErrorResult (
 	return result;
 }
 
-// Map error messages to specific error codes
+// Map error messages to specific error codes (Added CALCULATION_ERROR pattern)
 function mapErrorMessageToCode(message: string): OmrErrorCode | null {
 	const patterns: [RegExp, OmrErrorCode][] = [
 		[/Preprocessing failed|conversion|blur|threshold|morphology/i, 'PREPROCESSING_FAILED'],
@@ -233,14 +217,15 @@ function mapErrorMessageToCode(message: string): OmrErrorCode | null {
 		[/cornerPoints|ordenar|order|require \d points/i, 'FIDUCIAL_ORDERING_FAILED'],
 		[/[Ww]arp failed|transformation|perspective/i, 'WARP_FAILED'],
 		[/empty image|imagen vacía/i, 'WARPED_IMAGE_EMPTY'],
-		[/ROI.*extraction|region|Invalid dimensions/i, 'ROI_EXTRACTION_FAILED'],
+		[/ROI.*extraction|region|Invalid dimensions|clamping/i, 'ROI_EXTRACTION_FAILED'], // Added clamping
 		[/Code ROI|código.*vacía/i, 'CODE_ROI_EMPTY'],
 		[/Answer ROI|respuestas.*vacía/i, 'ANSWERS_ROI_EMPTY'],
-		[/bubble|burbuja|sample ROI|sample|sampling|intensity|ratio|fill/i, 'BUBBLE_DETECTION_FAILED'], // Updated regex
+		[/bubble|burbuja|sample ROI|sample|sampling|intensity|ratio|fill/i, 'BUBBLE_DETECTION_FAILED'],
 		[/Code processing|procesamiento.*código/i, 'CODE_PROCESSING_FAILED'],
 		[/Answer processing|procesamiento.*respuestas/i, 'ANSWER_PROCESSING_FAILED'],
 		[/invalid|params|parámetros|Num preguntas inválido/i, 'INVALID_PARAMS'],
-		[/decode failed|decoding/i, 'DECODE_FAILED']
+		[/decode failed|decoding/i, 'DECODE_FAILED'],
+		[/calculation|percentage|dimension|coordinate/i, 'CALCULATION_ERROR'] // Added
 	];
 	for (const [pattern, code] of patterns) {
 		if (pattern.test(message)) return code;
@@ -248,9 +233,11 @@ function mapErrorMessageToCode(message: string): OmrErrorCode | null {
 	return null;
 }
 
-// --- Funciones de Procesamiento (Core OMR Logic) ---
-/** Preprocesses the input image for OMR analysis.*/
+// --- Funciones de Procesamiento (Core OMR Logic - Updated with Percentage Calculations) ---
+
+/** Preprocesses the input image for OMR analysis. (No changes needed) */
 async function preprocessImage(inputMat: cv.Mat): Promise<cv.Mat> {
+	// ... (Keep original implementation)
 	const matsToRelease: cv.Mat[] = [];
 	let currentMat = inputMat;
 	try {
@@ -291,8 +278,9 @@ async function preprocessImage(inputMat: cv.Mat): Promise<cv.Mat> {
 	}
 }
 
-/** Finds and orders the 4 square fiducial markers. */
+/** Finds and orders the 4 square fiducial markers. (No changes needed) */
 async function findAndOrderFiducials(processedMat: cv.Mat): Promise<cv.Point2[]> {
+	// ... (Keep original implementation)
 	let contours: cv.Contour[] | null = null;
 	try {
 		contours = await processedMat.findContoursAsync(cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
@@ -343,11 +331,12 @@ async function findAndOrderFiducials(processedMat: cv.Mat): Promise<cv.Point2[]>
 	}
 }
 
-/** Applies perspective correction.*/
+/** Applies perspective correction. (No changes needed in core warp logic) */
 async function warpImage(
 	originalMat: cv.Mat,
 	orderedFiducialPoints: cv.Point2[]
 ): Promise<{ warpedColor: cv.Mat; warpedThresholded: cv.Mat }> {
+	// ... (Keep original implementation, it uses WARPED_IMAGE_WIDTH/HEIGHT correctly)
 	let transformMatrix: cv.Mat | null = null;
 	let warpedColor: cv.Mat | null = null;
 	let warpedThresholded: cv.Mat | null = null;
@@ -365,19 +354,20 @@ async function warpImage(
 			new cv.Size(WARPED_IMAGE_WIDTH, WARPED_IMAGE_HEIGHT),
 			cv.INTER_LINEAR,
 			cv.BORDER_CONSTANT,
-			new cv.Vec3(255, 255, 255)
+			new cv.Vec3(255, 255, 255) // Fill border with white
 		);
-		tryReleaseMat(transformMatrix);
+		tryReleaseMat(transformMatrix); // Release transform matrix now
 		if (!warpedColor || warpedColor.empty) {
 			throw new OmrError('WARPED_IMAGE_EMPTY', 'Warped image (color/gray) is empty.');
 		}
-		warpedThresholded = await preprocessImage(warpedColor); // Preprocess AFTER warping
+		// Preprocess AFTER warping for better thresholding
+		warpedThresholded = await preprocessImage(warpedColor);
 		if (!warpedThresholded || warpedThresholded.empty) {
 			throw new OmrError('WARPED_IMAGE_EMPTY', 'Warped and thresholded image is empty.');
 		}
 		return { warpedColor, warpedThresholded };
 	} catch (error) {
-		tryReleaseMat(transformMatrix);
+		tryReleaseMat(transformMatrix); // Ensure release on error too
 		tryReleaseMat(warpedColor);
 		tryReleaseMat(warpedThresholded);
 		if (error instanceof OmrError) throw error;
@@ -389,79 +379,82 @@ async function warpImage(
 	}
 }
 
-/** Extracts Code and Answer ROIs using FIXED coordinates. */
+/** Extracts Code and Answer ROIs using PERCENTAGE-BASED calculations. */
 function extractROIs(warpedThreshMat: cv.Mat): { codeROI: cv.Mat; answersROI: cv.Mat } {
 	let codeROI: cv.Mat | null = null;
 	let answersROI: cv.Mat | null = null;
 	try {
-		const h = warpedThreshMat.rows; // WARPED_IMAGE_HEIGHT
-		const w = warpedThreshMat.cols; // WARPED_IMAGE_WIDTH
+		const h = warpedThreshMat.rows; // Should match WARPED_IMAGE_HEIGHT
+		const w = warpedThreshMat.cols; // Should match WARPED_IMAGE_WIDTH
 
-		// --- Code ROI ---
-		if (
-			CODE_ROI_X_PX < 0 ||
-			CODE_ROI_Y_PX < 0 ||
-			CODE_ROI_WIDTH_PX <= 0 ||
-			CODE_ROI_HEIGHT_PX <= 0
-		) {
+		// --- Calculate Pixel Values from Percentages ---
+		const codeRoiX = Math.round((w * CODE_ROI_X_PERCENT) / 100);
+		const codeRoiY = Math.round((h * CODE_ROI_Y_PERCENT) / 100);
+		const codeRoiW = Math.round((w * CODE_ROI_WIDTH_PERCENT) / 100);
+		const codeRoiH = Math.round((h * CODE_ROI_HEIGHT_PERCENT) / 100);
+
+		const answersStartY = Math.round((h * ANSWERS_GLOBAL_Y_START_PERCENT) / 100);
+		const answersMarginLeft = Math.round((w * ANSWERS_MARGIN_LEFT_PERCENT) / 100);
+		const answersMarginRight = Math.round((w * ANSWERS_MARGIN_RIGHT_PERCENT) / 100);
+
+		// Calculate required answers height in pixels based on bubble/spacing percentages
+		const verticalPitchPx = Math.round((h * VERTICAL_PITCH_PERCENT) / 100);
+		const bubbleHeightPx = Math.round((h * BUBBLE_HEIGHT_PERCENT) / 100);
+
+		if (verticalPitchPx <= 0 || bubbleHeightPx <= 0) {
 			throw new OmrError(
-				'ROI_EXTRACTION_FAILED',
-				`Code ROI definition has invalid coordinates/dimensions.`
+				'CALCULATION_ERROR',
+				'Calculated vertical pitch or bubble height is non-positive.'
 			);
 		}
-		const clampedCodeX = Math.max(0, CODE_ROI_X_PX);
-		const clampedCodeY = Math.max(0, CODE_ROI_Y_PX);
-		const clampedCodeW = Math.min(CODE_ROI_WIDTH_PX, w - clampedCodeX);
-		const clampedCodeH = Math.min(CODE_ROI_HEIGHT_PX, h - clampedCodeY);
 
-		if (clampedCodeW <= 0 || clampedCodeH <= 0) {
+		const requiredAnswersHeightPx = (QUESTIONS_PER_COLUMN - 1) * verticalPitchPx + bubbleHeightPx;
+
+		// Calculate answers ROI dimensions in pixels
+		const answersWidthPx = w - answersMarginLeft - answersMarginRight;
+		const answersHeightPx = requiredAnswersHeightPx; // Use calculated height
+
+		// --- Code ROI Clamping and Validation ---
+		const clampedCodeX = Math.max(0, codeRoiX);
+		const clampedCodeY = Math.max(0, codeRoiY);
+		// Clamp width/height based on starting point and image bounds
+		const clampedCodeW = Math.max(1, Math.min(codeRoiW, w - clampedCodeX));
+		const clampedCodeH = Math.max(1, Math.min(codeRoiH, h - clampedCodeY));
+
+		if (clampedCodeW <= 1 || clampedCodeH <= 1) {
+			// Use 1 to ensure at least some area
 			throw new OmrError(
 				'ROI_EXTRACTION_FAILED',
-				`Code ROI has zero or negative size after clamping to image bounds.`
+				`Code ROI calculated dimensions (${clampedCodeW}x${clampedCodeH}) are too small after clamping. Original Calc: (${codeRoiW}x${codeRoiH}) at (${codeRoiX},${codeRoiY})`
 			);
 		}
 		const codeRect = new cv.Rect(clampedCodeX, clampedCodeY, clampedCodeW, clampedCodeH);
 
-		// --- Answers ROI ---
-		// 1. Calculate theoretical dimensions based on constants
-		const theoreticalAnswersX = ANSWERS_MARGIN_LEFT_PX;
-		const theoreticalAnswersY = ANSWERS_GLOBAL_Y_START_PX;
-		const theoreticalAnswersW = w - ANSWERS_MARGIN_LEFT_PX - ANSWERS_MARGIN_RIGHT_PX;
-		// Calculate required height based on number of questions per column and vertical pitch
-		const requiredAnswersHeight =
-			(QUESTIONS_PER_COLUMN - 1) * ANSWERS_VERTICAL_PITCH_PX + ANSWERS_BUBBLE_HEIGHT_PX;
-		const theoreticalAnswersH = requiredAnswersHeight;
+		// --- Answers ROI Clamping and Validation ---
+		const clampedAnswersX = Math.max(0, answersMarginLeft); // X starts at left margin
+		const clampedAnswersY = Math.max(0, answersStartY);
+		// Clamp width/height based on starting point and image bounds
+		const clampedAnswersW = Math.max(1, Math.min(answersWidthPx, w - clampedAnswersX));
+		const clampedAnswersH = Math.max(1, Math.min(answersHeightPx, h - clampedAnswersY));
 
-		// 2. Calculate final coordinates and dimensions, ensuring positivity and clamping
-		const finalAnswersX = Math.max(0, Math.round(theoreticalAnswersX));
-		const finalAnswersY = Math.max(0, Math.round(theoreticalAnswersY));
-
-		// Calculate initial positive width/height based on theoretical values
-		let finalAnswersW = Math.max(1, Math.round(theoreticalAnswersW));
-		let finalAnswersH = Math.max(1, Math.round(theoreticalAnswersH));
-
-		// Apply clamping based on image bounds *and the calculated starting position*
-		finalAnswersW = Math.min(finalAnswersW, w - finalAnswersX);
-		finalAnswersH = Math.min(finalAnswersH, h - finalAnswersY);
-
-		// 3. Final check for non-positive dimensions after clamping
-		if (finalAnswersW <= 0 || finalAnswersH <= 0) {
+		if (clampedAnswersW <= 1 || clampedAnswersH <= 1) {
 			throw new OmrError(
 				'ROI_EXTRACTION_FAILED',
-				`Answers ROI calculated dimensions (${finalAnswersW}x${finalAnswersH}) are non-positive after clamping to image bounds (${w}x${h}). Start: (${finalAnswersX},${finalAnswersY}). Theoretical: W=${theoreticalAnswersW.toFixed(1)}, H=${theoreticalAnswersH.toFixed(1)}`
+				`Answers ROI calculated dimensions (${clampedAnswersW}x${clampedAnswersH}) are too small after clamping. Original Calc: (${answersWidthPx}x${answersHeightPx}) at (${clampedAnswersX},${clampedAnswersY})`
 			);
 		}
+		const answersRect = new cv.Rect(
+			clampedAnswersX,
+			clampedAnswersY,
+			clampedAnswersW,
+			clampedAnswersH
+		);
 
-		// 4. Create the Rect with final, valid, clamped dimensions
-		const answersRect = new cv.Rect(finalAnswersX, finalAnswersY, finalAnswersW, finalAnswersH);
-
-		// 5. Extract regions (views using the validated Rects)
-		// getRegion internally handles if the Rect slightly exceeds due to rounding,
-		// but our Rect object itself is now guaranteed to represent a valid region within bounds.
+		// --- Extract regions (views using the validated Rects) ---
 		codeROI = warpedThreshMat.getRegion(codeRect);
 		answersROI = warpedThreshMat.getRegion(answersRect);
 
-		// 6. Validate extracted views are not empty (shouldn't happen if Rects are valid)
+		// --- Validate extracted views are not empty ---
 		if (!codeROI || codeROI.empty) {
 			throw new OmrError('CODE_ROI_EMPTY', 'Extracted Code ROI view is empty despite valid Rect.');
 		}
@@ -474,7 +467,6 @@ function extractROIs(warpedThreshMat: cv.Mat): { codeROI: cv.Mat; answersROI: cv
 
 		return { codeROI, answersROI }; // Return the views
 	} catch (error) {
-		// Log details for debugging ROI issues
 		console.error(
 			`Error details during ROI extraction: Image(${warpedThreshMat.cols}x${warpedThreshMat.rows})`,
 			error
@@ -488,18 +480,20 @@ function extractROIs(warpedThreshMat: cv.Mat): { codeROI: cv.Mat; answersROI: cv
 	}
 }
 
+/** Checks if a bubble area is sufficiently filled. (No changes needed) */
 function isBubbleFilled_Ratio(
 	roi: cv.Mat, // The specific ROI (Code or Answers)
 	centerX: number, // Center X relative to ROI's top-left
 	centerY: number, // Center Y relative to ROI's top-left
-	bubbleWidth: number, // Precise width of the bubble
-	bubbleHeight: number // Precise height of the bubble
+	bubbleWidthPx: number, // Precise width of the bubble IN PIXELS
+	bubbleHeightPx: number // Precise height of the bubble IN PIXELS
 ): boolean {
+	// ... (Keep original implementation, it works with pixel values)
 	let sampleROI: cv.Mat | null = null;
 	try {
 		// Define the central sampling area based on BUBBLE_SAMPLE_AREA_RATIO
-		const sampleWidth = Math.max(1, Math.round(bubbleWidth * BUBBLE_SAMPLE_AREA_RATIO));
-		const sampleHeight = Math.max(1, Math.round(bubbleHeight * BUBBLE_SAMPLE_AREA_RATIO));
+		const sampleWidth = Math.max(1, Math.round(bubbleWidthPx * BUBBLE_SAMPLE_AREA_RATIO));
+		const sampleHeight = Math.max(1, Math.round(bubbleHeightPx * BUBBLE_SAMPLE_AREA_RATIO));
 		const sampleX = Math.max(0, Math.round(centerX - sampleWidth / 2));
 		const sampleY = Math.max(0, Math.round(centerY - sampleHeight / 2));
 
@@ -516,7 +510,7 @@ function isBubbleFilled_Ratio(
 			console.warn(
 				`Bubble sample area at (${centerX.toFixed(1)}, ${centerY.toFixed(1)}) resulted in zero size after clamping.`
 			);
-			return false; 
+			return false;
 		}
 
 		const sampleRect = new cv.Rect(clampedX, clampedY, clampedW, clampedH);
@@ -541,36 +535,53 @@ function isBubbleFilled_Ratio(
 	} catch (e) {
 		console.error(
 			`Error in isBubbleFilled_Ratio at (${centerX.toFixed(1)}, ${centerY.toFixed(1)}) ` +
-				`bubble=(${bubbleWidth.toFixed(1)}x${bubbleHeight.toFixed(1)}):`,
+				`bubble=(${bubbleWidthPx.toFixed(1)}x${bubbleHeightPx.toFixed(1)}):`,
 			e
 		);
 		return false; // Treat as not filled on error
 	}
 }
 
-/** Processes the student code block using PRECISE PITCHES relative to the ROI start. */
+/** Processes the student code block using dynamically calculated pixel values. */
 function processCodeBlock_PreciseRelative(codeROI: cv.Mat): string {
-	// Assumes codeROI is a VIEW or a COPY. If a copy, release is handled by the caller.
 	try {
 		if (!codeROI || codeROI.empty) {
 			throw new OmrError('CODE_ROI_EMPTY', 'Input codeROI for processing is empty.');
 		}
 
+		// Calculate necessary pixel dimensions based on GLOBAL warped size
+		const bubbleWidthPx = Math.round((WARPED_IMAGE_WIDTH * BUBBLE_WIDTH_PERCENT) / 100);
+		const bubbleHeightPx = Math.round((WARPED_IMAGE_HEIGHT * BUBBLE_HEIGHT_PERCENT) / 100);
+		const horizontalPitchPx = Math.round((WARPED_IMAGE_WIDTH * HORIZONTAL_PITCH_PERCENT) / 100);
+		const verticalPitchPx = Math.round((WARPED_IMAGE_HEIGHT * VERTICAL_PITCH_PERCENT) / 100);
+
+		if (
+			bubbleWidthPx <= 0 ||
+			bubbleHeightPx <= 0 ||
+			horizontalPitchPx <= 0 ||
+			verticalPitchPx <= 0
+		) {
+			throw new OmrError(
+				'CALCULATION_ERROR',
+				`Code block calculated pixel dimensions are invalid: B(${bubbleWidthPx}x${bubbleHeightPx}), P(${horizontalPitchPx}x${verticalPitchPx})`
+			);
+		}
+
 		// Calculate the center coordinates of the *first* bubble (row 0, col 0)
 		// relative to the top-left corner of the codeROI.
-		const firstBubbleCenterX = CODE_BUBBLE_WIDTH_PX / 2;
-		const firstBubbleCenterY = CODE_BUBBLE_HEIGHT_PX / 2;
+		const firstBubbleCenterX = bubbleWidthPx / 2;
+		const firstBubbleCenterY = bubbleHeightPx / 2;
 
 		let studentCode = '';
 		for (let r = 0; r < NUM_CODE_DIGITS; r++) {
 			// Rows (Digits 0-3)
-			const currentCenterY = firstBubbleCenterY + r * CODE_VERTICAL_PITCH_PX;
+			const currentCenterY = firstBubbleCenterY + r * verticalPitchPx;
 			let detectedDigit = -1;
 			let marksInRow = 0;
 
 			for (let c = 0; c < CODE_OPTIONS_PER_DIGIT; c++) {
 				// Columns (Options 0-9)
-				const currentCenterX = firstBubbleCenterX + c * CODE_HORIZONTAL_PITCH_PX;
+				const currentCenterX = firstBubbleCenterX + c * horizontalPitchPx;
 
 				// Check if the bubble at this precise relative location is filled
 				if (
@@ -578,8 +589,8 @@ function processCodeBlock_PreciseRelative(codeROI: cv.Mat): string {
 						codeROI,
 						currentCenterX,
 						currentCenterY,
-						CODE_BUBBLE_WIDTH_PX,
-						CODE_BUBBLE_HEIGHT_PX
+						bubbleWidthPx, // Pass calculated pixel value
+						bubbleHeightPx // Pass calculated pixel value
 					)
 				) {
 					marksInRow++;
@@ -594,38 +605,69 @@ function processCodeBlock_PreciseRelative(codeROI: cv.Mat): string {
 				studentCode += 'X'; // Error: No mark or multiple marks
 				if (marksInRow > 1) {
 					console.warn(`Precise Code: Multiple marks (${marksInRow}) detected in digit row ${r}.`);
-				} else if (marksInRow === 0) {
-					// console.log(`Precise Code: No mark detected in digit row ${r}.`); // Optional: Log missing marks
-				}
+				} // else if (marksInRow === 0) { // Optional: Log missing marks }
 			}
 		}
-		// Ensure final length (shouldn't be needed if loops are correct)
 		return studentCode.padEnd(NUM_CODE_DIGITS, 'X');
 	} catch (error) {
 		if (error instanceof OmrError) throw error;
 		throw new OmrError(
 			'CODE_PROCESSING_FAILED',
-			`Error processing code block with precise relative coords: ${error instanceof Error ? error.message : String(error)}`,
+			`Error processing code block: ${error instanceof Error ? error.message : String(error)}`,
 			error
 		);
 	}
 }
 
-/** Processes the answers block using PRECISE PITCHES relative to the ROI start. */
+/** Processes the answers block using dynamically calculated pixel values. */
 function processAnswersBlock_PreciseRelative(
 	answersROI: cv.Mat,
 	numQuestionsToProcess: number
 ): Record<number, AnswerValue> {
 	// Returns 0-based index answers
-	// Assumes answersROI is a VIEW or a COPY. If a copy, release is handled by the caller.
 	try {
 		if (!answersROI || answersROI.empty) {
 			throw new OmrError('ANSWERS_ROI_EMPTY', 'Input answersROI for processing is empty.');
 		}
 
-		// Calculate the center Y of the *first row* (question 1, 21, 41, 61)
-		// relative to the top of the answersROI.
-		const firstRowCenterY_relative = ANSWERS_BUBBLE_HEIGHT_PX / 2;
+		// Calculate necessary pixel dimensions based on GLOBAL warped size
+		// (Redundant calculation, could be passed down, but keep here for clarity)
+		const bubbleWidthPx = Math.round((WARPED_IMAGE_WIDTH * BUBBLE_WIDTH_PERCENT) / 100);
+		const bubbleHeightPx = Math.round((WARPED_IMAGE_HEIGHT * BUBBLE_HEIGHT_PERCENT) / 100);
+		const horizontalPitchPx = Math.round((WARPED_IMAGE_WIDTH * HORIZONTAL_PITCH_PERCENT) / 100);
+		const verticalPitchPx = Math.round((WARPED_IMAGE_HEIGHT * VERTICAL_PITCH_PERCENT) / 100);
+
+		// Calculate group layout pixel values
+		const answersMarginLeftPx = Math.round(
+			(WARPED_IMAGE_WIDTH * ANSWERS_MARGIN_LEFT_PERCENT) / 100
+		);
+		const groupWidthPx = Math.round((WARPED_IMAGE_WIDTH * ANSWERS_GROUP_WIDTH_PERCENT) / 100);
+		const interGroupSpacingPx = Math.round(
+			(WARPED_IMAGE_WIDTH * ANSWERS_INTER_GROUP_SPACING_PERCENT) / 100
+		);
+
+		if (
+			bubbleWidthPx <= 0 ||
+			bubbleHeightPx <= 0 ||
+			horizontalPitchPx <= 0 ||
+			verticalPitchPx <= 0 ||
+			answersMarginLeftPx < 0 ||
+			groupWidthPx <= 0 ||
+			interGroupSpacingPx < 0
+		) {
+			throw new OmrError(
+				'CALCULATION_ERROR',
+				`Answers block calculated pixel dimensions are invalid: B(${bubbleWidthPx}x${bubbleHeightPx}), P(${horizontalPitchPx}x${verticalPitchPx}), G(${groupWidthPx}, ${interGroupSpacingPx}), M(${answersMarginLeftPx})`
+			);
+		}
+
+		// Calculate absolute X starts of each group on the warped image
+		const answersGroupXStartsPx = Array.from({ length: ANSWER_COLUMNS_COUNT }).map(
+			(_, i) => answersMarginLeftPx + i * (groupWidthPx + interGroupSpacingPx)
+		);
+
+		// Calculate the center Y of the *first row* relative to the top of the answersROI.
+		const firstRowCenterY_relative = bubbleHeightPx / 2;
 
 		const answers: Record<number, AnswerValue> = {}; // 0-based index
 
@@ -633,35 +675,34 @@ function processAnswersBlock_PreciseRelative(
 			const colBlockIndex = Math.floor(qIndex / QUESTIONS_PER_COLUMN); // Which block (0-3)
 			const rowIndexInBlock = qIndex % QUESTIONS_PER_COLUMN; // Row within block (0-19)
 
-			// Check if the column block index is valid
-			if (colBlockIndex >= ANSWERS_GROUP_X_STARTS_PX.length) {
+			if (colBlockIndex >= ANSWER_COLUMNS_COUNT || colBlockIndex >= answersGroupXStartsPx.length) {
 				console.error(
-					`Invalid column block index ${colBlockIndex} for question index ${qIndex}. Max index is ${ANSWERS_GROUP_X_STARTS_PX.length - 1}.`
+					`Invalid column block index ${colBlockIndex} for question index ${qIndex}. Max index is ${ANSWER_COLUMNS_COUNT - 1}.`
 				);
-				answers[qIndex] = 'error_multiple'; // Or throw? Mark as error for now.
+				answers[qIndex] = 'error_multiple';
 				continue;
 			}
 
 			// Calculate the Y center for the current question row, relative to answersROI top
-			const questionCenterY_relative =
-				firstRowCenterY_relative + rowIndexInBlock * ANSWERS_VERTICAL_PITCH_PX;
+			const questionCenterY_relative = firstRowCenterY_relative + rowIndexInBlock * verticalPitchPx;
 
-			// Calculate the X coordinate of the *start* of the current group, relative to answersROI left edge.
-			// This requires knowing the original margin used for extraction.
-			const groupStartX_relative =
-				ANSWERS_GROUP_X_STARTS_PX[colBlockIndex] - ANSWERS_MARGIN_LEFT_PX;
+			// Get the ABSOLUTE X coordinate of the *start* of the current group on the warped image
+			const groupStartX_absolute = answersGroupXStartsPx[colBlockIndex];
+
+			// Calculate the RELATIVE X coordinate of the group start within the answersROI
+			// The answersROI itself starts at answersMarginLeftPx
+			const groupStartX_relative = groupStartX_absolute - answersMarginLeftPx;
 
 			// Calculate the X center of the *first option ('A')* in this group, relative to answersROI left edge.
-			const optionA_CenterX_relative = groupStartX_relative + ANSWERS_BUBBLE_WIDTH_PX / 2;
+			const optionA_CenterX_relative = groupStartX_relative + bubbleWidthPx / 2;
 
 			let markedOptionIndex = -1; // Index of the marked option (0=A, 1=B, ...)
 			let marksInQuestion = 0;
 
 			for (let optIndex = 0; optIndex < NUM_ANSWER_OPTIONS; optIndex++) {
 				// Iterate A-E
-				// Calculate the X center for the current option bubble
-				const optionCenterX_relative =
-					optionA_CenterX_relative + optIndex * ANSWERS_HORIZONTAL_PITCH_PX;
+				// Calculate the X center for the current option bubble relative to answersROI left edge
+				const optionCenterX_relative = optionA_CenterX_relative + optIndex * horizontalPitchPx;
 
 				// Check if the bubble at this precise relative location is filled
 				if (
@@ -669,8 +710,8 @@ function processAnswersBlock_PreciseRelative(
 						answersROI,
 						optionCenterX_relative,
 						questionCenterY_relative,
-						ANSWERS_BUBBLE_WIDTH_PX,
-						ANSWERS_BUBBLE_HEIGHT_PX
+						bubbleWidthPx, // Pass calculated pixel value
+						bubbleHeightPx // Pass calculated pixel value
 					)
 				) {
 					marksInQuestion++;
@@ -684,12 +725,8 @@ function processAnswersBlock_PreciseRelative(
 			} else if (marksInQuestion === 1) {
 				answers[qIndex] = ANSWER_OPTIONS[markedOptionIndex];
 			} else {
-				answers[qIndex] = 'error_multiple'; // Consistent error value
-				if (marksInQuestion > 1) {
-					console.warn(
-						`Precise Answers: Multiple marks (${marksInQuestion}) detected in question index ${qIndex} (1-based: ${qIndex + 1}).`
-					);
-				}
+				answers[qIndex] = 'error_multiple';
+				// console.warn(`Precise Answers: Multiple marks (${marksInQuestion}) detected in question index ${qIndex} (1-based: ${qIndex + 1}).`);
 			}
 		}
 		return answers; // 0-based index
@@ -697,13 +734,13 @@ function processAnswersBlock_PreciseRelative(
 		if (error instanceof OmrError) throw error;
 		throw new OmrError(
 			'ANSWER_PROCESSING_FAILED',
-			`Error processing answers block with precise relative coords: ${error instanceof Error ? error.message : String(error)}`,
+			`Error processing answers block: ${error instanceof Error ? error.message : String(error)}`,
 			error
 		);
 	}
 }
 
-// --- Función Principal OMR ---
+// --- Función Principal OMR (Uses refactored functions) ---
 export async function omrProcessor(
 	imageBuffer: Buffer,
 	numberOfQuestions: number,
@@ -715,8 +752,9 @@ export async function omrProcessor(
 	let processedForFiducials: cv.Mat | null = null;
 	let warpedColorMat: cv.Mat | null = null;
 	let warpedThreshMat: cv.Mat | null = null;
-	let codeROI_View: cv.Mat | null = null;
-	let answersROI_View: cv.Mat | null = null;
+	// ROI Views do not need explicit release if their parent mat (warpedThreshMat) is released
+	// let codeROI_View: cv.Mat | null = null;
+	// let answersROI_View: cv.Mat | null = null;
 
 	try {
 		// 1. Validate Parameters
@@ -755,33 +793,44 @@ export async function omrProcessor(
 		// 4. Find and Order Fiducials
 		const orderedFiducialPoints = await findAndOrderFiducials(processedForFiducials);
 
-		// 5. Warp Image
+		// 5. Warp Image (Result provides warpedColor and warpedThresholded)
 		const warpResult = await warpImage(originalMat, orderedFiducialPoints);
 		warpedColorMat = warpResult.warpedColor;
-		warpedThreshMat = warpResult.warpedThresholded; 
+		warpedThreshMat = warpResult.warpedThresholded;
 		matsToRelease.push(warpedColorMat);
-		matsToRelease.push(warpedThreshMat); 
+		matsToRelease.push(warpedThreshMat); // Ensure the thresholded version is also released
 
-		// 6. Extract ROIs
-		const rois = extractROIs(warpedThreshMat); 
-		codeROI_View = rois.codeROI;
-		answersROI_View = rois.answersROI;
+		// 6. Extract ROIs (Uses percentage calculations internally)
+		const rois = extractROIs(warpedThreshMat);
+		// Get references to the ROI views (no need to add to matsToRelease)
+		const codeROI_View = rois.codeROI;
+		const answersROI_View = rois.answersROI;
 
-		// 7. Process Code Block (using the VIEW and precise relative logic)
+		// 7. Process Code Block (Uses dynamic pixel calculations internally)
 		const studentCode = processCodeBlock_PreciseRelative(codeROI_View);
 
-		// 8. Process Answers Block (using the VIEW and precise relative logic)
+		// 8. Process Answers Block (Uses dynamic pixel calculations internally)
 		const answers_0based = processAnswersBlock_PreciseRelative(
 			answersROI_View,
 			numQuestionsToProcess
 		);
 
-		// 9. Map Answer Indices to 1-based for the resul -- setp 9 and 10 needs refactor?
+		// 9. Map Answer Indices to 1-based for the result
 		const answers: { [questionNumber: number]: AnswerValue } = {};
 		for (const zeroIdxStr in answers_0based) {
 			const zeroIdx = parseInt(zeroIdxStr, 10);
-			if (!isNaN(zeroIdx)) {
+			if (!isNaN(zeroIdx) && zeroIdx >= 0 && zeroIdx < numQuestionsToProcess) {
+				// Check index validity
 				answers[zeroIdx + 1] = answers_0based[zeroIdx];
+			}
+		}
+		// Ensure all requested questions have an entry (even if processing failed for some reason)
+		for (let i = 1; i <= numQuestionsToProcess; i++) {
+			if (!(i in answers)) {
+				console.warn(
+					`Question ${i} was expected but not found in processed results. Setting to null.`
+				);
+				answers[i] = null; // Or 'error_multiple' if preferred for missing entries
 			}
 		}
 
@@ -789,33 +838,38 @@ export async function omrProcessor(
 		const result: OmrSuccessResult = {
 			status: 'success',
 			studentCode,
-			answers: answers
+			answers: answers // 1-based index
 		};
 		if (enableDebug) {
 			result.debug = { warpedThresholdedImage: matToBase64(warpedThreshMat) };
 		}
+
+		// Release Mats only AFTER potential use in debug output
 		matsToRelease.forEach(tryReleaseMat);
+		// Explicitly nullify to help GC, though release should be sufficient
+		originalMat = processedForFiducials = warpedColorMat = warpedThreshMat = null;
 
 		return result;
 	} catch (error) {
 		let debugImageOnError: string | null = null;
 		if (enableDebug) {
+			// Prioritize showing the stage where error likely occurred
 			const debugMat =
-				warpedThreshMat ??
-				warpedColorMat ??
-				processedForFiducials ??
-				originalMat ??
-				null;
+				warpedThreshMat ?? warpedColorMat ?? processedForFiducials ?? originalMat ?? null;
 			debugImageOnError = matToBase64(debugMat);
 		}
 
-		console.error('Error during OMR processing (Improved):', error);
+		console.error('Error during OMR processing:', error); // Keep concise log here
+		// createErrorResult already logs detailed info
+
+		// Ensure cleanup even on error path
 		matsToRelease.forEach(tryReleaseMat);
+		originalMat = processedForFiducials = warpedColorMat = warpedThreshMat = null;
 
 		return createErrorResult(
 			error,
-			'UNEXPECTED_ERROR',
-			error instanceof Error ? error.message : 'Unexpected OMR processing error',
+			'UNEXPECTED_ERROR', // Default if mapping fails
+			error instanceof Error ? error.message : 'Unexpected OMR processing error occurred',
 			debugImageOnError
 		);
 	}
