@@ -4,7 +4,7 @@ import * as cv from '@u4/opencv4nodejs'; // Necesario para cv.Size, cv.MORPH_ELL
 // --- Constantes de Layout OMR (Base) ---
 export const MAX_QUESTIONS_LAYOUT = 80;
 export const NUM_ANSWER_OPTIONS = 5;
-export const ANSWER_OPTIONS = ['a', 'b', 'c', 'd', 'e'] as const;
+export const ANSWER_OPTIONS = ['A', 'B', 'C', 'D', 'E'] as const;
 export const NUM_CODE_DIGITS = 4;
 export const CODE_OPTIONS_PER_DIGIT = 10;
 export const ANSWER_COLUMNS_COUNT = 4;

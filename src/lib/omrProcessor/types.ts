@@ -1,7 +1,7 @@
 // omrProcessor/types.ts
 import * as cv from '@u4/opencv4nodejs'; // Necesario si usas tipos de cv aquí, si no, puedes quitarlo
 
-export type AnswerValue = 'a' | 'b' | 'c' | 'd' | 'e' | null | 'error_multiple';
+export type AnswerValue = 'A' | 'B' | 'C' | 'D' | 'E' | null | 'error_multiple';
 
 export interface OmrSuccessResult {
 	status: 'success';

@@ -36,7 +36,6 @@
 					{/if}
 				</button>
 			</div>
-
 			{#if isProcessing}
 				<div class="mt-2">
 					<div class="w-full bg-base-300 rounded-full h-1.5 mb-1">

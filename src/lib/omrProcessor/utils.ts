@@ -54,11 +54,19 @@ export function orderCornerPoints(points: cv.Point2[]): cv.Point2[] {
 	}
 
 	// Verificar que sean puntos válidos
-    if (!points.every(p => typeof p === 'object' && p !== null && typeof p.x === 'number' && typeof p.y === 'number')) {
-        // Loguear qué estructura tienen los puntos si falla, para depuración
-        console.error("Invalid point structure detected in orderCornerPoints:", JSON.stringify(points));
-        throw new OmrError('FIDUCIAL_ORDERING_FAILED', 'Invalid points structure provided in the array. Expected objects with numeric x, y properties.');
-    }
+	if (
+		!points.every(
+			(p) =>
+				typeof p === 'object' && p !== null && typeof p.x === 'number' && typeof p.y === 'number'
+		)
+	) {
+		// Loguear qué estructura tienen los puntos si falla, para depuración
+		console.error('Invalid point structure detected in orderCornerPoints:', JSON.stringify(points));
+		throw new OmrError(
+			'FIDUCIAL_ORDERING_FAILED',
+			'Invalid points structure provided in the array. Expected objects with numeric x, y properties.'
+		);
+	}
 
 	// Heurística Suma/Diferencia
 	const sortedBySum = [...points].sort((a, b) => a.x + a.y - (b.x + b.y));

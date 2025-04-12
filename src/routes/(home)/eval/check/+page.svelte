@@ -1,6 +1,6 @@
 <script lang="ts">
 	import PageTitle from '$lib/components/PageTitle.svelte';
-	import { Upload, Trash2, X, School, BookOpen } from 'lucide-svelte';
+	import { Upload, Trash2, X, School, BookOpen, Play, Loader2, Check } from 'lucide-svelte';
 	import type { Eval, Level, EvalWithSections } from '../../../../app';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { showToast } from '$lib/stores/Toast';
@@ -11,7 +11,7 @@
 	import EvalHeader from '$lib/components/EvalHeader.svelte';
 	import FileTable from '$lib/components/FileTable.svelte';
 	import ImagePreview from '$lib/components/ImagePreview.svelte';
-	import BatchProcessing from '$lib/components/BatchProcessing.svelte';
+	// BatchProcessing functionality integrated directly
 
 	// Props tipados
 	const { data } = $props<{ data: { levels: Level[] } }>();
@@ -255,86 +255,183 @@
 		</EvalHeader>
 	{/if}
 
-	<!-- Barra de herramientas -->
-	<section class="card bg-base-200/80 shadow">
-		<div class="card-body p-4">
-			<div class="flex flex-wrap gap-2 justify-between items-center">
-				<div class="flex gap-2">
-					<label class="btn btn-primary btn-sm {!selectedEval?.code ? 'btn-disabled' : ''}">
-						<Upload size={18} class="mr-2" /> Cargar Respuestas
-						<input
-							type="file"
-							accept="image/jpeg,image/jpg"
-							multiple
-							class="hidden"
-							onchange={handleFileUpload}
-							disabled={!selectedEval?.code}
-						/>
-					</label>
-					<button
-						class="btn btn-error btn-outline btn-sm"
-						disabled={!uploadedFiles.length || isProcessing || isBatchProcessing}
-						onclick={clearFiles}
-					>
-						<Trash2 size={18} /> Limpiar
-					</button>
+	<!-- Contenedor principal unificado -->
+	<div class="card bg-base-200/80 shadow overflow-hidden">
+		<!-- Barra de herramientas y procesamiento por lotes unificados -->
+		<div class="card-body p-4 border-b border-base-300/30">
+			<div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+				<div class="flex flex-wrap gap-2 items-center">
+					<div class="join">
+						<label
+							class="btn join-item btn-primary btn-sm {!selectedEval?.code ? 'btn-disabled' : ''}"
+						>
+							<Upload size={16} class="mr-2" /> Cargar
+							<input
+								type="file"
+								accept="image/jpeg,image/jpg"
+								multiple
+								class="hidden"
+								onchange={handleFileUpload}
+								disabled={!selectedEval?.code}
+							/>
+						</label>
+						<button
+							class="btn join-item btn-error btn-outline btn-sm"
+							disabled={!uploadedFiles.length || isProcessing || isBatchProcessing}
+							onclick={clearFiles}
+						>
+							<Trash2 size={16} />
+						</button>
+					</div>
+
+					{#if uploadedFiles.length > 0 && pendingFilesCount > 0}
+						<button
+							class="btn btn-primary btn-sm {isBatchProcessing ? 'btn-disabled' : ''}"
+							onclick={processAllFiles}
+							disabled={isBatchProcessing || pendingFilesCount === 0 || !selectedEval}
+						>
+							{#if isBatchProcessing}
+								<Loader2 class="animate-spin mr-1" size={16} />
+								Procesando...
+							{:else}
+								<Play size={16} class="mr-1" />
+								Procesar todos ({pendingFilesCount})
+							{/if}
+						</button>
+					{/if}
 				</div>
 
-				<div class="badge badge-lg">
-					{uploadedFiles.length} archivos • {Object.values(processedResults).filter(
-						(r) => r.status === 'success'
-					).length} procesados
+				<div
+					class="flex items-center gap-2 bg-base-100/50 px-3 py-1.5 rounded-lg border border-base-300/30"
+				>
+					<div class="flex items-center gap-1.5">
+						<span class="badge badge-primary badge-sm">{uploadedFiles.length}</span>
+						<span class="text-sm">archivos</span>
+					</div>
+					<div class="w-0.5 h-4 bg-base-300/50"></div>
+					<div class="flex items-center gap-1.5">
+						<span class="badge badge-success badge-sm"
+							>{Object.values(processedResults).filter((r) => r.status === 'success').length}</span
+						>
+						<span class="text-sm">procesados</span>
+					</div>
 				</div>
 			</div>
+
+			<!-- Barra de progreso para procesamiento por lotes -->
+			{#if isBatchProcessing}
+				<div class="mt-2">
+					<div class="w-full bg-base-300 rounded-full h-1.5 mb-1">
+						<div
+							class="bg-primary h-1.5 rounded-full transition-all duration-300"
+							style="width: {((uploadedFiles.length - pendingFilesCount) / uploadedFiles.length) *
+								100}%"
+						></div>
+					</div>
+					<div class="text-xs text-right">
+						{uploadedFiles.length - pendingFilesCount} de {uploadedFiles.length} ({Math.round(
+							((uploadedFiles.length - pendingFilesCount) / uploadedFiles.length) * 100
+						)}%)
+					</div>
+				</div>
+			{:else if uploadedFiles.length > 0 && pendingFilesCount === 0}
+				<div class="alert alert-success py-2 px-4 mt-2">
+					<Check class="w-5 h-5" />
+					<span>Todos los archivos han sido procesados.</span>
+				</div>
+			{/if}
 		</div>
-	</section>
 
-	<!-- Procesamiento por lotes -->
-	{#if uploadedFiles.length > 0 && pendingFilesCount > 0}
-		<BatchProcessing
-			isProcessing={isBatchProcessing}
-			pendingCount={pendingFilesCount}
-			totalCount={uploadedFiles.length}
-			onProcessAll={processAllFiles}
-		/>
-	{/if}
-
-	<div class="flex flex-col lg:flex-row flex-1 gap-6">
-		<!-- Panel de archivos -->
-		<section class="w-full lg:w-1/3 card bg-base-200/80 shadow">
-			<div class="card-body p-4">
+		<!-- Contenido principal: archivos y previsualización -->
+		<div
+			class="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-base-300/30"
+		>
+			<!-- Panel de archivos -->
+			<div class="lg:col-span-1 p-4">
 				<header class="flex items-center justify-between mb-4">
-					<h3 class="card-title">Archivos</h3>
+					<h3 class="font-bold text-lg">Archivos</h3>
 					<div class="flex items-center gap-2">
 						<span class="badge badge-primary badge-outline">{uploadedFiles.length}</span>
 					</div>
 				</header>
 
-				<FileTable
-					files={uploadedFiles}
-					{processedResults}
-					selectedIndex={selectedFileIndex}
-					{isProcessing}
-					{processingIndex}
-					evalSelected={!!selectedEval}
-					onSelect={(index) => (selectedFileIndex = index)}
-					onProcess={processFile}
-					onRemove={removeFile}
-				/>
+				{#if uploadedFiles.length > 0}
+					<FileTable
+						files={uploadedFiles}
+						{processedResults}
+						selectedIndex={selectedFileIndex}
+						{isProcessing}
+						{processingIndex}
+						evalSelected={!!selectedEval}
+						onSelect={(index) => (selectedFileIndex = index)}
+						onProcess={processFile}
+						onRemove={removeFile}
+					/>
+				{:else}
+					<div
+						class="flex flex-col items-center justify-center p-8 text-center bg-base-100/50 rounded-lg border border-base-300/30"
+					>
+						<Upload size={48} class="text-primary/50 mb-4" />
+						<p class="text-base-content/70 mb-2">No hay archivos cargados</p>
+						<p class="text-sm text-base-content/50 mb-4">
+							Carga imágenes de hojas de respuestas para procesar
+						</p>
+						<label class="btn btn-primary btn-sm {!selectedEval?.code ? 'btn-disabled' : ''}">
+							<Upload size={16} class="mr-2" /> Cargar Imágenes
+							<input
+								type="file"
+								accept="image/jpeg,image/jpg"
+								multiple
+								class="hidden"
+								onchange={handleFileUpload}
+								disabled={!selectedEval?.code}
+							/>
+						</label>
+					</div>
+				{/if}
 			</div>
-		</section>
 
-		<!-- Previsualización -->
-		<section class="flex-1 card bg-base-200/80 shadow">
-			<ImagePreview
-				imageUrl={currentPreview}
-				{selectionRect}
-				status={previewStatus}
-				fileIndex={selectedFileIndex}
-				totalFiles={uploadedFiles.length}
-				onchange={(rect) => (selectionRect = rect)}
-			/>
-		</section>
+			<!-- Previsualización -->
+			<div class="lg:col-span-2">
+				{#if uploadedFiles.length > 0}
+					<ImagePreview
+						imageUrl={currentPreview}
+						{selectionRect}
+						status={previewStatus}
+						fileIndex={selectedFileIndex}
+						totalFiles={uploadedFiles.length}
+						onchange={(rect) => (selectionRect = rect)}
+					/>
+				{:else}
+					<div class="card-body flex flex-col items-center justify-center p-8 text-center">
+						<div class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md">
+							<School size={64} class="text-primary/30 mx-auto mb-4" />
+							<h3 class="text-lg font-bold mb-2">Listo para procesar</h3>
+							<p class="text-base-content/70 mb-4">
+								Carga imágenes de hojas de respuestas para comenzar
+							</p>
+
+							{#if !selectedEval}
+								<button class="btn btn-primary btn-sm" onclick={openEvalModal}>
+									<School size={16} class="mr-2" /> Seleccionar evaluación
+								</button>
+							{:else}
+								<label class="btn btn-primary btn-sm">
+									<Upload size={16} class="mr-2" /> Cargar Imágenes
+									<input
+										type="file"
+										accept="image/jpeg,image/jpg"
+										multiple
+										class="hidden"
+										onchange={handleFileUpload}
+									/>
+								</label>
+							{/if}
+						</div>
+					</div>
+				{/if}
+			</div>
+		</div>
 	</div>
 </main>
 
