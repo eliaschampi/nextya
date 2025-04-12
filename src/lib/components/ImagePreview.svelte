@@ -9,26 +9,68 @@
 		RotateCw,
 		ZoomIn,
 		ZoomOut,
-		Maximize
+		Save,
+		Crop,
+		Info
 	} from 'lucide-svelte';
+	import {
+		PAPER_FORMATS,
+		checkImageFormat as checkFormat,
+		processImageWithCanvas
+	} from '$lib/utils/imageUtils';
 
 	const {
 		imageUrl = '',
 		status = 'pending',
 		fileIndex = -1,
-		totalFiles = 0
+		totalFiles = 0,
+		onImageSave = undefined
 	} = $props<{
 		imageUrl: string;
 		status?: 'pending' | 'processing' | 'success' | 'error' | undefined;
 		fileIndex?: number;
 		totalFiles?: number;
+		onImageSave?: (processedImageData: string) => void;
 	}>();
 
 	// Estado para la rotación y zoom
 	let rotation = $state(0);
 	let zoom = $state(1);
 	let imageRef = $state<HTMLImageElement | undefined>(undefined);
-	let fullscreen = $state(false);
+	let isSaving = $state(false);
+	let isCropping = $state(false);
+	let showFormatInfo = $state(false);
+
+	// Estado para verificación de formato
+	let isA5Format = $state(true);
+	let imageRatio = $state(0);
+	let formatName = $state('');
+
+	// Verificar formato cuando la imagen carga
+	function checkImageFormat() {
+		if (!imageRef) return;
+
+		// Calcular relación de aspecto actual
+		const width = imageRef.naturalWidth;
+		const height = imageRef.naturalHeight;
+		imageRatio = width / height;
+
+		// Verificar si está en formato A5 vertical
+		isA5Format = checkFormat(width, height, PAPER_FORMATS.A5_VERTICAL);
+
+		// Determinar el formato más cercano
+		if (isA5Format) {
+			formatName = PAPER_FORMATS.A5_VERTICAL.name;
+		} else if (checkFormat(width, height, PAPER_FORMATS.A5_HORIZONTAL)) {
+			formatName = PAPER_FORMATS.A5_HORIZONTAL.name;
+		} else if (checkFormat(width, height, PAPER_FORMATS.A4_VERTICAL)) {
+			formatName = PAPER_FORMATS.A4_VERTICAL.name;
+		} else if (checkFormat(width, height, PAPER_FORMATS.A4_HORIZONTAL)) {
+			formatName = PAPER_FORMATS.A4_HORIZONTAL.name;
+		} else {
+			formatName = 'Formato personalizado';
+		}
+	}
 
 	// Funciones para rotar la imagen
 	function rotateClockwise() {
@@ -53,16 +95,75 @@
 		zoom = 1;
 	}
 
-	// Función para alternar pantalla completa
-	function toggleFullscreen() {
-		fullscreen = !fullscreen;
+	// Función para alternar la información de formato
+	function toggleFormatInfo() {
+		showFormatInfo = !showFormatInfo;
+	}
+
+	// Función para recortar a formato A5 vertical
+	async function cropToA5() {
+		if (!imageRef || !imageUrl) return;
+
+		try {
+			isCropping = true;
+
+			// Usar la utilidad para procesar la imagen
+			const croppedImageData = processImageWithCanvas(imageRef, {
+				crop: {
+					targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio
+				},
+				quality: 0.95
+			});
+
+			// Llamar al callback si existe
+			if (onImageSave) {
+				onImageSave(croppedImageData);
+			}
+
+			// Actualizar estado
+			isA5Format = true;
+			formatName = PAPER_FORMATS.A5_VERTICAL.name;
+
+			return croppedImageData;
+		} catch (error) {
+			console.error('Error al recortar la imagen:', error);
+		} finally {
+			isCropping = false;
+		}
+	}
+
+	// Función para guardar la imagen rotada
+	async function saveRotatedImage() {
+		if (!imageRef || !imageUrl || rotation === 0) return;
+
+		try {
+			isSaving = true;
+
+			// Usar la utilidad para procesar la imagen
+			const rotatedImageData = processImageWithCanvas(imageRef, {
+				rotation,
+				quality: 0.95
+			});
+
+			// Llamar al callback si existe
+			if (onImageSave) {
+				onImageSave(rotatedImageData);
+			}
+
+			// Resetear la rotación ya que ahora la imagen está rotada
+			rotation = 0;
+
+			return rotatedImageData;
+		} catch (error) {
+			console.error('Error al guardar la imagen rotada:', error);
+		} finally {
+			isSaving = false;
+		}
 	}
 
 	// Calcular clases y estilos para la imagen
 	let imageTransform = $derived(`rotate(${rotation}deg) scale(${zoom})`);
-	let imageContainerClass = $derived(
-		`relative max-w-full ${fullscreen ? 'max-h-[85vh]' : 'max-h-[65vh]'}`
-	);
+	let imageContainerClass = $derived(`relative w-full max-h-[65vh]`);
 </script>
 
 <div class="card-body p-4">
@@ -119,26 +220,56 @@
 			<button class="btn btn-sm" onclick={resetView} aria-label="Restablecer vista">
 				Restablecer
 			</button>
-			<button class="btn btn-sm" onclick={toggleFullscreen} aria-label="Pantalla completa">
-				<Maximize size={16} />
-				{fullscreen ? 'Reducir' : 'Ampliar'}
-			</button>
+
+			{#if rotation !== 0}
+				<button
+					class="btn btn-sm btn-success gap-2"
+					onclick={saveRotatedImage}
+					aria-label="Guardar cambios"
+					disabled={isSaving}
+				>
+					{#if isSaving}
+						<Loader2 size={16} class="animate-spin" />
+						Guardando...
+					{:else}
+						<Save size={16} />
+						Guardar cambios
+					{/if}
+				</button>
+			{/if}
+
+			{#if !isA5Format}
+				<button
+					class="btn btn-sm btn-warning gap-2"
+					onclick={cropToA5}
+					aria-label="Recortar a A5"
+					disabled={isCropping}
+				>
+					{#if isCropping}
+						<Loader2 size={16} class="animate-spin" />
+						Recortando...
+					{:else}
+						<Crop size={16} />
+						Recortar a A5
+					{/if}
+				</button>
+			{/if}
 		</div>
 	{/if}
 
 	<!-- Contenedor de imagen -->
 	<div
-		class="relative flex-1 flex items-center justify-center bg-base-100 rounded-lg p-4 min-h-[400px] overflow-hidden"
-		class:min-h-[600px]={fullscreen}
+		class="relative flex-1 flex items-center justify-center bg-base-100 rounded-lg p-4 min-h-[400px] overflow-auto"
 	>
 		<div class={imageContainerClass}>
 			{#if imageUrl}
 				<img
 					src={imageUrl}
 					alt="Previsualización"
-					class="max-w-full h-auto object-contain rounded-lg shadow-md transition-transform duration-300"
+					class="w-full h-auto object-contain rounded-lg shadow-md transition-transform duration-300 mx-auto"
 					style="transform: {imageTransform}"
 					bind:this={imageRef}
+					onload={checkImageFormat}
 				/>
 			{:else}
 				<div class="text-center opacity-50 space-y-4">
@@ -150,10 +281,33 @@
 	</div>
 
 	{#if imageUrl}
-		<div class="flex justify-center mt-4">
+		<div class="flex justify-center mt-4 gap-2">
 			<div class="badge badge-sm">
 				Rotación: {rotation}° | Zoom: {(zoom * 100).toFixed(0)}%
 			</div>
+			{#if !isA5Format}
+				<button
+					class="badge badge-sm badge-warning gap-1 cursor-pointer"
+					onclick={toggleFormatInfo}
+					onkeydown={(e) => e.key === 'Enter' && toggleFormatInfo()}
+					tabindex="0"
+					aria-label="Mostrar información de formato"
+				>
+					<Info size={12} />
+					Formato no A5 ({formatName})
+				</button>
+			{/if}
+
+			{#if showFormatInfo}
+				<div
+					class="tooltip tooltip-open tooltip-warning"
+					data-tip="Se requiere formato A5 vertical para procesamiento OMR"
+				>
+					<span class="badge badge-sm badge-outline">
+						Relación: {(imageRatio * 100).toFixed(0)}%
+					</span>
+				</div>
+			{/if}
 		</div>
 	{/if}
 </div>

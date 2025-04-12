@@ -5,6 +5,7 @@
 	import { formatDate } from '$lib/utils/formatDate';
 	import { showToast } from '$lib/stores/Toast';
 	import type { AnswerValue } from '$lib/omrProcessor';
+	import { base64ToFile } from '$lib/utils/imageUtils';
 
 	// Componentes personalizados
 	import EvalDetails from '$lib/components/EvalDetails.svelte';
@@ -77,6 +78,26 @@
 		if (!selectedLevel) return (evaluations = []);
 		const response = await fetch(`/api/eval/${selectedLevel}`);
 		evaluations = response.ok ? await response.json() : [];
+	}
+
+	// Función para manejar la imagen procesada (rotada o recortada)
+	function handleProcessedImage(processedImageData: string) {
+		if (!uploadedFiles[selectedFileIndex]) return;
+
+		// Revocar la URL anterior
+		URL.revokeObjectURL(URL.createObjectURL(uploadedFiles[selectedFileIndex]));
+
+		// Convertir la imagen base64 a un archivo usando la utilidad
+		const fileName = uploadedFiles[selectedFileIndex].name;
+		const newFile = base64ToFile(processedImageData, fileName);
+
+		// Reemplazar el archivo en el array
+		const newFiles = [...uploadedFiles];
+		newFiles[selectedFileIndex] = newFile;
+		uploadedFiles = newFiles;
+
+		// Actualizar la vista previa
+		showToast('Imagen procesada correctamente', 'success');
 	}
 
 	function openEvalModal() {
@@ -393,6 +414,7 @@
 						status={previewStatus}
 						fileIndex={selectedFileIndex}
 						totalFiles={uploadedFiles.length}
+						onImageSave={handleProcessedImage}
 					/>
 				{:else}
 					<div class="card-body flex flex-col items-center justify-center p-8 text-center">
