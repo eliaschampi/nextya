@@ -5,9 +5,6 @@
 	import { formatDate } from '$lib/utils/formatDate';
 	import { showToast } from '$lib/stores/Toast';
 	import { base64ToFile } from '$lib/utils/imageUtils';
-	import { goto } from '$app/navigation';
-
-	// Componentes personalizados
 	import EvalDetails from '$lib/components/EvalDetails.svelte';
 	import EvalHeader from '$lib/components/EvalHeader.svelte';
 	import FileTable from '$lib/components/FileTable.svelte';
@@ -16,261 +13,137 @@
 	import OmrDetailsModal from '$lib/components/OmrDetailsModal.svelte';
 	import type { OmrProcessedResult } from '$lib/types/omrProcessing';
 
-	// Props tipados
 	const { data } = $props<{
 		data: { levels: Level[]; questions: EvalQuestion[]; evalCode?: string };
 	}>();
 
-	// Estado para almacenar las preguntas de la evaluación seleccionada
+	let appState = $state({
+		modal: null as HTMLDialogElement | null,
+		selectedEval: null as EvalWithSections | null,
+		files: [] as File[],
+		selectedFileIndex: -1,
+		evaluations: [] as Eval[],
+		level: '',
+		processing: { isActive: false, index: -1, isBatch: false },
+		saving: { isActive: false, index: -1 },
+		details: { showModal: false, selectedResult: null as OmrProcessedResult | null },
+		processedResults: {} as Record<number, OmrProcessedResult>
+	});
+
 	let evalQuestions = $state<EvalQuestion[]>(data.questions || []);
 
-	// Estados reactivos con Svelte v5 runes
-	let evalModal = $state<HTMLDialogElement | null>(null);
-	let selectedEval = $state<EvalWithSections | null>(null);
-	let uploadedFiles = $state<File[]>([]);
-	let selectedFileIndex = $state(-1);
-	let evaluations = $state<Eval[]>([]);
-
-	let selectedLevel = $state('');
-	let isProcessing = $state(false);
-	let processingIndex = $state(-1);
-	let processedResults = $state<Record<number, OmrProcessedResult>>({});
-	let isBatchProcessing = $state(false);
-	let isSaving = $state(false);
-	let savingIndex = $state(-1);
-	let showDetailsModal = $state(false);
-	let selectedResultForDetails = $state<OmrProcessedResult | null>(null);
-
-	// Previsualización derivada
 	let currentPreview = $derived(
-		selectedFileIndex >= 0 && selectedFileIndex < uploadedFiles.length
-			? URL.createObjectURL(uploadedFiles[selectedFileIndex])
+		appState.selectedFileIndex >= 0 && appState.selectedFileIndex < appState.files.length
+			? URL.createObjectURL(appState.files[appState.selectedFileIndex])
 			: ''
 	);
 
-	// Valores derivados para el estado de procesamiento
 	let pendingFilesCount = $derived(
-		uploadedFiles.filter(
-			(_, index) => !processedResults[index] || processedResults[index]?.status === 'error'
+		appState.files.filter(
+			(_, index) =>
+				!appState.processedResults[index] || appState.processedResults[index]?.status === 'error'
 		).length
 	);
 
 	let previewStatus: 'pending' | 'processing' | 'success' | 'error' | undefined = $derived(
-		isProcessing && processingIndex === selectedFileIndex
+		appState.processing.isActive && appState.processing.index === appState.selectedFileIndex
 			? 'processing'
-			: processedResults[selectedFileIndex]?.status === 'success'
+			: appState.processedResults[appState.selectedFileIndex]?.status === 'success'
 				? 'success'
-				: processedResults[selectedFileIndex]?.status === 'error'
+				: appState.processedResults[appState.selectedFileIndex]?.status === 'error'
 					? 'error'
 					: 'pending'
 	);
 
-	// Funciones principales
-	async function loadEvaluationsByLevel() {
-		if (!selectedLevel) return (evaluations = []);
-		const response = await fetch(`/api/eval/${selectedLevel}`);
-		evaluations = response.ok ? await response.json() : [];
-	}
-
-	// Función para manejar la imagen procesada (rotada o recortada)
-	function handleProcessedImage(processedImageData: string) {
-		if (!uploadedFiles[selectedFileIndex]) return;
-
-		// Revocar la URL anterior
-		URL.revokeObjectURL(URL.createObjectURL(uploadedFiles[selectedFileIndex]));
-
-		// Convertir la imagen base64 a un archivo usando la utilidad
-		const fileName = uploadedFiles[selectedFileIndex].name;
-		const newFile = base64ToFile(processedImageData, fileName);
-
-		// Reemplazar el archivo en el array
-		const newFiles = [...uploadedFiles];
-		newFiles[selectedFileIndex] = newFile;
-		uploadedFiles = newFiles;
-
-		// Actualizar la vista previa
-		showToast('Imagen procesada correctamente', 'success');
-	}
-
-	function openEvalModal() {
-		selectedLevel = '';
-		evaluations = [];
-		evalModal?.showModal();
-	}
-
-	function handleFileUpload(event: Event) {
-		const files = (event.target as HTMLInputElement).files;
-		if (!files) return;
-		const imageFiles = Array.from(files).filter((file) => file.type.startsWith('image/'));
-		if (imageFiles.length < files.length) {
-			showToast('Algunos archivos no son imágenes y fueron ignorados', 'warning');
-		}
-		uploadedFiles = [...uploadedFiles, ...imageFiles];
-		selectedFileIndex = uploadedFiles.length - 1;
-		showToast(`${imageFiles.length} imagen(es) cargada(s)`, 'success');
-	}
-
-	function clearFiles() {
-		uploadedFiles.forEach((file) => URL.revokeObjectURL(URL.createObjectURL(file)));
-		uploadedFiles = [];
-		selectedFileIndex = -1;
-		processedResults = {};
-		showToast('Archivos eliminados', 'success');
-	}
-
-	function removeFile(index: number) {
-		URL.revokeObjectURL(URL.createObjectURL(uploadedFiles[index]));
-		uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
-		selectedFileIndex = uploadedFiles.length
-			? Math.min(selectedFileIndex, uploadedFiles.length - 1)
-			: -1;
-
-		// Actualizar processedResults
-		const newProcessedResults: Record<number, OmrProcessedResult> = {};
-
-		Object.entries(processedResults).forEach(([k, v]) => {
-			const key = Number(k);
-			if (key !== index) {
-				const newKey = key > index ? key - 1 : key;
-				newProcessedResults[newKey] = v;
-			}
+	async function readFileAsDataURL(file: File): Promise<string> {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(reader.result as string);
+			reader.onerror = reject;
+			reader.readAsDataURL(file);
 		});
-
-		processedResults = newProcessedResults;
 	}
 
-	async function processFile(index: number, rollCode: string | null = null) {
-		if (!selectedEval || !uploadedFiles[index]) {
+	async function processSingleFile(
+		index: number,
+		rollCode: string | null = null
+	): Promise<OmrProcessedResult | null> {
+		if (!appState.selectedEval || !appState.files[index]) {
 			showToast('No se puede procesar este archivo', 'warning');
-			return;
+			return null;
 		}
 
 		try {
-			// Marcar como procesando
-			isProcessing = true;
-			processingIndex = index;
-			selectedFileIndex = index;
+			appState.processing.isActive = true;
+			appState.processing.index = index;
+			appState.selectedFileIndex = index;
 
-			const file = uploadedFiles[index];
-			const reader = new FileReader();
+			const file = appState.files[index];
+			const imageData = await readFileAsDataURL(file);
 
-			const imageData = await new Promise<string>((resolve, reject) => {
-				reader.onload = () => resolve(reader.result as string);
-				reader.onerror = reject;
-				reader.readAsDataURL(file);
-			});
-
-			// Enviar a la API para procesar con los datos de evaluación y preguntas
 			const response = await fetch('/api/eval/omr', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					imageData,
-					evalData: selectedEval,
-					rollCode, // Pasar el código si se proporciona
-					questions: evalQuestions // Pasar las preguntas para evitar consultas redundantes
+					evalData: appState.selectedEval,
+					rollCode,
+					questions: evalQuestions
 				})
 			});
 
 			const result = await response.json();
+			appState.processedResults[index] = result;
 
-			// Guardar el resultado
-			processedResults[index] = result;
-
-			// Mostrar notificación solo si no estamos en procesamiento por lotes
-			if (!isBatchProcessing) {
-				if (result.status === 'success') {
-					if (result.student) {
-						showToast(`Procesado: ${result.student.name} ${result.student.lastName}`, 'success');
-					} else {
-						showToast(`Procesado pero estudiante no encontrado: ${result.studentCode}`, 'warning');
-					}
-				} else {
-					showToast(`Error en ${file.name}: ${result.message}`, 'warning');
-				}
+			if (!appState.processing.isBatch) {
+				showToast(
+					result.status === 'success'
+						? result.student
+							? `Procesado: ${result.student.name} ${result.student.lastName}`
+							: `Estudiante no encontrado: ${result.studentCode}`
+						: `Error en ${file.name}: ${result.message}`,
+					result.status === 'success' ? 'success' : 'warning'
+				);
 			}
 
 			return result;
 		} catch (error) {
-			console.error('Error processing file:', error);
-
-			// Mostrar notificación solo si no estamos en procesamiento por lotes
-			if (!isBatchProcessing) {
-				showToast(`Error al procesar ${uploadedFiles[index].name}`, 'warning');
-			}
-
-			// Guardar el error
-			processedResults[index] = {
+			console.error('Error procesando archivo:', error);
+			appState.processedResults[index] = {
 				status: 'error',
 				message: error instanceof Error ? error.message : 'Error desconocido'
 			};
-
+			if (!appState.processing.isBatch)
+				showToast(`Error al procesar ${appState.files[index].name}`, 'warning');
 			return null;
 		} finally {
-			isProcessing = false;
-			processingIndex = -1;
+			appState.processing.isActive = false;
+			appState.processing.index = -1;
 		}
 	}
 
-	// Función para procesar todos los archivos pendientes
-	async function processAllFiles() {
-		if (!selectedEval || uploadedFiles.length === 0 || isBatchProcessing) return;
-
-		try {
-			isBatchProcessing = true;
-
-			// Procesar archivos pendientes uno por uno
-			for (let i = 0; i < uploadedFiles.length; i++) {
-				// Saltar archivos ya procesados correctamente
-				if (processedResults[i]?.status === 'success') continue;
-
-				await processFile(i);
-
-				// No mostrar toast por cada archivo procesado en modo lote
-				// Solo actualizar la barra de progreso visual
-			}
-
-			showToast('Procesamiento por lotes completado', 'success');
-		} catch (error) {
-			console.error('Error en procesamiento por lotes:', error);
-			showToast('Error en procesamiento por lotes', 'warning');
-		} finally {
-			isBatchProcessing = false;
-		}
-	}
-
-	// Función para guardar un resultado individual
-	async function saveResult(index: number) {
-		if (!selectedEval || !processedResults[index] || !processedResults[index].student) {
+	async function saveSingleResult(index: number): Promise<void> {
+		const result = appState.processedResults[index];
+		if (!appState.selectedEval || !result || !result.student) {
 			showToast('No se puede guardar este resultado', 'warning');
 			return;
 		}
 
 		try {
-			isSaving = true;
-			savingIndex = index;
+			appState.saving.isActive = true;
+			appState.saving.index = index;
 
-			const result = processedResults[index];
-			const registerCode = result.student?.registerCode;
-
-			if (!registerCode) {
-				showToast('Código de registro no encontrado', 'warning');
-				return;
-			}
-
-			// Preparar datos para guardar
 			const saveData = {
-				evalCode: selectedEval.code,
-				registerCode,
+				evalCode: appState.selectedEval.code,
+				registerCode: result.student.registerCode,
 				answers: result.answers || {},
 				correctCount: result.results?.correctCount || 0,
 				incorrectCount: result.results?.incorrectCount || 0,
 				blankCount: result.results?.blankCount || 0,
 				totalScore: result.results?.totalScore || 0,
-				questions: evalQuestions // Pasar las preguntas para evitar consultas redundantes
+				questions: evalQuestions
 			};
 
-			// Enviar a la API para guardar
 			const response = await fetch('/api/eval/save-results', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -278,150 +151,146 @@
 			});
 
 			const saveResult = await response.json();
-
 			if (saveResult.status === 'success') {
 				showToast(
-					`Resultados guardados para ${result.student?.name || ''} ${result.student?.lastName || ''}`,
+					`Resultados guardados para ${result.student.name} ${result.student.lastName}`,
 					'success'
 				);
-
-				// Marcar como guardado en el resultado
-				processedResults[index] = {
-					...result,
-					saved: true
-				};
+				appState.processedResults[index] = { ...result, saved: true };
 			} else {
 				showToast(`Error al guardar: ${saveResult.message}`, 'warning');
 			}
-
-			return saveResult;
 		} catch (error) {
-			console.error('Error saving result:', error);
-			showToast('Error al guardar resultados', 'warning');
-			return null;
+			console.error('Error guardando resultado:', error);
+			showToast('Error al guardar resultado', 'warning');
 		} finally {
-			isSaving = false;
-			savingIndex = -1;
+			appState.saving.isActive = false;
+			appState.saving.index = -1;
 		}
 	}
 
-	// Función para guardar todos los resultados en lote
-	async function saveAllResults() {
-		if (!selectedEval) {
-			showToast('No hay evaluación seleccionada', 'warning');
+	async function loadEvaluationsByLevel() {
+		if (!appState.level) {
+			appState.evaluations = [];
 			return;
 		}
+		try {
+			const response = await fetch(`/api/eval/${appState.level}`);
+			appState.evaluations = response.ok ? await response.json() : [];
+		} catch (error) {
+			console.error('Error cargando evaluaciones:', error);
+			showToast('No se pudieron cargar las evaluaciones', 'danger');
+			appState.evaluations = [];
+		}
+	}
 
-		// Filtrar solo los resultados válidos con estudiante
-		const validResults = Object.entries(processedResults)
-			.filter(([, result]) => result.status === 'success' && result.student && !result.saved)
-			.map(([, result]) => ({
-				registerCode: result.student?.registerCode || '',
-				answers: result.answers || {},
-				correctCount: result.results?.correctCount || 0,
-				incorrectCount: result.results?.incorrectCount || 0,
-				blankCount: result.results?.blankCount || 0,
-				totalScore: result.results?.totalScore || 0
-			}));
+	function openEvalModal() {
+		appState.level = '';
+		appState.evaluations = [];
+		appState.modal?.showModal();
+	}
 
-		if (validResults.length === 0) {
+	function handleFileUpload(event: Event) {
+		const input = event.target as HTMLInputElement;
+		if (!input.files?.length) return;
+
+		const newFiles = Array.from(input.files).filter((file) => file.type.startsWith('image/'));
+		if (newFiles.length < input.files.length) {
+			showToast('Algunos archivos no son imágenes y fueron ignorados', 'warning');
+		}
+		appState.files = [...appState.files, ...newFiles];
+		appState.selectedFileIndex = appState.files.length - 1;
+		showToast(`${newFiles.length} imagen(es) cargada(s)`, 'success');
+	}
+
+	function clearFiles() {
+		appState.files.forEach((file) => URL.revokeObjectURL(URL.createObjectURL(file)));
+		appState.files = [];
+		appState.selectedFileIndex = -1;
+		appState.processedResults = {};
+		showToast('Archivos eliminados', 'success');
+	}
+
+	function removeFile(index: number) {
+		URL.revokeObjectURL(URL.createObjectURL(appState.files[index]));
+		appState.files = appState.files.filter((_, i) => i !== index);
+		appState.selectedFileIndex = appState.files.length
+			? Math.min(appState.selectedFileIndex, appState.files.length - 1)
+			: -1;
+
+		const newProcessedResults: Record<number, OmrProcessedResult> = {};
+		Object.entries(appState.processedResults).forEach(([k, v]) => {
+			const key = Number(k);
+			if (key !== index) {
+				const newKey = key > index ? key - 1 : key;
+				newProcessedResults[newKey] = v;
+			}
+		});
+		appState.processedResults = newProcessedResults;
+	}
+
+	async function processFile(index: number, rollCode: string | null = null) {
+		await processSingleFile(index, rollCode);
+	}
+
+	async function processAllFiles() {
+		if (!appState.selectedEval || !appState.files.length || appState.processing.isBatch) return;
+		appState.processing.isBatch = true;
+		try {
+			for (let i = 0; i < appState.files.length; i++) {
+				if (appState.processedResults[i]?.status !== 'success') await processSingleFile(i);
+			}
+			showToast('Procesamiento por lotes completado', 'success');
+		} catch {
+			showToast('Error en procesamiento por lotes', 'warning');
+		} finally {
+			appState.processing.isBatch = false;
+		}
+	}
+
+	async function saveResult(index: number) {
+		await saveSingleResult(index);
+	}
+
+	async function saveAllResults() {
+		const validIndexes = Object.entries(appState.processedResults)
+			.filter(([, r]) => r.status === 'success' && r.student && !r.saved)
+			.map(([i]) => Number(i));
+
+		if (!validIndexes.length) {
 			showToast('No hay resultados válidos para guardar', 'warning');
 			return;
 		}
 
 		try {
-			isSaving = true;
-
-			// Preparar datos para guardar en lote
-			const batchData = {
-				evalCode: selectedEval.code,
-				results: validResults,
-				questions: evalQuestions // Pasar las preguntas para evitar consultas redundantes
-			};
-
-			// Enviar a la API para guardar en lote
-			const response = await fetch('/api/eval/save-batch', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(batchData)
-			});
-
-			const batchResult = await response.json();
-
-			if (batchResult.status === 'success') {
-				showToast(
-					`${batchResult.processedResults?.length || 0} resultados guardados correctamente`,
-					'success'
-				);
-
-				// Marcar como guardados los resultados exitosos
-				if (batchResult.processedResults) {
-					Object.entries(processedResults).forEach(([index, result]) => {
-						if (
-							result.student &&
-							batchResult.processedResults.some(
-								(pr: { registerCode: string; status: string }) =>
-									pr.registerCode === result.student?.registerCode && pr.status === 'success'
-							)
-						) {
-							processedResults[Number(index)] = {
-								...result,
-								saved: true
-							};
-						}
-					});
-				}
-
-				// Mostrar errores si hay
-				if (batchResult.errors && batchResult.errors.length > 0) {
-					showToast(`${batchResult.errors.length} resultados con error`, 'warning');
-				}
-			} else {
-				showToast(`Error al guardar en lote: ${batchResult.message}`, 'warning');
-			}
-
-			return batchResult;
-		} catch (error) {
-			console.error('Error saving batch results:', error);
-			showToast('Error al guardar resultados en lote', 'warning');
-			return null;
+			appState.saving.isActive = true;
+			for (const index of validIndexes) await saveSingleResult(index);
+			showToast(`${validIndexes.length} resultados guardados`, 'success');
+		} catch {
+			showToast('Error al guardar en lote', 'warning');
 		} finally {
-			isSaving = false;
+			appState.saving.isActive = false;
 		}
 	}
 
-	// Función para mostrar detalles de un resultado
 	function viewResultDetails(index: number) {
-		if (!processedResults[index]) {
-			return;
-		}
-
-		selectedResultForDetails = processedResults[index];
-		showDetailsModal = true;
+		if (!appState.processedResults[index]) return;
+		appState.details.selectedResult = appState.processedResults[index];
+		appState.details.showModal = true;
 	}
 
-	// Función para cerrar el modal de detalles
 	function closeDetailsModal() {
-		showDetailsModal = false;
-	}
-
-	// Función para reprocesar con un código específico
-	async function reprocessWithCode(index: number, rollCode: string) {
-		return processFile(index, rollCode);
+		appState.details.showModal = false;
 	}
 
 	async function selectEval(evalItem: Eval) {
-		selectedEval = evalItem as unknown as EvalWithSections;
+		appState.selectedEval = evalItem as unknown as EvalWithSections;
 
-		// Fetch questions for this evaluation if not already loaded
 		if (evalItem.code !== data.evalCode || evalQuestions.length === 0) {
 			try {
 				const response = await fetch(`/api/eval/questions/${evalItem.code}`);
 				if (response.ok) {
-					const data = await response.json();
-					evalQuestions = data;
-					// Update URL with eval code for direct access/refresh
-					goto(`?eval=${evalItem.code}`, { replaceState: true, keepFocus: true });
+					evalQuestions = await response.json();
 				} else {
 					showToast('Error al cargar preguntas de la evaluación', 'warning');
 					evalQuestions = [];
@@ -433,10 +302,9 @@
 			}
 		}
 
-		evalModal?.close();
+		appState.modal?.close();
 	}
 
-	// Limpiar URLs al desmontar
 	$effect(() => () => currentPreview && URL.revokeObjectURL(currentPreview));
 </script>
 
@@ -454,24 +322,24 @@
 </PageTitle>
 
 <main class="flex flex-col h-full gap-6 p-4">
-	<!-- Información de la evaluación seleccionada -->
-	{#if selectedEval}
+	{#if appState.selectedEval}
 		<EvalHeader
-			evaluation={selectedEval}
-			level={data.levels.find((l: Level) => l.code === selectedEval?.level_code)}
+			evaluation={appState.selectedEval}
+			level={data.levels.find((l: Level) => l.code === appState.selectedEval?.level_code)}
 		>
-			<EvalDetails evaluation={selectedEval} />
+			<EvalDetails evaluation={appState.selectedEval} />
 		</EvalHeader>
 	{/if}
 
-	<!-- Contenedor principal unificado -->
 	<div class="card bg-base-200/80 shadow overflow-hidden">
 		<div class="card-body p-4 border-b border-base-300/30">
 			<div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
 				<div class="flex flex-wrap gap-2 items-center">
 					<div class="join">
 						<label
-							class="btn join-item btn-primary btn-sm {!selectedEval?.code ? 'btn-disabled' : ''}"
+							class="btn join-item btn-primary btn-sm {!appState.selectedEval?.code
+								? 'btn-disabled'
+								: ''}"
 						>
 							<Plus size={16} />
 							<input
@@ -480,25 +348,29 @@
 								multiple
 								class="hidden"
 								onchange={handleFileUpload}
-								disabled={!selectedEval?.code}
+								disabled={!appState.selectedEval?.code}
 							/>
 						</label>
 						<button
 							class="btn join-item btn-error btn-outline btn-sm"
-							disabled={!uploadedFiles.length || isProcessing || isBatchProcessing}
+							disabled={!appState.files.length ||
+								appState.processing.isActive ||
+								appState.processing.isBatch}
 							onclick={clearFiles}
 						>
 							<Trash2 size={16} />
 						</button>
 					</div>
 
-					{#if uploadedFiles.length > 0 && pendingFilesCount > 0}
+					{#if appState.files.length > 0 && pendingFilesCount > 0}
 						<button
-							class="btn btn-accent btn-sm {isBatchProcessing ? 'btn-disabled' : ''}"
+							class="btn btn-accent btn-sm {appState.processing.isBatch ? 'btn-disabled' : ''}"
 							onclick={processAllFiles}
-							disabled={isBatchProcessing || pendingFilesCount === 0 || !selectedEval}
+							disabled={appState.processing.isBatch ||
+								pendingFilesCount === 0 ||
+								!appState.selectedEval}
 						>
-							{#if isBatchProcessing}
+							{#if appState.processing.isBatch}
 								<Loader2 class="animate-spin mr-1" size={16} />
 								Procesando...
 							{:else}
@@ -510,30 +382,27 @@
 				</div>
 			</div>
 
-			<!-- Barra de progreso para procesamiento por lotes -->
-			{#if isBatchProcessing}
+			{#if appState.processing.isBatch}
 				<div class="mt-2">
 					<div class="w-full bg-base-300 rounded-full h-1.5 mb-1">
-						<div
-							class="bg-primary h-1.5 rounded-full transition-all duration-300"
-							style="width: {((uploadedFiles.length - pendingFilesCount) / uploadedFiles.length) *
-								100}%"
-						></div>
+						<progress
+							class="progress progress-primary w-100"
+							value={((appState.files.length - pendingFilesCount) / appState.files.length) * 100}
+						>
+						</progress>
 					</div>
 					<div class="text-xs text-right">
-						{uploadedFiles.length - pendingFilesCount} de {uploadedFiles.length} ({Math.round(
-							((uploadedFiles.length - pendingFilesCount) / uploadedFiles.length) * 100
+						{appState.files.length - pendingFilesCount} de {appState.files.length} ({Math.round(
+							((appState.files.length - pendingFilesCount) / appState.files.length) * 100
 						)}%)
 					</div>
 				</div>
-			{:else if uploadedFiles.length > 0 && pendingFilesCount === 0}
+			{:else if appState.files.length > 0 && pendingFilesCount === 0}
 				<Message description="Todos los archivos han sido procesados." type="success" />
 			{/if}
 		</div>
 
-		<!-- Contenido principal: archivos y previsualización -->
 		<div class="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-base-300/30">
-			<!-- Panel de archivos -->
 			<div class="w-full lg:w-1/2 p-4">
 				<header class="flex items-center justify-between mb-4">
 					<h3 class="font-bold text-lg">Archivos</h3>
@@ -541,43 +410,46 @@
 						class="flex items-center gap-2 bg-base-100/50 px-3 py-1.5 rounded-lg border border-base-300/30"
 					>
 						<div class="flex items-center gap-1.5">
-							<span class="badge badge-primary badge-sm">{uploadedFiles.length}</span>
+							<span class="badge badge-primary badge-sm">{appState.files.length}</span>
 							<span class="text-sm">archivos</span>
 						</div>
 						<div class="w-0.5 h-4 bg-base-300/50"></div>
 						<div class="flex items-center gap-1.5">
-							<span class="badge badge-success badge-sm"
-								>{Object.values(processedResults).filter((r) => r.status === 'success')
-									.length}</span
-							>
+							<span class="badge badge-success badge-sm">
+								{Object.values(appState.processedResults).filter((r) => r.status === 'success')
+									.length}
+							</span>
 							<span class="text-sm">procesados</span>
 						</div>
 					</div>
 				</header>
 
-				{#if uploadedFiles.length > 0}
+				{#if appState.files.length > 0}
 					<FileTable
-						files={uploadedFiles}
-						{processedResults}
-						selectedIndex={selectedFileIndex}
-						{isProcessing}
-						{processingIndex}
-						{isSaving}
-						{savingIndex}
-						evalSelected={!!selectedEval}
-						onSelect={(index) => (selectedFileIndex = index)}
-						onProcess={(index, rollCode = null) => processFile(index, rollCode)}
+						files={appState.files}
+						processedResults={appState.processedResults}
+						selectedIndex={appState.selectedFileIndex}
+						isProcessing={appState.processing.isActive}
+						processingIndex={appState.processing.index}
+						isSaving={appState.saving.isActive}
+						savingIndex={appState.saving.index}
+						evalSelected={!!appState.selectedEval}
+						onSelect={(index) => (appState.selectedFileIndex = index)}
+						onProcess={(index, rollCode = undefined) => processFile(index, rollCode)}
 						onRemove={removeFile}
 						onViewDetails={viewResultDetails}
 						onSave={saveResult}
-						onReprocess={reprocessWithCode}
+						onReprocess={(index, rollCode) => processFile(index, rollCode)}
 					/>
 
-					<!-- Botón para guardar todos los resultados -->
-					{#if Object.values(processedResults).some((r) => r.status === 'success' && r.student && !r.saved)}
+					{#if Object.values(appState.processedResults).some((r) => r.status === 'success' && r.student && !r.saved)}
 						<div class="mt-4 flex justify-end">
-							<button class="btn btn-primary btn-sm" onclick={saveAllResults} disabled={isSaving}>
-								{#if isSaving}
+							<button
+								class="btn btn-primary btn-sm"
+								onclick={saveAllResults}
+								disabled={appState.saving.isActive}
+							>
+								{#if appState.saving.isActive}
 									<span class="loading loading-spinner loading-xs"></span>
 								{:else}
 									<Save size={14} class="mr-1" />
@@ -595,7 +467,9 @@
 						<p class="text-sm text-base-content/50 mb-4">
 							Carga imágenes de hojas de respuestas para procesar
 						</p>
-						<label class="btn btn-primary btn-sm {!selectedEval?.code ? 'btn-disabled' : ''}">
+						<label
+							class="btn btn-primary btn-sm {!appState.selectedEval?.code ? 'btn-disabled' : ''}"
+						>
 							<Upload size={16} class="mr-2" /> Cargar Imágenes
 							<input
 								type="file"
@@ -603,22 +477,26 @@
 								multiple
 								class="hidden"
 								onchange={handleFileUpload}
-								disabled={!selectedEval?.code}
+								disabled={!appState.selectedEval?.code}
 							/>
 						</label>
 					</div>
 				{/if}
 			</div>
 
-			<!-- Previsualización -->
 			<div class="w-full lg:w-1/2">
-				{#if uploadedFiles.length > 0}
+				{#if appState.files.length > 0}
 					<ImagePreview
 						imageUrl={currentPreview}
 						status={previewStatus}
-						fileIndex={selectedFileIndex}
-						totalFiles={uploadedFiles.length}
-						onImageSave={handleProcessedImage}
+						fileIndex={appState.selectedFileIndex}
+						totalFiles={appState.files.length}
+						onImageSave={(processedImageData) => {
+							const fileName = appState.files[appState.selectedFileIndex].name;
+							const newFile = base64ToFile(processedImageData, fileName);
+							appState.files[appState.selectedFileIndex] = newFile;
+							showToast('Imagen procesada correctamente', 'success');
+						}}
 					/>
 				{:else}
 					<div class="card-body flex flex-col items-center justify-center p-8 text-center">
@@ -636,33 +514,31 @@
 	</div>
 </main>
 
-<!-- Modal de detalles -->
-{#if selectedResultForDetails}
+{#if appState.details.selectedResult}
 	<OmrDetailsModal
-		result={selectedResultForDetails}
-		open={showDetailsModal}
+		result={appState.details.selectedResult}
+		open={appState.details.showModal}
 		onClose={closeDetailsModal}
 	/>
 {/if}
 
-<!-- Modal de selección de evaluación -->
-<dialog bind:this={evalModal} class="modal">
-	<div class="modal-box">
-		<header class="flex items-center justify-between mb-6">
-			<h3 class="text-lg font-bold flex gap-2">
-				<School class="w-6 h-6 text-primary" /> Seleccionar Evaluación
+<dialog bind:this={appState.modal} class="modal modal-bottom sm:modal-middle">
+	<div class="modal-box bg-base-100 shadow-xl rounded-xl p-6">
+		<div class="flex justify-between items-center mb-6">
+			<h3 class="text-xl font-bold text-primary flex items-center gap-2">
+				<School class="w-6 h-6" /> Seleccionar Evaluación
 			</h3>
-			<button class="btn btn-circle btn-ghost" onclick={() => evalModal?.close()}>
+			<button class="btn btn-ghost btn-circle" onclick={() => appState.modal?.close()}>
 				<X size={20} />
 			</button>
-		</header>
+		</div>
 		<div class="bg-base-100 rounded-xl p-4 mb-6 shadow-sm">
 			<label class="label font-semibold flex gap-2">
 				<BookOpen class="w-5 h-5 text-primary" /> Nivel
 			</label>
 			<select
 				class="select select-bordered w-full"
-				bind:value={selectedLevel}
+				bind:value={appState.level}
 				onchange={loadEvaluationsByLevel}
 			>
 				<option value="">Elige un nivel</option>
@@ -682,7 +558,7 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each evaluations as item (item.code)}
+					{#each appState.evaluations as item (item.code)}
 						<tr class="hover:bg-base-300">
 							<td class="font-medium">{item.name}</td>
 							<td class="text-center"><span class="badge badge-ghost">{item.group_name}</span></td>
@@ -700,5 +576,5 @@
 			</table>
 		</div>
 	</div>
-	<form method="dialog" class="modal-backdrop"><button>close</button></form>
+	<form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
 </dialog>

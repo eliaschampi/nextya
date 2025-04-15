@@ -2,6 +2,7 @@
 	import { X, Check, AlertCircle } from 'lucide-svelte';
 	import type { OmrProcessedResult } from '$lib/types/omrProcessing';
 	import type { AnswerValue } from '$lib/omrProcessor';
+	import Message from './Message.svelte';
 
 	const {
 		result,
@@ -15,7 +16,6 @@
 
 	let modal = $state<HTMLDialogElement | null>(null);
 
-	// Modal control
 	$effect(() => {
 		if (open && modal) {
 			modal.showModal();
@@ -24,7 +24,6 @@
 		}
 	});
 
-	// Close event handling
 	$effect(() => {
 		const modalElement = modal;
 		if (!modalElement) return;
@@ -34,26 +33,22 @@
 		return () => modalElement.removeEventListener('close', handleClose);
 	});
 
-	// Close modal
 	function closeModal() {
 		modal?.close();
 	}
 
-	// Get answer status class
 	function getAnswerStatusClass(answer: AnswerValue, correctKey: string): string {
 		if (!answer) return 'badge-warning';
 		if (answer === 'error_multiple') return 'badge-error';
 		return answer.toUpperCase() === correctKey ? 'badge-success' : 'badge-error';
 	}
 
-	// Get answer status icon
 	function getAnswerStatusIcon(answer: AnswerValue, correctKey: string) {
 		if (!answer) return AlertCircle;
 		if (answer === 'error_multiple') return X;
 		return answer.toUpperCase() === correctKey ? Check : X;
 	}
 
-	// Format answer for display
 	function formatAnswer(answer: AnswerValue): string {
 		if (!answer) return 'Sin respuesta';
 		if (answer === 'error_multiple') return 'Múltiples marcas';
@@ -62,7 +57,7 @@
 </script>
 
 <dialog bind:this={modal} class="modal">
-	<div class="modal-box  flex flex-col">
+	<div class="modal-box flex flex-col">
 		<h3 class="font-bold text-lg mb-4">Detalles de Respuestas</h3>
 
 		{#if result}
@@ -78,11 +73,11 @@
 					</div>
 				</div>
 			{:else}
-				<div class="alert alert-warning mb-4">
-					<AlertCircle size={16} />
-					<span>{result.validationStatus?.message || 'Estudiante no encontrado'}</span>
-				</div>
-				<div class="mb-4">
+				<Message
+					type="warning"
+					description={result.validationStatus?.message || 'Estudiante no encontrado'}
+				/>
+				<div class="my-2">
 					<div class="text-sm opacity-70">
 						Código detectado: {result.studentCode || result.detectedCode || 'N/A'}
 					</div>
@@ -143,12 +138,12 @@
 								<tr>
 									<td class="font-medium">{question.order_in_eval}</td>
 									<td>
-										<span class="badge badge-lg font-mono">
+										<span class="badge font-mono">
 											{formatAnswer(answer)}
 										</span>
 									</td>
 									<td>
-										<span class="badge badge-lg badge-primary font-mono">
+										<span class="badge badge-outline badge-primary font-mono">
 											{correctKey}
 										</span>
 									</td>

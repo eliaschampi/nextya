@@ -13,7 +13,6 @@ export interface OmrProcessedResult {
 		rollCode: string;
 		registerCode: string;
 	};
-	duplicateFound?: boolean;
 	validationStatus?: {
 		isValid: boolean;
 		message: string;
@@ -30,33 +29,3 @@ export interface OmrProcessedResult {
 	saved?: boolean; // Flag to indicate if the result has been saved
 }
 
-// Types for saving results
-export interface SaveResultRequest {
-	evalCode: string;
-	registerCode: string;
-	answers: Record<number, AnswerValue>;
-	correctCount: number;
-	incorrectCount: number;
-	blankCount: number;
-	totalScore: number;
-}
-
-// Types for batch saving
-export interface BatchSaveRequest {
-	evalCode: string;
-	results: SaveResultRequest[];
-}
-
-// Types for batch save response
-export interface BatchSaveResponse {
-	status: 'success' | 'error';
-	message: string;
-	processedResults?: Array<{
-		registerCode: string;
-		status: 'success' | 'error';
-	}>;
-	errors?: Array<{
-		registerCode: string;
-		message: string;
-	}>;
-}

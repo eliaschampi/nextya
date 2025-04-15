@@ -38,73 +38,55 @@
 		savingIndex: number;
 		evalSelected: boolean;
 		onSelect?: (index: number) => void;
-		onProcess?: (index: number) => void;
+		onProcess?: (index: number, rollCode?: string) => void;
 		onRemove?: (index: number) => void;
 		onViewDetails?: (index: number) => void;
 		onSave?: (index: number) => void;
 		onReprocess?: (index: number, rollCode: string) => void;
 	}>();
 
-	// Local state for editing student codes
 	let editingIndex = $state<number | null>(null);
 	let editedRollCode = $state('');
-	// Flag to indicate if we're editing before processing
-	let preProcessEdit = $state<number | null>(null);
+	let isPreProcessingEdit = $state<number | null>(null);
 
-	// Start editing a student code
 	function startEditing(index: number, event: MouseEvent) {
 		event.stopPropagation();
 		editingIndex = index;
-		// If the file hasn't been processed yet, mark it as pre-process edit
 		if (!processedResults[index] || processedResults[index]?.status === 'error') {
-			preProcessEdit = index;
+			isPreProcessingEdit = index;
 		}
 		editedRollCode =
 			processedResults[index]?.studentCode || processedResults[index]?.detectedCode || '';
 	}
 
-	// Save edited student code
 	function saveEditing(index: number, event: MouseEvent) {
 		event.stopPropagation();
 		if (editedRollCode && /^\d{4}$/.test(editedRollCode)) {
-			// If we're editing before processing, we'll use this code when processing
-			if (preProcessEdit === index) {
-				// Process with the manually entered code
+			if (isPreProcessingEdit === index) {
 				onProcess(index, editedRollCode);
-				preProcessEdit = null;
+				isPreProcessingEdit = null;
 			} else {
-				// Reprocess with the new code
 				onReprocess(index, editedRollCode);
 			}
 		}
 		editingIndex = null;
 	}
 
-	// Cancel editing
 	function cancelEditing(event: MouseEvent) {
 		event.stopPropagation();
 		editingIndex = null;
-		preProcessEdit = null;
+		isPreProcessingEdit = null;
 	}
 
-	// Format score with color
-	function getScoreClass(score: number): string {
-		if (score >= 7) return 'text-success';
-		if (score >= 4) return 'text-warning';
+	function getScoreColorClass(score: number): string {
+		if (score >= 14) return 'text-success';
+		if (score >= 10) return 'text-warning';
 		return 'text-error';
 	}
-
-	// Get code status class
-	/* function getCodeStatusClass(result: OmrProcessedResult | undefined): string {
-		if (!result) return '';
-		if (result.status === 'error' && result.errorType === 'invalid_roll_code') return 'text-error';
-		if (!result.student) return 'text-warning';
-		return 'text-primary';
-	} */
 </script>
 
-<div class="overflow-x-auto rounded-lg bg-base-200/80">
-	<table class="table table-zebra table-sm">
+<div class="overflow-x-auto rounded-lg bg-base-300/50">
+	<table class="table table-sm">
 		<thead>
 			<tr>
 				<th>Archivo</th>
@@ -117,22 +99,20 @@
 		<tbody>
 			{#each files as file, index (index)}
 				<tr
-					class="hover:bg-base-200 cursor-pointer {selectedIndex === index
-						? 'bg-primary/10 border-l-4 border-primary'
+					class="hover:bg-primary/10 cursor-pointer {selectedIndex === index
+						? 'bg-primary/10'
 						: ''}"
 					onclick={() => onSelect(index)}
 				>
-					<!-- Nombre del archivo -->
 					<td class="truncate max-w-[150px]" title={file.name}>
 						<div class="flex items-center gap-2">
-							<!-- Indicador de estado -->
 							{#if isProcessing && processingIndex === index}
 								<Loader2 size={14} class="text-info animate-spin" />
 							{:else if processedResults[index]?.status === 'success'}
 								<Check size={14} class="text-success" />
 							{:else if processedResults[index]?.status === 'error'}
 								<AlertCircle size={14} class="text-error" />
-							{:else if preProcessEdit === index}
+							{:else if isPreProcessingEdit === index}
 								<div class="w-3.5 h-3.5 rounded-full bg-primary animate-pulse"></div>
 							{:else}
 								<div class="w-3.5 h-3.5 rounded-full bg-warning/50"></div>
@@ -141,7 +121,6 @@
 						</div>
 					</td>
 
-					<!-- Código de estudiante -->
 					<td>
 						{#if editingIndex === index}
 							<div class="join">
@@ -161,7 +140,7 @@
 									class="join-item btn btn-primary btn-xs btn-square"
 									onclick={(e) => saveEditing(index, e)}
 									disabled={!editedRollCode || !/^\d{4}$/.test(editedRollCode)}
-									title={preProcessEdit === index
+									title={isPreProcessingEdit === index
 										? 'Procesar con este código'
 										: 'Actualizar código'}
 								>
@@ -171,21 +150,18 @@
 									<X size={12} />
 								</button>
 							</div>
-						{:else if !processedResults[index] && preProcessEdit !== index}
-							<!-- Opción para ingresar código antes de procesar -->
-							<div class="flex items-center gap-1">
-								<button
-									class="btn btn-outline btn-xs btn-primary"
-									onclick={(e) => startEditing(index, e)}
-									disabled={isProcessing}
-									title="Especificar código antes de procesar"
-								>
-									<Edit size={12} class="mr-1" /> Especificar código
-								</button>
-							</div>
+						{:else if !processedResults[index] && isPreProcessingEdit !== index}
+							<button
+								class="btn btn-outline btn-xs btn-primary"
+								onclick={(e) => startEditing(index, e)}
+								disabled={isProcessing}
+								title="Especificar código antes de procesar"
+							>
+								<Edit size={12} class="mr-1" /> Especificar
+							</button>
 						{:else}
-							<div class="flex items-center gap-1">
-								{#if processedResults[index]}
+							<div class="flex items-center gap-2">
+								{#if processedResults[index]?.studentCode || processedResults[index]?.detectedCode}
 									<div
 										class="badge badge-sm font-mono {processedResults[index].errorType ===
 										'invalid_roll_code'
@@ -194,15 +170,8 @@
 												? 'badge-primary'
 												: 'badge-warning'}"
 									>
-										{processedResults[index].studentCode ||
-											processedResults[index].detectedCode ||
-											'N/A'}
+										{processedResults[index].studentCode || processedResults[index].detectedCode}
 									</div>
-									{#if processedResults[index].detectedCode && processedResults[index].detectedCode !== processedResults[index].studentCode}
-										<div class="text-xs opacity-70">
-											(Detectado: {processedResults[index].detectedCode})
-										</div>
-									{/if}
 									<button
 										class="btn btn-ghost btn-xs btn-square"
 										onclick={(e) => startEditing(index, e)}
@@ -210,10 +179,6 @@
 									>
 										<Edit size={12} />
 									</button>
-								{:else if preProcessEdit === index}
-									<div class="badge badge-sm badge-primary font-mono animate-pulse">
-										{editedRollCode || 'Pendiente'}
-									</div>
 								{:else}
 									<span class="text-xs opacity-50">Pendiente</span>
 								{/if}
@@ -221,7 +186,6 @@
 						{/if}
 					</td>
 
-					<!-- Nombre del estudiante -->
 					<td>
 						{#if processedResults[index]?.status === 'success' && processedResults[index]?.student}
 							<span class="text-sm truncate max-w-32">
@@ -249,32 +213,31 @@
 									<Info size={12} /> No encontrado
 								</span>
 							</div>
-						{:else if preProcessEdit === index}
+						{:else if isPreProcessingEdit === index}
 							<span class="text-xs opacity-70">Pendiente de procesar</span>
 						{:else}
 							<span class="text-xs opacity-50">-</span>
 						{/if}
 					</td>
 
-					<!-- Nota -->
 					<td class="text-center">
 						{#if processedResults[index]?.status === 'success' && processedResults[index]?.results}
-							<span class="font-bold {getScoreClass(processedResults[index].results.totalScore)}">
+							<span
+								class="font-bold {getScoreColorClass(processedResults[index].results.totalScore)}"
+							>
 								{processedResults[index].results.totalScore.toFixed(1)}
 							</span>
-						{:else if preProcessEdit === index}
+						{:else if isPreProcessingEdit === index}
 							<span class="text-xs opacity-70">Pendiente</span>
 						{:else}
 							<span class="text-xs opacity-50">-</span>
 						{/if}
 					</td>
 
-					<!-- Acciones -->
 					<td class="text-right">
 						<div class="flex gap-1 justify-end">
 							{#if !processedResults[index] || processedResults[index]?.status === 'error'}
-								<!-- Botón de procesar solo si no estamos en modo edición previa -->
-								{#if preProcessEdit !== index}
+								{#if isPreProcessingEdit !== index}
 									<button
 										class="btn btn-primary btn-xs"
 										onclick={(e) => {
@@ -293,7 +256,6 @@
 								{/if}
 							{/if}
 
-							<!-- Botón de reprocesar si hubo error pero no es de código inválido -->
 							{#if processedResults[index]?.status === 'error' && processedResults[index]?.errorType !== 'invalid_roll_code'}
 								<button
 									class="btn btn-warning btn-xs"
@@ -308,7 +270,6 @@
 								</button>
 							{/if}
 
-							<!-- Botón de ver detalles siempre visible si hay resultados -->
 							{#if processedResults[index]?.status === 'success'}
 								<button
 									class="btn btn-ghost btn-xs"
@@ -322,7 +283,6 @@
 								</button>
 							{/if}
 
-							<!-- Botón de guardar solo si hay estudiante y no está guardado -->
 							{#if processedResults[index]?.status === 'success' && processedResults[index]?.student && !processedResults[index]?.saved}
 								<button
 									class="btn btn-primary btn-xs"
@@ -341,7 +301,6 @@
 								</button>
 							{/if}
 
-							<!-- Indicador de guardado -->
 							{#if processedResults[index]?.saved}
 								<span class="badge badge-sm badge-success gap-1">
 									<Check size={12} /> Guardado
