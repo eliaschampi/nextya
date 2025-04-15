@@ -24,7 +24,8 @@ import { processCodeBlock, processAnswersBlock } from './steps/05_process_bubble
 export async function omrProcessorInternal( // Renombrada a Internal para evitar conflicto con exportación final
 	imageBuffer: Buffer,
 	numberOfQuestions: number,
-	enableDebug: boolean = false
+	enableDebug: boolean = false,
+	codeDefined: string | null = null
 ): Promise<OmrResult> {
 	// --- Gestión de Memoria ---
 	const matsToRelease: (cv.Mat | null | undefined)[] = [];
@@ -94,7 +95,7 @@ export async function omrProcessorInternal( // Renombrada a Internal para evitar
 		const answersROI_View = rois.answersROI;
 
 		// --- 7. Procesamiento del Bloque de Código ---
-		const studentCode = processCodeBlock(codeROI_View); // Lanza OmrError
+		const studentCode = !codeDefined ? processCodeBlock(codeROI_View) : codeDefined;
 
 		// --- 8. Procesamiento del Bloque de Respuestas ---
 		const answers_0based = processAnswersBlock(answersROI_View, numQuestionsToProcess); // Lanza OmrError

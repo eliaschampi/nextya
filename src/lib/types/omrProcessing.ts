@@ -28,4 +28,3 @@ export interface OmrProcessedResult {
 	omrResult?: unknown;
 	saved?: boolean; // Flag to indicate if the result has been saved
 }
-

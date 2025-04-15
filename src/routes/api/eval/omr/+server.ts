@@ -1,7 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { omrProcessor as processOmrImage } from '$lib/omrProcessor';
-import type { AnswerValue } from '$lib/omrProcessor';
 import { fetchRegisterByStudentCode } from '$lib/data/register';
 import { fetchQuestions } from '$lib/data/question';
 import type { EvalQuestion } from '../../../../app';
@@ -43,7 +42,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				{
 					status: 'error',
 					errorType: 'invalid_roll_code',
-					message: `Código inválido: ${studentRollCode}. Debe ser 4 dígitos numéricos.`,
+					message: `Código inválido: ${studentRollCode}.`,
 					detectedCode: omrResult.studentCode,
 					omrResult
 				},
@@ -63,7 +62,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		for (const question of questionsData) {
 			const questionIndex = question.order_in_eval - 1;
 			const studentAnswer = omrResult.answers[questionIndex];
-
 			if (!studentAnswer || studentAnswer === null) {
 				blankCount++;
 			} else if (studentAnswer === 'error_multiple') {
@@ -94,13 +92,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				blankCount,
 				totalScore
 			},
-			answers: Object.entries(omrResult.answers).reduce(
-				(acc, [key, value]) => {
-					acc[Number(key)] = value;
-					return acc;
-				},
-				{} as Record<number, AnswerValue>
-			),
+			answers: omrResult.answers,
 			questions: questionsData
 		});
 	} catch (error) {
