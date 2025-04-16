@@ -50,7 +50,7 @@
 	let dragStart = $state<{ x: number; y: number } | null>(null);
 	const MIN_ZOOM = 0.5;
 	const MAX_ZOOM = 1.5;
-	const ZOOM_STEP = 0.05;
+	const ZOOM_STEP = 0.02;
 
 	// Estado para verificación de formato
 	let isA5Format = $state(true);
@@ -58,6 +58,10 @@
 
 	$effect(() => {
 		displayedImageUrl = imageUrl;
+		// Reiniciar transformaciones cuando cambia la imagen
+		if (imageUrl) {
+			resetView();
+		}
 	});
 
 	function checkImageFormat() {
@@ -91,7 +95,8 @@
 		flipY = false;
 		cropData = null;
 		exitCropMode();
-		displayedImageUrl = imageUrl;
+		zoomLevel = 1;
+		// No resetear displayedImageUrl, solo mantener la imagen actual sin transformaciones
 	}
 
 	// Modo recorte
@@ -105,6 +110,7 @@
 	function exitCropMode() {
 		cropMode = false;
 		zoomLevel = 1;
+		// No eliminamos cropData para mantener el último recorte
 	}
 
 	// Zoom
@@ -123,17 +129,23 @@
 			const transformations = {
 				rotation,
 				flip: { horizontal: flipX, vertical: flipY },
+				zoom: cropMode ? zoomLevel : 1,
 				crop: cropData ? { ...cropData, targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio } : undefined,
 				quality: 0.95
 			};
 			const processedImageData = processImageWithCanvas(imageRef, transformations);
+			// Actualizar la imagen mostrada con la versión procesada
 			displayedImageUrl = processedImageData;
-			if (onImageSave) onImageSave(processedImageData);
+
+			// Reiniciar todas las transformaciones ya que ahora están aplicadas a la imagen
 			rotation = 0;
 			flipX = false;
 			flipY = false;
 			cropData = null;
 			exitCropMode();
+
+			// Enviar la imagen procesada si hay un callback
+			if (onImageSave) onImageSave(processedImageData);
 		} catch (error) {
 			console.error('Error al procesar la imagen:', error);
 		} finally {
@@ -154,7 +166,12 @@
 			width = imgRect.width * 0.9;
 			height = width / targetRatio;
 		}
-		cropData = { x: (imgRect.width - width) / 2, y: (imgRect.height - height) / 2, width, height };
+		cropData = {
+			x: Math.floor((imgRect.width - width) / 2),
+			y: Math.floor((imgRect.height - height) / 2),
+			width: Math.floor(width),
+			height: Math.floor(height)
+		};
 	}
 
 	// Manejo de arrastre del marco de recorte
@@ -162,7 +179,10 @@
 		if (!imageRef || !cropMode || !cropData) return;
 		isDraggingCrop = true;
 		const rect = imageRef.getBoundingClientRect();
-		dragStart = { x: clientX - rect.left - cropData.x, y: clientY - rect.top - cropData.y };
+		dragStart = {
+			x: clientX - rect.left - cropData.x,
+			y: clientY - rect.top - cropData.y
+		};
 		document.addEventListener('mousemove', handleMouseMove);
 		document.addEventListener('mouseup', handleMouseUp);
 		document.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -186,10 +206,13 @@
 	function moveDragCrop(clientX: number, clientY: number) {
 		if (!isDraggingCrop || !dragStart || !imageRef || !cropData) return;
 		const rect = imageRef.getBoundingClientRect();
-		let newX = clientX - rect.left - dragStart.x;
-		let newY = clientY - rect.top - dragStart.y;
+		let newX = Math.floor(clientX - rect.left - dragStart.x);
+		let newY = Math.floor(clientY - rect.top - dragStart.y);
+
+		// Asegurar que el recorte no salga de los límites de la imagen
 		newX = Math.max(0, Math.min(rect.width - cropData.width, newX));
 		newY = Math.max(0, Math.min(rect.height - cropData.height, newY));
+
 		cropData = { ...cropData, x: newX, y: newY };
 	}
 
@@ -255,9 +278,8 @@
 				<button class="btn btn-sm" onclick={resetView}>Restablecer</button>
 			{/if}
 			<button
-				class="btn btn-sm btn-primary gap-2"
+				class="btn btn-sm btn-primary gap-2 {cropMode && 'btn-error'}"
 				onclick={toggleCropMode}
-				class:btn-error={cropMode}
 			>
 				<Crop size={16} />
 				{cropMode ? 'Cancelar' : 'Recortar'}
