@@ -18,13 +18,6 @@ export const PAPER_FORMATS = {
 	A4_HORIZONTAL: { name: 'A4 Horizontal', ratio: 1.414, tolerance: 0.05 }
 };
 
-/**
- * Verifica si una imagen tiene un formato específico
- * @param imageWidth Ancho de la imagen
- * @param imageHeight Alto de la imagen
- * @param format Formato a verificar
- * @returns true si la imagen tiene el formato especificado
- */
 export function checkImageFormat(
 	imageWidth: number,
 	imageHeight: number,
@@ -34,13 +27,6 @@ export function checkImageFormat(
 	return Math.abs(imageRatio - format.ratio) <= format.tolerance;
 }
 
-/**
- * Calcula las dimensiones para recortar una imagen a un formato específico
- * @param origWidth Ancho original
- * @param origHeight Alto original
- * @param targetRatio Relación de aspecto objetivo (ancho/alto)
- * @returns Dimensiones para el recorte
- */
 export function calculateCropDimensions(
 	origWidth: number,
 	origHeight: number,
@@ -65,12 +51,6 @@ export function calculateCropDimensions(
 	return { width: newWidth, height: newHeight, offsetX, offsetY };
 }
 
-/**
- * Procesa una imagen en un canvas (rotación o recorte)
- * @param image Elemento de imagen
- * @param options Opciones de procesamiento
- * @returns Datos de la imagen procesada en formato base64
- */
 export function processImageWithCanvas(
 	image: HTMLImageElement,
 	options: {
@@ -227,8 +207,6 @@ export function processImageWithCanvas(
 		outputCtx.scale(scaleX, scaleY);
 	}
 
-	// Dibujar la imagen desde el canvas temporal al canvas de salida
-	// Si rotamos 90 o 270 grados, intercambiamos ancho y alto
 	const drawWidth =
 		options.rotation && (options.rotation % 180 === 90 || options.rotation % 180 === 270)
 			? imgHeight
@@ -247,12 +225,6 @@ export function processImageWithCanvas(
 	return outputCanvas.toDataURL('image/jpeg', options.quality || 0.95);
 }
 
-/**
- * Convierte datos de imagen base64 a un objeto File
- * @param base64Data Datos de imagen en formato base64
- * @param fileName Nombre del archivo
- * @returns Objeto File
- */
 export function base64ToFile(base64Data: string, fileName: string): File {
 	const byteString = atob(base64Data.split(',')[1]);
 	const mimeType = base64Data.split(',')[0].split(':')[1].split(';')[0];
