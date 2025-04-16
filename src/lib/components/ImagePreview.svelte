@@ -7,11 +7,14 @@
 		Loader2,
 		RotateCcw,
 		RotateCw,
-		ZoomIn,
-		ZoomOut,
 		Save,
 		Crop,
-		Info
+		Info,
+		FlipHorizontal,
+		FlipVertical,
+		Move,
+		ZoomIn,
+		ZoomOut
 	} from 'lucide-svelte';
 	import {
 		PAPER_FORMATS,
@@ -33,148 +36,188 @@
 		onImageSave?: (processedImageData: string) => void;
 	}>();
 
-	// Estado para la rotación y zoom
+	// Estado para transformaciones
 	let rotation = $state(0);
-	let zoom = $state(1);
+	let flipX = $state(false);
+	let flipY = $state(false);
+	let cropData = $state<{ x: number; y: number; width: number; height: number } | null>(null);
 	let imageRef = $state<HTMLImageElement | undefined>(undefined);
-	let isSaving = $state(false);
-	let isCropping = $state(false);
-	let showFormatInfo = $state(false);
+	let displayedImageUrl = $state(imageUrl);
+	let isProcessing = $state(false);
+	let cropMode = $state(false);
+	let zoomLevel = $state(1);
+	let isDraggingCrop = $state(false);
+	let dragStart = $state<{ x: number; y: number } | null>(null);
+	const MIN_ZOOM = 0.5;
+	const MAX_ZOOM = 1.5;
+	const ZOOM_STEP = 0.05;
 
 	// Estado para verificación de formato
 	let isA5Format = $state(true);
-	let imageRatio = $state(0);
 	let formatName = $state('');
 
-	// Verificar formato cuando la imagen carga
+	$effect(() => {
+		displayedImageUrl = imageUrl;
+	});
+
 	function checkImageFormat() {
 		if (!imageRef) return;
-
-		// Calcular relación de aspecto actual
 		const width = imageRef.naturalWidth;
 		const height = imageRef.naturalHeight;
-		imageRatio = width / height;
-
-		// Verificar si está en formato A5 vertical
 		isA5Format = checkFormat(width, height, PAPER_FORMATS.A5_VERTICAL);
-
-		// Determinar el formato más cercano
-		if (isA5Format) {
-			formatName = PAPER_FORMATS.A5_VERTICAL.name;
-		} else if (checkFormat(width, height, PAPER_FORMATS.A5_HORIZONTAL)) {
-			formatName = PAPER_FORMATS.A5_HORIZONTAL.name;
-		} else if (checkFormat(width, height, PAPER_FORMATS.A4_VERTICAL)) {
-			formatName = PAPER_FORMATS.A4_VERTICAL.name;
-		} else if (checkFormat(width, height, PAPER_FORMATS.A4_HORIZONTAL)) {
-			formatName = PAPER_FORMATS.A4_HORIZONTAL.name;
-		} else {
-			formatName = 'Formato personalizado';
-		}
+		formatName = isA5Format ? PAPER_FORMATS.A5_VERTICAL.name : 'Formato no A5';
 	}
 
-	// Funciones para rotar la imagen
+	// Funciones de transformación
 	function rotateClockwise() {
 		rotation = (rotation + 90) % 360;
+		exitCropMode();
 	}
-
 	function rotateCounterClockwise() {
 		rotation = (rotation - 90 + 360) % 360;
+		exitCropMode();
 	}
-
-	// Funciones para zoom
-	function zoomIn() {
-		zoom = Math.min(zoom + 0.25, 3);
+	function flipHorizontal() {
+		flipX = !flipX;
+		exitCropMode();
 	}
-
-	function zoomOut() {
-		zoom = Math.max(zoom - 0.25, 0.5);
+	function flipVertical() {
+		flipY = !flipY;
+		exitCropMode();
 	}
-
 	function resetView() {
 		rotation = 0;
-		zoom = 1;
+		flipX = false;
+		flipY = false;
+		cropData = null;
+		exitCropMode();
+		displayedImageUrl = imageUrl;
 	}
 
-	// Función para alternar la información de formato
-	function toggleFormatInfo() {
-		showFormatInfo = !showFormatInfo;
-	}
-
-	// Función para recortar a formato A5 vertical
-	async function cropToA5() {
-		if (!imageRef || !imageUrl) return;
-
-		try {
-			isCropping = true;
-
-			// Usar la utilidad para procesar la imagen
-			const croppedImageData = processImageWithCanvas(imageRef, {
-				crop: {
-					targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio
-				},
-				quality: 0.95
-			});
-
-			// Llamar al callback si existe
-			if (onImageSave) {
-				onImageSave(croppedImageData);
-			}
-
-			// Actualizar estado
-			isA5Format = true;
-			formatName = PAPER_FORMATS.A5_VERTICAL.name;
-
-			return croppedImageData;
-		} catch (error) {
-			console.error('Error al recortar la imagen:', error);
-		} finally {
-			isCropping = false;
+	// Modo recorte
+	function toggleCropMode() {
+		cropMode = !cropMode;
+		if (cropMode) {
+			zoomLevel = 1;
+			resetCropPreview();
 		}
 	}
+	function exitCropMode() {
+		cropMode = false;
+		zoomLevel = 1;
+	}
 
-	// Función para guardar la imagen rotada
-	async function saveRotatedImage() {
-		if (!imageRef || !imageUrl || rotation === 0) return;
+	// Zoom
+	function zoomIn() {
+		if (zoomLevel < MAX_ZOOM) zoomLevel = Math.min(MAX_ZOOM, zoomLevel + ZOOM_STEP);
+	}
+	function zoomOut() {
+		if (zoomLevel > MIN_ZOOM) zoomLevel = Math.max(MIN_ZOOM, zoomLevel - ZOOM_STEP);
+	}
 
+	// Guardar transformaciones
+	async function saveProcessedImage() {
+		if (!imageRef || !displayedImageUrl) return;
 		try {
-			isSaving = true;
-
-			// Usar la utilidad para procesar la imagen
-			const rotatedImageData = processImageWithCanvas(imageRef, {
+			isProcessing = true;
+			const transformations = {
 				rotation,
+				flip: { horizontal: flipX, vertical: flipY },
+				crop: cropData ? { ...cropData, targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio } : undefined,
 				quality: 0.95
-			});
-
-			// Llamar al callback si existe
-			if (onImageSave) {
-				onImageSave(rotatedImageData);
-			}
-
-			// Resetear la rotación ya que ahora la imagen está rotada
+			};
+			const processedImageData = processImageWithCanvas(imageRef, transformations);
+			displayedImageUrl = processedImageData;
+			if (onImageSave) onImageSave(processedImageData);
 			rotation = 0;
-
-			return rotatedImageData;
+			flipX = false;
+			flipY = false;
+			cropData = null;
+			exitCropMode();
 		} catch (error) {
-			console.error('Error al guardar la imagen rotada:', error);
+			console.error('Error al procesar la imagen:', error);
 		} finally {
-			isSaving = false;
+			isProcessing = false;
 		}
 	}
 
-	// Calcular clases y estilos para la imagen
-	let imageTransform = $derived(`rotate(${rotation}deg) scale(${zoom})`);
-	let imageContainerClass = $derived(`relative w-full max-h-[65vh]`);
+	// Vista previa de recorte
+	function resetCropPreview() {
+		if (!imageRef) return;
+		const imgRect = imageRef.getBoundingClientRect();
+		const targetRatio = PAPER_FORMATS.A5_VERTICAL.ratio;
+		let width, height;
+		if (imgRect.width / imgRect.height > targetRatio) {
+			height = imgRect.height * 0.9;
+			width = height * targetRatio;
+		} else {
+			width = imgRect.width * 0.9;
+			height = width / targetRatio;
+		}
+		cropData = { x: (imgRect.width - width) / 2, y: (imgRect.height - height) / 2, width, height };
+	}
+
+	// Manejo de arrastre del marco de recorte
+	function startDragCrop(clientX: number, clientY: number) {
+		if (!imageRef || !cropMode || !cropData) return;
+		isDraggingCrop = true;
+		const rect = imageRef.getBoundingClientRect();
+		dragStart = { x: clientX - rect.left - cropData.x, y: clientY - rect.top - cropData.y };
+		document.addEventListener('mousemove', handleMouseMove);
+		document.addEventListener('mouseup', handleMouseUp);
+		document.addEventListener('touchmove', handleTouchMove, { passive: false });
+		document.addEventListener('touchend', handleTouchEnd);
+	}
+
+	function handleMouseMove(e: MouseEvent) {
+		moveDragCrop(e.clientX, e.clientY);
+	}
+	function handleTouchMove(e: TouchEvent) {
+		e.preventDefault();
+		if (e.touches[0]) moveDragCrop(e.touches[0].clientX, e.touches[0].clientY);
+	}
+	function handleMouseUp() {
+		endDragCrop();
+	}
+	function handleTouchEnd() {
+		endDragCrop();
+	}
+
+	function moveDragCrop(clientX: number, clientY: number) {
+		if (!isDraggingCrop || !dragStart || !imageRef || !cropData) return;
+		const rect = imageRef.getBoundingClientRect();
+		let newX = clientX - rect.left - dragStart.x;
+		let newY = clientY - rect.top - dragStart.y;
+		newX = Math.max(0, Math.min(rect.width - cropData.width, newX));
+		newY = Math.max(0, Math.min(rect.height - cropData.height, newY));
+		cropData = { ...cropData, x: newX, y: newY };
+	}
+
+	function endDragCrop() {
+		isDraggingCrop = false;
+		dragStart = null;
+		document.removeEventListener('mousemove', handleMouseMove);
+		document.removeEventListener('mouseup', handleMouseUp);
+		document.removeEventListener('touchmove', handleTouchMove);
+		document.removeEventListener('touchend', handleTouchEnd);
+	}
+
+	// Transformaciones calculadas
+	let imageTransform = $derived(
+		`rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})`
+	);
+	let imageTransformWithZoom = $derived(`${imageTransform} scale(${zoomLevel})`);
+	let hasTransformations = $derived(rotation !== 0 || flipX || flipY || cropData !== null);
 </script>
 
 <div class="card-body p-4">
 	<header class="flex items-center justify-between mb-4 overflow-x-auto">
 		<h3 class="card-title">Previsualización</h3>
-		{#if imageUrl}
+		{#if displayedImageUrl}
 			<div class="flex gap-2">
-				<span class="badge badge-success gap-2">
-					<Check size={14} />
-					{fileIndex + 1}/{totalFiles}
-				</span>
+				<span class="badge badge-success gap-2"
+					><Check size={14} /> {fileIndex + 1}/{totalFiles}</span
+				>
 				{#if status === 'processing'}
 					<span class="badge badge-info gap-1"
 						><Loader2 size={12} class="animate-spin" /> Procesando</span
@@ -190,123 +233,137 @@
 		{/if}
 	</header>
 
-	<!-- Controles de imagen -->
-	{#if imageUrl}
+	{#if displayedImageUrl}
 		<div class="flex flex-wrap justify-center gap-2 mb-4">
-			<div class="join">
-				<button
-					class="btn btn-sm join-item"
-					onclick={rotateCounterClockwise}
-					aria-label="Rotar a la izquierda"
-				>
-					<RotateCcw size={16} />
-				</button>
-				<button
-					class="btn btn-sm join-item"
-					onclick={rotateClockwise}
-					aria-label="Rotar a la derecha"
-				>
-					<RotateCw size={16} />
-				</button>
-			</div>
-			<div class="join">
-				<button class="btn btn-sm join-item" onclick={zoomOut} aria-label="Reducir zoom">
-					<ZoomOut size={16} />
-				</button>
-				<button class="btn btn-sm join-item" onclick={zoomIn} aria-label="Aumentar zoom">
-					<ZoomIn size={16} />
-				</button>
-			</div>
-			<button class="btn btn-sm" onclick={resetView} aria-label="Restablecer vista">
-				Restablecer
+			{#if !cropMode}
+				<div class="join">
+					<button class="btn btn-sm join-item" onclick={rotateCounterClockwise}>
+						<RotateCcw size={16} />
+					</button>
+					<button class="btn btn-sm join-item" onclick={rotateClockwise}>
+						<RotateCw size={16} />
+					</button>
+				</div>
+				<div class="join">
+					<button class="btn btn-sm join-item" class:btn-accent={flipX} onclick={flipHorizontal}>
+						<FlipHorizontal size={16} />
+					</button>
+					<button class="btn btn-sm join-item" class:btn-accent={flipY} onclick={flipVertical}>
+						<FlipVertical size={16} />
+					</button>
+				</div>
+				<button class="btn btn-sm" onclick={resetView}>Restablecer</button>
+			{/if}
+			<button
+				class="btn btn-sm btn-primary gap-2"
+				onclick={toggleCropMode}
+				class:btn-error={cropMode}
+			>
+				<Crop size={16} />
+				{cropMode ? 'Cancelar' : 'Recortar'}
 			</button>
-
-			{#if rotation !== 0}
+			{#if cropMode}
+				<div class="join">
+					<button class="btn btn-sm join-item" onclick={zoomOut} disabled={zoomLevel <= MIN_ZOOM}>
+						<ZoomOut size={16} />
+					</button>
+					<span class="btn btn-sm join-item no-animation cursor-default">
+						{Math.round(zoomLevel * 100)}%
+					</span>
+					<button class="btn btn-sm join-item" onclick={zoomIn} disabled={zoomLevel >= MAX_ZOOM}>
+						<ZoomIn size={16} />
+					</button>
+				</div>
 				<button
 					class="btn btn-sm btn-success gap-2"
-					onclick={saveRotatedImage}
-					aria-label="Guardar cambios"
-					disabled={isSaving}
+					onclick={saveProcessedImage}
+					disabled={isProcessing}
 				>
-					{#if isSaving}
-						<Loader2 size={16} class="animate-spin" />
-						Guardando...
+					{#if isProcessing}
+						<Loader2 size={16} class="animate-spin" /> Procesando...
 					{:else}
-						<Save size={16} />
-						Guardar cambios
+						<Save size={16} /> Aplicar
 					{/if}
 				</button>
 			{/if}
-
-			{#if !isA5Format}
+			{#if hasTransformations && !cropMode}
 				<button
-					class="btn btn-sm btn-warning gap-2"
-					onclick={cropToA5}
-					aria-label="Recortar a A5"
-					disabled={isCropping}
+					class="btn btn-sm btn-success gap-2"
+					onclick={saveProcessedImage}
+					disabled={isProcessing}
 				>
-					{#if isCropping}
-						<Loader2 size={16} class="animate-spin" />
-						Recortando...
+					{#if isProcessing}
+						<Loader2 size={16} class="animate-spin" /> Guardando...
 					{:else}
-						<Crop size={16} />
-						Recortar a A5
+						<Save size={16} /> Guardar
 					{/if}
 				</button>
 			{/if}
 		</div>
 	{/if}
-
-	<!-- Contenedor de imagen -->
 	<div
 		class="relative flex-1 flex items-center justify-center bg-base-100 rounded-lg p-4 min-h-[400px] overflow-auto"
 	>
-		<div class={imageContainerClass}>
-			{#if imageUrl}
+		{#if displayedImageUrl}
+			<div class="relative inline-block">
 				<img
-					src={imageUrl}
+					src={displayedImageUrl}
 					alt="Previsualización"
-					class="w-full h-auto object-contain rounded-lg shadow-md transition-transform duration-300 mx-auto"
-					style="transform: {imageTransform}"
+					class="w-auto h-auto max-w-full max-h-[65vh] object-contain rounded-lg shadow-md transition-transform duration-200 select-none"
+					style="transform: {cropMode
+						? imageTransformWithZoom
+						: imageTransform}; transform-origin: center center;"
 					bind:this={imageRef}
 					onload={checkImageFormat}
 				/>
-			{:else}
-				<div class="text-center opacity-50 space-y-4">
-					<Upload size={48} class="mx-auto" />
-					<p>Selecciona un archivo</p>
-				</div>
-			{/if}
-		</div>
+				{#if cropMode && cropData}
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<div
+						class="absolute pointer-events-auto"
+						style="left: {cropData.x}px; top: {cropData.y}px; width: {cropData.width}px; height: {cropData.height}px; border: 2px dashed #3b82f6; background-color: rgba(255, 255, 255, 0.2); cursor: move; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); z-index: 10;"
+						onmousedown={(e) => startDragCrop(e.clientX, e.clientY)}
+						ontouchstart={(e) => {
+							e.preventDefault();
+							if (e.touches[0]) startDragCrop(e.touches[0].clientX, e.touches[0].clientY);
+						}}
+					>
+						<div
+							class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white"
+						>
+							<Move size={16} />
+						</div>
+					</div>
+				{/if}
+			</div>
+		{:else}
+			<div class="text-center opacity-50 space-y-4">
+				<Upload size={48} class="mx-auto" />
+				<p>Selecciona un archivo</p>
+			</div>
+		{/if}
 	</div>
 
-	{#if imageUrl}
-		<div class="flex justify-center mt-4 gap-2">
-			<div class="badge badge-sm">
-				Rotación: {rotation}° | Zoom: {(zoom * 100).toFixed(0)}%
-			</div>
-			{#if !isA5Format}
-				<button
-					class="badge badge-sm badge-warning gap-1 cursor-pointer"
-					onclick={toggleFormatInfo}
-					onkeydown={(e) => e.key === 'Enter' && toggleFormatInfo()}
-					tabindex="0"
-					aria-label="Mostrar información de formato"
-				>
-					<Info size={12} />
-					Formato no A5 ({formatName})
-				</button>
-			{/if}
-
-			{#if showFormatInfo}
-				<div
-					class="tooltip tooltip-open tooltip-warning"
-					data-tip="Se requiere formato A5 vertical para procesamiento OMR"
-				>
-					<span class="badge badge-sm badge-outline">
-						Relación: {(imageRatio * 100).toFixed(0)}%
-					</span>
+	{#if displayedImageUrl}
+		<div class="flex justify-center mt-4 gap-2 flex-wrap">
+			{#if cropMode}
+				<div class="badge badge-sm badge-info">Formato objetivo: A5 vertical</div>
+				{#if zoomLevel !== 1}
+					<div class="badge badge-sm badge-outline">Zoom: {Math.round(zoomLevel * 100)}%</div>
+				{/if}
+			{:else}
+				<div class="badge badge-sm">
+					Rotación: {rotation}°
+					{#if flipX || flipY}
+						| Volteo: {flipX ? 'Horizontal' : ''}{flipX && flipY ? ' y ' : ''}{flipY
+							? 'Vertical'
+							: ''}
+					{/if}
 				</div>
+				{#if !isA5Format}
+					<div class="badge badge-sm badge-warning gap-1">
+						<Info size={12} /> Formato no A5 ({formatName})
+					</div>
+				{/if}
 			{/if}
 		</div>
 	{/if}

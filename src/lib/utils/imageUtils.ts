@@ -75,6 +75,10 @@ export function processImageWithCanvas(
 	image: HTMLImageElement,
 	options: {
 		rotation?: number;
+		flip?: {
+			horizontal?: boolean;
+			vertical?: boolean;
+		}; // Puedes añadir más opciones si desees, como 'both' para voltear ambas direcciones, o 'none' para no voltear n
 		crop?: {
 			targetRatio: number;
 		};
