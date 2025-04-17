@@ -1,319 +1,295 @@
 <script lang="ts">
+	import type { FileEntry } from '$lib/types/app';
 	import {
 		Play,
 		X,
 		Loader2,
 		Eye,
 		Edit,
-		Save,
 		Check,
 		AlertCircle,
-		Info,
+		UserX,
+		HelpCircle,
+		UserCheck,
 		RefreshCw
 	} from 'lucide-svelte';
-	import type { OmrProcessedResult } from '$lib/types/omrProcessing';
+
+	type Props = {
+		entries: FileEntry[];
+		selectedId: string | null;
+		processingId: string | null; // ID del archivo que se está procesando individualmente (no batch)
+		validationErrorsMap: Map<string, string>; // Mapa de ID -> mensaje de error de validación
+		evalSelected: boolean;
+		onSelect: (id: string) => void;
+		onProcess: (id: string, rollCode?: string) => void; // Para procesar/reprocesar
+		onRemove: (id: string) => void;
+		onViewDetails: (id: string) => void;
+		onUpdateRollCode: (id: string, newRollCode: string) => void; // Cuando se confirma la edición del código
+	};
+
+	// Constants for score thresholds
+	const SCORE_THRESHOLD_SUCCESS = 14;
+	const SCORE_THRESHOLD_WARNING = 10.5;
+	const ROLL_CODE_PATTERN = /^\d{4}$/;
 
 	const {
-		files = [],
-		processedResults = {},
-		selectedIndex = -1,
-		isProcessing = false,
-		processingIndex = -1,
-		isSaving = false,
-		savingIndex = -1,
+		entries = [],
+		selectedId = null,
+		processingId = null,
+		validationErrorsMap = new Map(),
 		evalSelected = false,
 		onSelect = () => {},
 		onProcess = () => {},
 		onRemove = () => {},
 		onViewDetails = () => {},
-		onSave = () => {},
-		onReprocess = () => {}
-	} = $props<{
-		files: File[];
-		processedResults: Record<number, OmrProcessedResult>;
-		selectedIndex: number;
-		isProcessing: boolean;
-		processingIndex: number;
-		isSaving: boolean;
-		savingIndex: number;
-		evalSelected: boolean;
-		onSelect?: (index: number) => void;
-		onProcess?: (index: number, rollCode?: string) => void;
-		onRemove?: (index: number) => void;
-		onViewDetails?: (index: number) => void;
-		onSave?: (index: number) => void;
-		onReprocess?: (index: number, rollCode: string) => void;
-	}>();
+		onUpdateRollCode = () => {}
+	}: Props = $props();
 
-	let editingIndex = $state<number | null>(null);
+	let editingId = $state<string | null>(null);
 	let editedRollCode = $state('');
-	let isPreProcessingEdit = $state<number | null>(null);
 
-	function startEditing(index: number, event: MouseEvent) {
+	function startEditing(id: string, initialCode: string, event: MouseEvent) {
 		event.stopPropagation();
-		editingIndex = index;
-		if (!processedResults[index] || processedResults[index]?.status === 'error') {
-			isPreProcessingEdit = index;
+		// Si ya hay otro en edición, no hacer nada o cancelarlo? Por ahora, solo permitir uno.
+		if (editingId !== null) return;
+		editingId = id;
+		editedRollCode = initialCode;
+	}
+
+	function confirmEdit(id: string, event: Event) {
+		event.stopPropagation();
+		if (editedRollCode && ROLL_CODE_PATTERN.test(editedRollCode)) {
+			onUpdateRollCode(id, editedRollCode);
 		}
-		editedRollCode =
-			processedResults[index]?.studentCode || processedResults[index]?.detectedCode || '';
+		editingId = null;
+		editedRollCode = '';
 	}
 
-	function saveEditing(index: number, event: MouseEvent) {
+	function cancelEdit(event: Event) {
 		event.stopPropagation();
-		if (editedRollCode && /^\d{4}$/.test(editedRollCode)) {
-			if (isPreProcessingEdit === index) {
-				onProcess(index, editedRollCode);
-				isPreProcessingEdit = null;
-			} else {
-				onReprocess(index, editedRollCode);
-			}
+		editingId = null;
+		editedRollCode = '';
+	}
+
+	function getRowClass(entry: FileEntry): string {
+		let classes = 'hover:bg-primary/10 cursor-pointer';
+		if (entry.id === selectedId) classes += ' bg-primary/10';
+		else if (entry.saved) classes += ' opacity-70'; // Atenuar guardados
+		return classes;
+	}
+
+	function getStatusIcon(entry: FileEntry): typeof AlertCircle {
+		if (entry.id === processingId) return Loader2;
+		if (validationErrorsMap.has(entry.id)) return AlertCircle;
+		if (entry.status === 'processing') return Loader2; // Para batch
+		if (entry.status === 'success' && !entry.result?.register_code) return UserX;
+		if (entry.status === 'success') return Check;
+		if (entry.status === 'error') return AlertCircle;
+		return HelpCircle; // Pending
+	}
+
+	function getStatusColor(entry: FileEntry): string {
+		const icon = getStatusIcon(entry);
+		if (icon === Loader2) return 'text-info animate-spin';
+		if (validationErrorsMap.has(entry.id)) return 'text-error';
+		if (icon === UserX) return 'text-warning';
+		if (icon === Check) return 'text-success';
+		if (icon === AlertCircle) return 'text-error';
+		return 'text-base-content/50'; // Pending
+	}
+
+	function getScoreDisplay(entry: FileEntry): { text: string; class: string } {
+		if (entry.status === 'success' && entry.result?.scores?.general) {
+			const score = entry.result.scores.general.score;
+			let colorClass = 'text-error';
+			if (score >= SCORE_THRESHOLD_SUCCESS) colorClass = 'text-success';
+			else if (score >= SCORE_THRESHOLD_WARNING) colorClass = 'text-warning';
+			return { text: score.toFixed(1), class: `font-bold ${colorClass}` };
 		}
-		editingIndex = null;
+		return { text: '-', class: 'text-base-content/50' };
 	}
 
-	function cancelEditing(event: MouseEvent) {
-		event.stopPropagation();
-		editingIndex = null;
-		isPreProcessingEdit = null;
-	}
-
-	function getScoreColorClass(score: number): string {
-		if (score >= 14) return 'text-success';
-		if (score >= 10) return 'text-warning';
-		return 'text-error';
+	function getTooltip(entry: FileEntry): string | null {
+		if (validationErrorsMap.has(entry.id)) return validationErrorsMap.get(entry.id)!;
+		if (entry.status === 'error') return entry.error?.message ?? 'Error desconocido';
+		if (entry.status === 'success' && !entry.result?.register_code)
+			return `Estudiante con código ${entry.result?.roll_code} no encontrado en registros.`;
+		if (entry.saved) return 'Resultado guardado en la base de datos.';
+		if (entry.status === 'pending') return 'Pendiente de procesamiento.';
+		if (entry.id === processingId || entry.status === 'processing') return 'Procesando...';
+		if (entry.status === 'success') return 'Procesado correctamente.';
+		return null;
 	}
 </script>
 
-<div class="overflow-x-auto rounded-lg bg-base-300/50">
-	<table class="table table-sm">
+<div class="overflow-x-auto rounded-lg bg-base-200/50">
+	<table class="table table-sm w-full">
 		<thead>
 			<tr>
+				<th class="w-10"></th>
 				<th>Archivo</th>
 				<th>Código</th>
 				<th>Estudiante</th>
 				<th class="text-center">Nota</th>
-				<th class="text-right">Acciones</th>
+				<th class="text-right pr-4">Acciones</th>
 			</tr>
 		</thead>
 		<tbody>
-			{#each files as file, index (index)}
-				<tr
-					class="hover:bg-primary/10 cursor-pointer {selectedIndex === index
-						? 'bg-primary/10'
-						: ''}"
-					onclick={() => onSelect(index)}
-				>
-					<td class="truncate max-w-[150px]" title={file.name}>
-						<div class="flex items-center gap-2">
-							{#if isProcessing && processingIndex === index}
-								<Loader2 size={14} class="text-info animate-spin" />
-							{:else if processedResults[index]?.status === 'success'}
-								<Check size={14} class="text-success" />
-							{:else if processedResults[index]?.status === 'error'}
-								<AlertCircle size={14} class="text-error" />
-							{:else if isPreProcessingEdit === index}
-								<div class="w-3.5 h-3.5 rounded-full bg-primary animate-pulse"></div>
-							{:else}
-								<div class="w-3.5 h-3.5 rounded-full bg-warning/50"></div>
-							{/if}
-							<span class="font-medium">{file.name}</span>
-						</div>
+			{#each entries as entry (entry.id)}
+				{@const Icon = getStatusIcon(entry)}
+				{@const scoreInfo = getScoreDisplay(entry)}
+				{@const isProcessing = entry.id === processingId || entry.status === 'processing'}
+				{@const isEditingOther = editingId !== null && editingId !== entry.id}
+				{@const isBusy = isProcessing || isEditingOther}
+				<tr class={getRowClass(entry)} onclick={() => onSelect(entry.id)}>
+					<td class="text-center pl-2">
+						<span class="tooltip" data-tip={getTooltip(entry)}>
+							<Icon size={16} class={getStatusColor(entry)} />
+						</span>
 					</td>
-
-					<td>
-						{#if editingIndex === index}
-							<div class="join">
+					<td class="truncate max-w-xs py-2.5" title={entry.file.name}>
+						{entry.file.name}
+					</td>
+					<td class="font-mono text-sm">
+						{#if editingId === entry.id}
+							<div class="join h-7">
 								<input
 									type="text"
-									class="join-item input input-bordered input-xs w-16 {!editedRollCode ||
-									!/^\d{4}$/.test(editedRollCode)
+									class="join-item input input-bordered input-xs w-16 px-2 font-mono {editedRollCode &&
+									!ROLL_CODE_PATTERN.test(editedRollCode)
 										? 'input-error'
-										: ''}"
+										: 'input-primary'}"
 									bind:value={editedRollCode}
 									pattern="\d{4}"
 									maxlength="4"
-									placeholder="Código"
-									onclick={(e) => e.stopPropagation()}
+									placeholder="0000"
+									onkeydown={(e) => {
+										if (e.key === 'Enter') confirmEdit(entry.id, e);
+										else if (e.key === 'Escape') cancelEdit(e);
+									}}
+									aria-label="Editar código de matrícula"
+									aria-describedby={editedRollCode && !ROLL_CODE_PATTERN.test(editedRollCode)
+										? `roll-code-error-${entry.id}`
+										: undefined}
 								/>
 								<button
 									class="join-item btn btn-primary btn-xs btn-square"
-									onclick={(e) => saveEditing(index, e)}
-									disabled={!editedRollCode || !/^\d{4}$/.test(editedRollCode)}
-									title={isPreProcessingEdit === index
-										? 'Procesar con este código'
-										: 'Actualizar código'}
+									onclick={(e) => confirmEdit(entry.id, e)}
+									disabled={!editedRollCode || !ROLL_CODE_PATTERN.test(editedRollCode)}
+									title="Confirmar y Reprocesar"
+									aria-label="Confirmar y Reprocesar código"
 								>
-									<Save size={12} />
+									<Check size={14} />
 								</button>
-								<button class="join-item btn btn-ghost btn-xs btn-square" onclick={cancelEditing}>
-									<X size={12} />
+								<button
+									class="join-item btn btn-ghost btn-xs btn-square"
+									onclick={cancelEdit}
+									title="Cancelar edición"
+									aria-label="Cancelar edición de código"
+								>
+									<X size={14} />
 								</button>
 							</div>
-						{:else if !processedResults[index] && isPreProcessingEdit !== index}
-							<button
-								class="btn btn-outline btn-xs btn-primary"
-								onclick={(e) => startEditing(index, e)}
-								disabled={isProcessing}
-								title="Especificar código antes de procesar"
-							>
-								<Edit size={12} class="mr-1" /> Especificar
-							</button>
+							{#if editedRollCode && !ROLL_CODE_PATTERN.test(editedRollCode)}
+								<p id={`roll-code-error-${entry.id}`} class="text-error text-xs mt-0.5">
+									4 dígitos
+								</p>
+							{/if}
 						{:else}
-							<div class="flex items-center gap-2">
-								{#if processedResults[index]?.studentCode || processedResults[index]?.detectedCode}
-									<div
-										class="badge badge-sm font-mono {processedResults[index].errorType ===
-										'invalid_roll_code'
-											? 'badge-error'
-											: processedResults[index].student
-												? 'badge-primary'
-												: 'badge-warning'}"
-									>
-										{processedResults[index].studentCode || processedResults[index].detectedCode}
-									</div>
+							<div class="flex items-center gap-1 h-7">
+								{#if entry.result?.roll_code || entry.error?.roll_code}
+									<code>
+										{entry.result?.roll_code || entry.error?.roll_code}
+									</code>
 									<button
-										class="btn btn-ghost btn-xs btn-square"
-										onclick={(e) => startEditing(index, e)}
-										title="Editar código"
+										class="btn btn-ghost btn-xs btn-square text-base-content/60 hover:text-primary"
+										onclick={(e) =>
+											startEditing(
+												entry.id,
+												entry.result?.roll_code || entry.error?.roll_code || '',
+												e
+											)}
+										title="Editar código y reprocesar"
+										aria-label="Editar código y reprocesar"
+										disabled={isBusy}
 									>
 										<Edit size={12} />
 									</button>
-								{:else}
-									<span class="text-xs opacity-50">Pendiente</span>
-								{/if}
-							</div>
-						{/if}
-					</td>
-
-					<td>
-						{#if processedResults[index]?.status === 'success' && processedResults[index]?.student}
-							<span class="text-sm truncate max-w-32">
-								{processedResults[index].student.name}
-								{processedResults[index].student.lastName}
-							</span>
-						{:else if processedResults[index]?.status === 'error'}
-							<div
-								class="tooltip tooltip-right"
-								data-tip={processedResults[index].message || 'Error desconocido'}
-							>
-								<span class="text-xs text-error flex items-center gap-1">
-									<Info size={12} />
-									{processedResults[index].errorType === 'invalid_roll_code'
-										? 'Código inválido'
-										: 'Error'}
-								</span>
-							</div>
-						{:else if processedResults[index]?.validationStatus?.message}
-							<div
-								class="tooltip tooltip-right"
-								data-tip={processedResults[index].validationStatus.message}
-							>
-								<span class="text-xs text-warning flex items-center gap-1">
-									<Info size={12} /> No encontrado
-								</span>
-							</div>
-						{:else if isPreProcessingEdit === index}
-							<span class="text-xs opacity-70">Pendiente de procesar</span>
-						{:else}
-							<span class="text-xs opacity-50">-</span>
-						{/if}
-					</td>
-
-					<td class="text-center">
-						{#if processedResults[index]?.status === 'success' && processedResults[index]?.results}
-							<span
-								class="font-bold {getScoreColorClass(processedResults[index].results.totalScore)}"
-							>
-								{processedResults[index].results.totalScore.toFixed(1)}
-							</span>
-						{:else if isPreProcessingEdit === index}
-							<span class="text-xs opacity-70">Pendiente</span>
-						{:else}
-							<span class="text-xs opacity-50">-</span>
-						{/if}
-					</td>
-
-					<td class="text-right">
-						<div class="flex gap-1 justify-end">
-							{#if !processedResults[index] || processedResults[index]?.status === 'error'}
-								{#if isPreProcessingEdit !== index}
+								{:else if entry.status === 'pending' || (entry.status === 'error' && !entry.error?.roll_code)}
 									<button
-										class="btn btn-primary btn-xs"
-										onclick={(e) => {
-											e.stopPropagation();
-											onProcess(index);
-										}}
-										disabled={isProcessing || !evalSelected}
-										title={!evalSelected ? 'Seleccione una evaluación primero' : 'Procesar'}
+										class="btn btn-outline btn-xs btn-primary"
+										onclick={(e) => startEditing(entry.id, '', e)}
+										disabled={isBusy}
+										title="Especificar código de 4 dígitos para procesar"
+										aria-label="Asignar código de matrícula"
 									>
-										{#if isProcessing && processingIndex === index}
-											<Loader2 size={14} class="animate-spin" />
-										{:else}
-											<Play size={14} />
-										{/if}
+										<Edit size={12} class="mr-0.5" /> Asignar
 									</button>
+								{:else}
+									<span class="text-xs opacity-50">-</span>
 								{/if}
-							{/if}
-
-							{#if processedResults[index]?.status === 'error' && processedResults[index]?.errorType !== 'invalid_roll_code'}
+							</div>
+						{/if}
+					</td>
+					<td class="truncate max-w-xs text-sm">
+						{#if entry.result?.student}
+							<span
+								class="flex items-center gap-1.5"
+								title={`${entry.result.student.name} ${entry.result.student.lastname}`}
+							>
+								<UserCheck size={14} class="text-success flex-shrink-0" />
+								{entry.result.student.name}
+								{entry.result.student.lastname}
+							</span>
+						{:else if entry.status === 'success' && entry.result && !entry.result.student}
+							<span
+								class="flex items-center gap-1.5 text-warning"
+								title={`Estudiante ${entry.result.roll_code} no encontrado`}
+							>
+								<UserX size={14} class="flex-shrink-0" /> No encontrado
+							</span>
+						{:else}
+							<span class="text-xs opacity-50">-</span>
+						{/if}
+					</td>
+					<td class="text-center">
+						<span class={scoreInfo.class}>{scoreInfo.text}</span>
+					</td>
+					<td class="text-right pr-4">
+						<div class="flex gap-1 justify-end items-center h-7">
+							{#if (entry.status === 'pending' || entry.status === 'error') && editingId !== entry.id}
 								<button
-									class="btn btn-warning btn-xs"
-									onclick={(e) => {
-										e.stopPropagation();
-										onProcess(index);
-									}}
-									disabled={isProcessing || !evalSelected}
-									title="Reintentar procesamiento"
+									class={`btn btn-xs tooltip ${entry.status === 'error' ? 'btn-warning' : 'btn-primary'}`}
+									onclick={() => onProcess(entry.id)}
+									disabled={!evalSelected || isBusy}
+									data-tip={entry.status === 'error' ? 'Reintentar' : 'Procesar'}
 								>
-									<RefreshCw size={14} />
+									{#if isProcessing}
+										<Loader2 size={14} class="animate-spin" />
+									{:else if entry.status === 'error'}
+										<RefreshCw size={14} />
+									{:else}
+										<Play size={14} />
+									{/if}
 								</button>
 							{/if}
-
-							{#if processedResults[index]?.status === 'success'}
+							{#if entry.status === 'success'}
 								<button
-									class="btn btn-ghost btn-xs"
-									onclick={(e) => {
-										e.stopPropagation();
-										onViewDetails(index);
-									}}
-									title="Ver detalles"
+									class="btn btn-ghost btn-xs btn-square"
+									onclick={() => onViewDetails(entry.id)}
+									title="Ver detalles de respuestas"
+									aria-label="Ver detalles de respuestas"
+									disabled={isEditingOther}
 								>
 									<Eye size={14} />
 								</button>
 							{/if}
-
-							{#if processedResults[index]?.status === 'success' && processedResults[index]?.student && !processedResults[index]?.saved}
-								<button
-									class="btn btn-primary btn-xs"
-									onclick={(e) => {
-										e.stopPropagation();
-										onSave(index);
-									}}
-									disabled={isSaving && savingIndex === index}
-									title="Guardar resultado"
-								>
-									{#if isSaving && savingIndex === index}
-										<span class="loading loading-spinner loading-xs"></span>
-									{:else}
-										<Save size={14} />
-									{/if}
-								</button>
-							{/if}
-
-							{#if processedResults[index]?.saved}
-								<span class="badge badge-sm badge-success gap-1">
-									<Check size={12} /> Guardado
-								</span>
-							{/if}
-
 							<button
-								class="btn btn-ghost btn-xs"
-								onclick={(e) => {
-									e.stopPropagation();
-									onRemove(index);
-								}}
-								disabled={isProcessing && processingIndex === index}
+								class="btn btn-ghost btn-error btn-xs btn-square"
+								onclick={() => onRemove(entry.id)}
+								disabled={isBusy}
+								title="Eliminar archivo"
+								aria-label="Eliminar archivo"
 							>
 								<X size={14} />
 							</button>
@@ -321,7 +297,11 @@
 					</td>
 				</tr>
 			{:else}
-				<tr><td colspan="5" class="text-center py-8 opacity-50">Sin archivos</td></tr>
+				<tr>
+					<td colspan="6" class="text-center py-8 opacity-50">
+						No hay archivos cargados. Añade imágenes para comenzar.
+					</td>
+				</tr>
 			{/each}
 		</tbody>
 	</table>

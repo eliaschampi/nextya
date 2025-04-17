@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { X, Check, AlertCircle } from 'lucide-svelte';
-	import type { OmrProcessedResult } from '$lib/types/omrProcessing';
-	import type { AnswerValue } from '$lib/omrProcessor';
+	import { X, Check, AlertCircle, BookCopy, ListChecks } from 'lucide-svelte';
+	import type { ApiOmrSuccessData, StudentAnswer } from '$lib/types/api';
+	import type { EvalQuestion } from '../../app'; // Asumiendo tipo base de pregunta
 	import Message from './Message.svelte';
+	import { fade } from 'svelte/transition';
 
-	const {
-		result,
-		open = false,
-		onClose = () => {}
-	} = $props<{
-		result: OmrProcessedResult;
+	type Props = {
+		result: ApiOmrSuccessData | null;
+		questions: EvalQuestion[]; // Pasar las preguntas para mapear nombres de sección, etc.
 		open?: boolean;
 		onClose?: () => void;
-	}>();
+	};
+
+	const { result = null, open = false, onClose = () => {} }: Props = $props();
 
 	let modal = $state<HTMLDialogElement | null>(null);
 
 	$effect(() => {
-		if (open && modal) {
+		if (open && modal && !modal.open) {
 			modal.showModal();
-		} else if (!open && modal) {
+		} else if (!open && modal?.open) {
 			modal.close();
 		}
 	});
@@ -27,8 +27,9 @@
 	$effect(() => {
 		const modalElement = modal;
 		if (!modalElement) return;
-
-		const handleClose = () => onClose();
+		const handleClose = () => {
+			if (open) onClose(); // Llama a onClose solo si el modal estaba supuesto a estar abierto
+		};
 		modalElement.addEventListener('close', handleClose);
 		return () => modalElement.removeEventListener('close', handleClose);
 	});
@@ -37,146 +38,159 @@
 		modal?.close();
 	}
 
-	function getAnswerStatusClass(answer: AnswerValue, correctKey: string): string {
-		if (!answer) return 'badge-warning';
-		if (answer === 'error_multiple') return 'badge-error';
-		return answer.toUpperCase() === correctKey ? 'badge-success' : 'badge-error';
+	function getAnswerStatusClass(answer: StudentAnswer): string {
+		if (answer.is_blank) return 'badge-warning';
+		if (answer.is_multiple) return 'badge-error';
+		return answer.is_correct ? 'badge-success' : 'badge-error';
 	}
 
-	function getAnswerStatusIcon(answer: AnswerValue, correctKey: string) {
-		if (!answer) return AlertCircle;
-		if (answer === 'error_multiple') return X;
-		return answer.toUpperCase() === correctKey ? Check : X;
+	function getAnswerStatusIcon(answer: StudentAnswer): typeof AlertCircle {
+		if (answer.is_blank) return AlertCircle;
+		if (answer.is_multiple) return X;
+		return answer.is_correct ? Check : X;
 	}
 
-	function formatAnswer(answer: AnswerValue): string {
-		if (!answer) return 'Sin respuesta';
-		if (answer === 'error_multiple') return 'Múltiples marcas';
-		return answer;
+	function getAnswerStatusText(answer: StudentAnswer): string {
+		if (answer.is_blank) return 'En blanco';
+		if (answer.is_multiple) return 'Múltiple';
+		return answer.is_correct ? 'Correcta' : 'Incorrecta';
+	}
+
+	function formatStudentAnswer(answerValue: StudentAnswer['student_answer']): string {
+		if (answerValue === null) return '-';
+		if (answerValue === 'error_multiple') return 'Multi';
+		return answerValue;
+	}
+
+	function getScoreColorClass(score: number): string {
+		if (score >= 14) return 'text-success';
+		if (score >= 10.5) return 'text-warning'; // Punto medio de 0-20 es 10, aprobado > 10.5?
+		return 'text-error';
 	}
 </script>
 
-<dialog bind:this={modal} class="modal">
-	<div class="modal-box flex flex-col">
-		<h3 class="font-bold text-lg mb-4">Detalles de Respuestas</h3>
+<dialog bind:this={modal} class="modal modal-bottom sm:modal-middle">
+	{#if result}
+		<div class="modal-box max-w-2xl" transition:fade>
+			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onclick={closeModal}>
+				<X size={20} />
+			</button>
+			<h3 class="font-bold text-lg mb-1 flex items-center gap-2">
+				<ListChecks /> Detalles del Resultado
+			</h3>
+			<p class="text-sm opacity-70 mb-4">Código: {result.roll_code}</p>
 
-		{#if result}
-			<!-- Información del estudiante si existe -->
 			{#if result.student}
-				<div class="mb-4">
-					<div class="text-lg font-medium">
-						{result.student.name}
-						{result.student.lastName}
-					</div>
-					<div class="text-sm opacity-70">
-						Código: {result.student.rollCode}
-					</div>
+				<div class="mb-4 p-3 bg-base-200 rounded-lg">
+					<div class="font-medium">{result.student.name} {result.student.lastname}</div>
 				</div>
 			{:else}
-				<Message
-					type="warning"
-					description={result.validationStatus?.message || 'Estudiante no encontrado'}
-				/>
-				<div class="my-2">
-					<div class="text-sm opacity-70">
-						Código detectado: {result.studentCode || result.detectedCode || 'N/A'}
-					</div>
-				</div>
+				<Message type="warning" description="Estudiante no encontrado en los registros." />
 			{/if}
 
-			<!-- Estadísticas si hay resultados -->
-			{#if result.results}
-				<div class="stats shadow mb-4 w-full">
-					<div class="stat">
-						<div class="stat-title">Correctas</div>
-						<div class="stat-value text-success">{result.results.correctCount}</div>
+			<!-- Estadísticas Generales -->
+			<div class="stats shadow mb-4 w-full bg-base-100">
+				<div class="stat">
+					<div class="stat-title">Correctas</div>
+					<div class="stat-value text-success">{result.scores.general.correct_count}</div>
+				</div>
+				<div class="stat">
+					<div class="stat-title">Incorrectas</div>
+					<div class="stat-value text-error">{result.scores.general.incorrect_count}</div>
+				</div>
+				<div class="stat">
+					<div class="stat-title">En blanco</div>
+					<div class="stat-value text-warning">{result.scores.general.blank_count}</div>
+				</div>
+				<div class="stat">
+					<div class="stat-title">Nota General</div>
+					<div class={`stat-value ${getScoreColorClass(result.scores.general.score)}`}>
+						{result.scores.general.score.toFixed(2)}
 					</div>
+					<div class="stat-desc">/ 20.00</div>
+				</div>
+			</div>
 
-					<div class="stat">
-						<div class="stat-title">Incorrectas</div>
-						<div class="stat-value text-error">{result.results.incorrectCount}</div>
-					</div>
-
-					<div class="stat">
-						<div class="stat-title">En blanco</div>
-						<div class="stat-value text-warning">{result.results.blankCount}</div>
-					</div>
-
-					<div class="stat">
-						<div class="stat-title">Nota</div>
-						<div
-							class="stat-value {result.results.totalScore >= 7
-								? 'text-success'
-								: result.results.totalScore >= 4
-									? 'text-warning'
-									: 'text-error'}"
-						>
-							{result.results.totalScore.toFixed(2)}
+			<!-- Puntajes por Sección -->
+			{#if Object.keys(result.scores.by_section).length > 0}
+				<details class="collapse collapse-arrow bg-base-200 border border-base-300 rounded-lg mb-4">
+					<summary class="collapse-title text-md font-medium flex items-center gap-2">
+						<BookCopy size={18} /> Puntajes por Sección
+					</summary>
+					<div class="collapse-content">
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+							{#each Object.entries(result.scores.by_section) as [code, sectionScore] (code)}
+								<div class="p-3 border border-base-300 rounded bg-base-100">
+									<div class="font-semibold text-sm mb-1">{sectionScore.section_name}</div>
+									<div class="flex justify-between items-center text-xs gap-2">
+										<div class="flex gap-2">
+											<span class="tooltip" data-tip="Correctas"
+												><Check size={14} class="text-success" />{sectionScore.correct_count}</span
+											>
+											<span class="tooltip" data-tip="Incorrectas"
+												><X size={14} class="text-error" />{sectionScore.incorrect_count}</span
+											>
+											<span class="tooltip" data-tip="En Blanco"
+												><AlertCircle
+													size={14}
+													class="text-warning"
+												/>{sectionScore.blank_count}</span
+											>
+										</div>
+										<div class="font-bold text-sm {getScoreColorClass(sectionScore.score)}">
+											{sectionScore.score.toFixed(1)}
+										</div>
+									</div>
+								</div>
+							{/each}
 						</div>
 					</div>
-				</div>
+				</details>
 			{/if}
 
-			<!-- Tabla de respuestas -->
-			{#if result.answers && result.questions}
-				<div class="max-h-[20rem] overflow-y-auto border border-base-300 rounded-lg">
-					<table class="table table-zebra w-full">
-						<thead class="sticky top-0 bg-base-200 z-10">
+			<!-- Tabla Detallada de Respuestas -->
+			<h4 class="font-semibold mb-2 text-md">Respuestas Detalladas</h4>
+			<div class="max-h-[40vh] overflow-y-auto border border-base-300 rounded-lg bg-base-200">
+				<table class="table table-zebra table-pin-rows table-sm w-full">
+					<thead>
+						<tr>
+							<th class="w-12 text-center">N°</th>
+							<th class="w-20 text-center">Tu Resp.</th>
+							<th class="w-20 text-center">Correcta</th>
+							<th>Estado</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each result.answers as answer (answer.question_code)}
+							{@const StatusIcon = getAnswerStatusIcon(answer)}
 							<tr>
-								<th class="w-16">N°</th>
-								<th>Respuesta</th>
-								<th>Correcta</th>
-								<th>Estado</th>
+								<td class="text-center font-medium">{answer.order_in_eval}</td>
+								<td class="text-center">
+									<span class="badge badge-lg font-mono">
+										{formatStudentAnswer(answer.student_answer)}
+									</span>
+								</td>
+								<td class="text-center">
+									<span class="badge badge-outline badge-primary badge-lg font-mono">
+										{answer.correct_key}
+									</span>
+								</td>
+								<td>
+									<span class={`badge ${getAnswerStatusClass(answer)} gap-1`}>
+										<StatusIcon size={12} />
+										{getAnswerStatusText(answer)}
+									</span>
+								</td>
 							</tr>
-						</thead>
-						<tbody>
-							{#each result.questions as question (question.code)}
-								{@const answer = result.answers[question.order_in_eval]}
-								{@const correctKey = question.correct_key}
-								{@const StatusIcon = getAnswerStatusIcon(answer, correctKey)}
-
-								<tr>
-									<td class="font-medium">{question.order_in_eval}</td>
-									<td>
-										<span class="badge font-mono">
-											{formatAnswer(answer)}
-										</span>
-									</td>
-									<td>
-										<span class="badge badge-outline badge-primary font-mono">
-											{correctKey}
-										</span>
-									</td>
-									<td>
-										<span class="badge {getAnswerStatusClass(answer, correctKey)} gap-1">
-											<StatusIcon size={12} />
-											{!answer
-												? 'En blanco'
-												: answer === 'error_multiple'
-													? 'Múltiple'
-													: answer.toUpperCase() === correctKey
-														? 'Correcta'
-														: 'Incorrecta'}
-										</span>
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
-		{:else}
-			<div class="alert alert-warning">
-				<AlertCircle />
-				<span>No hay datos disponibles</span>
+						{/each}
+					</tbody>
+				</table>
 			</div>
-		{/if}
 
-		<div class="modal-action">
-			<button class="btn" onclick={closeModal}>Cerrar</button>
+			<div class="modal-action mt-6">
+				<button class="btn" onclick={closeModal}>Cerrar</button>
+			</div>
 		</div>
-	</div>
-	<form method="dialog" class="modal-backdrop">
-		<button>cerrar</button>
-	</form>
+	{/if}
+	<form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
 </dialog>

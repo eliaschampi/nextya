@@ -21,18 +21,28 @@
 		checkImageFormat as checkFormat,
 		processImageWithCanvas
 	} from '$lib/utils/imageUtils';
+	import type { ApiOmrErrorData, ApiOmrSuccessData } from '$lib/types/api';
 
 	const {
 		imageUrl = '',
 		status = 'pending',
 		fileIndex = -1,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		error = null,
 		totalFiles = 0,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		result = null,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		fileName = '',
 		onImageSave = undefined
 	} = $props<{
 		imageUrl: string;
 		status?: 'pending' | 'processing' | 'success' | 'error' | undefined;
 		fileIndex?: number;
+		error?: ApiOmrErrorData | null | undefined;
 		totalFiles?: number;
+		result?: ApiOmrSuccessData | null;
+		fileName?: string;
 		onImageSave?: (processedImageData: string) => void;
 	}>();
 
