@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { X, Check, AlertCircle, BookCopy, ListChecks } from 'lucide-svelte';
+	import { X, Check, AlertCircle, ListChecks, FileText, Table2 } from 'lucide-svelte';
 	import type { ApiOmrSuccessData, StudentAnswer } from '$lib/types/api';
 	import type { EvalQuestion } from '../../app'; // Asumiendo tipo base de pregunta
 	import Message from './Message.svelte';
@@ -15,6 +15,7 @@
 	const { result = null, open = false, onClose = () => {} }: Props = $props();
 
 	let modal = $state<HTMLDialogElement | null>(null);
+	let activeTab = $state<'details' | 'answers'>('details');
 
 	$effect(() => {
 		if (open && modal && !modal.open) {
@@ -36,6 +37,10 @@
 
 	function closeModal() {
 		modal?.close();
+	}
+
+	function switchTab(tab: 'details' | 'answers') {
+		activeTab = tab;
 	}
 
 	function getAnswerStatusClass(answer: StudentAnswer): string {
@@ -88,104 +93,124 @@
 				<Message type="warning" description="Estudiante no encontrado en los registros." />
 			{/if}
 
-			<!-- Estadísticas Generales -->
-			<div class="stats shadow mb-4 w-full bg-base-100">
-				<div class="stat">
-					<div class="stat-title">Correctas</div>
-					<div class="stat-value text-success">{result.scores.general.correct_count}</div>
-				</div>
-				<div class="stat">
-					<div class="stat-title">Incorrectas</div>
-					<div class="stat-value text-error">{result.scores.general.incorrect_count}</div>
-				</div>
-				<div class="stat">
-					<div class="stat-title">En blanco</div>
-					<div class="stat-value text-warning">{result.scores.general.blank_count}</div>
-				</div>
-				<div class="stat">
-					<div class="stat-title">Nota General</div>
-					<div class={`stat-value ${getScoreColorClass(result.scores.general.score)}`}>
-						{result.scores.general.score.toFixed(2)}
-					</div>
-					<div class="stat-desc">/ 20.00</div>
-				</div>
+			<!-- Tabs Navigation -->
+			<div class="tabs tabs-box mb-4">
+				<button
+					role="tab"
+					class="tab w-full {activeTab === 'details' ? 'tab-active' : ''}"
+					onclick={() => switchTab('details')}
+					tabindex={0}
+				>
+					<FileText size={16} class="mr-2" /> Detalles del Curso
+				</button>
+				<button
+					role="tab"
+					class="tab w-full {activeTab === 'answers' ? 'tab-active' : ''}"
+					onclick={() => switchTab('answers')}
+					tabindex={0}
+				>
+					<Table2 size={16} class="mr-2" /> Tabla de Respuestas
+				</button>
 			</div>
 
-			<!-- Puntajes por Sección -->
-			{#if Object.keys(result.scores.by_section).length > 0}
-				<details class="collapse collapse-arrow bg-base-200 border border-base-300 rounded-lg mb-4">
-					<summary class="collapse-title text-md font-medium flex items-center gap-2">
-						<BookCopy size={18} /> Puntajes por Sección
-					</summary>
-					<div class="collapse-content">
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-							{#each Object.entries(result.scores.by_section) as [code, sectionScore] (code)}
-								<div class="p-3 border border-base-300 rounded bg-base-100">
-									<div class="font-semibold text-sm mb-1">{sectionScore.section_name}</div>
-									<div class="flex justify-between items-center text-xs gap-2">
-										<div class="flex gap-2">
-											<span class="tooltip" data-tip="Correctas"
-												><Check size={14} class="text-success" />{sectionScore.correct_count}</span
-											>
-											<span class="tooltip" data-tip="Incorrectas"
-												><X size={14} class="text-error" />{sectionScore.incorrect_count}</span
-											>
-											<span class="tooltip" data-tip="En Blanco"
-												><AlertCircle
-													size={14}
-													class="text-warning"
-												/>{sectionScore.blank_count}</span
-											>
-										</div>
-										<div class="font-bold text-sm {getScoreColorClass(sectionScore.score)}">
-											{sectionScore.score.toFixed(1)}
-										</div>
-									</div>
-								</div>
-							{/each}
+			<!-- Tab Content: Details -->
+			{#if activeTab === 'details'}
+				<!-- Estadísticas Generales -->
+				<div class="stats shadow mb-4 w-full bg-base-100">
+					<div class="stat">
+						<div class="stat-title">Correctas</div>
+						<div class="stat-value text-success">{result.scores.general.correct_count}</div>
+					</div>
+					<div class="stat">
+						<div class="stat-title">Incorrectas</div>
+						<div class="stat-value text-error">{result.scores.general.incorrect_count}</div>
+					</div>
+					<div class="stat">
+						<div class="stat-title">En blanco</div>
+						<div class="stat-value text-warning">{result.scores.general.blank_count}</div>
+					</div>
+					<div class="stat">
+						<div class="stat-title">Nota General</div>
+						<div class={`stat-value ${getScoreColorClass(result.scores.general.score)}`}>
+							{result.scores.general.score.toFixed(2)}
 						</div>
+						<div class="stat-desc">/ 20.00</div>
 					</div>
-				</details>
-			{/if}
+				</div>
 
-			<!-- Tabla Detallada de Respuestas -->
-			<h4 class="font-semibold mb-2 text-md">Respuestas Detalladas</h4>
-			<div class="max-h-[40vh] overflow-y-auto border border-base-300 rounded-lg bg-base-200">
-				<table class="table table-zebra table-pin-rows table-sm w-full">
-					<thead>
-						<tr>
-							<th class="w-12 text-center">N°</th>
-							<th class="w-20 text-center">Tu Resp.</th>
-							<th class="w-20 text-center">Correcta</th>
-							<th>Estado</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each result.answers as answer (answer.question_code)}
-							{@const StatusIcon = getAnswerStatusIcon(answer)}
+				<!-- Puntajes por Sección -->
+				{#if Object.keys(result.scores.by_section).length > 0}
+					<div class="font-medium">Puntajes por Sección</div>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+						<table class="min-w-full table table-sm">
+							<thead>
+								<tr>
+									<th class="px-4 py-2">Sección</th>
+									<th class="px-4 py-2 text-center">Correctas</th>
+									<th class="px-4 py-2 text-center">Incorrectas</th>
+									<th class="px-4 py-2 text-center">Blanco</th>
+									<th class="px-4 py-2 text-center">Nota</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each Object.entries(result.scores.by_section) as [code, sectionScore] (code)}
+									<tr class="border-t">
+										<td class="px-4 py-2">{sectionScore.section_name}</td>
+										<td class="px-4 py-2 text-center">{sectionScore.correct_count}</td>
+										<td class="px-4 py-2 text-center">{sectionScore.incorrect_count}</td>
+										<td class="px-4 py-2 text-center">{sectionScore.blank_count}</td>
+										<td
+											class="px-4 py-2 text-center font-bold {getScoreColorClass(
+												sectionScore.score
+											)}"
+										>
+											{sectionScore.score.toFixed(1)}
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			{:else if activeTab === 'answers'}
+				<!-- Tab Content: Answers Table -->
+				<div class="max-h-[20rem] overflow-y-auto border border-base-300 rounded-lg bg-base-200">
+					<table class="table table-zebra table-pin-rows table-sm w-full">
+						<thead>
 							<tr>
-								<td class="text-center font-medium">{answer.order_in_eval}</td>
-								<td class="text-center">
-									<span class="badge badge-lg font-mono">
-										{formatStudentAnswer(answer.student_answer)}
-									</span>
-								</td>
-								<td class="text-center">
-									<span class="badge badge-outline badge-primary badge-lg font-mono">
-										{answer.correct_key}
-									</span>
-								</td>
-								<td>
-									<span class={`badge ${getAnswerStatusClass(answer)} gap-1`}>
-										<StatusIcon size={12} />
-										{getAnswerStatusText(answer)}
-									</span>
-								</td>
+								<th class="w-12 text-center">N°</th>
+								<th class="w-20 text-center">Tu Resp.</th>
+								<th class="w-20 text-center">Correcta</th>
+								<th>Estado</th>
 							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+						</thead>
+						<tbody>
+							{#each result.answers as answer (answer.question_code)}
+								{@const StatusIcon = getAnswerStatusIcon(answer)}
+								<tr>
+									<td class="text-center font-medium">{answer.order_in_eval}</td>
+									<td class="text-center">
+										<span class="badge badge-lg font-mono">
+											{formatStudentAnswer(answer.student_answer)}
+										</span>
+									</td>
+									<td class="text-center">
+										<span class="badge badge-outline badge-primary badge-lg font-mono">
+											{answer.correct_key}
+										</span>
+									</td>
+									<td>
+										<span class={`badge ${getAnswerStatusClass(answer)} gap-1`}>
+											<StatusIcon size={12} />
+											{getAnswerStatusText(answer)}
+										</span>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
 
 			<div class="modal-action mt-6">
 				<button class="btn" onclick={closeModal}>Cerrar</button>

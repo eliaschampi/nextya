@@ -431,7 +431,7 @@
 								Procesando...
 							{:else}
 								<Play size={16} class="mr-1" />
-								Procesar Pendientes ({pendingFilesCount})
+								Procesar ({pendingFilesCount})
 							{/if}
 						</button>
 					{/if}
@@ -503,20 +503,22 @@
 		<div class="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-base-300/30">
 			<div class="w-full lg:w-1/2 p-4 flex flex-col">
 				<header class="flex items-center justify-between mb-4 gap-4 flex-wrap">
-					<h3 class="font-bold text-lg">Hojas de Respuestas</h3>
+					<h3 class="font-bold">Hojas de Respuestas</h3>
 					<div class="flex items-center gap-2 flex-wrap">
-						<span class="badge badge-ghost gap-1.5"
-							><Upload size={12} /> {fileEntries.length} Total</span
-						>
+						<span class="badge badge-ghost gap-1.5">
+							<Upload size={12} />
+							{fileEntries.length} Total
+						</span>
 						<span class="badge badge-success badge-outline gap-1.5"
-							><Check size={12} /> {successFilesCount} OK</span
-						>
+							><Check size={12} /> {successFilesCount} OK
+						</span>
 						<span class="badge badge-error badge-outline gap-1.5"
-							><X size={12} /> {errorFilesCount} Error</span
-						>
-						<span class="badge badge-info badge-outline gap-1.5"
-							><Save size={12} /> {fileEntries.filter((e) => e.saved).length} Guardado</span
-						>
+							><X size={12} /> {errorFilesCount} Error
+						</span>
+						<span class="badge badge-info badge-outline gap-1.5">
+							<Save size={12} />
+							{fileEntries.filter((e) => e.saved).length} Guardado
+						</span>
 					</div>
 				</header>
 
@@ -644,14 +646,14 @@
 					bind:value={selectedLevelCode}
 					disabled={isProcessingBatch || isSavingBatch}
 				>
-					<option value="">-- Elige un nivel --</option>
+					<option value="">Elige un nivel</option>
 					{#each data.levels as level (level.code)}
 						<option value={level.code}>{level.name}</option>
 					{/each}
 				</select>
 			</div>
 			{#if selectedLevelCode}
-				<div class="max-h-60 overflow-y-auto border rounded-lg bg-base-200">
+				<div class="max-h-60 overflow-y-auto rounded-lg bg-base-200">
 					<table class="table table-zebra table-pin-rows table-sm">
 						<thead>
 							<tr>
@@ -683,18 +685,15 @@
 								</tr>
 							{:else}
 								<tr
-									><td colspan="4" class="text-center py-6 opacity-50"
-										>No hay evaluaciones para este nivel.</td
-									></tr
-								>
+									><td colspan="4" class="text-center py-6 opacity-50">
+										No hay evaluaciones para este nivel.
+									</td>
+								</tr>
 							{/each}
 						</tbody>
 					</table>
 				</div>
 			{/if}
-		</div>
-		<div class="modal-action mt-6">
-			<button class="btn btn-ghost" onclick={() => modal?.close()}>Cerrar</button>
 		</div>
 	</div>
 	<form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
