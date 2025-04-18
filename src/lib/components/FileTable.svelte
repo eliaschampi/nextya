@@ -272,11 +272,11 @@
 						{#if entry.result?.student}
 							<span
 								class="flex items-center gap-1.5"
-								title={`${entry.result.student.name} ${entry.result.student.lastname}`}
+								title={`${entry.result.student.name} ${entry.result.student.last_name}`}
 							>
 								<Check size={14} class="text-success flex-shrink-0" />
 								{entry.result.student.name}
-								{entry.result.student.lastname}
+								{entry.result.student.last_name}
 							</span>
 						{:else if entry.status === 'success' && entry.result && !entry.result.student}
 							<span

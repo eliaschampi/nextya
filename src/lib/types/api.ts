@@ -19,7 +19,7 @@ export interface ApiOmrSuccessData {
 	register_code: string; // Código UUID del registro del estudiante
 	student: {
 		name: string;
-		lastname: string;
+		last_name: string;
 	} | null; // Información del estudiante (null si no se encontró)
 	answers: StudentAnswer[]; // Array detallado de respuestas
 	scores: {

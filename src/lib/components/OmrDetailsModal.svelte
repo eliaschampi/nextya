@@ -87,7 +87,7 @@
 
 			{#if result.student}
 				<div class="mb-4 p-3 bg-base-200 rounded-lg">
-					<div class="font-medium">{result.student.name} {result.student.lastname}</div>
+					<div class="font-medium">{result.student.name} {result.student.last_name}</div>
 				</div>
 			{:else}
 				<Message type="warning" description="Estudiante no encontrado en los registros." />

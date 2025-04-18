@@ -220,7 +220,7 @@
 				if (!isProcessingBatch) {
 					showToast(
 						apiResponse.data.student
-							? `Procesado: ${apiResponse.data.student.name} ${apiResponse.data.student.lastname}`
+							? `Procesado: ${apiResponse.data.student.name} ${apiResponse.data.student.last_name}`
 							: `Procesado: Código ${apiResponse.data.roll_code} (Estudiante no encontrado)`,
 						'success'
 					);

@@ -82,13 +82,23 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 	const numQuestions = evalData.questions.length;
 
+	// Validar código proporcionado antes de procesar
+	if (providedRollCode && !/^\d{4}$/.test(providedRollCode)) {
+		return createApiErrorResponse(
+			'VALIDATION_ERROR',
+			`Invalid provided roll code: ${providedRollCode}. Must be 4 digits.`,
+			providedRollCode
+		);
+	}
+
 	// 2. Procesar imagen OMR
 	let omrResult;
 	let debugImage: string | null = null;
 	try {
 		const buffer = Buffer.from(imageDataBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
 		// Pasa true para obtener imagen de debug si la librería lo soporta así
-		omrResult = await omrProcessor(buffer, numQuestions, true);
+		// Pasa el código manual como cuarto parámetro si existe y es válido
+		omrResult = await omrProcessor(buffer, numQuestions, true, providedRollCode);
 		// Accede a la imagen de debug si existe
 		if (omrResult.debug) {
 			debugImage = null; // TODO: Implementar;
@@ -115,22 +125,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		);
 	}
 
-	// 3. Determinar y Validar Código del Estudiante (Roll Code)
-	const detectedRollCode = omrResult.studentCode;
-	const finalRollCode = providedRollCode || detectedRollCode; // Prioriza el código manual
-
-	if (!finalRollCode || !/^\d{4}$/.test(finalRollCode)) {
-		return createApiErrorResponse(
-			'VALIDATION_ERROR',
-			`Invalid roll code: ${finalRollCode}. Detected: ${detectedRollCode}, Provided: ${providedRollCode}`,
-			finalRollCode, // Devolvemos el código que falló
-			debugImage // Incluimos imagen de debug si existe
-		);
-	}
+	const finalRollCode = providedRollCode || omrResult.studentCode;
 
 	// 4. Obtener Información del Registro del Estudiante
 	const registerInfo = await fetchRegisterByRollCode(locals.supabase, finalRollCode);
-
 	// 5. Calcular Puntajes
 	const { detailedAnswers, scores } = calculateScores(omrResult.answers, evalData);
 

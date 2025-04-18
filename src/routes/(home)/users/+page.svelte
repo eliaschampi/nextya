@@ -100,11 +100,11 @@
 	// Validar formulario
 	function validateForm(formData: FormData): boolean {
 		const fields = ['name', 'last_name', 'email', 'password'];
-		const [name, lastName, email, password] = fields.map((field) =>
+		const [name, last_name, email, password] = fields.map((field) =>
 			formData.get(field)?.toString().trim()
 		);
 
-		if (!name || !lastName || !email) {
+		if (!name || !last_name || !email) {
 			message = 'Todos los campos son obligatorios';
 			return false;
 		}

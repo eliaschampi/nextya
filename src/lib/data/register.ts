@@ -5,7 +5,7 @@ export interface StudentRegisterInfo {
 	roll_code: string;
 	student: {
 		name: string;
-		lastname: string;
+		last_name: string;
 	} | null;
 }
 
@@ -22,7 +22,7 @@ export async function fetchRegisterByRollCode(
 
 	const { data, error } = await supabase
 		.from('registers')
-		.select('code, roll_code, students:student_code (name, lastname)')
+		.select('code, roll_code, student_code, students:student_code (name, last_name)')
 		.eq('roll_code', rollCode)
 		.limit(1)
 		.maybeSingle(); // Devuelve null si no se encuentra, en lugar de array vacío
@@ -36,9 +36,10 @@ export async function fetchRegisterByRollCode(
 		return null; // No encontrado
 	}
 
+	// The Supabase query returns students as an array, but we need just the first item
 	return {
 		register_code: data.code,
 		roll_code: data.roll_code,
-		student: data.students[0]
+		student: data.students as unknown as StudentRegisterInfo['student']
 	};
 }
