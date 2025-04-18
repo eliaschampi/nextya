@@ -18,6 +18,13 @@ export const PAPER_FORMATS = {
 	A4_HORIZONTAL: { name: 'A4 Horizontal', ratio: 1.414, tolerance: 0.05 }
 };
 
+/**
+ * Verifica si una imagen tiene el formato especificado
+ * @param imageWidth Ancho de la imagen
+ * @param imageHeight Alto de la imagen
+ * @param format Formato a verificar
+ * @returns true si la imagen tiene el formato especificado
+ */
 export function checkImageFormat(
 	imageWidth: number,
 	imageHeight: number,
@@ -25,6 +32,34 @@ export function checkImageFormat(
 ): boolean {
 	const imageRatio = imageWidth / imageHeight;
 	return Math.abs(imageRatio - format.ratio) <= format.tolerance;
+}
+
+/**
+ * Verifica si una imagen tiene proporción A5 (vertical u horizontal)
+ * @param width Ancho de la imagen
+ * @param height Alto de la imagen
+ * @returns Un objeto con el resultado de la validación y el formato detectado
+ */
+export function validateA5Proportion(
+	width: number,
+	height: number
+): {
+	isValid: boolean;
+	format: string;
+	isVertical: boolean;
+} {
+	const isVertical = checkImageFormat(width, height, PAPER_FORMATS.A5_VERTICAL);
+	const isHorizontal = checkImageFormat(width, height, PAPER_FORMATS.A5_HORIZONTAL);
+
+	return {
+		isValid: isVertical || isHorizontal,
+		format: isVertical
+			? PAPER_FORMATS.A5_VERTICAL.name
+			: isHorizontal
+				? PAPER_FORMATS.A5_HORIZONTAL.name
+				: 'Formato no A5',
+		isVertical
+	};
 }
 
 export function calculateCropDimensions(

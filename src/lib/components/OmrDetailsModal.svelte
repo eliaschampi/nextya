@@ -174,7 +174,7 @@
 				{/if}
 			{:else if activeTab === 'answers'}
 				<!-- Tab Content: Answers Table -->
-				<div class="max-h-[20rem] overflow-y-auto border border-base-300 rounded-lg bg-base-200">
+				<div class="max-h-[20rem] overflow-y-auto rounded-lg bg-base-200">
 					<table class="table table-zebra table-pin-rows table-sm w-full">
 						<thead>
 							<tr>
@@ -211,10 +211,6 @@
 					</table>
 				</div>
 			{/if}
-
-			<div class="modal-action mt-6">
-				<button class="btn" onclick={closeModal}>Cerrar</button>
-			</div>
 		</div>
 	{/if}
 	<form method="dialog" class="modal-backdrop"><button>cerrar</button></form>

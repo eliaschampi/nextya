@@ -16,24 +16,16 @@
 		ZoomIn,
 		ZoomOut
 	} from 'lucide-svelte';
-	import {
-		PAPER_FORMATS,
-		checkImageFormat as checkFormat,
-		processImageWithCanvas
-	} from '$lib/utils/imageUtils';
+	import { PAPER_FORMATS, processImageWithCanvas } from '$lib/utils/imageUtils';
 	import type { ApiOmrErrorData, ApiOmrSuccessData } from '$lib/types/api';
 
 	const {
 		imageUrl = '',
 		status = 'pending',
 		fileIndex = -1,
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		error = null,
 		totalFiles = 0,
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		result = null,
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		fileName = '',
+		isA5Format = true,
+		formatName = 'A5 Vertical',
 		onImageSave = undefined
 	} = $props<{
 		imageUrl: string;
@@ -43,6 +35,8 @@
 		totalFiles?: number;
 		result?: ApiOmrSuccessData | null;
 		fileName?: string;
+		isA5Format?: boolean; // Indica si la imagen tiene proporción A5
+		formatName?: string; // Nombre del formato detectado
 		onImageSave?: (processedImageData: string) => void;
 	}>();
 
@@ -62,10 +56,6 @@
 	const MAX_ZOOM = 1.5;
 	const ZOOM_STEP = 0.02;
 
-	// Estado para verificación de formato
-	let isA5Format = $state(true);
-	let formatName = $state('');
-
 	$effect(() => {
 		displayedImageUrl = imageUrl;
 		// Reiniciar transformaciones cuando cambia la imagen
@@ -73,14 +63,6 @@
 			resetView();
 		}
 	});
-
-	function checkImageFormat() {
-		if (!imageRef) return;
-		const width = imageRef.naturalWidth;
-		const height = imageRef.naturalHeight;
-		isA5Format = checkFormat(width, height, PAPER_FORMATS.A5_VERTICAL);
-		formatName = isA5Format ? PAPER_FORMATS.A5_VERTICAL.name : 'Formato no A5';
-	}
 
 	// Funciones de transformación
 	function rotateClockwise() {
@@ -346,7 +328,6 @@
 						? imageTransformWithZoom
 						: imageTransform}; transform-origin: center center;"
 					bind:this={imageRef}
-					onload={checkImageFormat}
 				/>
 				{#if cropMode && cropData}
 					<!-- svelte-ignore a11y_no_static_element_interactions -->

@@ -1,18 +1,19 @@
 <script lang="ts">
-	import type { FileEntry } from '$lib/types/app';
-	import {
-		Play,
-		X,
-		Loader2,
-		Eye,
-		Edit,
-		Check,
-		AlertCircle,
-		UserX,
-		HelpCircle,
-		UserCheck,
-		RefreshCw
-	} from 'lucide-svelte';
+	import type { ApiOmrErrorData, ApiOmrSuccessData } from '$lib/types/api';
+
+	// Definición local de FileEntry para incluir propiedades de formato
+	type FileStatus = 'pending' | 'processing' | 'success' | 'error';
+	interface FileEntry {
+		file: File;
+		id: string;
+		status: FileStatus;
+		result: ApiOmrSuccessData | null;
+		error: ApiOmrErrorData | null;
+		saved: boolean;
+		formatValid?: boolean; // Indica si la imagen tiene proporción A5
+		formatName?: string; // Nombre del formato detectado
+	}
+	import { Play, X, Loader2, Eye, Edit, Check, AlertCircle } from 'lucide-svelte';
 
 	type Props = {
 		entries: FileEntry[];
@@ -71,22 +72,60 @@
 	}
 
 	function getStatusIcon(entry: FileEntry): typeof AlertCircle {
-		if (entry.id === processingId) return Loader2;
-		if (validationErrorsMap.has(entry.id)) return AlertCircle;
-		if (entry.status === 'processing') return Loader2;
-		if (entry.status === 'success' && !entry.result?.register_code) return UserX;
-		if (entry.status === 'success') return Check;
-		if (entry.status === 'error') return AlertCircle;
-		return HelpCircle;
+		// Simplificado a 3 estados principales: carga, error, éxito
+
+		// Estado de carga
+		if (entry.id === processingId || entry.status === 'processing') {
+			return Loader2;
+		}
+
+		// Estados de error
+		if (
+			validationErrorsMap.has(entry.id) ||
+			entry.formatValid === false ||
+			entry.status === 'error' ||
+			(entry.status === 'success' && !entry.result?.register_code)
+		) {
+			return AlertCircle;
+		}
+
+		// Estado de éxito
+		if (entry.status === 'success') {
+			return Check;
+		}
+
+		// Estado pendiente (default)
+		return AlertCircle;
 	}
 
 	function getStatusColor(entry: FileEntry): string {
-		const icon = getStatusIcon(entry);
-		if (icon === Loader2) return 'text-info animate-spin';
-		if (validationErrorsMap.has(entry.id)) return 'text-error';
-		if (icon === UserX) return 'text-warning';
-		if (icon === Check) return 'text-success';
-		if (icon === AlertCircle) return 'text-error';
+		// Simplificado a 3 colores principales: carga, error, éxito
+
+		// Estado de carga
+		if (entry.id === processingId || entry.status === 'processing') {
+			return 'text-info animate-spin';
+		}
+
+		// Estados de error
+		if (
+			validationErrorsMap.has(entry.id) ||
+			entry.formatValid === false ||
+			entry.status === 'error'
+		) {
+			return 'text-error';
+		}
+
+		// Estado de advertencia (estudiante no encontrado)
+		if (entry.status === 'success' && !entry.result?.register_code) {
+			return 'text-warning';
+		}
+
+		// Estado de éxito
+		if (entry.status === 'success') {
+			return 'text-success';
+		}
+
+		// Estado pendiente (default)
 		return 'text-base-content/50';
 	}
 
@@ -102,7 +141,15 @@
 	}
 
 	function getTooltip(entry: FileEntry): string | null {
+		// Prioridad 1: Errores de validación del sistema
 		if (validationErrorsMap.has(entry.id)) return validationErrorsMap.get(entry.id)!;
+
+		// Prioridad 2: Error de formato A5
+		if (entry.formatValid === false) {
+			return `Formato no A5: ${entry.formatName || 'Proporción incorrecta'}. Recorta la imagen primero.`;
+		}
+
+		// Otros estados
 		if (entry.status === 'error') return entry.error?.message ?? 'Error desconocido';
 		if (entry.status === 'success' && !entry.result?.register_code)
 			return `Estudiante con código ${entry.result?.roll_code} no encontrado en registros.`;
@@ -122,7 +169,6 @@
 		<Icon size={16} class={statusColor} />
 	</span>
 {/snippet}
-
 {#snippet rollCodeEditor(entry: FileEntry)}
 	<div class="join h-7">
 		<input
@@ -155,11 +201,7 @@
 			<X size={14} />
 		</button>
 	</div>
-	{#if editedRollCode && !ROLL_CODE_PATTERN.test(editedRollCode)}
-		<p id={`roll-code-error-${entry.id}`} class="text-error text-xs mt-0.5">4 dígitos</p>
-	{/if}
 {/snippet}
-
 {#snippet rollCodeDisplay(entry: FileEntry, isBusy: boolean)}
 	<div class="flex items-center gap-1 h-7">
 		{#if entry.result?.roll_code || entry.error?.roll_code}
@@ -191,9 +233,8 @@
 		{/if}
 	</div>
 {/snippet}
-
-<div class="overflow-x-auto rounded-lg bg-base-200/50">
-	<table class="table table-sm w-full">
+<div class="max-h-[50rem] overflow-auto rounded-lg bg-base-200/50">
+	<table class="table table-sm table-zebra table-pin-rows w-full">
 		<thead>
 			<tr>
 				<th class="w-10"></th>
@@ -217,7 +258,7 @@
 					<td class="text-center pl-2">
 						{@render statusIcon(entry)}
 					</td>
-					<td class="truncate max-w-xs py-2.5" title={entry.file.name}>
+					<td class="truncate max-w-[10rem] py-2.5" title={entry.file.name}>
 						{entry.file.name}
 					</td>
 					<td class="font-mono text-sm">
@@ -233,7 +274,7 @@
 								class="flex items-center gap-1.5"
 								title={`${entry.result.student.name} ${entry.result.student.lastname}`}
 							>
-								<UserCheck size={14} class="text-success flex-shrink-0" />
+								<Check size={14} class="text-success flex-shrink-0" />
 								{entry.result.student.name}
 								{entry.result.student.lastname}
 							</span>
@@ -242,7 +283,7 @@
 								class="flex items-center gap-1.5 text-warning"
 								title={`Estudiante ${entry.result.roll_code} no encontrado`}
 							>
-								<UserX size={14} class="flex-shrink-0" /> No encontrado
+								No encontrado
 							</span>
 						{:else}
 							<span class="text-xs opacity-50">-</span>
@@ -255,15 +296,15 @@
 						<div class="flex gap-1 justify-end items-center h-7">
 							{#if (entry.status === 'pending' || entry.status === 'error') && editingId !== entry.id}
 								<button
-									class={`btn btn-xs tooltip ${entry.status === 'error' ? 'btn-warning' : 'btn-primary'}`}
+									class="btn btn-xs tooltip btn-primary"
 									onclick={() => onProcess(entry.id)}
-									disabled={!evalSelected || isBusy}
-									data-tip={entry.status === 'error' ? 'Reintentar' : 'Procesar'}
+									disabled={!evalSelected || isBusy || entry.formatValid === false}
+									data-tip={entry.formatValid === false
+										? 'Formato no A5. Recorta la imagen primero.'
+										: 'Procesar'}
 								>
 									{#if isProcessing}
 										<Loader2 size={14} class="animate-spin" />
-									{:else if entry.status === 'error'}
-										<RefreshCw size={14} />
 									{:else}
 										<Play size={14} />
 									{/if}
