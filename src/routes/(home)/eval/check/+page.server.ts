@@ -5,102 +5,104 @@ import { fetchEvalData } from '$lib/data/eval';
 import type { ResultToSave } from '$lib/types/api';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-async function saveSingleResultToDb(
-	supabase: SupabaseClient,
-	result: ResultToSave
-): Promise<{ success: boolean; error?: string }> {
-	if (!result.register_code) {
-		return { success: false, error: `Resultado para ${result.roll_code} no tiene register_code.` };
-	}
-
-	const answersToSave = result.answers.map((a) => ({
+/**
+ * Empaqueta un resultado para el RPC de Supabase
+ */
+function buildRpcPayload(result: ResultToSave) {
+	const answers = result.answers.map((a) => ({
 		question_code: a.question_code,
 		student_answer: a.student_answer
 	}));
 
-	const generalResultToSave = {
+	const general = {
 		correct_count: result.scores.general.correct_count,
 		incorrect_count: result.scores.general.incorrect_count,
 		blank_count: result.scores.general.blank_count,
 		score: result.scores.general.score
 	};
 
-	const sectionResultsToSave: Record<string, unknown> = {};
-	Object.entries(result.scores.by_section).forEach(([sectionCode, sectionScore]) => {
-		sectionResultsToSave[sectionCode] = {
-			correct_count: sectionScore.correct_count,
-			incorrect_count: sectionScore.incorrect_count,
-			blank_count: sectionScore.blank_count,
-			score: sectionScore.score
+	const by_section: Record<string, unknown> = {};
+	for (const [sectionCode, s] of Object.entries(result.scores.by_section)) {
+		by_section[sectionCode] = {
+			correct_count: s.correct_count,
+			incorrect_count: s.incorrect_count,
+			blank_count: s.blank_count,
+			score: s.score
 		};
-	});
-
-	try {
-		const { error: rpcError } = await supabase.rpc('upsert_eval_results', {
-			p_eval_code: result.eval_code,
-			p_register_code: result.register_code,
-			p_answers: answersToSave,
-			p_general_result: generalResultToSave,
-			p_section_results: sectionResultsToSave
-		});
-
-		if (rpcError) {
-			console.error('Error calling upsert_eval_results RPC:', rpcError);
-			return {
-				success: false,
-				error: `Error DB guardando ${result.roll_code}: ${rpcError.message}`
-			};
-		}
-
-		return { success: true };
-	} catch (e) {
-		console.error('Exception calling upsert_eval_results RPC:', e);
-		return { success: false, error: `Excepción guardando ${result.roll_code}` };
-	}
-}
-
-export const load: PageServerLoad = async ({ locals, url }) => {
-	// Obtener niveles
-	const { data: levels, error: levelsError } = await locals.supabase
-		.from('levels')
-		.select('*')
-		.order('name');
-	if (levelsError) console.error('Error loading levels:', levelsError);
-
-	const evalCode = url.searchParams.get('eval');
-	let serverQuestions: EvalQuestion[] = [];
-	let initialEval: EvalWithSections | null = null;
-
-	// Si viene código de evaluación en URL, cargar sus datos
-	if (evalCode) {
-		// Cargar detalles de la evaluación
-		const { data: evalData, error: evalError } = await locals.supabase
-			.from('evals')
-			.select('*, sections:eval_sections(*, course:course_code(name))') // Carga evaluación con secciones y nombre curso
-			.eq('code', evalCode)
-			.single(); // Espera una sola evaluación
-
-		if (evalError || !evalData) {
-			console.error('Error loading initial eval:', evalError);
-		} else {
-			initialEval = evalData as unknown as EvalWithSections; // Casting necesario por el select anidado
-			// Cargar preguntas para la evaluación
-			const evalDetails = await fetchEvalData(locals.supabase, evalCode);
-			if (evalDetails) {
-				serverQuestions = evalDetails.questions;
-			} else {
-				console.error('Error loading questions for initial eval:', evalCode);
-				// Quizás mostrar un error al usuario en la página si falla la carga inicial
-				initialEval = null; // No establecer evaluación inicial si las preguntas fallan
-			}
-		}
 	}
 
 	return {
-		levels: (levels as Level[]) || [],
-		serverQuestions, // Renombrado para claridad
+		p_eval_code: result.eval_code,
+		p_register_code: result.register_code,
+		p_answers: answers,
+		p_general_result: general,
+		p_section_results: by_section
+	};
+}
+
+/**
+ * Guarda todos los resultados en paralelo usando Promise.allSettled
+ */
+async function saveAllResults(
+	supabase: SupabaseClient,
+	results: ResultToSave[]
+): Promise<{ successCount: number; errors: string[] }> {
+	const tasks = results.map((r) => {
+		const payload = buildRpcPayload(r);
+		return supabase.rpc('upsert_eval_results', payload).then(({ error }) => {
+			if (error) throw new Error(`${r.roll_code}: ${error.message}`);
+		});
+	});
+
+	const settled = await Promise.allSettled(tasks);
+	let successCount = 0;
+	const errors: string[] = [];
+
+	for (const res of settled) {
+		if (res.status === 'fulfilled') {
+			successCount++;
+		} else {
+			errors.push(res.reason.message || 'Error desconocido');
+		}
+	}
+
+	return { successCount, errors };
+}
+
+export const load: PageServerLoad = async ({ locals, url }) => {
+	const evalCode = url.searchParams.get('eval');
+
+	// Carga niveles y datos de evaluación en paralelo
+	const [levelsRes, evalRes] = await Promise.all([
+		locals.supabase.from('levels').select('*').order('name'),
+		evalCode
+			? locals.supabase
+					.from('evals')
+					.select('*, sections:eval_sections(*, course:course_code(name))')
+					.eq('code', evalCode)
+					.single()
+			: Promise.resolve({ data: null, error: null })
+	]);
+
+	if (levelsRes.error) console.error('Error loading levels:', levelsRes.error);
+	const levels = (levelsRes.data as Level[]) || [];
+
+	let initialEval: EvalWithSections | null = null;
+	let serverQuestions: EvalQuestion[] = [];
+
+	if (evalRes.error) {
+		console.error('Error loading initial eval:', evalRes.error);
+	} else if (evalRes.data) {
+		initialEval = evalRes.data as unknown as EvalWithSections;
+		const details = await fetchEvalData(locals.supabase, evalCode!);
+		serverQuestions = details?.questions ?? [];
+	}
+
+	return {
+		levels,
 		evalCode,
-		initialEval, // Pasar la evaluación completa si se encontró
+		initialEval,
+		serverQuestions,
 		title: 'Procesar Evaluación OMR'
 	};
 };
@@ -118,8 +120,7 @@ export const actions: Actions = {
 		try {
 			resultsToSave = JSON.parse(resultsJson);
 			if (!Array.isArray(resultsToSave)) throw new Error('Invalid format');
-		} catch (error) {
-			console.error('Failed to parse resultsToSave JSON:', error);
+		} catch {
 			return fail(400, { message: 'Formato de resultados inválido.' });
 		}
 
@@ -127,29 +128,16 @@ export const actions: Actions = {
 			return fail(400, { message: 'No hay resultados válidos para guardar.' });
 		}
 
-		let successCount = 0;
-		const errors: string[] = [];
+		const { successCount, errors } = await saveAllResults(locals.supabase, resultsToSave);
 
-		// Procesar cada resultado individualmente
-		for (const result of resultsToSave) {
-			const saveOutcome = await saveSingleResultToDb(locals.supabase, result);
-			if (saveOutcome.success) {
-				successCount++;
-			} else {
-				errors.push(saveOutcome.error || `Error desconocido guardando ${result.roll_code}`);
-			}
-		}
-
-		if (errors.length > 0) {
-			// Devolver fallo parcial o total con detalles
+		if (errors.length) {
 			return fail(500, {
-				message: `Se guardaron ${successCount} de ${resultsToSave.length} resultados. Errores: ${errors.join(', ')}`,
+				message: `Se guardaron ${successCount} de ${resultsToSave.length}`,
 				savedCount: successCount,
-				errors: errors
+				errors
 			});
 		}
 
-		// Éxito total
 		return {
 			success: true,
 			message: `Se guardaron ${successCount} resultados correctamente.`,

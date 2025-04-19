@@ -2,7 +2,7 @@ CREATE TABLE public.eval_answers (
     code UUID DEFAULT gen_random_uuid(),
     register_code UUID NOT NULL,
     question_code UUID NOT NULL,
-    student_answer CHAR(1), 
+    student_answer TEXT, 
     CONSTRAINT pk_eval_answers PRIMARY KEY (code),
     CONSTRAINT fk_eval_answers_register FOREIGN KEY (register_code) REFERENCES public.registers(code) ON DELETE CASCADE,
     CONSTRAINT fk_eval_answers_question FOREIGN KEY (question_code) REFERENCES public.eval_questions(code) ON DELETE CASCADE,

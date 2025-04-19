@@ -30,6 +30,7 @@
 		ApiOmrErrorData,
 		ResultToSave
 	} from '$lib/types/api';
+	import { goto } from '$app/navigation';
 
 	type FileStatus = 'pending' | 'processing' | 'success' | 'error';
 	interface FileEntry {
@@ -267,7 +268,6 @@
 		if (!selectedEval || isProcessingBatch || pendingFilesCount === 0) return;
 		isProcessingBatch = true;
 
-		// Guardar el ID del archivo seleccionado actualmente para restaurarlo después
 		const previousSelectedId = selectedFileId;
 
 		try {
@@ -574,9 +574,14 @@
 						action="?/saveResults"
 						use:enhance={() => {
 							isSavingBatch = true;
-							return async ({ update }) => {
+							return async ({ update, result }) => {
 								await update();
 								isSavingBatch = false;
+								if (result.type === 'success' && (result.data as { success: boolean }).success) {
+									goto('/result');
+								} else {
+									showToast('Ocurrio un error inesperado', 'danger');
+								}
 							};
 						}}
 					>
@@ -593,9 +598,6 @@
 							type="submit"
 							class="btn btn-success btn-sm"
 							disabled={!canSave || isSavingBatch}
-							title={!canSave
-								? 'Completa el procesamiento y corrige errores para guardar'
-								: 'Guardar todos los resultados válidos'}
 						>
 							{#if isSavingBatch}
 								<Loader2 class="animate-spin mr-1" size={16} /> Guardando...
