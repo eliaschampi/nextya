@@ -37,9 +37,9 @@
 		modal?.showModal();
 
 		const nameInput = modal?.querySelector<HTMLInputElement>('#name');
-		const modalityInput = modal?.querySelector<HTMLTextAreaElement>('#modality');
+		const abrInput = modal?.querySelector<HTMLTextAreaElement>('#abr');
 		if (nameInput) nameInput.value = level.name || '';
-		if (modalityInput) modalityInput.value = level.modality || '';
+		if (abrInput) abrInput.value = level.abr || '';
 	}
 
 	// Abrir modal para confirmar eliminación
@@ -51,9 +51,9 @@
 	// Validar formulario
 	function validateForm(formData: FormData): boolean {
 		const name = (formData.get('name') as string)?.trim();
-		const modality = (formData.get('modality') as string)?.trim();
+		const abr = (formData.get('abr') as string)?.trim();
 
-		if (!name || !modality) {
+		if (!name || !abr) {
 			message = 'Todos los campos son obligatorios';
 			return false;
 		}
@@ -169,10 +169,10 @@
 				/>
 				<div class="mt-2">
 					<label class="label font-medium" for="group_name">Modalidad</label>
-					<select id="modality" name="modality" class="select w-full validator" required>
+					<select id="abr" name="abr" class="select w-full validator" required>
 						<option value="">Selecciona una modalidad</option>
-						{#each modalities as modality (modality)}
-							<option value={modality}>{modality}</option>
+						{#each modalities as abr (abr)}
+							<option value={abr}>{abr}</option>
 						{/each}
 					</select>
 				</div>
@@ -211,7 +211,7 @@
 		<div class="flex items-center justify-between">
 			<div class="flex-1">
 				<div class="font-medium text-base-content">{item.name}</div>
-				<div class="text-sm text-base-content/70">{item.modality}</div>
+				<div class="text-sm text-base-content/70">{item.abr}</div>
 			</div>
 			<div class="flex items-center gap-1">
 				{#if item.created_at}

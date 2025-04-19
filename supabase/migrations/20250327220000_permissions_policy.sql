@@ -1,4 +1,4 @@
--- Policies for permissions
+-- Policies for permissions, do not touch this
 CREATE POLICY "Users_can_view_permissions" ON public.permissions 
     FOR SELECT
     TO authenticated

@@ -7,19 +7,19 @@
 	import { Shield } from 'lucide-svelte';
 	import type { User } from '@supabase/supabase-js';
 
-	type PermissionValue = {
-		can_create: boolean;
-		can_update: boolean;
-		can_delete: boolean;
-	};
+	// Define available actions
+	const ACTIONS = ['read', 'create', 'update', 'delete'] as const;
+	type Action = (typeof ACTIONS)[number];
 
-	type PermissionRecord = Record<string, PermissionValue>;
+	// New permission structure
+	type EntityPermissions = Record<Action, boolean>;
+	type PermissionRecord = Record<string, EntityPermissions>;
 
 	type ApiPermission = {
+		code: string;
+		user_code: string;
 		entity: string;
-		can_create: boolean;
-		can_update: boolean;
-		can_delete: boolean;
+		user_action: string;
 	};
 
 	const {
@@ -40,26 +40,40 @@
 	let saving = $state(false);
 	let allEntities = $derived(entities);
 
-	let allCanCreate = $derived(
-		Object.keys(permissions).length > 0 && Object.values(permissions).every((p) => p.can_create)
-	);
-	let allCanUpdate = $derived(
-		Object.keys(permissions).length > 0 && Object.values(permissions).every((p) => p.can_update)
-	);
-	let allCanDelete = $derived(
-		Object.keys(permissions).length > 0 && Object.values(permissions).every((p) => p.can_delete)
-	);
-
-	let allPermissionsGloballyEnabled = $derived(allCanCreate && allCanUpdate && allCanDelete);
-
-	let entityStates = $derived(
-		Object.fromEntries(
-			Object.entries(permissions).map(([entity, p]) => [
-				entity,
-				p.can_create && p.can_update && p.can_delete
-			])
+	// Derived states for all permissions
+	let allPermissionsByAction = $state<Record<Action, boolean>>(
+		ACTIONS.reduce(
+			(acc, action) => {
+				acc[action] = false;
+				return acc;
+			},
+			{} as Record<Action, boolean>
 		)
 	);
+
+	let allPermissionsGloballyEnabled = $state(false);
+	let entityStates = $state<Record<string, boolean>>({});
+
+	// Update derived states when permissions change
+	$effect(() => {
+		if (Object.keys(permissions).length === 0) return;
+
+		// Update action permissions
+		ACTIONS.forEach((action) => {
+			allPermissionsByAction[action] = Object.values(permissions).every((p) => p[action]);
+		});
+
+		// Update global state
+		allPermissionsGloballyEnabled = ACTIONS.every((action) => allPermissionsByAction[action]);
+
+		// Update entity states
+		entityStates = Object.fromEntries(
+			Object.entries(permissions).map(([entity, perms]) => [
+				entity,
+				ACTIONS.every((action) => perms[action])
+			])
+		);
+	});
 
 	// Modal control
 	$effect(() => {
@@ -99,23 +113,32 @@
 				permissions: ApiPermission[];
 			};
 
-			// Convert array to record for faster lookups
+			// Group permissions by entity
+			const permissionsByEntity: Record<string, string[]> = {};
+			permissionsData.forEach((p) => {
+				if (!permissionsByEntity[p.entity]) {
+					permissionsByEntity[p.entity] = [];
+				}
+				permissionsByEntity[p.entity].push(p.user_action);
+			});
+
+			// Convert to our permission record format
 			const permissionsMap: PermissionRecord = {};
-			permissionsData.forEach((p: ApiPermission) => {
-				permissionsMap[p.entity] = {
-					can_create: p.can_create,
-					can_update: p.can_update,
-					can_delete: p.can_delete
-				};
+			Object.entries(permissionsByEntity).forEach(([entity, actions]) => {
+				permissionsMap[entity] = ACTIONS.reduce((acc, action) => {
+					acc[action] = actions.includes(action);
+					return acc;
+				}, {} as EntityPermissions);
 			});
 
 			// Initialize all entities with their permissions
 			permissions = allEntities.reduce<PermissionRecord>((acc, entity) => {
-				acc[entity.label] = permissionsMap[entity.label] || {
-					can_create: false,
-					can_update: false,
-					can_delete: false
-				};
+				acc[entity.label] =
+					permissionsMap[entity.label] ||
+					ACTIONS.reduce((perms, action) => {
+						perms[action] = false;
+						return perms;
+					}, {} as EntityPermissions);
 				return acc;
 			}, {});
 		} catch (err) {
@@ -132,16 +155,24 @@
 		error = '';
 
 		try {
-			// Convert record back to array for API
-			const permissionsArray = Object.entries(permissions).map(([entity, perms]) => ({
-				entity,
-				...perms
-			}));
+			// Convert our permission format to the API format
+			const permissionsToSave: { entity: string; user_action: string }[] = [];
+
+			Object.entries(permissions).forEach(([entity, entityPermissions]) => {
+				ACTIONS.forEach((action) => {
+					if (entityPermissions[action]) {
+						permissionsToSave.push({
+							entity,
+							user_action: action
+						});
+					}
+				});
+			});
 
 			const response = await fetch(`/api/users/${user.id}/permissions`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ permissions: permissionsArray })
+				body: JSON.stringify({ permissions: permissionsToSave })
 			});
 
 			if (!response.ok) {
@@ -171,10 +202,10 @@
 	}
 
 	// Batch permission operations
-	function setAllPermissions(type: 'can_create' | 'can_update' | 'can_delete', value: boolean) {
+	function setAllPermissions(action: Action, value: boolean) {
 		// Create a new object to ensure reactivity
 		permissions = Object.fromEntries(
-			Object.entries(permissions).map(([key, perms]) => [key, { ...perms, [type]: value }])
+			Object.entries(permissions).map(([key, perms]) => [key, { ...perms, [action]: value }])
 		);
 	}
 
@@ -183,11 +214,10 @@
 			// Create a new object to ensure reactivity
 			permissions = {
 				...permissions,
-				[entity]: {
-					can_create: value,
-					can_update: value,
-					can_delete: value
-				}
+				[entity]: ACTIONS.reduce((acc, action) => {
+					acc[action] = value;
+					return acc;
+				}, {} as EntityPermissions)
 			};
 		}
 	}
@@ -199,6 +229,14 @@
 			callback(target.checked);
 		};
 	}
+
+	// Action name mapping for display
+	const actionNames: Record<Action, string> = {
+		read: 'Leer',
+		create: 'Crear',
+		update: 'Editar',
+		delete: 'Eliminar'
+	};
 </script>
 
 <dialog bind:this={modal} class="modal">
@@ -228,45 +266,27 @@
 					<thead>
 						<tr>
 							<th>Entidad</th>
-							<th class="text-center"> Crear </th>
-							<th class="text-center"> Editar </th>
-							<th class="text-center"> Eliminar </th>
+							{#each ACTIONS as action (action)}
+								<th class="text-center">{actionNames[action]}</th>
+							{/each}
 							<th class="text-center align-bottom pb-3">Todos</th>
 						</tr>
 					</thead>
 					<tbody>
 						<tr>
-							<td> <b>Todos</b> </td>
-							<td class="text-center">
-								<input
-									type="checkbox"
-									class="toggle toggle-primary toggle-sm"
-									title="Activar/Desactivar Crear para todos"
-									disabled={loading}
-									checked={allCanCreate}
-									onchange={handleToggleChange((value) => setAllPermissions('can_create', value))}
-								/>
-							</td>
-							<td class="text-center">
-								<input
-									type="checkbox"
-									class="toggle toggle-primary toggle-sm"
-									title="Activar/Desactivar Modificar para todos"
-									disabled={loading}
-									checked={allCanUpdate}
-									onchange={handleToggleChange((value) => setAllPermissions('can_update', value))}
-								/>
-							</td>
-							<td class="text-center">
-								<input
-									type="checkbox"
-									class="toggle toggle-primary toggle-sm"
-									title="Activar/Desactivar Eliminar para todos"
-									disabled={loading}
-									checked={allCanDelete}
-									onchange={handleToggleChange((value) => setAllPermissions('can_delete', value))}
-								/>
-							</td>
+							<td><b>Todos</b></td>
+							{#each ACTIONS as action (action)}
+								<td class="text-center">
+									<input
+										type="checkbox"
+										class="toggle toggle-primary toggle-sm"
+										title="Activar/Desactivar {actionNames[action]} para todos"
+										disabled={loading}
+										checked={allPermissionsByAction[action]}
+										onchange={handleToggleChange((value) => setAllPermissions(action, value))}
+									/>
+								</td>
+							{/each}
 							<td class="text-center">
 								<input
 									type="checkbox"
@@ -275,9 +295,7 @@
 									disabled={loading}
 									checked={allPermissionsGloballyEnabled}
 									onchange={handleToggleChange((value) => {
-										setAllPermissions('can_create', value);
-										setAllPermissions('can_update', value);
-										setAllPermissions('can_delete', value);
+										ACTIONS.forEach((action) => setAllPermissions(action, value));
 									})}
 								/>
 							</td>
@@ -285,30 +303,16 @@
 						{#each Object.entries(permissions) as [entity, permission] (entity)}
 							<tr>
 								<td>{getEntityName(entity)}</td>
-								<td class="text-center">
-									<input
-										type="checkbox"
-										class="toggle toggle-primary toggle-sm"
-										bind:checked={permission.can_create}
-										disabled={loading}
-									/>
-								</td>
-								<td class="text-center">
-									<input
-										type="checkbox"
-										class="toggle toggle-primary toggle-sm"
-										bind:checked={permission.can_update}
-										disabled={loading}
-									/>
-								</td>
-								<td class="text-center">
-									<input
-										type="checkbox"
-										class="toggle toggle-primary toggle-sm"
-										bind:checked={permission.can_delete}
-										disabled={loading}
-									/>
-								</td>
+								{#each ACTIONS as action (action)}
+									<td class="text-center">
+										<input
+											type="checkbox"
+											class="toggle toggle-primary toggle-sm"
+											bind:checked={permission[action]}
+											disabled={loading}
+										/>
+									</td>
+								{/each}
 								<td class="text-center">
 									<input
 										type="checkbox"

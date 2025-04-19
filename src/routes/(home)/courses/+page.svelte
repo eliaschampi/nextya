@@ -7,7 +7,6 @@
 	import type { Course } from '../../../app';
 	import { EllipsisVertical } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
-	import { getModalityTypes } from '$lib/data/modality';
 	import { permissionsStore } from '$lib/stores/permissions';
 
 	// Estados y referencias
@@ -16,7 +15,6 @@
 	let isEditing = $state(false);
 	let message = $state('');
 	let selectedcourse = $state<Course | null>(null);
-	const modalities = getModalityTypes();
 
 	const { data } = $props<{ data: { courses: Course[] } }>();
 
@@ -37,9 +35,9 @@
 		modal?.showModal();
 
 		const nameInput = modal?.querySelector<HTMLInputElement>('#name');
-		const modalityInput = modal?.querySelector<HTMLTextAreaElement>('#modality');
+		const abrInput = modal?.querySelector<HTMLTextAreaElement>('#abr');
 		if (nameInput) nameInput.value = course.name || '';
-		if (modalityInput) modalityInput.value = course.modality || '';
+		if (abrInput) abrInput.value = course.abr || '';
 	}
 
 	// Abrir modal para confirmar eliminación
@@ -51,9 +49,9 @@
 	// Validar formulario
 	function validateForm(formData: FormData): boolean {
 		const name = (formData.get('name') as string)?.trim();
-		const modality = (formData.get('modality') as string)?.trim();
+		const abr = (formData.get('abr') as string)?.trim();
 
-		if (!name || !modality) {
+		if (!name || !abr) {
 			message = 'Todos los campos son obligatorios';
 			return false;
 		}
@@ -164,13 +162,16 @@
 					placeholder="Ej: Matemática, Química, etc."
 				/>
 				<div class="mt-2">
-					<label class="label font-medium" for="modality">Modalidad</label>
-					<select id="modality" name="modality" class="select w-full validator" required>
-						<option value="">Selecciona una modalidad</option>
-						{#each modalities as modality (modality)}
-							<option value={modality}>{modality}</option>
-						{/each}
-					</select>
+					<label class="fieldset-legend" for="abr">Abreviatura</label>
+					<input
+						id="abr"
+						name="abr"
+						required
+						maxlength="4"
+						type="text"
+						class="input w-full validator"
+						placeholder="Ej: Art"
+					/>
 				</div>
 			</fieldset>
 			{#if message}
@@ -207,7 +208,7 @@
 		<div class="flex items-center justify-between">
 			<div class="flex-1">
 				<div class="font-medium text-base-content">{item.name}</div>
-				<div class="text-sm text-base-content/70">{item.modality}</div>
+				<div class="text-sm text-base-content/70">{item.abr}</div>
 			</div>
 			<div class="dropdown dropdown-end">
 				<button type="button" class="m-1 cursor-pointer">

@@ -30,23 +30,23 @@ export type Database = {
 		Tables: {
 			courses: {
 				Row: {
+					abr: string;
 					code: string;
 					created_at: string | null;
-					modality: string;
 					name: string;
 					user_code: string;
 				};
 				Insert: {
+					abr: string;
 					code?: string;
 					created_at?: string | null;
-					modality: string;
 					name: string;
 					user_code: string;
 				};
 				Update: {
+					abr?: string;
 					code?: string;
 					created_at?: string | null;
-					modality?: string;
 					name?: string;
 					user_code?: string;
 				};
@@ -287,51 +287,45 @@ export type Database = {
 			};
 			levels: {
 				Row: {
+					abr: string;
 					code: string;
 					created_at: string | null;
-					modality: string;
 					name: string;
-					user_code: string;
+					users: string[];
 				};
 				Insert: {
+					abr: string;
 					code?: string;
 					created_at?: string | null;
-					modality: string;
 					name: string;
-					user_code: string;
+					users: string[];
 				};
 				Update: {
+					abr?: string;
 					code?: string;
 					created_at?: string | null;
-					modality?: string;
 					name?: string;
-					user_code?: string;
+					users?: string[];
 				};
 				Relationships: [];
 			};
 			permissions: {
 				Row: {
-					can_create: boolean;
-					can_delete: boolean;
-					can_update: boolean;
 					code: string;
 					entity: Database['public']['Enums']['entity_enum'];
+					user_action: string;
 					user_code: string;
 				};
 				Insert: {
-					can_create?: boolean;
-					can_delete?: boolean;
-					can_update?: boolean;
 					code?: string;
 					entity: Database['public']['Enums']['entity_enum'];
+					user_action: string;
 					user_code: string;
 				};
 				Update: {
-					can_create?: boolean;
-					can_delete?: boolean;
-					can_update?: boolean;
 					code?: string;
 					entity?: Database['public']['Enums']['entity_enum'];
+					user_action?: string;
 					user_code?: string;
 				};
 				Relationships: [];
@@ -450,21 +444,16 @@ export type Database = {
 		};
 		Functions: {
 			has_permission: {
-				Args: {
-					entity_name: string;
-					permission: string;
-				};
+				Args: { entity_name: string; permission: string };
 				Returns: boolean;
 			};
-			process_evaluation_results: {
+			upsert_eval_results: {
 				Args: {
-					p_register_code: string;
 					p_eval_code: string;
+					p_register_code: string;
 					p_answers: Json;
-					p_correct_count: number;
-					p_blank_count: number;
-					p_incorrect_count: number;
-					p_score: number;
+					p_general_result: Json;
+					p_section_results: Json;
 				};
 				Returns: undefined;
 			};

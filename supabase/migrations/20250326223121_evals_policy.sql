@@ -1,7 +1,10 @@
 -- SELECT policy (unchanged)
 CREATE POLICY "Users_can_view_evals" ON evals FOR
 SELECT TO authenticated
-    USING (TRUE);
+    USING (
+        user_code = (SELECT auth.uid())
+        OR public.has_permission('evals', 'read')
+    );
 
 -- INSERT policy (optimized)
 CREATE POLICY "users_can_insert_eval" ON evals FOR

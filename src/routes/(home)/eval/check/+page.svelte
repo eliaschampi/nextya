@@ -758,7 +758,7 @@
 	/>
 {/if}
 
-<dialog bind:this={modal} class="modal modal-bottom sm:modal-middle">
+<dialog bind:this={modal} class="modal">
 	<div class="modal-box">
 		<div class="flex justify-between items-center mb-6">
 			<h3 class="text-xl font-bold text-primary flex items-center gap-2">

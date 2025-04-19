@@ -1,7 +1,7 @@
 -- SELECT policy
 CREATE POLICY "Users_can_view_eval_sections" ON eval_sections FOR
 SELECT TO authenticated
-    USING (TRUE);
+    USING (public.has_permission('eval_sections', 'read'));
 
 -- INSERT policy
 CREATE POLICY "users_can_insert_eval_section" ON eval_sections FOR

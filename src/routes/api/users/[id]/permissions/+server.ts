@@ -6,9 +6,7 @@ import { error } from '@sveltejs/kit';
 // Type definitions for better code safety
 type Permission = {
 	entity: string;
-	can_create: boolean;
-	can_update: boolean;
-	can_delete: boolean;
+	user_action: string;
 };
 
 // GET /api/users/[id]/permissions
@@ -53,20 +51,17 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		const { error: deleteError } = await supabaseAdmin
 			.from('permissions')
 			.delete()
-			.eq('user_code', userId);
+			.eq('user_code', userId)
+			.neq('entity', 'users');
 
 		if (deleteError) throw deleteError;
 
-		// Only insert permissions that have at least one permission enabled
-		const permissionsToInsert = permissions
-			.filter((p) => p.can_create || p.can_update || p.can_delete)
-			.map((p) => ({
-				user_code: userId,
-				entity: p.entity,
-				can_create: p.can_create,
-				can_update: p.can_update,
-				can_delete: p.can_delete
-			}));
+		// Map permissions to the new structure
+		const permissionsToInsert = permissions.map((p) => ({
+			user_code: userId,
+			entity: p.entity,
+			user_action: p.user_action
+		}));
 
 		// If we have permissions to insert, do it
 		if (permissionsToInsert.length > 0) {
@@ -82,6 +77,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			count: permissionsToInsert.length
 		});
 	} catch (err) {
+		console.log(err);
 		throw error(500, err instanceof Error ? err.message : 'Error al guardar permisos');
 	}
 };

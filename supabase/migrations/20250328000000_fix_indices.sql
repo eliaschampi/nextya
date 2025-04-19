@@ -9,7 +9,6 @@ CREATE INDEX idx_students_user_code ON public.students(user_code);
 CREATE INDEX idx_students_name_search ON public.students USING GIN (to_tsvector('english', name || ' ' || last_name));
 
 -- 3. Levels table
-CREATE INDEX idx_levels_user_code ON public.levels(user_code);
 CREATE INDEX idx_levels_name ON public.levels(name);
 
 -- 4. Courses table

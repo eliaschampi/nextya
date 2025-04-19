@@ -1,7 +1,7 @@
 -- SELECT policy
 CREATE POLICY "Users_can_view_eval_answers" ON eval_answers FOR
 SELECT TO authenticated
-    USING (TRUE);
+    USING (public.has_permission('eval_answers', 'read'));
 
 -- INSERT policy
 CREATE POLICY "users_can_insert_eval_answer" ON eval_answers FOR

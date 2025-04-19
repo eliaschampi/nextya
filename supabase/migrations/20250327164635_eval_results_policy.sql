@@ -1,8 +1,7 @@
 -- SELECT policy
 CREATE POLICY "Users_can_view_eval_results" ON eval_results FOR
 SELECT TO authenticated
-    USING (TRUE);
-
+    USING (public.has_permission('eval_results', 'read'));
 -- INSERT policy
 CREATE POLICY "users_can_insert_eval_result" ON eval_results FOR
 INSERT TO authenticated

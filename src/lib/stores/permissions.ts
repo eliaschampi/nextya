@@ -1,12 +1,19 @@
 // src/lib/stores/permission.ts
 import { writable, derived, type Readable, get } from 'svelte/store';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Permission } from '../../app';
 import type { Database } from '../../database.types';
+
+// Define the new permission structure
+type Permission = {
+	code: string;
+	user_code: string;
+	entity: string;
+	user_action: string;
+};
 
 type PermissionCheck = {
 	entity: string;
-	action: 'create' | 'update' | 'delete';
+	action: 'read' | 'create' | 'update' | 'delete';
 };
 
 const createPermissionsStore = () => {
@@ -45,18 +52,8 @@ const createPermissionsStore = () => {
 	const has = (check: PermissionCheck): Readable<boolean> => {
 		return derived(permissions, ($permissions) => {
 			if (!$permissions.length) return false;
-			const permission = $permissions.find((p) => p.entity === check.entity);
-			if (!permission) return false;
-			switch (check.action) {
-				case 'create':
-					return permission.can_create;
-				case 'update':
-					return permission.can_update;
-				case 'delete':
-					return permission.can_delete;
-				default:
-					return false;
-			}
+			// Check if the user has the specific action permission for the entity
+			return $permissions.some((p) => p.entity === check.entity && p.user_action === check.action);
 		});
 	};
 
