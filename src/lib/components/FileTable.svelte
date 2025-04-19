@@ -234,7 +234,7 @@
 	</div>
 {/snippet}
 <div class="max-h-[50rem] overflow-auto rounded-lg bg-base-200/50">
-	<table class="table table-sm table-zebra table-pin-rows w-full">
+	<table class="table table-sm table-pin-rows w-full">
 		<thead>
 			<tr>
 				<th class="w-10"></th>

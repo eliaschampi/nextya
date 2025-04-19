@@ -32,6 +32,7 @@
 	} from '$lib/types/api';
 	import { goto } from '$app/navigation';
 
+	// Definición de tipos
 	type FileStatus = 'pending' | 'processing' | 'success' | 'error';
 	interface FileEntry {
 		file: File;
@@ -40,16 +41,16 @@
 		result: ApiOmrSuccessData | null;
 		error: ApiOmrErrorData | null;
 		saved: boolean;
-		formatValid?: boolean; // Indica si la imagen tiene proporción A5
-		formatName?: string; // Nombre del formato detectado
+		formatValid?: boolean;
+		formatName?: string;
 	}
 
-	// Interfaz para errores de validación
 	interface ValidationError {
 		id: string;
 		message: string;
 	}
 
+	// Props
 	const { data } = $props<{
 		data: {
 			levels: Level[];
@@ -59,7 +60,7 @@
 		};
 	}>();
 
-	// State declarations
+	// Estado
 	let selectedEval = $state<EvalWithSections | null>(data.initialEval ?? null);
 	let evalQuestions = $state<EvalQuestion[]>(data.serverQuestions || []);
 	let availableEvals = $state<EvalWithSections[]>([]);
@@ -71,12 +72,20 @@
 	let detailsModalOpen = $state(false);
 	let modal = $state<HTMLDialogElement | null>(null);
 
-	// Derived values
-	let currentPreviewUrl = $derived(
-		getSelectedFileEntry()?.file ? URL.createObjectURL(getSelectedFileEntry()!.file) : ''
+	// Valores derivados
+	let currentPreviewUrl = $derived.by(() => {
+		if (!selectedFileId) return '';
+		const entry = fileEntries.find((e) => e.id === selectedFileId);
+		if (!entry || !entry.file) return '';
+		const url = URL.createObjectURL(entry.file);
+		return url ?? '';
+	});
+	let selectedFileResult = $derived(
+		selectedFileId ? fileEntries.find((e) => e.id === selectedFileId)?.result : null
 	);
-	let selectedFileResult = $derived(getSelectedFileEntry()?.result);
-	let selectedFileError = $derived(getSelectedFileEntry()?.error);
+	let selectedFileError = $derived(
+		selectedFileId ? fileEntries.find((e) => e.id === selectedFileId)?.error : null
+	);
 	let pendingFilesCount = $derived(fileEntries.filter((e) => e.status === 'pending').length);
 	let successFilesCount = $derived(fileEntries.filter((e) => e.status === 'success').length);
 	let errorFilesCount = $derived(fileEntries.filter((e) => e.status === 'error').length);
@@ -86,60 +95,52 @@
 			.length
 	);
 
-	// Validation logic
-	let validationErrors = $derived<ValidationError[]>(
-		(function () {
-			const errors: ValidationError[] = [];
-			const rollCodes = new Map<string, string[]>();
+	// Lógica de validación extraída
+	function getValidationErrors(entries: FileEntry[]): ValidationError[] {
+		const errors: ValidationError[] = [];
+		const rollCodes = new Map<string, string[]>();
 
-			for (const entry of fileEntries) {
-				if (entry.result?.roll_code) {
-					const code = entry.result.roll_code;
-					if (!rollCodes.has(code)) rollCodes.set(code, []);
-					rollCodes.get(code)!.push(entry.id);
-				}
+		for (const entry of entries) {
+			if (entry.result?.roll_code) {
+				const code = entry.result.roll_code;
+				if (!rollCodes.has(code)) rollCodes.set(code, []);
+				rollCodes.get(code)!.push(entry.id);
 			}
+		}
 
-			rollCodes.forEach((ids, code) => {
-				if (ids.length > 1) {
-					ids.forEach((id) => errors.push({ id, message: `Código duplicado: ${code}` }));
-				}
-			});
+		rollCodes.forEach((ids, code) => {
+			if (ids.length > 1) {
+				ids.forEach((id) => errors.push({ id, message: `Código duplicado: ${code}` }));
+			}
+		});
 
-			fileEntries.forEach((entry) => {
-				// Validación de formato A5
-				if (entry.status === 'pending' && entry.formatValid === false) {
-					errors.push({
-						id: entry.id,
-						message: `Formato no A5: ${entry.formatName || 'Proporción incorrecta'}`
-					});
-				}
+		entries.forEach((entry) => {
+			if (entry.status === 'pending' && entry.formatValid === false) {
+				errors.push({
+					id: entry.id,
+					message: `Formato no A5: ${entry.formatName || 'Proporción incorrecta'}`
+				});
+			}
+			if (entry.status === 'success' && !entry.result?.register_code) {
+				errors.push({
+					id: entry.id,
+					message: `Estudiante no encontrado (${entry.result?.roll_code})`
+				});
+			}
+			if (entry.status === 'error' && entry.error?.code !== 'STUDENT_NOT_FOUND') {
+				errors.push({ id: entry.id, message: `Error: ${entry.error?.message || 'Desconocido'}` });
+			}
+		});
 
-				// Validación de estudiante
-				if (entry.status === 'success' && !entry.result?.register_code) {
-					errors.push({
-						id: entry.id,
-						message: `Estudiante no encontrado (${entry.result?.roll_code})`
-					});
-				}
+		return errors;
+	}
 
-				// Validación de errores de procesamiento
-				if (entry.status === 'error' && entry.error?.code !== 'STUDENT_NOT_FOUND') {
-					errors.push({ id: entry.id, message: `Error: ${entry.error?.message || 'Desconocido'}` });
-				}
-			});
-
-			return errors;
-		})()
-	);
-
-	// Convert validationErrors to a Map for FileTable
+	let validationErrors = $derived(getValidationErrors(fileEntries));
 	let validationErrorsMap = $derived(new Map(validationErrors.map((err) => [err.id, err.message])));
 
 	let canProcess = $derived(
 		!!selectedEval &&
 			fileEntries.length > 0 &&
-			// Solo permitir procesar si no hay archivos pendientes con formato inválido
 			!fileEntries.some((e) => e.status === 'pending' && e.formatValid === false)
 	);
 	let canSave = $derived(
@@ -151,11 +152,7 @@
 			errorFilesCount === fileEntries.filter((e) => e.error?.code === 'STUDENT_NOT_FOUND').length
 	);
 
-	// Functions
-	function getSelectedFileEntry(): FileEntry | undefined {
-		return fileEntries.find((entry) => entry.id === selectedFileId);
-	}
-
+	// Funciones auxiliares
 	async function readFileAsDataURL(file: File): Promise<string> {
 		return new Promise((resolve, reject) => {
 			const reader = new FileReader();
@@ -165,8 +162,7 @@
 		});
 	}
 
-	// Process a single file with optional roll code override
-	async function processFileEntry(
+	async function processFile(
 		id: string,
 		rollCodeOverride: string | null = null,
 		skipSelection: boolean = false
@@ -174,7 +170,6 @@
 		const entryIndex = fileEntries.findIndex((e) => e.id === id);
 		if (entryIndex === -1 || !selectedEval) return;
 
-		// Verificar si el formato es válido antes de procesar
 		if (fileEntries[entryIndex].formatValid === false) {
 			showToast(
 				`No se puede procesar: ${fileEntries[entryIndex].formatName || 'Formato no A5'}. Recorta la imagen primero.`,
@@ -183,14 +178,10 @@
 			return;
 		}
 
-		fileEntries[entryIndex] = {
-			...fileEntries[entryIndex],
-			status: 'processing',
-			result: null,
-			error: null
-		};
+		fileEntries[entryIndex].status = 'processing';
+		fileEntries[entryIndex].result = null;
+		fileEntries[entryIndex].error = null;
 
-		// Solo seleccionar el archivo si no estamos en procesamiento por lotes
 		if (!skipSelection) {
 			selectedFileId = id;
 		}
@@ -211,13 +202,9 @@
 			const apiResponse = (await response.json()) as ApiOmrResponse;
 
 			if (response.ok && apiResponse.success) {
-				fileEntries[entryIndex] = {
-					...fileEntries[entryIndex],
-					status: 'success',
-					result: apiResponse.data,
-					error: null,
-					saved: false
-				};
+				fileEntries[entryIndex].status = 'success';
+				fileEntries[entryIndex].result = apiResponse.data;
+				fileEntries[entryIndex].saved = false;
 				if (!isProcessingBatch) {
 					showToast(
 						apiResponse.data.student
@@ -227,40 +214,28 @@
 					);
 				}
 			} else if (!apiResponse.success) {
-				fileEntries[entryIndex] = {
-					...fileEntries[entryIndex],
-					status: 'error',
-					result: null,
-					error: apiResponse.error
-				};
-				if (!isProcessingBatch)
-					showToast(`Error en ${file.name}: ${apiResponse.error.message}`, 'warning');
-			} else {
-				const errorData: ApiOmrErrorData = {
+				fileEntries[entryIndex].status = 'error';
+				fileEntries[entryIndex].error = apiResponse.error || {
 					code: 'INTERNAL_ERROR',
 					message: 'Respuesta inesperada de la API.'
 				};
-				fileEntries[entryIndex] = {
-					...fileEntries[entryIndex],
-					status: 'error',
-					result: null,
-					error: errorData
-				};
-				if (!isProcessingBatch) showToast(`Error inesperado procesando ${file.name}`, 'danger');
+				if (!isProcessingBatch) {
+					showToast(
+						`Error en ${file.name}: ${apiResponse.error?.message || 'Desconocido'}`,
+						'warning'
+					);
+				}
 			}
 		} catch (error) {
 			console.error('Error procesando archivo:', error);
-			const errorData: ApiOmrErrorData = {
+			fileEntries[entryIndex].status = 'error';
+			fileEntries[entryIndex].error = {
 				code: 'INTERNAL_ERROR',
 				message: error instanceof Error ? error.message : 'Error de red o desconocido'
 			};
-			fileEntries[entryIndex] = {
-				...fileEntries[entryIndex],
-				status: 'error',
-				result: null,
-				error: errorData
-			};
-			if (!isProcessingBatch) showToast(`Error al procesar archivo`, 'danger');
+			if (!isProcessingBatch) {
+				showToast(`Error al procesar archivo`, 'danger');
+			}
 		}
 	}
 
@@ -271,19 +246,16 @@
 		const previousSelectedId = selectedFileId;
 
 		try {
-			// Filtrar entradas pendientes y con formato válido (o sin validación de formato)
 			const pendingEntries = fileEntries.filter(
 				(e) => e.status === 'pending' && e.formatValid !== false
 			);
-
 			if (pendingEntries.length === 0) {
 				showToast('No hay archivos válidos para procesar. Corrige el formato A5.', 'warning');
 				return;
 			}
 
-			// Procesar todos los archivos sin cambiar la selección (skipSelection=true)
 			for (const entry of pendingEntries) {
-				await processFileEntry(entry.id, null, true);
+				await processFile(entry.id, null, true);
 			}
 
 			showToast('Procesamiento por lotes completado', 'success');
@@ -291,13 +263,11 @@
 			showToast('Error durante el procesamiento por lotes', 'danger');
 			console.error('Batch processing error:', error);
 		} finally {
-			// Restaurar la selección original si todavía existe, o seleccionar el primer archivo
 			if (previousSelectedId && fileEntries.some((e) => e.id === previousSelectedId)) {
 				selectedFileId = previousSelectedId;
 			} else if (fileEntries.length > 0) {
 				selectedFileId = fileEntries[0].id;
 			}
-
 			isProcessingBatch = false;
 		}
 	}
@@ -307,15 +277,14 @@
 		if (!input.files?.length) return;
 
 		const newFiles = Array.from(input.files).filter((file) => file.type.startsWith('image/'));
-		if (newFiles.length < input.files.length)
+		if (newFiles.length < input.files.length) {
 			showToast('Algunos archivos no son imágenes y fueron ignorados', 'warning');
+		}
 
-		// Validar proporción A5 para cada archivo
 		const newEntries: FileEntry[] = [];
 		let invalidFormatCount = 0;
 
 		for (const file of newFiles) {
-			// Crear una entrada temporal
 			const entry: FileEntry = {
 				file,
 				id: crypto.randomUUID(),
@@ -325,7 +294,6 @@
 				saved: false
 			};
 
-			// Validar formato A5
 			try {
 				const url = URL.createObjectURL(file);
 				const dimensions = await getImageDimensions(url);
@@ -340,8 +308,7 @@
 				}
 			} catch (error) {
 				console.error('Error validando formato de imagen:', error);
-				// Si hay error en la validación, asumimos que es válido para no bloquear
-				entry.formatValid = true;
+				entry.formatValid = true; // Asumir válido si hay error
 			}
 
 			newEntries.push(entry);
@@ -362,16 +329,10 @@
 		input.value = '';
 	}
 
-	// Función auxiliar para obtener dimensiones de una imagen
 	async function getImageDimensions(url: string): Promise<{ width: number; height: number }> {
 		return new Promise((resolve, reject) => {
 			const img = new Image();
-			img.onload = () => {
-				resolve({
-					width: img.naturalWidth,
-					height: img.naturalHeight
-				});
-			};
+			img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
 			img.onerror = () => reject(new Error('Error cargando imagen'));
 			img.src = url;
 		});
@@ -462,30 +423,21 @@
 		const originalFile = fileEntries[entryIndex].file;
 		const newFile = base64ToFile(processedImageData, originalFile.name);
 
-		// Validar el formato de la imagen procesada
 		try {
-			// Crear una imagen temporal para verificar las dimensiones
 			const dimensions = await getImageDimensions(processedImageData);
 			const validation = validateA5Proportion(dimensions.width, dimensions.height);
-
-			// Actualizar la entrada con el nuevo archivo y la validación de formato
-			fileEntries[entryIndex] = {
-				...fileEntries[entryIndex],
-				file: newFile,
-				formatValid: validation.isValid,
-				formatName: validation.format
-			};
-
-			// Mostrar mensaje apropiado
-			if (validation.isValid) {
-				showToast('Imagen editada guardada localmente.', 'success');
-			} else {
-				showToast(`Guardado con formato Invalido: ${validation.format}`, 'warning');
-			}
+			fileEntries[entryIndex].file = newFile;
+			fileEntries[entryIndex].formatValid = validation.isValid;
+			fileEntries[entryIndex].formatName = validation.format;
+			showToast(
+				validation.isValid
+					? 'Imagen editada guardada localmente.'
+					: `Guardado con formato Invalido: ${validation.format}`,
+				validation.isValid ? 'success' : 'warning'
+			);
 		} catch (error) {
 			console.error('Error validando formato de imagen procesada:', error);
-			// Si hay error en la validación, guardamos la imagen sin cambiar el estado de validación
-			fileEntries[entryIndex] = { ...fileEntries[entryIndex], file: newFile };
+			fileEntries[entryIndex].file = newFile;
 			showToast('Imagen editada guardada localmente', 'success');
 		}
 	}
@@ -580,7 +532,7 @@
 								if (result.type === 'success' && (result.data as { success: boolean }).success) {
 									goto('/result');
 								} else {
-									showToast('Ocurrio un error inesperado', 'danger');
+									showToast('Ocurrió un error inesperado', 'danger');
 								}
 							};
 						}}
@@ -608,7 +560,7 @@
 					</form>
 				</div>
 			</div>
-
+			<div class="divider"></div>
 			{#if isProcessingBatch}
 				<div class="mt-4">
 					<progress
@@ -644,11 +596,13 @@
 							<Upload size={12} />
 							{fileEntries.length} Total
 						</span>
-						<span class="badge badge-success badge-outline gap-1.5"
-							><Check size={12} /> {successFilesCount} OK
+						<span class="badge badge-success badge-outline gap-1.5">
+							<Check size={12} />
+							{successFilesCount} OK
 						</span>
-						<span class="badge badge-error badge-outline gap-1.5"
-							><X size={12} /> {errorFilesCount} Error
+						<span class="badge badge-error badge-outline gap-1.5">
+							<X size={12} />
+							{errorFilesCount} Error
 						</span>
 						<span class="badge badge-info badge-outline gap-1.5">
 							<Save size={12} />
@@ -668,11 +622,10 @@
 							{validationErrorsMap}
 							evalSelected={!!selectedEval}
 							onSelect={(id: string) => (selectedFileId = id)}
-							onProcess={(id: string, rollCode?: string) => processFileEntry(id, rollCode)}
+							onProcess={(id: string, rollCode?: string) => processFile(id, rollCode)}
 							onRemove={removeFile}
 							onViewDetails={viewResultDetails}
-							onUpdateRollCode={(id: string, newRollCode: string) =>
-								processFileEntry(id, newRollCode)}
+							onUpdateRollCode={(id: string, newRollCode: string) => processFile(id, newRollCode)}
 						/>
 					</div>
 
@@ -716,15 +669,16 @@
 			</div>
 
 			<div class="w-full lg:w-1/2 p-4">
-				{#if selectedFileId && getSelectedFileEntry()}
+				{#if selectedFileId && fileEntries.find((e) => e.id === selectedFileId)}
 					<ImagePreview
 						imageUrl={currentPreviewUrl}
-						status={getSelectedFileEntry()!.status}
+						status={fileEntries.find((e) => e.id === selectedFileId)!.status}
 						error={selectedFileError}
 						result={selectedFileResult}
-						fileName={getSelectedFileEntry()!.file.name}
-						isA5Format={getSelectedFileEntry()!.formatValid !== false}
-						formatName={getSelectedFileEntry()!.formatName || 'Formato desconocido'}
+						fileName={fileEntries.find((e) => e.id === selectedFileId)!.file.name}
+						isA5Format={fileEntries.find((e) => e.id === selectedFileId)!.formatValid !== false}
+						formatName={fileEntries.find((e) => e.id === selectedFileId)!.formatName ||
+							'Formato desconocido'}
 						onImageSave={handleSaveImage}
 					/>
 				{:else if fileEntries.length > 0}
@@ -804,9 +758,9 @@
 							{#each availableEvals as item (item.code)}
 								<tr class="hover">
 									<td class="font-medium">{item.name}</td>
-									<td class="text-center"
-										><span class="badge badge-ghost badge-sm">{item.group_name}</span></td
-									>
+									<td class="text-center">
+										<span class="badge badge-ghost badge-sm">{item.group_name}</span>
+									</td>
 									<td class="text-center text-xs opacity-70">{formatDate(item.eval_date)}</td>
 									<td class="text-center">
 										<button
@@ -821,8 +775,8 @@
 									</td>
 								</tr>
 							{:else}
-								<tr
-									><td colspan="4" class="text-center py-6 opacity-50">
+								<tr>
+									<td colspan="4" class="text-center py-6 opacity-50">
 										No hay evaluaciones para este nivel.
 									</td>
 								</tr>
