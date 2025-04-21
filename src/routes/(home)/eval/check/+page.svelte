@@ -195,7 +195,9 @@
 				body: JSON.stringify({
 					imageData,
 					evalCode: selectedEval.code,
-					rollCode: rollCodeOverride
+					rollCode: rollCodeOverride,
+					sections: selectedEval.eval_sections,
+					questions: evalQuestions
 				})
 			});
 

@@ -2,10 +2,12 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { omrProcessor } from '$lib/omrProcessor';
 import { fetchRegisterByRollCode } from '$lib/data/register';
-import { fetchEvalData } from '$lib/data/eval';
+import { fetchSections } from '$lib/data/eval';
 import { calculateScores } from '$lib/utils/scoring';
 import type { ApiOmrResponse, ApiOmrErrorData, ApiOmrSuccessData } from '$lib/types/api';
 import { createErrorResult as createOmrErrorResultObject } from '$lib/omrProcessor/error';
+import type { EvalQuestion, EvalSection } from '../../../../app';
+import { fetchQuestions } from '$lib/data/question';
 
 // Helper para crear respuestas de error estandarizadas
 function createApiErrorResponse(
@@ -58,12 +60,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	let imageDataBase64: string;
 	let evalCode: string;
 	let providedRollCode: string | null = null;
+	let questions: EvalQuestion[] | null = null;
+	let sections: EvalSection[] | null = null;
 
 	try {
 		const body = await request.json();
 		imageDataBase64 = body.imageData;
-		evalCode = body.evalCode; // Esperamos evalCode en lugar de evalData completo
-		providedRollCode = body.rollCode || null; // Código opcional proporcionado por el usuario
+		evalCode = body.evalCode;
+		providedRollCode = body.rollCode || null;
+		questions = body.questions || null;
+		sections = body.sections || null;
 
 		if (!imageDataBase64 || !evalCode) {
 			return createApiErrorResponse('INVALID_PARAMS', 'Missing imageData or evalCode');
@@ -72,15 +78,24 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return createApiErrorResponse('INVALID_PARAMS', 'Invalid JSON body');
 	}
 
-	// 1. Obtener datos de la evaluación (preguntas y secciones)
-	const evalData = await fetchEvalData(locals.supabase, evalCode);
-	if (!evalData || !evalData.questions || evalData.questions.length === 0) {
-		return createApiErrorResponse(
-			'INTERNAL_ERROR',
-			`Evaluation data not found for evalCode: ${evalCode}`
-		);
+	// 1. Obtener preguntas y secciones
+
+	if (!questions || !questions.length) {
+		questions = await fetchQuestions(evalCode, locals.supabase);
 	}
-	const numQuestions = evalData.questions.length;
+	if (!sections || !sections.length) {
+		sections = await fetchSections(evalCode, locals.supabase);
+	}
+
+	if (!questions || !questions.length) {
+		return createApiErrorResponse('INTERNAL_ERROR', 'No se ha obtenido nro de Respuestas.');
+	}
+
+	if (!sections || !sections.length) {
+		return createApiErrorResponse('INTERNAL_ERROR', 'No hay cursos disponibles.');
+	}
+
+	const numQuestions = questions.length;
 
 	// Validar código proporcionado antes de procesar
 	if (providedRollCode && !/^\d{4}$/.test(providedRollCode)) {
@@ -129,8 +144,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	// 4. Obtener Información del Registro del Estudiante
 	const registerInfo = await fetchRegisterByRollCode(locals.supabase, finalRollCode);
+
 	// 5. Calcular Puntajes
-	const { detailedAnswers, scores } = calculateScores(omrResult.answers, evalData);
+	const { detailedAnswers, scores } = calculateScores(omrResult.answers, sections, questions);
 
 	// 6. Construir Respuesta Exitosa
 	const successData: ApiOmrSuccessData = {

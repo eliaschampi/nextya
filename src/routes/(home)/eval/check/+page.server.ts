@@ -1,9 +1,9 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import type { Level, EvalQuestion, EvalWithSections } from '../../../../app';
-import { fetchEvalData } from '$lib/data/eval';
 import type { ResultToSave } from '$lib/types/api';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { fetchQuestions } from '$lib/data/question';
 
 /**
  * Empaqueta un resultado para el RPC de Supabase
@@ -92,10 +92,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	if (evalRes.error) {
 		console.error('Error loading initial eval:', evalRes.error);
-	} else if (evalRes.data) {
+	} else if (evalRes.data && evalCode) {
 		initialEval = evalRes.data as unknown as EvalWithSections;
-		const details = await fetchEvalData(locals.supabase, evalCode!);
-		serverQuestions = details?.questions ?? [];
+		serverQuestions = await fetchQuestions(evalCode, locals.supabase);
 	}
 
 	return {
