@@ -5,14 +5,11 @@
 	import { showToast } from '$lib/stores/Toast';
 	import { entities } from '$lib/data/entities';
 	import { Shield } from 'lucide-svelte';
+	import PermissionTableRow from '$lib/components/PermissionTableRow.svelte';
 	import type { User } from '@supabase/supabase-js';
+	import { ACTIONS } from '$lib/types/permissions';
+	import type { Action, EntityPermissions } from '$lib/types/permissions';
 
-	// Define available actions
-	const ACTIONS = ['read', 'create', 'update', 'delete'] as const;
-	type Action = (typeof ACTIONS)[number];
-
-	// New permission structure
-	type EntityPermissions = Record<Action, boolean>;
 	type PermissionRecord = Record<string, EntityPermissions>;
 
 	type ApiPermission = {
@@ -39,41 +36,6 @@
 	let error = $state('');
 	let saving = $state(false);
 	let allEntities = $derived(entities);
-
-	// Derived states for all permissions
-	let allPermissionsByAction = $state<Record<Action, boolean>>(
-		ACTIONS.reduce(
-			(acc, action) => {
-				acc[action] = false;
-				return acc;
-			},
-			{} as Record<Action, boolean>
-		)
-	);
-
-	let allPermissionsGloballyEnabled = $state(false);
-	let entityStates = $state<Record<string, boolean>>({});
-
-	// Update derived states when permissions change
-	$effect(() => {
-		if (Object.keys(permissions).length === 0) return;
-
-		// Update action permissions
-		ACTIONS.forEach((action) => {
-			allPermissionsByAction[action] = Object.values(permissions).every((p) => p[action]);
-		});
-
-		// Update global state
-		allPermissionsGloballyEnabled = ACTIONS.every((action) => allPermissionsByAction[action]);
-
-		// Update entity states
-		entityStates = Object.fromEntries(
-			Object.entries(permissions).map(([entity, perms]) => [
-				entity,
-				ACTIONS.every((action) => perms[action])
-			])
-		);
-	});
 
 	// Modal control
 	$effect(() => {
@@ -201,35 +163,6 @@
 		return allEntities.find((e) => e.label === label)?.name || label;
 	}
 
-	// Batch permission operations
-	function setAllPermissions(action: Action, value: boolean) {
-		// Create a new object to ensure reactivity
-		permissions = Object.fromEntries(
-			Object.entries(permissions).map(([key, perms]) => [key, { ...perms, [action]: value }])
-		);
-	}
-
-	function setEntityPermissions(entity: string, value: boolean) {
-		if (permissions[entity]) {
-			// Create a new object to ensure reactivity
-			permissions = {
-				...permissions,
-				[entity]: ACTIONS.reduce((acc, action) => {
-					acc[action] = value;
-					return acc;
-				}, {} as EntityPermissions)
-			};
-		}
-	}
-
-	// Event handler helpers with proper typing
-	function handleToggleChange(callback: (value: boolean) => void): (e: Event) => void {
-		return (e: Event) => {
-			const target = e.target as HTMLInputElement;
-			callback(target.checked);
-		};
-	}
-
 	// Action name mapping for display
 	const actionNames: Record<Action, string> = {
 		read: 'Leer',
@@ -269,61 +202,24 @@
 							{#each ACTIONS as action (action)}
 								<th class="text-center">{actionNames[action]}</th>
 							{/each}
-							<th class="text-center align-bottom pb-3">Todos</th>
 						</tr>
 					</thead>
 					<tbody>
-						<tr>
-							<td><b>Todos</b></td>
-							{#each ACTIONS as action (action)}
-								<td class="text-center">
-									<input
-										type="checkbox"
-										class="toggle toggle-primary toggle-sm"
-										title="Activar/Desactivar {actionNames[action]} para todos"
-										disabled={loading}
-										checked={allPermissionsByAction[action]}
-										onchange={handleToggleChange((value) => setAllPermissions(action, value))}
-									/>
-								</td>
-							{/each}
-							<td class="text-center">
-								<input
-									type="checkbox"
-									class="toggle toggle-secondary toggle-sm"
-									title="Activar/Desactivar todos los permisos"
-									disabled={loading}
-									checked={allPermissionsGloballyEnabled}
-									onchange={handleToggleChange((value) => {
-										ACTIONS.forEach((action) => setAllPermissions(action, value));
-									})}
-								/>
-							</td>
-						</tr>
 						{#each Object.entries(permissions) as [entity, permission] (entity)}
-							<tr>
-								<td>{getEntityName(entity)}</td>
-								{#each ACTIONS as action (action)}
-									<td class="text-center">
-										<input
-											type="checkbox"
-											class="toggle toggle-primary toggle-sm"
-											bind:checked={permission[action]}
-											disabled={loading}
-										/>
-									</td>
-								{/each}
-								<td class="text-center">
-									<input
-										type="checkbox"
-										class="toggle toggle-secondary toggle-sm"
-										title="Activar/Desactivar todos los permisos para esta entidad"
-										disabled={loading}
-										checked={entityStates[entity]}
-										onchange={handleToggleChange((value) => setEntityPermissions(entity, value))}
-									/>
-								</td>
-							</tr>
+							<PermissionTableRow
+								entity={getEntityName(entity)}
+								{permission}
+								{loading}
+								onPermissionChange={(action, value) => {
+									permissions = {
+										...permissions,
+										[entity]: {
+											...permission,
+											[action]: value
+										}
+									};
+								}}
+							/>
 						{/each}
 					</tbody>
 				</table>
