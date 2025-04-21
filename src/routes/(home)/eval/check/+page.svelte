@@ -20,7 +20,7 @@
 		AlertTriangle,
 		Check
 	} from 'lucide-svelte';
-	import type { Level, EvalWithSections, EvalQuestion } from '../../../../app';
+	import type { Level, EvalWithSections, EvalQuestion } from '$lib/types';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { showToast } from '$lib/stores/Toast';
 	import { base64ToFile, validateA5Proportion } from '$lib/utils/imageUtils';

@@ -1,6 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import type { EvalQuestion, EvalSection, Eval } from '../../../../../app';
+import type { EvalQuestion, EvalSection, Eval } from '$lib/types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const evalCode = params.eval_code;

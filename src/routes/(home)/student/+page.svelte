@@ -3,7 +3,7 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
-	import type { Level, RegisterStudent, SelectForDelete, Student } from '../../../app';
+	import type { Level, RegisterStudent, SelectForDelete, Student } from '$lib/types';
 	import { Book, Pencil, Search, Trash2, UserPlus } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';

@@ -1,6 +1,6 @@
 import type { StudentAnswer, ApiOmrSuccessData } from '$lib/types/api';
 import type { OmrSuccessResult, AnswerValue } from '$lib/omrProcessor';
-import type { EvalQuestion, EvalSection } from '../../app';
+import type { EvalQuestion, EvalSection } from '$lib/types';
 
 const MAX_SCORE = 20;
 

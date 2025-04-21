@@ -4,7 +4,7 @@
 	import { showToast } from '$lib/stores/Toast';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { BookOpen, Save, ArrowLeft, Check, ChevronLeft, ChevronRight } from 'lucide-svelte';
-	import type { EvalQuestion, EvalSection, Eval } from '../../../../../app';
+	import type { EvalQuestion, EvalSection, Eval } from '$lib/types';
 	import { onMount } from 'svelte';
 	import Message from '$lib/components/Message.svelte';
 	import { permissionsStore } from '$lib/stores/permissions';

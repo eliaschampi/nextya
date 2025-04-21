@@ -1,6 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import type { Level, EvalQuestion, EvalWithSections } from '../../../../app';
+import type { Level, EvalQuestion, EvalWithSections } from '$lib/types';
 import type { ResultToSave } from '$lib/types/api';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchQuestions } from '$lib/data/question';

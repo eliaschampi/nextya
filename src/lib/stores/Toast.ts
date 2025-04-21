@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import type { ToastState, ToastType } from '../../app';
+import type { ToastState, ToastType } from '$lib/types';
 
 let toastId = 0;
 export const toasts = writable<ToastState[]>([]);

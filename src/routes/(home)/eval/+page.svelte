@@ -1,7 +1,7 @@
 <script lang="ts">
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
-	import type { Level, Course, FormSection, EvalWithSections } from '../../../app';
+	import type { Level, Course, FormSection, EvalWithSections, EvalSection } from '$lib/types';
 	import {
 		ClipboardEdit,
 		Trash2,
@@ -82,7 +82,7 @@
 		formState.level_code = item.level_code || '';
 		formState.eval_date = item.eval_date ? item.eval_date.substring(0, 10) : '';
 		formState.group_name = item.group_name || '';
-		formState.sections = item.eval_sections.map((s) => ({
+		formState.sections = item.eval_sections.map((s: EvalSection) => ({
 			course_code: s.course_code,
 			course_name: s.course_name,
 			order_in_eval: s.order_in_eval,

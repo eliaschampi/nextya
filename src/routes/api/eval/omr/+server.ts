@@ -6,7 +6,7 @@ import { fetchSections } from '$lib/data/eval';
 import { calculateScores } from '$lib/utils/scoring';
 import type { ApiOmrResponse, ApiOmrErrorData, ApiOmrSuccessData } from '$lib/types/api';
 import { createErrorResult as createOmrErrorResultObject } from '$lib/omrProcessor/error';
-import type { EvalQuestion, EvalSection } from '../../../../app';
+import type { EvalQuestion, EvalSection } from '$lib/types';
 import { fetchQuestions } from '$lib/data/question';
 
 // Helper para crear respuestas de error estandarizadas

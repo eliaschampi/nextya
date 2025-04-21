@@ -3,7 +3,7 @@ import { getCourses } from '$lib/data/courses';
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
 import { evalSchema, evalSectionSchema } from '$lib/schemas/eval';
-import type { FormSection } from '../../../app';
+import type { FormSection } from '$lib/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export const load: PageServerLoad = async ({ locals }) => {

@@ -4,7 +4,7 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
-	import type { Course } from '../../../app';
+	import type { Course } from '$lib/types';
 	import { EllipsisVertical } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { permissionsStore } from '$lib/stores/permissions';

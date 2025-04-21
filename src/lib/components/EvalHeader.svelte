@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Eval, Level } from '../../app';
+	import type { Eval, Level } from '$lib/types';
 	import { School, BookOpen } from 'lucide-svelte';
 	import { formatDate } from '$lib/utils/formatDate';
 	import Message from './Message.svelte';

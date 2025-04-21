@@ -1,4 +1,4 @@
-import type { Eval, EvalSection } from '../../../../app';
+import type { Eval, EvalSection } from '$lib/types';
 import type { RequestHandler } from '@sveltejs/kit';
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const { code } = params;
@@ -19,7 +19,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			}
 		) => ({
 			...evalItem,
-			eval_sections: evalItem.eval_sections.map((section) => ({
+			eval_sections: evalItem.eval_sections.map((section: EvalSection) => ({
 				code: section.code,
 				eval_code: section.eval_code,
 				course_code: section.course_code,

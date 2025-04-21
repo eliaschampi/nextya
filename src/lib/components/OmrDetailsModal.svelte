@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { X, Check, AlertCircle, ListChecks, FileText, Table2 } from 'lucide-svelte';
 	import type { ApiOmrSuccessData, StudentAnswer } from '$lib/types/api';
-	import type { EvalQuestion } from '../../app'; // Asumiendo tipo base de pregunta
+	import type { EvalQuestion } from '$lib/types';
 	import Message from './Message.svelte';
 	import { fade } from 'svelte/transition';
 

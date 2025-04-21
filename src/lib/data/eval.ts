@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { EvalSection } from '../../app';
+import type { EvalSection } from '$lib/types';
 
 export async function fetchSections(
 	evalCode: string,

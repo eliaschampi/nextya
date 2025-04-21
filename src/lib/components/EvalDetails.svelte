@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Eval, EvalSection } from '../../app';
+	import type { Eval, EvalSection } from '$lib/types';
 	import { BookOpen, ListChecks } from 'lucide-svelte';
 
 	const { evaluation } = $props<{
