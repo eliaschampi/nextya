@@ -7,7 +7,11 @@ import type { FormSection } from '$lib/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const levels = await getLevels(locals.supabase);
+	const userId = locals.session?.user.id;
+	let levels = [];
+	if (userId) {
+		levels = await getLevels(locals.supabase, userId);
+	}
 	const courses = await getCourses(locals.supabase);
 	return { levels, courses, title: 'Exámenes' };
 };

@@ -1,12 +1,11 @@
 // routes/levels/+page.server.ts
-import { getLevels } from '$lib/data/levels';
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ locals, depends }) => {
 	depends('levels:load');
-	const levels = await getLevels(locals.supabase);
-	return { levels, title: 'Niveles' };
+	const { data, error } = await locals.supabase.from('levels').select('*');
+	return { levels: error ? [] : data, title: 'Niveles' };
 };
 
 export const actions: Actions = {

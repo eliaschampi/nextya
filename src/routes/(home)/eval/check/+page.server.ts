@@ -1,9 +1,10 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import type { Level, EvalQuestion, EvalWithSections } from '$lib/types';
+import type { EvalQuestion, EvalWithSections } from '$lib/types';
 import type { ResultToSave } from '$lib/types/api';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchQuestions } from '$lib/data/question';
+import { getLevels } from '$lib/data/levels';
 
 /**
  * Empaqueta un resultado para el RPC de Supabase
@@ -71,30 +72,27 @@ async function saveAllResults(
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const evalCode = url.searchParams.get('eval');
-
-	// Carga niveles y datos de evaluación en paralelo
-	const [levelsRes, evalRes] = await Promise.all([
-		locals.supabase.from('levels').select('*').order('name'),
-		evalCode
-			? locals.supabase
-					.from('evals')
-					.select('*, sections:eval_sections(*, course:course_code(name))')
-					.eq('code', evalCode)
-					.single()
-			: Promise.resolve({ data: null, error: null })
-	]);
-
-	if (levelsRes.error) console.error('Error loading levels:', levelsRes.error);
-	const levels = (levelsRes.data as Level[]) || [];
-
+	const userId = locals.session?.user.id;
+	let levels = [];
 	let initialEval: EvalWithSections | null = null;
 	let serverQuestions: EvalQuestion[] = [];
+	if (userId) {
+		levels = await getLevels(locals.supabase, userId);
+	}
 
-	if (evalRes.error) {
-		console.error('Error loading initial eval:', evalRes.error);
-	} else if (evalRes.data && evalCode) {
-		initialEval = evalRes.data as unknown as EvalWithSections;
-		serverQuestions = await fetchQuestions(evalCode, locals.supabase);
+	if (evalCode) {
+		const { data, error } = await locals.supabase
+			.from('evals')
+			.select('*, sections:eval_sections(*, course:course_code(name))')
+			.eq('code', evalCode)
+			.single();
+
+		if (error) {
+			console.error('Error loading initial eval:', error);
+		} else if (data) {
+			initialEval = data as unknown as EvalWithSections;
+			serverQuestions = await fetchQuestions(evalCode, locals.supabase);
+		}
 	}
 
 	return {

@@ -4,7 +4,11 @@ import { fail } from '@sveltejs/kit';
 import { studentSchema } from '$lib/schemas/student';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const levels = await getLevels(locals.supabase);
+	const userId = locals.session?.user.id;
+	let levels = [];
+	if (userId) {
+		levels = await getLevels(locals.supabase, userId);
+	}
 	return { levels, title: 'Estudiantes' };
 };
 
