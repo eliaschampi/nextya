@@ -54,3 +54,22 @@ export interface SimpleUser {
 	name: string;
 	last_name: string;
 }
+
+export interface ResultItem {
+	result_code: string;
+	register_code: string;
+	eval_code: string;
+	section_code: string | null;
+	correct_count: number;
+	incorrect_count: number;
+	blank_count: number;
+	score: number;
+	calculated_at: string;
+	student_code: string;
+	roll_code: string;
+	group_name: string;
+	level_code: string;
+	name: string;
+	last_name: string;
+	level_name: string;
+}

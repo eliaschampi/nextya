@@ -1,9 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import type { EvalQuestion, EvalWithSections } from '$lib/types';
 import type { ResultToSave } from '$lib/types/api';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { fetchQuestions } from '$lib/data/question';
 import { getLevels } from '$lib/data/levels';
 
 /**
@@ -70,36 +68,17 @@ async function saveAllResults(
 	return { successCount, errors };
 }
 
-export const load: PageServerLoad = async ({ locals, url }) => {
-	const evalCode = url.searchParams.get('eval');
+export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.session?.user.id;
 	let levels = [];
-	let initialEval: EvalWithSections | null = null;
-	let serverQuestions: EvalQuestion[] = [];
+
 	if (userId) {
 		levels = await getLevels(locals.supabase, userId);
 	}
 
-	if (evalCode) {
-		const { data, error } = await locals.supabase
-			.from('evals')
-			.select('*, sections:eval_sections(*, course:course_code(name))')
-			.eq('code', evalCode)
-			.single();
-
-		if (error) {
-			console.error('Error loading initial eval:', error);
-		} else if (data) {
-			initialEval = data as unknown as EvalWithSections;
-			serverQuestions = await fetchQuestions(evalCode, locals.supabase);
-		}
-	}
-
 	return {
 		levels,
-		evalCode,
-		initialEval,
-		serverQuestions,
+		serverQuestions: [],
 		title: 'Procesar Evaluación OMR'
 	};
 };

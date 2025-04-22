@@ -457,6 +457,27 @@ export type Database = {
 				};
 				Returns: undefined;
 			};
+			get_register_eval_results: {
+				Args: { p_eval_code: string };
+				Returns: {
+					result_code: string;
+					register_code: string;
+					eval_code: string;
+					section_code: string | null;
+					correct_count: number;
+					incorrect_count: number;
+					blank_count: number;
+					score: number;
+					calculated_at: string;
+					student_code: string;
+					roll_code: string;
+					group_name: string;
+					level_code: string;
+					name: string;
+					last_name: string;
+					level_name: string;
+				}[];
+			};
 		};
 		Enums: {
 			entity_enum:

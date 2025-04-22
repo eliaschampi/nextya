@@ -11,13 +11,15 @@
 		open?: boolean;
 		title?: string;
 		onClose?: () => void;
+		loading?: boolean;
 	};
 
 	const {
 		result = null,
 		open = false,
 		title = 'Detalles del Resultado',
-		onClose = () => {}
+		onClose = () => {},
+		loading = false
 	}: Props = $props();
 
 	let modal = $state<HTMLDialogElement | null>(null);
@@ -181,42 +183,56 @@
 				{/if}
 			{:else if activeTab === 'answers'}
 				<!-- Tab Content: Answers Table -->
-				<div class="max-h-[20rem] overflow-y-auto rounded-lg bg-base-200">
-					<table class="table table-zebra table-pin-rows table-sm w-full">
-						<thead>
-							<tr>
-								<th class="w-12 text-center">N°</th>
-								<th class="w-20 text-center">Tu Resp.</th>
-								<th class="w-20 text-center">Correcta</th>
-								<th>Estado</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each result.answers as answer (answer.question_code)}
-								{@const StatusIcon = getAnswerStatusIcon(answer)}
+				{#if loading}
+					<div class="flex justify-center py-12">
+						<span class="loading loading-spinner loading-lg text-primary"></span>
+						<p class="ml-4">Cargando respuestas...</p>
+					</div>
+				{:else if result.answers && result.answers.length > 0}
+					<div class="max-h-[20rem] overflow-y-auto rounded-lg bg-base-200">
+						<table class="table table-zebra table-pin-rows table-sm w-full">
+							<thead>
 								<tr>
-									<td class="text-center font-medium">{answer.order_in_eval}</td>
-									<td class="text-center">
-										<span class="badge badge-lg font-mono">
-											{formatStudentAnswer(answer.student_answer)}
-										</span>
-									</td>
-									<td class="text-center">
-										<span class="badge badge-outline badge-primary badge-lg font-mono">
-											{answer.correct_key}
-										</span>
-									</td>
-									<td>
-										<span class={`badge ${getAnswerStatusClass(answer)} gap-1`}>
-											<StatusIcon size={12} />
-											{getAnswerStatusText(answer)}
-										</span>
-									</td>
+									<th class="w-12 text-center">N°</th>
+									<th class="w-20 text-center">Tu Resp.</th>
+									<th class="w-20 text-center">Correcta</th>
+									<th>Estado</th>
 								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
+							</thead>
+							<tbody>
+								{#each result.answers as answer (answer.question_code)}
+									{@const StatusIcon = getAnswerStatusIcon(answer)}
+									<tr>
+										<td class="text-center font-medium">{answer.order_in_eval}</td>
+										<td class="text-center">
+											<span class="badge badge-lg font-mono">
+												{formatStudentAnswer(answer.student_answer)}
+											</span>
+										</td>
+										<td class="text-center">
+											<span class="badge badge-outline badge-primary badge-lg font-mono">
+												{answer.correct_key}
+											</span>
+										</td>
+										<td>
+											<span class={`badge ${getAnswerStatusClass(answer)} gap-1`}>
+												<StatusIcon size={12} />
+												{getAnswerStatusText(answer)}
+											</span>
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{:else}
+					<div class="alert alert-info">
+						<div>
+							<h3 class="font-bold">Sin respuestas</h3>
+							<p>No hay respuestas disponibles para este estudiante.</p>
+						</div>
+					</div>
+				{/if}
 			{/if}
 		</div>
 	{/if}

@@ -54,16 +54,14 @@
 		data: {
 			levels: Level[];
 			serverQuestions: EvalQuestion[];
-			evalCode?: string;
-			initialEval?: EvalWithSections | null;
 		};
 	}>();
 
 	// Estado
-	let selectedEval = $state<EvalWithSections | null>(data.initialEval ?? null);
+	let selectedEval = $state<EvalWithSections | null>(null);
 	let evalQuestions = $state<EvalQuestion[]>(data.serverQuestions || []);
 	let availableEvals = $state<EvalWithSections[]>([]);
-	let selectedLevelCode = $state(data.initialEval?.level_code || '');
+	let selectedLevelCode = $state('');
 	let fileEntries = $state<FileEntry[]>([]);
 	let selectedFileId = $state<string | null>(null);
 	let isProcessingBatch = $state(false);
