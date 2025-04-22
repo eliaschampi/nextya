@@ -7,12 +7,12 @@
 	import ImagePreview from '$lib/components/ImagePreview.svelte';
 	import Message from '$lib/components/Message.svelte';
 	import OmrDetailsModal from '$lib/components/OmrDetailsModal.svelte';
+	import EvaluationSelectionModal from '$lib/components/EvaluationSelectionModal.svelte';
 	import {
 		Upload,
 		Trash2,
 		X,
 		School,
-		BookOpen,
 		Play,
 		Loader2,
 		Plus,
@@ -21,7 +21,6 @@
 		Check
 	} from 'lucide-svelte';
 	import type { Level, EvalWithSections, EvalQuestion } from '$lib/types';
-	import { formatDate } from '$lib/utils/formatDate';
 	import { showToast } from '$lib/stores/Toast';
 	import { base64ToFile, validateA5Proportion } from '$lib/utils/imageUtils';
 	import type {
@@ -70,7 +69,8 @@
 	let isProcessingBatch = $state(false);
 	let isSavingBatch = $state(false);
 	let detailsModalOpen = $state(false);
-	let modal = $state<HTMLDialogElement | null>(null);
+	let evalSelectionModalOpen = $state(false);
+	let loadingEvals = $state(false);
 
 	// Valores derivados
 	let currentPreviewUrl = $derived.by(() => {
@@ -375,6 +375,7 @@
 			availableEvals = [];
 			return;
 		}
+		loadingEvals = true;
 		try {
 			const response = await fetch(`/api/eval/${selectedLevelCode}`);
 			availableEvals = await response.json();
@@ -382,12 +383,14 @@
 			console.error('Error cargando evaluaciones:', error);
 			showToast('No se pudieron cargar las evaluaciones', 'danger');
 			availableEvals = [];
+		} finally {
+			loadingEvals = false;
 		}
 	}
 
 	async function selectEvalAndFetchQuestions(evalItem: EvalWithSections) {
 		selectedEval = evalItem;
-		modal?.close();
+		evalSelectionModalOpen = false;
 		fileEntries = fileEntries.map((entry) => ({
 			...entry,
 			status: 'pending',
@@ -416,7 +419,7 @@
 	}
 
 	function openEvalModal() {
-		modal?.showModal();
+		evalSelectionModalOpen = true;
 	}
 
 	async function handleSaveImage(processedImageData: string) {
@@ -716,78 +719,17 @@
 	/>
 {/if}
 
-<dialog bind:this={modal} class="modal">
-	<div class="modal-box">
-		<div class="flex justify-between items-center mb-6">
-			<h3 class="text-xl font-bold text-primary flex items-center gap-2">
-				<School class="w-6 h-6" /> Seleccionar Evaluación
-			</h3>
-			<button
-				class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-				onclick={() => modal?.close()}
-			>
-				<X size={20} />
-			</button>
-		</div>
-		<div class="space-y-4">
-			<div>
-				<label class="label font-semibold flex items-center gap-2">
-					<BookOpen class="w-5 h-5 text-secondary" /> Nivel Académico
-				</label>
-				<select
-					class="select select-bordered w-full"
-					bind:value={selectedLevelCode}
-					disabled={isProcessingBatch || isSavingBatch}
-				>
-					<option value="">Elige un nivel</option>
-					{#each data.levels as level (level.code)}
-						<option value={level.code}>{level.name}</option>
-					{/each}
-				</select>
-			</div>
-			{#if selectedLevelCode}
-				<div class="max-h-60 overflow-y-auto rounded-lg bg-base-200">
-					<table class="table table-zebra table-pin-rows table-sm">
-						<thead>
-							<tr>
-								<th>Nombre</th>
-								<th class="text-center">Grupo</th>
-								<th class="text-center">Fecha</th>
-								<th class="text-center">Acción</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each availableEvals as item (item.code)}
-								<tr class="hover">
-									<td class="font-medium">{item.name}</td>
-									<td class="text-center">
-										<span class="badge badge-ghost badge-sm">{item.group_name}</span>
-									</td>
-									<td class="text-center text-xs opacity-70">{formatDate(item.eval_date)}</td>
-									<td class="text-center">
-										<button
-											class="btn btn-primary btn-xs"
-											onclick={() => selectEvalAndFetchQuestions(item)}
-											disabled={selectedEval?.code === item.code ||
-												isProcessingBatch ||
-												isSavingBatch}
-										>
-											{selectedEval?.code === item.code ? 'Seleccionado' : 'Seleccionar'}
-										</button>
-									</td>
-								</tr>
-							{:else}
-								<tr>
-									<td colspan="4" class="text-center py-6 opacity-50">
-										No hay evaluaciones para este nivel.
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
-		</div>
-	</div>
-	<form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
-</dialog>
+<EvaluationSelectionModal
+	levels={data.levels}
+	{availableEvals}
+	{selectedEval}
+	{selectedLevelCode}
+	open={evalSelectionModalOpen}
+	loading={loadingEvals}
+	onClose={() => (evalSelectionModalOpen = false)}
+	onLevelChange={(levelCode) => {
+		selectedLevelCode = levelCode;
+		loadEvaluationsByLevel();
+	}}
+	onSelectEval={selectEvalAndFetchQuestions}
+/>

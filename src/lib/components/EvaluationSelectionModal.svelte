@@ -1,0 +1,137 @@
+<script lang="ts">
+	import { X, School, BookOpen } from 'lucide-svelte';
+	import type { Level, EvalWithSections } from '$lib/types';
+	import { formatDate } from '$lib/utils/formatDate';
+
+	type Props = {
+		levels: Level[];
+		availableEvals: EvalWithSections[];
+		selectedEval: EvalWithSections | null;
+		selectedLevelCode: string;
+		open?: boolean;
+		loading?: boolean;
+		onClose?: () => void;
+		onLevelChange?: (levelCode: string) => void;
+		onSelectEval?: (evalItem: EvalWithSections) => void;
+	};
+
+	const {
+		levels = [],
+		availableEvals = [],
+		selectedEval = null,
+		selectedLevelCode = '',
+		open = false,
+		loading = false,
+		onClose = () => {},
+		onLevelChange = () => {},
+		onSelectEval = () => {}
+	}: Props = $props();
+
+	let modal = $state<HTMLDialogElement | null>(null);
+
+	// Modal control
+	$effect(() => {
+		if (open && modal && !modal.open) {
+			modal.showModal();
+		} else if (!open && modal?.open) {
+			modal.close();
+		}
+	});
+
+	// Close event handling
+	$effect(() => {
+		const modalElement = modal;
+		if (!modalElement) return;
+
+		const handleClose = () => onClose();
+		modalElement.addEventListener('close', handleClose);
+		return () => modalElement.removeEventListener('close', handleClose);
+	});
+
+	function closeModal() {
+		modal?.close();
+	}
+
+	function handleLevelChange(event: Event) {
+		const target = event.target as HTMLSelectElement;
+		onLevelChange(target.value);
+	}
+</script>
+
+<dialog bind:this={modal} class="modal">
+	<div class="modal-box">
+		<div class="flex justify-between items-center mb-6">
+			<h3 class="text-xl font-bold text-primary flex items-center gap-2">
+				<School class="w-6 h-6" /> Seleccionar Evaluación
+			</h3>
+			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onclick={closeModal}>
+				<X size={20} />
+			</button>
+		</div>
+		<div class="space-y-4">
+			<div>
+				<label class="label font-semibold flex items-center gap-2">
+					<BookOpen class="w-5 h-5 text-secondary" /> Nivel Académico
+				</label>
+				<select
+					class="select select-bordered w-full"
+					value={selectedLevelCode}
+					onchange={handleLevelChange}
+					disabled={loading}
+				>
+					<option value="">Elige un nivel</option>
+					{#each levels as level (level.code)}
+						<option value={level.code}>{level.name}</option>
+					{/each}
+				</select>
+			</div>
+			{#if selectedLevelCode}
+				{#if loading}
+					<div class="flex justify-center my-8">
+						<span class="loading loading-spinner loading-md text-primary"></span>
+					</div>
+				{:else}
+					<div class="max-h-60 overflow-y-auto rounded-lg bg-base-200">
+						<table class="table table-zebra table-pin-rows table-sm">
+							<thead>
+								<tr>
+									<th>Nombre</th>
+									<th class="text-center">Grupo</th>
+									<th class="text-center">Fecha</th>
+									<th class="text-center">Acción</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each availableEvals as item (item.code)}
+									<tr class="hover">
+										<td class="font-medium">{item.name}</td>
+										<td class="text-center">
+											<span class="badge badge-ghost badge-sm">{item.group_name}</span>
+										</td>
+										<td class="text-center text-xs opacity-70">{formatDate(item.eval_date)}</td>
+										<td class="text-center">
+											<button
+												class="btn btn-primary btn-xs"
+												onclick={() => onSelectEval(item)}
+												disabled={selectedEval?.code === item.code || loading}
+											>
+												{selectedEval?.code === item.code ? 'Seleccionado' : 'Seleccionar'}
+											</button>
+										</td>
+									</tr>
+								{:else}
+									<tr>
+										<td colspan="4" class="text-center py-6 opacity-50">
+											No hay evaluaciones para este nivel.
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			{/if}
+		</div>
+	</div>
+	<form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+</dialog>

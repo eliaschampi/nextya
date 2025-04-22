@@ -9,10 +9,16 @@
 		result: ApiOmrSuccessData | null;
 		questions: EvalQuestion[]; // Pasar las preguntas para mapear nombres de sección, etc.
 		open?: boolean;
+		title?: string;
 		onClose?: () => void;
 	};
 
-	const { result = null, open = false, onClose = () => {} }: Props = $props();
+	const {
+		result = null,
+		open = false,
+		title = 'Detalles del Resultado',
+		onClose = () => {}
+	}: Props = $props();
 
 	let modal = $state<HTMLDialogElement | null>(null);
 	let activeTab = $state<'details' | 'answers'>('details');
@@ -81,7 +87,8 @@
 				<X size={20} />
 			</button>
 			<h3 class="font-bold text-lg mb-1 flex items-center gap-2">
-				<ListChecks /> Detalles del Resultado
+				<ListChecks />
+				{title}
 			</h3>
 			<p class="text-sm opacity-70 mb-4">Código: {result.roll_code}</p>
 
