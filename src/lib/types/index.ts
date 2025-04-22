@@ -48,3 +48,9 @@ export interface ToastState {
 	title: string;
 	type: ToastType;
 }
+
+export interface SimpleUser {
+	id: string;
+	name: string;
+	last_name: string;
+}

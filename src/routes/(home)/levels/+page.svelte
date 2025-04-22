@@ -5,8 +5,8 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
-	import type { Level } from '$lib/types';
-	import { EllipsisVertical } from 'lucide-svelte';
+	import type { Level, SimpleUser } from '$lib/types';
+	import { EllipsisVertical, Plus, Minus } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getModalityTypes } from '$lib/data/modality';
 	import { permissionsStore } from '$lib/stores/permissions';
@@ -17,6 +17,9 @@
 	let isEditing = $state(false);
 	let message = $state('');
 	let selectedLevel = $state<Level | null>(null);
+	let users = $state<SimpleUser[]>([]);
+	let selectedUsers = $state<string[]>([]);
+	let selectedUserId = $state('');
 	const modalities = getModalityTypes();
 
 	const { data } = $props<{ data: { levels: Level[] } }>();
@@ -24,10 +27,18 @@
 	const canUpdate = permissionsStore.has({ entity: 'levels', action: 'update' });
 	const canDelete = permissionsStore.has({ entity: 'levels', action: 'delete' });
 
+	async function fetchUsers() {
+		if (users.length === 0) {
+			const data = await fetch('/api/users');
+			users = await data.json();
+		}
+	}
+
 	// Abrir modal para crear
 	function openCreateModal() {
 		isEditing = false;
 		modal?.showModal();
+		fetchUsers();
 	}
 
 	// Abrir modal para editar
@@ -40,6 +51,11 @@
 		const abrInput = modal?.querySelector<HTMLTextAreaElement>('#abr');
 		if (nameInput) nameInput.value = level.name || '';
 		if (abrInput) abrInput.value = level.abr || '';
+
+		// Cargar usuarios seleccionados del nivel
+		selectedUsers = level.users || [];
+
+		fetchUsers();
 	}
 
 	// Abrir modal para confirmar eliminación
@@ -96,8 +112,31 @@
 	function resetFormOnClose() {
 		selectedLevel = null;
 		message = '';
+		selectedUsers = [];
+		selectedUserId = '';
 		const form = modal?.querySelector('form');
 		if (form) form.reset();
+	}
+
+	// Funciones para gestionar usuarios
+	function addUser() {
+		if (selectedUserId && !selectedUsers.includes(selectedUserId)) {
+			selectedUsers = [...selectedUsers, selectedUserId];
+			selectedUserId = '';
+		}
+	}
+
+	function removeUser(userId: string) {
+		selectedUsers = selectedUsers.filter((id) => id !== userId);
+	}
+
+	function getUserName(userId: string) {
+		const user = users.find((u) => u.id === userId);
+		return user ? `${user.name} ${user.last_name}` : userId;
+	}
+
+	function getAvailableUsers() {
+		return users.filter((user) => !selectedUsers.includes(user.id));
 	}
 
 	onMount(() => {
@@ -168,13 +207,61 @@
 					maxlength={20}
 				/>
 				<div class="mt-2">
-					<label class="label font-medium" for="group_name">Modalidad</label>
+					<label class="label font-medium" for="abr">Modalidad</label>
 					<select id="abr" name="abr" class="select w-full validator" required>
 						<option value="">Selecciona una modalidad</option>
 						{#each modalities as abr (abr)}
 							<option value={abr}>{abr}</option>
 						{/each}
 					</select>
+				</div>
+
+				<!-- Gestión de usuarios -->
+				<div class="mt-4">
+					<label class="label font-medium" for="users">Usuarios</label>
+					<div class="flex gap-2">
+						<select
+							id="users"
+							bind:value={selectedUserId}
+							class="select select-sm flex-1 validator"
+						>
+							<option value="">Selecciona un usuario</option>
+							{#each getAvailableUsers() as user (user.id)}
+								<option value={user.id}>{user.name} {user.last_name}</option>
+							{/each}
+						</select>
+						<button
+							type="button"
+							class="btn btn-sm btn-primary"
+							onclick={addUser}
+							disabled={!selectedUserId}
+						>
+							<Plus class="w-4 h-4" />
+						</button>
+					</div>
+
+					<!-- Lista de usuarios seleccionados -->
+					{#if selectedUsers.length > 0}
+						<div class="mt-2 space-y-2">
+							{#each selectedUsers as userId (userId)}
+								<div class="flex justify-between items-center bg-base-100 p-2 rounded-md">
+									<span class="text-sm">{getUserName(userId)}</span>
+									<input type="hidden" name="selectedUsers" value={userId} />
+									<button
+										type="button"
+										class="btn btn-xs btn-ghost text-error"
+										onclick={() => removeUser(userId)}
+									>
+										<Minus class="w-3 h-3" />
+									</button>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<div class="mt-2 text-sm text-base-content/70 italic">
+							No hay usuarios seleccionados
+						</div>
+					{/if}
 				</div>
 			</fieldset>
 			{#if message}

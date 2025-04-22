@@ -19,7 +19,12 @@ export const actions: Actions = {
 		const userId = locals.session?.user.id;
 		if (!userId) return fail(401, { error: 'User not authenticated' });
 
-		const { error } = await locals.supabase.from('levels').insert({ name, abr, users: [userId] });
+		// Get selected users from form data
+		const selectedUsers = formData.getAll('selectedUsers') as string[];
+		// Ensure current user is included in the users array
+		const users = [...new Set([userId, ...selectedUsers])];
+
+		const { error } = await locals.supabase.from('levels').insert({ name, abr, users });
 		if (error) return fail(400, { error: error.message });
 		return { success: true };
 	},
@@ -31,9 +36,15 @@ export const actions: Actions = {
 		const name = formData.get('name') as string;
 		const abr = formData.get('abr') as string;
 
+		// Get selected users from form data
+		const selectedUsers = formData.getAll('selectedUsers') as string[];
+		// Ensure current user is included in the users array if they're the one updating
+		const userId = locals.session?.user.id;
+		const users = userId ? [...new Set([userId, ...selectedUsers])] : selectedUsers;
+
 		const { error } = await locals.supabase
 			.from('levels')
-			.update({ name, abr })
+			.update({ name, abr, users })
 			.eq('code', levelCode);
 		if (error) return fail(400, { error: error.message });
 
