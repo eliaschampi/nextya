@@ -31,6 +31,15 @@
 	let dummyQuestions = $state<EvalQuestion[]>([]);
 	let studentAnswers = $state<StudentAnswer[]>([]);
 
+	// Caché de resultados por evaluación
+	const resultsCache = $state<Record<string, { data: ResultItem[]; timestamp: number }>>({});
+	// TTL de caché: 5 minutos
+	const CACHE_TTL = 5 * 60 * 1000;
+
+	// Estado para paginación
+	let currentPage = $state(1);
+	let pageSize = $state(20); // Resultados por página
+
 	// Computed value for filtered results
 	const filteredResults = $derived(
 		results.filter((result) => {
@@ -44,6 +53,20 @@
 			);
 		})
 	);
+
+	// Resultados paginados
+	const paginatedResults = $derived(
+		filteredResults.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+	);
+
+	// Total de páginas
+	const totalPages = $derived(Math.ceil(filteredResults.length / pageSize));
+
+	// Función para cambiar de página
+	function goToPage(page: number) {
+		if (page < 1 || page > totalPages) return;
+		currentPage = page;
+	}
 
 	// Functions
 	function openEvalModal() {
@@ -75,12 +98,32 @@
 
 	async function loadResults(evalCode: string) {
 		loadingResults = true;
+
+		// Verificar si hay datos en caché y si son válidos
+		const now = Date.now();
+		if (resultsCache[evalCode] && now - resultsCache[evalCode].timestamp < CACHE_TTL) {
+			// Usar datos de caché
+			results = resultsCache[evalCode].data;
+			loadingResults = false;
+			return;
+		}
+
 		try {
 			const response = await fetch(`/api/eval/results/${evalCode}`);
 			if (!response.ok) {
 				throw new Error('Error al cargar resultados');
 			}
-			results = await response.json();
+			const data = await response.json();
+
+			// Guardar en caché
+			resultsCache[evalCode] = {
+				data,
+				timestamp: now
+			};
+
+			results = data;
+			// Resetear a la primera página cuando se cargan nuevos resultados
+			currentPage = 1;
 		} catch (error) {
 			console.error('Error cargando resultados:', error);
 			showToast('No se pudieron cargar los resultados', 'danger');
@@ -215,7 +258,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each filteredResults as result (result.result_code)}
+								{#each paginatedResults as result (result.result_code)}
 									<tr class="hover">
 										<td class="font-mono text-accent">{result.roll_code}</td>
 										<td class="font-medium">{result.name}</td>
@@ -248,6 +291,38 @@
 								{/each}
 							</tbody>
 						</table>
+
+						<!-- Paginación -->
+						{#if totalPages > 1}
+							<div class="flex justify-center mt-4">
+								<div class="join">
+									<button
+										class="join-item btn btn-sm {currentPage === 1 ? 'btn-disabled' : ''}"
+										onclick={() => goToPage(currentPage - 1)}
+									>
+										«
+									</button>
+
+									{#each Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
+										return index + 1 + Math.max(0, Math.min(totalPages - 5, currentPage - 3));
+									}) as pageNum (pageNum)}
+										<button
+											class="join-item btn btn-sm {pageNum === currentPage ? 'btn-active' : ''}"
+											onclick={() => goToPage(pageNum)}
+										>
+											{pageNum}
+										</button>
+									{/each}
+
+									<button
+										class="join-item btn btn-sm {currentPage === totalPages ? 'btn-disabled' : ''}"
+										onclick={() => goToPage(currentPage + 1)}
+									>
+										»
+									</button>
+								</div>
+							</div>
+						{/if}
 					</div>
 				{:else if searchQuery}
 					<div class="alert alert-info">

@@ -1,6 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import type { EvalQuestion, EvalSection, Eval } from '$lib/types';
+import type { EvalQuestion, Eval, EvalSectionWithCourse } from '$lib/types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const evalCode = params.eval_code;
@@ -33,7 +33,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	}
 
 	// Add the course_name to the sections from the join
-	const sections = sectionsData.map((section: EvalSection & { courses: { name: string } }) => ({
+	const sections = sectionsData.map((section: EvalSectionWithCourse) => ({
 		...section,
 		course_name: section.courses?.name
 	}));
@@ -52,7 +52,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	return {
 		eval: evalData as Eval & { levels: { name: string } },
-		sections: sections as (EvalSection & { course_name: string })[],
+		sections: sections as EvalSectionWithCourse[],
 		existingQuestions: questionsData as EvalQuestion[],
 		title: `Claves - ${evalData.name}`
 	};

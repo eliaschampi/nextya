@@ -1,10 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { EvalSection } from '$lib/types';
+import type { EvalSectionWithCourse } from '$lib/types';
 
 export async function fetchSections(
 	evalCode: string,
 	supabase: SupabaseClient
-): Promise<EvalSection[]> {
+): Promise<EvalSectionWithCourse[]> {
 	const { data: sections, error: sectionsError } = await supabase
 		.from('eval_sections')
 		.select('*, course:course_code(name)')

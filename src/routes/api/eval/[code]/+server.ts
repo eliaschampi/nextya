@@ -1,4 +1,4 @@
-import type { Eval, EvalSection } from '$lib/types';
+import type { Eval, EvalSectionWithCourse } from '$lib/types';
 import type { RequestHandler } from '@sveltejs/kit';
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const { code } = params;
@@ -14,18 +14,18 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	const evals = data.map(
 		(
 			evalItem: Eval & {
-				eval_sections: Array<EvalSection & { courses: { name: string } }>;
+				eval_sections: Array<EvalSectionWithCourse>;
 				levels: { name: string };
 			}
 		) => ({
 			...evalItem,
-			eval_sections: evalItem.eval_sections.map((section: EvalSection) => ({
+			eval_sections: evalItem.eval_sections.map((section) => ({
 				code: section.code,
 				eval_code: section.eval_code,
 				course_code: section.course_code,
 				order_in_eval: section.order_in_eval,
 				question_count: section.question_count,
-				course_name: section.courses.name
+				course_name: section.courses?.name || 'Sin nombre'
 			}))
 		})
 	);

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import type { Eval, EvalSection } from '$lib/types';
+	import type { Eval, EvalSectionWithCourse } from '$lib/types';
 	import { BookOpen, ListChecks } from 'lucide-svelte';
 
 	const { evaluation } = $props<{
 		evaluation: Eval & {
-			eval_sections?: (EvalSection & { course_name?: string; courses?: { name: string } })[];
+			eval_sections?: EvalSectionWithCourse[];
 			levels?: { name: string };
 		};
 	}>();

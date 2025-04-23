@@ -1,4 +1,4 @@
-import type { Database } from 'lucide-svelte';
+import type { Database } from '../../database.types';
 
 export type Level = Database['public']['Tables']['levels']['Row'];
 export type Course = Database['public']['Tables']['courses']['Row'];
@@ -36,8 +36,13 @@ export type FormSection = {
 	question_count: number;
 };
 
+export type EvalSectionWithCourse = EvalSection & {
+	course_name?: string;
+	courses?: { name: string };
+};
+
 export type EvalWithSections = Eval & {
-	eval_sections: (EvalSection & { course_name: string })[];
+	eval_sections: EvalSectionWithCourse[];
 	levels?: { name: string };
 };
 
