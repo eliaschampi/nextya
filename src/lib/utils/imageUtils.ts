@@ -1,16 +1,25 @@
 // Utilidades para manipulación de imágenes
+
+/**
+ * Representa las dimensiones de una imagen
+ */
 export interface ImageDimensions {
 	width: number;
 	height: number;
 }
 
+/**
+ * Representa un formato de imagen con su relación de aspecto
+ */
 export interface ImageFormat {
 	name: string;
 	ratio: number;
 	tolerance: number;
 }
 
-// Formatos de papel estándar (relación ancho/alto)
+/**
+ * Formatos de papel estándar (relación ancho/alto)
+ */
 export const PAPER_FORMATS = {
 	A5_VERTICAL: { name: 'A5 Vertical', ratio: 1 / 1.414, tolerance: 0.05 },
 	A5_HORIZONTAL: { name: 'A5 Horizontal', ratio: 1.414, tolerance: 0.05 },
@@ -100,6 +109,12 @@ export function calculateCropDimensions(
 	return { width: newWidth, height: newHeight, offsetX, offsetY };
 }
 
+/**
+ * Procesa una imagen aplicando transformaciones como rotación y recorte.
+ * @param image Imagen a procesar
+ * @param options Opciones de transformación
+ * @returns Imagen procesada en formato base64
+ */
 export function processImageWithCanvas(
 	image: HTMLImageElement,
 	options: {
@@ -108,9 +123,8 @@ export function processImageWithCanvas(
 			horizontal?: boolean;
 			vertical?: boolean;
 		};
-		zoom?: number;
 		crop?: {
-			targetRatio: number;
+			targetRatio?: number;
 			x?: number;
 			y?: number;
 			width?: number;
@@ -119,164 +133,159 @@ export function processImageWithCanvas(
 		quality?: number;
 	}
 ): string {
-	// Crear un canvas temporal para el procesamiento inicial
-	const tempCanvas = document.createElement('canvas');
-	const tempCtx = tempCanvas.getContext('2d');
-	if (!tempCtx) throw new Error('No se pudo obtener el contexto 2D del canvas');
+	const canvas = document.createElement('canvas');
+	const ctx = canvas.getContext('2d');
+	if (!ctx) throw new Error('No se pudo obtener el contexto 2D del canvas');
 
-	// Obtener dimensiones naturales de la imagen
-	let { naturalWidth: imgWidth, naturalHeight: imgHeight } = image;
+	const { naturalWidth, naturalHeight } = image;
+	const width = naturalWidth;
+	const height = naturalHeight;
 
-	// Definir dimensiones iniciales del canvas
-	tempCanvas.width = imgWidth;
-	tempCanvas.height = imgHeight;
+	// CASO 1: Rotación sin recorte
+	if (
+		options.rotation !== undefined &&
+		!options.crop &&
+		(options.rotation % 180 === 90 || options.rotation % 180 === 270)
+	) {
+		// Si la rotación es 90 o 270 grados, intercambiar dimensiones
+		canvas.width = height;
+		canvas.height = width;
 
-	// Dibujar la imagen original en el canvas temporal
-	tempCtx.drawImage(image, 0, 0, imgWidth, imgHeight);
+		// Aplicar rotación
+		ctx.save();
+		ctx.translate(canvas.width / 2, canvas.height / 2);
+		ctx.rotate((options.rotation * Math.PI) / 180);
+		ctx.drawImage(image, -width / 2, -height / 2, width, height);
+		ctx.restore();
 
-	// Definir el canvas final que contendrá el resultado
-	const outputCanvas = document.createElement('canvas');
-	const outputCtx = outputCanvas.getContext('2d');
-	if (!outputCtx) throw new Error('No se pudo obtener el contexto 2D del canvas');
+		return canvas.toDataURL('image/jpeg', options.quality || 0.95);
+	}
 
-	// 1. Procesar el recorte primero si existe
-	if (options.crop) {
-		let cropX = 0;
-		let cropY = 0;
-		let cropWidth = imgWidth;
-		let cropHeight = imgHeight;
-
-		// Si hay zoom, ajustar el recorte
-		const zoomFactor = options.zoom || 1;
-
-		// Si se proporcionan coordenadas específicas de recorte
+	// CASO 2: Recorte sin rotación
+	if (options.crop && (!options.rotation || options.rotation === 0)) {
+		// Si hay coordenadas específicas de recorte
 		if (
 			options.crop.x !== undefined &&
 			options.crop.y !== undefined &&
 			options.crop.width !== undefined &&
-			options.crop.height !== undefined &&
-			// Asegurarse de que las dimensiones son válidas (no cero)
-			options.crop.width > 0 &&
-			options.crop.height > 0
+			options.crop.height !== undefined
 		) {
 			// Convertir coordenadas de pantalla a coordenadas de imagen real
-			const displayToNaturalRatioX = imgWidth / image.width;
-			const displayToNaturalRatioY = imgHeight / image.height;
+			const displayToNaturalRatioX = width / image.width;
+			const displayToNaturalRatioY = height / image.height;
 
-			// Cuando hay zoom, necesitamos ajustar el centro del recorte
-			if (zoomFactor !== 1) {
-				// Calculamos el centro del área visible
-				const centerX = image.width / 2;
-				const centerY = image.height / 2;
+			const cropX = Math.floor(options.crop.x * displayToNaturalRatioX);
+			const cropY = Math.floor(options.crop.y * displayToNaturalRatioY);
+			const cropWidth = Math.floor(options.crop.width * displayToNaturalRatioX);
+			const cropHeight = Math.floor(options.crop.height * displayToNaturalRatioY);
 
-				// Calculamos la posición relativa al centro
-				const relX = options.crop.x - centerX;
-				const relY = options.crop.y - centerY;
+			// Configurar canvas para el recorte
+			canvas.width = cropWidth;
+			canvas.height = cropHeight;
 
-				// Ajustamos según el zoom (si hacemos zoom in, el recorte es más pequeño en la imagen real)
-				const adjustedRelX = relX / zoomFactor;
-				const adjustedRelY = relY / zoomFactor;
-
-				// Calculamos las nuevas coordenadas ajustadas
-				const adjustedX = centerX + adjustedRelX;
-				const adjustedY = centerY + adjustedRelY;
-
-				// Ajustamos el tamaño del recorte
-				const adjustedWidth = options.crop.width / zoomFactor;
-				const adjustedHeight = options.crop.height / zoomFactor;
-
-				// Convertimos a coordenadas naturales
-				cropX = Math.floor(adjustedX * displayToNaturalRatioX);
-				cropY = Math.floor(adjustedY * displayToNaturalRatioY);
-				cropWidth = Math.floor(adjustedWidth * displayToNaturalRatioX);
-				cropHeight = Math.floor(adjustedHeight * displayToNaturalRatioY);
-			} else {
-				// Sin zoom, usamos el cálculo original
-				cropX = Math.floor(options.crop.x * displayToNaturalRatioX);
-				cropY = Math.floor(options.crop.y * displayToNaturalRatioY);
-				cropWidth = Math.floor(options.crop.width * displayToNaturalRatioX);
-				cropHeight = Math.floor(options.crop.height * displayToNaturalRatioY);
-			}
-		} else {
+			// Dibujar la porción recortada
+			ctx.drawImage(image, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+		} else if (options.crop.targetRatio) {
 			// Calcular dimensiones basadas en la relación de aspecto objetivo
-			const cropDimensions = calculateCropDimensions(imgWidth, imgHeight, options.crop.targetRatio);
-			cropX = cropDimensions.offsetX;
-			cropY = cropDimensions.offsetY;
-			cropWidth = cropDimensions.width;
-			cropHeight = cropDimensions.height;
+			const {
+				width: cropWidth,
+				height: cropHeight,
+				offsetX,
+				offsetY
+			} = calculateCropDimensions(width, height, options.crop.targetRatio);
+
+			// Configurar canvas para el recorte
+			canvas.width = cropWidth;
+			canvas.height = cropHeight;
+
+			// Dibujar la porción recortada
+			ctx.drawImage(image, offsetX, offsetY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
 		}
 
-		// Asegurarse de que las dimensiones del recorte son válidas
-		cropX = Math.max(0, Math.min(imgWidth - 1, cropX));
-		cropY = Math.max(0, Math.min(imgHeight - 1, cropY));
-		cropWidth = Math.max(1, Math.min(imgWidth - cropX, cropWidth));
-		cropHeight = Math.max(1, Math.min(imgHeight - cropY, cropHeight));
-
-		// Extraer los datos del recorte
-		const croppedImgData = tempCtx.getImageData(cropX, cropY, cropWidth, cropHeight);
-
-		// Redimensionar el canvas temporal para el recorte
-		tempCanvas.width = cropWidth;
-		tempCanvas.height = cropHeight;
-
-		// Colocar los datos recortados en el canvas temporal
-		tempCtx.putImageData(croppedImgData, 0, 0);
-
-		// Actualizar las dimensiones para los próximos pasos
-		imgWidth = cropWidth;
-		imgHeight = cropHeight;
+		return canvas.toDataURL('image/jpeg', options.quality || 0.95);
 	}
 
-	// 2. Aplicar rotación y volteo
-	let finalWidth = imgWidth;
-	let finalHeight = imgHeight;
+	// CASO 3: Rotación con recorte o rotación simple (0 o 180 grados)
+	// Configurar canvas para la imagen completa
+	canvas.width = width;
+	canvas.height = height;
 
-	// Determinar las dimensiones finales según la rotación
-	if (options.rotation && (options.rotation % 180 === 90 || options.rotation % 180 === 270)) {
-		finalWidth = imgHeight;
-		finalHeight = imgWidth;
+	// Aplicar rotación si existe
+	if (options.rotation !== undefined && options.rotation !== 0) {
+		ctx.save();
+		ctx.translate(canvas.width / 2, canvas.height / 2);
+		ctx.rotate((options.rotation * Math.PI) / 180);
+		ctx.drawImage(image, -width / 2, -height / 2, width, height);
+		ctx.restore();
+	} else {
+		// Sin rotación, simplemente dibujar la imagen
+		ctx.drawImage(image, 0, 0, width, height);
 	}
 
-	// Configurar el canvas de salida
-	outputCanvas.width = finalWidth;
-	outputCanvas.height = finalHeight;
+	// Aplicar volteo si está especificado
+	if (options.flip && (options.flip.horizontal || options.flip.vertical)) {
+		const flippedCanvas = document.createElement('canvas');
+		flippedCanvas.width = width;
+		flippedCanvas.height = height;
+		const flippedCtx = flippedCanvas.getContext('2d');
+		if (!flippedCtx) throw new Error('No se pudo obtener el contexto 2D del canvas');
 
-	// Aplicar transformaciones
-	outputCtx.save();
+		flippedCtx.save();
+		flippedCtx.translate(options.flip.horizontal ? width : 0, options.flip.vertical ? height : 0);
+		flippedCtx.scale(options.flip.horizontal ? -1 : 1, options.flip.vertical ? -1 : 1);
+		flippedCtx.drawImage(canvas, 0, 0, width, height, 0, 0, width, height);
+		flippedCtx.restore();
 
-	// Mover al centro del canvas
-	outputCtx.translate(finalWidth / 2, finalHeight / 2);
-
-	// Aplicar rotación
-	if (options.rotation) {
-		outputCtx.rotate((options.rotation * Math.PI) / 180);
+		// Reemplazar el canvas original con el volteado
+		canvas.width = width;
+		canvas.height = height;
+		ctx.drawImage(flippedCanvas, 0, 0);
 	}
 
-	// Aplicar volteo
-	if (options.flip) {
-		const scaleX = options.flip.horizontal ? -1 : 1;
-		const scaleY = options.flip.vertical ? -1 : 1;
-		outputCtx.scale(scaleX, scaleY);
+	// Si hay recorte después de rotación, aplicarlo
+	if (options.crop && options.crop.targetRatio) {
+		// Calcular dimensiones basadas en la relación de aspecto objetivo
+		const {
+			width: cropWidth,
+			height: cropHeight,
+			offsetX,
+			offsetY
+		} = calculateCropDimensions(width, height, options.crop.targetRatio);
+
+		// Crear un nuevo canvas para el recorte
+		const croppedCanvas = document.createElement('canvas');
+		croppedCanvas.width = cropWidth;
+		croppedCanvas.height = cropHeight;
+		const croppedCtx = croppedCanvas.getContext('2d');
+		if (!croppedCtx) throw new Error('No se pudo obtener el contexto 2D del canvas');
+
+		// Dibujar la porción recortada
+		croppedCtx.drawImage(
+			canvas,
+			offsetX,
+			offsetY,
+			cropWidth,
+			cropHeight,
+			0,
+			0,
+			cropWidth,
+			cropHeight
+		);
+
+		// Convertir a base64 y retornar
+		return croppedCanvas.toDataURL('image/jpeg', options.quality || 0.95);
 	}
-
-	const drawWidth =
-		options.rotation && (options.rotation % 180 === 90 || options.rotation % 180 === 270)
-			? imgHeight
-			: imgWidth;
-	const drawHeight =
-		options.rotation && (options.rotation % 180 === 90 || options.rotation % 180 === 270)
-			? imgWidth
-			: imgHeight;
-
-	// Dibujar la imagen centrada
-	outputCtx.drawImage(tempCanvas, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-
-	outputCtx.restore();
 
 	// Convertir a base64 y retornar
-	return outputCanvas.toDataURL('image/jpeg', options.quality || 0.95);
+	return canvas.toDataURL('image/jpeg', options.quality || 0.95);
 }
 
+/**
+ * Convierte una imagen base64 a un objeto File
+ * @param base64Data Datos de la imagen en formato base64
+ * @param fileName Nombre del archivo
+ * @returns Objeto File
+ */
 export function base64ToFile(base64Data: string, fileName: string): File {
 	const byteString = atob(base64Data.split(',')[1]);
 	const mimeType = base64Data.split(',')[0].split(':')[1].split(';')[0];

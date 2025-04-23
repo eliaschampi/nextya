@@ -69,18 +69,22 @@
 		rotation = (rotation + 90) % 360;
 		exitCropMode();
 	}
+
 	function rotateCounterClockwise() {
 		rotation = (rotation - 90 + 360) % 360;
 		exitCropMode();
 	}
+
 	function flipHorizontal() {
 		flipX = !flipX;
 		exitCropMode();
 	}
+
 	function flipVertical() {
 		flipY = !flipY;
 		exitCropMode();
 	}
+
 	function resetView() {
 		rotation = 0;
 		flipX = false;
@@ -88,7 +92,6 @@
 		cropData = null;
 		exitCropMode();
 		zoomLevel = 1;
-		// No resetear displayedImageUrl, solo mantener la imagen actual sin transformaciones
 	}
 
 	// Modo recorte
@@ -99,52 +102,85 @@
 			resetCropPreview();
 		}
 	}
+
 	function exitCropMode() {
 		cropMode = false;
 		zoomLevel = 1;
-		// No eliminamos cropData para mantener el último recorte
 	}
 
 	// Zoom
 	function zoomIn() {
 		if (zoomLevel < MAX_ZOOM) zoomLevel = Math.min(MAX_ZOOM, zoomLevel + ZOOM_STEP);
 	}
+
 	function zoomOut() {
 		if (zoomLevel > MIN_ZOOM) zoomLevel = Math.max(MIN_ZOOM, zoomLevel - ZOOM_STEP);
 	}
 
-	// Guardar transformaciones
+	/**
+	 * Guarda la imagen con las transformaciones aplicadas.
+	 * - Si estamos en modo recorte, aplica recorte con proporción A5
+	 * - Si solo hay rotación o volteo, aplica estas transformaciones sin modificar la proporción
+	 */
 	async function saveProcessedImage() {
 		if (!imageRef || !displayedImageUrl) return;
 		try {
 			isProcessing = true;
 
-			// Configurar transformaciones según el modo actual
-			const transformations: {
-				rotation: number;
-				flip: { horizontal: boolean; vertical: boolean };
-				zoom: number;
-				quality: number;
-				crop?: { x?: number; y?: number; width?: number; height?: number; targetRatio: number };
+			// Configurar opciones de transformación
+			const options: {
+				rotation?: number;
+				flip?: { horizontal?: boolean; vertical?: boolean };
+				zoom?: number;
+				crop?: {
+					targetRatio?: number;
+					x?: number;
+					y?: number;
+					width?: number;
+					height?: number;
+				};
+				quality?: number;
 			} = {
-				rotation,
-				flip: { horizontal: flipX, vertical: flipY },
-				zoom: cropMode ? zoomLevel : 1,
 				quality: 0.95
 			};
 
-			// Solo aplicar restricción de proporción A5 en modo recorte o si se especificó un área de recorte
-			if (cropMode || cropData) {
-				transformations.crop = cropData
-					? { ...cropData, targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio }
-					: { targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio };
-			} else if (!isA5Format) {
-				// Si la imagen no tiene formato A5 y no estamos en modo recorte,
-				// aplicar un recorte automático para corregir la proporción
-				transformations.crop = { targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio };
+			// Añadir rotación si es necesario
+			if (rotation !== 0) {
+				options.rotation = rotation;
 			}
 
-			const processedImageData = processImageWithCanvas(imageRef, transformations);
+			// Añadir volteo si es necesario
+			if (flipX || flipY) {
+				options.flip = {
+					horizontal: flipX,
+					vertical: flipY
+				};
+			}
+
+			// Añadir recorte y zoom SOLO si estamos en modo recorte
+			if (cropMode) {
+				// Añadir zoom si es diferente de 1
+				if (zoomLevel !== 1) {
+					options.zoom = zoomLevel;
+				}
+
+				if (cropData) {
+					// Usar el área de recorte seleccionada por el usuario
+					options.crop = {
+						...cropData,
+						targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio
+					};
+				} else {
+					// Recorte automático basado en la proporción A5
+					options.crop = {
+						targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio
+					};
+				}
+			}
+
+			// Procesar la imagen con las opciones configuradas
+			const processedImageData = processImageWithCanvas(imageRef, options);
+
 			// Actualizar la imagen mostrada con la versión procesada
 			displayedImageUrl = processedImageData;
 
@@ -203,13 +239,16 @@
 	function handleMouseMove(e: MouseEvent) {
 		moveDragCrop(e.clientX, e.clientY);
 	}
+
 	function handleTouchMove(e: TouchEvent) {
 		e.preventDefault();
 		if (e.touches[0]) moveDragCrop(e.touches[0].clientX, e.touches[0].clientY);
 	}
+
 	function handleMouseUp() {
 		endDragCrop();
 	}
+
 	function handleTouchEnd() {
 		endDragCrop();
 	}
@@ -241,10 +280,8 @@
 		`rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})`
 	);
 	let imageTransformWithZoom = $derived(`${imageTransform} scale(${zoomLevel})`);
-	// Verificar si hay transformaciones aplicadas
-	let hasTransformations = $derived(
-		rotation !== 0 || flipX || flipY || cropData !== null || !isA5Format
-	);
+	// Verificar si hay transformaciones aplicadas (solo rotación, volteo o recorte)
+	let hasTransformations = $derived(rotation !== 0 || flipX || flipY || cropData !== null);
 </script>
 
 <div class="card-body p-4">
