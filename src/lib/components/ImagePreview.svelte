@@ -118,16 +118,32 @@
 		if (!imageRef || !displayedImageUrl) return;
 		try {
 			isProcessing = true;
-			const transformations = {
+
+			// Configurar transformaciones según el modo actual
+			const transformations: {
+				rotation: number;
+				flip: { horizontal: boolean; vertical: boolean };
+				zoom: number;
+				quality: number;
+				crop?: { x?: number; y?: number; width?: number; height?: number; targetRatio: number };
+			} = {
 				rotation,
 				flip: { horizontal: flipX, vertical: flipY },
 				zoom: cropMode ? zoomLevel : 1,
-				// Siempre aplicar proporción A5, incluso sin recorte manual
-				crop: cropData
-					? { ...cropData, targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio }
-					: { targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio },
 				quality: 0.95
 			};
+
+			// Solo aplicar restricción de proporción A5 en modo recorte o si se especificó un área de recorte
+			if (cropMode || cropData) {
+				transformations.crop = cropData
+					? { ...cropData, targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio }
+					: { targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio };
+			} else if (!isA5Format) {
+				// Si la imagen no tiene formato A5 y no estamos en modo recorte,
+				// aplicar un recorte automático para corregir la proporción
+				transformations.crop = { targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio };
+			}
+
 			const processedImageData = processImageWithCanvas(imageRef, transformations);
 			// Actualizar la imagen mostrada con la versión procesada
 			displayedImageUrl = processedImageData;

@@ -21,28 +21,11 @@
 		Check
 	} from 'lucide-svelte';
 	import type { Level, EvalWithSections, EvalQuestion } from '$lib/types';
+	import type { FileEntry } from '$lib/types/app';
 	import { showToast } from '$lib/stores/Toast';
 	import { base64ToFile, validateA5Proportion } from '$lib/utils/imageUtils';
-	import type {
-		ApiOmrResponse,
-		ApiOmrSuccessData,
-		ApiOmrErrorData,
-		ResultToSave
-	} from '$lib/types/api';
+	import type { ApiOmrResponse, ResultToSave } from '$lib/types/api';
 	import { goto } from '$app/navigation';
-
-	// Definición de tipos
-	type FileStatus = 'pending' | 'processing' | 'success' | 'error';
-	interface FileEntry {
-		file: File;
-		id: string;
-		status: FileStatus;
-		result: ApiOmrSuccessData | null;
-		error: ApiOmrErrorData | null;
-		saved: boolean;
-		formatValid?: boolean;
-		formatName?: string;
-	}
 
 	interface ValidationError {
 		id: string;
@@ -113,10 +96,10 @@
 		});
 
 		entries.forEach((entry) => {
-			if (entry.status === 'pending' && entry.formatValid === false) {
+			if (entry.status === 'pending' && !entry.formatValid) {
 				errors.push({
 					id: entry.id,
-					message: `Formato no A5: ${entry.formatName || 'Proporción incorrecta'}`
+					message: `Formato no A5: ${entry.formatName}`
 				});
 			}
 			if (entry.status === 'success' && !entry.result?.register_code) {
@@ -139,7 +122,7 @@
 	let canProcess = $derived(
 		!!selectedEval &&
 			fileEntries.length > 0 &&
-			!fileEntries.some((e) => e.status === 'pending' && e.formatValid === false)
+			!fileEntries.some((e) => e.status === 'pending' && !e.formatValid)
 	);
 	let canSave = $derived(
 		saveableFilesCount > 0 &&
@@ -168,9 +151,9 @@
 		const entryIndex = fileEntries.findIndex((e) => e.id === id);
 		if (entryIndex === -1 || !selectedEval) return;
 
-		if (fileEntries[entryIndex].formatValid === false) {
+		if (!fileEntries[entryIndex].formatValid) {
 			showToast(
-				`No se puede procesar: ${fileEntries[entryIndex].formatName || 'Formato no A5'}. Recorta la imagen primero.`,
+				`No se puede procesar: ${fileEntries[entryIndex].formatName}. Recorta la imagen primero.`,
 				'danger'
 			);
 			return;
@@ -246,9 +229,7 @@
 		const previousSelectedId = selectedFileId;
 
 		try {
-			const pendingEntries = fileEntries.filter(
-				(e) => e.status === 'pending' && e.formatValid !== false
-			);
+			const pendingEntries = fileEntries.filter((e) => e.status === 'pending' && e.formatValid);
 			if (pendingEntries.length === 0) {
 				showToast('No hay archivos válidos para procesar. Corrige el formato A5.', 'warning');
 				return;
@@ -285,14 +266,8 @@
 		let invalidFormatCount = 0;
 
 		for (const file of newFiles) {
-			const entry: FileEntry = {
-				file,
-				id: crypto.randomUUID(),
-				status: 'pending',
-				result: null,
-				error: null,
-				saved: false
-			};
+			let formatValid = true;
+			let formatName = 'A5 Vertical';
 
 			try {
 				const url = URL.createObjectURL(file);
@@ -300,16 +275,27 @@
 				URL.revokeObjectURL(url);
 
 				const validation = validateA5Proportion(dimensions.width, dimensions.height);
-				entry.formatValid = validation.isValid;
-				entry.formatName = validation.format;
+				formatValid = validation.isValid;
+				formatName = validation.format;
 
 				if (!validation.isValid) {
 					invalidFormatCount++;
 				}
 			} catch (error) {
 				console.error('Error validando formato de imagen:', error);
-				entry.formatValid = true; // Asumir válido si hay error
+				// Asumir válido si hay error
 			}
+
+			const entry: FileEntry = {
+				file,
+				id: crypto.randomUUID(),
+				status: 'pending',
+				result: null,
+				error: null,
+				saved: false,
+				formatValid,
+				formatName
+			};
 
 			newEntries.push(entry);
 		}
@@ -394,7 +380,10 @@
 			status: 'pending',
 			result: null,
 			error: null,
-			saved: false
+			saved: false,
+			// Mantener los valores de formato existentes
+			formatValid: entry.formatValid,
+			formatName: entry.formatName
 		}));
 		selectedFileId = fileEntries[0]?.id ?? null;
 
@@ -426,12 +415,15 @@
 		const originalFile = fileEntries[entryIndex].file;
 		const newFile = base64ToFile(processedImageData, originalFile.name);
 
+		let formatValid = true;
+		let formatName = 'A5 Vertical';
+
 		try {
 			const dimensions = await getImageDimensions(processedImageData);
 			const validation = validateA5Proportion(dimensions.width, dimensions.height);
-			fileEntries[entryIndex].file = newFile;
-			fileEntries[entryIndex].formatValid = validation.isValid;
-			fileEntries[entryIndex].formatName = validation.format;
+			formatValid = validation.isValid;
+			formatName = validation.format;
+
 			showToast(
 				validation.isValid
 					? 'Imagen editada guardada localmente.'
@@ -440,9 +432,13 @@
 			);
 		} catch (error) {
 			console.error('Error validando formato de imagen procesada:', error);
-			fileEntries[entryIndex].file = newFile;
 			showToast('Imagen editada guardada localmente', 'success');
 		}
+
+		// Actualizar el archivo y sus propiedades
+		fileEntries[entryIndex].file = newFile;
+		fileEntries[entryIndex].formatValid = formatValid;
+		fileEntries[entryIndex].formatName = formatName;
 	}
 
 	$effect(() => {
@@ -679,9 +675,8 @@
 						error={selectedFileError}
 						result={selectedFileResult}
 						fileName={fileEntries.find((e) => e.id === selectedFileId)!.file.name}
-						isA5Format={fileEntries.find((e) => e.id === selectedFileId)!.formatValid !== false}
-						formatName={fileEntries.find((e) => e.id === selectedFileId)!.formatName ||
-							'Formato desconocido'}
+						isA5Format={fileEntries.find((e) => e.id === selectedFileId)!.formatValid}
+						formatName={fileEntries.find((e) => e.id === selectedFileId)!.formatName}
 						onImageSave={handleSaveImage}
 					/>
 				{:else if fileEntries.length > 0}

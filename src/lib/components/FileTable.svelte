@@ -1,18 +1,5 @@
 <script lang="ts">
-	import type { ApiOmrErrorData, ApiOmrSuccessData } from '$lib/types/api';
-
-	// Definición local de FileEntry para incluir propiedades de formato
-	type FileStatus = 'pending' | 'processing' | 'success' | 'error';
-	interface FileEntry {
-		file: File;
-		id: string;
-		status: FileStatus;
-		result: ApiOmrSuccessData | null;
-		error: ApiOmrErrorData | null;
-		saved: boolean;
-		formatValid?: boolean; // Indica si la imagen tiene proporción A5
-		formatName?: string; // Nombre del formato detectado
-	}
+	import type { FileEntry } from '$lib/types/app';
 	import { Play, X, Loader2, Eye, Edit, Check, AlertCircle } from 'lucide-svelte';
 
 	type Props = {
@@ -80,7 +67,7 @@
 		// Estados de error
 		if (
 			validationErrorsMap.has(entry.id) ||
-			entry.formatValid === false ||
+			!entry.formatValid ||
 			entry.status === 'error' ||
 			(entry.status === 'success' && !entry.result?.register_code)
 		) {
@@ -105,11 +92,7 @@
 		}
 
 		// Estados de error
-		if (
-			validationErrorsMap.has(entry.id) ||
-			entry.formatValid === false ||
-			entry.status === 'error'
-		) {
+		if (validationErrorsMap.has(entry.id) || !entry.formatValid || entry.status === 'error') {
 			return 'text-error';
 		}
 
@@ -141,8 +124,8 @@
 		if (validationErrorsMap.has(entry.id)) return validationErrorsMap.get(entry.id)!;
 
 		// Prioridad 2: Error de formato A5
-		if (entry.formatValid === false) {
-			return `Formato no A5: ${entry.formatName || 'Proporción incorrecta'}. Recorta la imagen primero.`;
+		if (!entry.formatValid) {
+			return `Formato no A5: ${entry.formatName}. Recorta la imagen primero.`;
 		}
 
 		// Otros estados
@@ -294,8 +277,8 @@
 								<button
 									class="btn btn-xs tooltip btn-primary"
 									onclick={() => onProcess(entry.id)}
-									disabled={!evalSelected || isBusy || entry.formatValid === false}
-									data-tip={entry.formatValid === false
+									disabled={!evalSelected || isBusy || !entry.formatValid}
+									data-tip={!entry.formatValid
 										? 'Formato no A5. Recorta la imagen primero.'
 										: 'Procesar'}
 								>
