@@ -3,6 +3,10 @@
 	import type { Level, EvalWithSections } from '$lib/types';
 	import { formatDate } from '$lib/utils/formatDate';
 
+	/**
+	 * Modal para seleccionar una evaluación.
+	 * El modal se cierra automáticamente cuando se selecciona una evaluación.
+	 */
 	type Props = {
 		levels: Level[];
 		availableEvals: EvalWithSections[];
@@ -10,8 +14,10 @@
 		selectedLevelCode: string;
 		open?: boolean;
 		loading?: boolean;
+		/** Función que se llama cuando el modal se cierra (ya sea por selección o por cancelación) */
 		onClose?: () => void;
 		onLevelChange?: (levelCode: string) => void;
+		/** Función que se llama cuando se selecciona una evaluación */
 		onSelectEval?: (evalItem: EvalWithSections) => void;
 	};
 
@@ -38,7 +44,7 @@
 		}
 	});
 
-	// Close event handling
+	// Close event handling - notifica al componente padre cuando el modal se cierra
 	$effect(() => {
 		const modalElement = modal;
 		if (!modalElement) return;
@@ -112,7 +118,10 @@
 										<td class="text-center">
 											<button
 												class="btn btn-primary btn-xs"
-												onclick={() => onSelectEval(item)}
+												onclick={() => {
+													onSelectEval(item);
+													closeModal(); // Cerrar el modal automáticamente al seleccionar
+												}}
 												disabled={selectedEval?.code === item.code || loading}
 											>
 												{selectedEval?.code === item.code ? 'Seleccionado' : 'Seleccionar'}

@@ -388,7 +388,7 @@
 
 	async function selectEvalAndFetchQuestions(evalItem: EvalWithSections) {
 		selectedEval = evalItem;
-		evalSelectionModalOpen = false;
+		// El modal se cierra automáticamente en el componente
 		fileEntries = fileEntries.map((entry) => ({
 			...entry,
 			status: 'pending',

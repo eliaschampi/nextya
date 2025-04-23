@@ -7,7 +7,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	const { register_code, eval_code } = params;
 
 	if (!register_code || !eval_code) {
-		return json({ error: 'Código de registro o evaluación no proporcionado' }, { status: 400 });
+		return json([]);
 	}
 
 	try {
