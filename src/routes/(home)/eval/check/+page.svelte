@@ -673,8 +673,6 @@
 						imageUrl={currentPreviewUrl}
 						status={fileEntries.find((e) => e.id === selectedFileId)!.status}
 						error={selectedFileError}
-						result={selectedFileResult}
-						fileName={fileEntries.find((e) => e.id === selectedFileId)!.file.name}
 						isA5Format={fileEntries.find((e) => e.id === selectedFileId)!.formatValid}
 						formatName={fileEntries.find((e) => e.id === selectedFileId)!.formatName}
 						onImageSave={handleSaveImage}
