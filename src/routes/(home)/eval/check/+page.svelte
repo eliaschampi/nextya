@@ -674,7 +674,6 @@
 						status={fileEntries.find((e) => e.id === selectedFileId)!.status}
 						error={selectedFileError}
 						isA5Format={fileEntries.find((e) => e.id === selectedFileId)!.formatValid}
-						formatName={fileEntries.find((e) => e.id === selectedFileId)!.formatName}
 						onImageSave={handleSaveImage}
 					/>
 				{:else if fileEntries.length > 0}
