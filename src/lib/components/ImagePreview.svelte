@@ -122,7 +122,10 @@
 				rotation,
 				flip: { horizontal: flipX, vertical: flipY },
 				zoom: cropMode ? zoomLevel : 1,
-				crop: cropData ? { ...cropData, targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio } : undefined,
+				// Siempre aplicar proporción A5, incluso sin recorte manual
+				crop: cropData
+					? { ...cropData, targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio }
+					: { targetRatio: PAPER_FORMATS.A5_VERTICAL.ratio },
 				quality: 0.95
 			};
 			const processedImageData = processImageWithCanvas(imageRef, transformations);
@@ -222,7 +225,10 @@
 		`rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})`
 	);
 	let imageTransformWithZoom = $derived(`${imageTransform} scale(${zoomLevel})`);
-	let hasTransformations = $derived(rotation !== 0 || flipX || flipY || cropData !== null);
+	// Verificar si hay transformaciones aplicadas
+	let hasTransformations = $derived(
+		rotation !== 0 || flipX || flipY || cropData !== null || !isA5Format
+	);
 </script>
 
 <div class="card-body p-4">

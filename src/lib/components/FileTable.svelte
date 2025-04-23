@@ -28,9 +28,7 @@
 		onUpdateRollCode: (id: string, newRollCode: string) => void;
 	};
 
-	// Constants for score thresholds
-	const SCORE_THRESHOLD_SUCCESS = 14;
-	const SCORE_THRESHOLD_WARNING = 10.5;
+	// Constante para validación de código de matrícula
 	const ROLL_CODE_PATTERN = /^\d{4}$/;
 
 	const {
@@ -132,10 +130,8 @@
 	function getScoreDisplay(entry: FileEntry): { text: string; class: string } {
 		if (entry.status === 'success' && entry.result?.scores?.general) {
 			const score = entry.result.scores.general.score;
-			let colorClass = 'text-error';
-			if (score >= SCORE_THRESHOLD_SUCCESS) colorClass = 'text-success';
-			else if (score >= SCORE_THRESHOLD_WARNING) colorClass = 'text-warning';
-			return { text: score.toFixed(1), class: `font-bold ${colorClass}` };
+			// Usar siempre el mismo color para todas las puntuaciones
+			return { text: score.toFixed(1), class: 'font-bold text-primary' };
 		}
 		return { text: '-', class: 'text-base-content/50' };
 	}

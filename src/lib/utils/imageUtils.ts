@@ -62,6 +62,13 @@ export function validateA5Proportion(
 	};
 }
 
+/**
+ * Calcula las dimensiones de recorte para ajustar una imagen a una proporción específica
+ * @param origWidth Ancho original de la imagen
+ * @param origHeight Alto original de la imagen
+ * @param targetRatio Proporción objetivo (ancho/alto)
+ * @returns Dimensiones y posición del recorte
+ */
 export function calculateCropDimensions(
 	origWidth: number,
 	origHeight: number,
@@ -69,7 +76,10 @@ export function calculateCropDimensions(
 ): { width: number; height: number; offsetX: number; offsetY: number } {
 	let newWidth, newHeight;
 
-	if (origWidth / origHeight > targetRatio) {
+	// Calcular la proporción actual
+	const currentRatio = origWidth / origHeight;
+
+	if (currentRatio > targetRatio) {
 		// Imagen más ancha que el formato objetivo: recortar ancho
 		newHeight = origHeight;
 		newWidth = Math.round(origHeight * targetRatio);
@@ -78,6 +88,10 @@ export function calculateCropDimensions(
 		newWidth = origWidth;
 		newHeight = Math.round(origWidth / targetRatio);
 	}
+
+	// Asegurarse de que las dimensiones son válidas
+	newWidth = Math.min(newWidth, origWidth);
+	newHeight = Math.min(newHeight, origHeight);
 
 	// Calcular posición para centrar el recorte
 	const offsetX = Math.max(0, Math.floor((origWidth - newWidth) / 2));
@@ -140,7 +154,10 @@ export function processImageWithCanvas(
 			options.crop.x !== undefined &&
 			options.crop.y !== undefined &&
 			options.crop.width !== undefined &&
-			options.crop.height !== undefined
+			options.crop.height !== undefined &&
+			// Asegurarse de que las dimensiones son válidas (no cero)
+			options.crop.width > 0 &&
+			options.crop.height > 0
 		) {
 			// Convertir coordenadas de pantalla a coordenadas de imagen real
 			const displayToNaturalRatioX = imgWidth / image.width;
