@@ -464,7 +464,7 @@
 		aria-label="Seleccionar evaluación"
 	>
 		<School size={20} class="mr-2" />
-		{selectedEval ? `Evaluación: ${selectedEval.name}` : 'Seleccionar Evaluación'}
+		{selectedEval ? `${selectedEval.name}` : 'Seleccionar'}
 	</button>
 </PageTitle>
 
@@ -671,9 +671,10 @@
 				{#if selectedFileId && fileEntries.find((e) => e.id === selectedFileId)}
 					<ImagePreview
 						imageUrl={currentPreviewUrl}
-						status={fileEntries.find((e) => e.id === selectedFileId)!.status}
 						error={selectedFileError}
-						isA5Format={fileEntries.find((e) => e.id === selectedFileId)!.formatValid}
+						status={fileEntries.find((e) => e.id === selectedFileId)!.status}
+						fileIndex={fileEntries.findIndex((e) => e.id === selectedFileId)}
+						totalFiles={fileEntries.length}
 						onImageSave={handleSaveImage}
 					/>
 				{:else if fileEntries.length > 0}

@@ -15,9 +15,7 @@ export interface ImageFormat {
 
 export const PAPER_FORMATS = {
 	A5_VERTICAL: { name: 'A5 Vertical', ratio: 1 / 1.414, tolerance: 0.05 },
-	A5_HORIZONTAL: { name: 'A5 Horizontal', ratio: 1.414, tolerance: 0.05 },
-	A4_VERTICAL: { name: 'A4 Vertical', ratio: 1 / 1.414, tolerance: 0.05 },
-	A4_HORIZONTAL: { name: 'A4 Horizontal', ratio: 1.414, tolerance: 0.05 }
+	A5_HORIZONTAL: { name: 'A5 Horizontal', ratio: 1.414, tolerance: 0.05 }
 };
 
 export function checkImageFormat(
@@ -35,19 +33,11 @@ export function validateA5Proportion(
 ): {
 	isValid: boolean;
 	format: string;
-	isVertical: boolean;
 } {
 	const isVertical = checkImageFormat(width, height, PAPER_FORMATS.A5_VERTICAL);
-	const isHorizontal = checkImageFormat(width, height, PAPER_FORMATS.A5_HORIZONTAL);
-
 	return {
-		isValid: isVertical || isHorizontal,
-		format: isVertical
-			? PAPER_FORMATS.A5_VERTICAL.name
-			: isHorizontal
-				? PAPER_FORMATS.A5_HORIZONTAL.name
-				: 'Formato no A5',
-		isVertical
+		isValid: isVertical,
+		format: isVertical ? PAPER_FORMATS.A5_VERTICAL.name : 'Formato no A5'
 	};
 }
 
@@ -76,26 +66,19 @@ export function calculateCropDimensions(
 	return { width: newWidth, height: newHeight, offsetX, offsetY };
 }
 
-/**
- * Procesa una imagen aplicando transformaciones. Modificado para manejar operaciones opcionales.
- * Solo aplicará las transformaciones que se proporcionen explícitamente.
- */
 export function processImageWithCanvas(
 	image: HTMLImageElement,
 	options: {
-		rotation?: 0 | 90 | 180 | 270; // Hacer explícito el tipo de rotación
+		rotation?: 0 | 90 | 180 | 270;
 		flip?: {
 			horizontal?: boolean;
 			vertical?: boolean;
 		};
-		// 'zoom' se elimina como opción de procesamiento, se maneja visualmente y se calcula en 'crop'
 		crop?: {
-			// Coordenadas NATURALES del recorte
 			x: number;
 			y: number;
 			width: number;
 			height: number;
-			// targetRatio no es necesario aquí si ya tenemos las coordenadas exactas
 		};
 		quality?: number;
 	}
