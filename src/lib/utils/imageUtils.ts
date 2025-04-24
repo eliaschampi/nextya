@@ -1,7 +1,4 @@
 // src/lib/utils/imageUtils.ts
-// Interfaces y constantes (PAPER_FORMATS, checkImageFormat, validateA5Proportion, base64ToFile)
-// se mantienen exactamente como en tu último ejemplo proporcionado.
-
 export interface ImageDimensions {
 	width: number;
 	height: number;
@@ -135,7 +132,7 @@ export function processImageWithCanvas(
 
 	// 3. Aplicar transformaciones (rotación/volteo) al contexto de salida
 	outputCtx.save();
-	outputCtx.translate(finalWidth / 2, finalHeight / 2); // Mover al centro
+	outputCtx.translate(finalWidth / 2, finalHeight / 2);
 
 	if (applyRotation) {
 		outputCtx.rotate((options.rotation! * Math.PI) / 180);
@@ -146,18 +143,16 @@ export function processImageWithCanvas(
 		outputCtx.scale(options.flip!.horizontal ? -1 : 1, options.flip!.vertical ? -1 : 1);
 	}
 
-	// 4. Dibujar la imagen fuente (recortada o completa) en el contexto transformado
-	// Las dimensiones de dibujo (-canvasWidth/2, etc.) son las del canvas ANTES de la rotación
 	outputCtx.drawImage(
-		image, // Imagen original completa
-		sourceX, // Origen X en la imagen original
-		sourceY, // Origen Y en la imagen original
-		sourceWidth, // Ancho a tomar de la original
-		sourceHeight, // Alto a tomar de la original
-		-canvasWidth / 2, // Posición X en el canvas (centrado antes de rotar/flipear)
-		-canvasHeight / 2, // Posición Y en el canvas (centrado antes de rotar/flipear)
-		canvasWidth, // Ancho a dibujar en el canvas
-		canvasHeight // Alto a dibujar en el canvas
+		image,
+		sourceX,
+		sourceY,
+		sourceWidth,
+		sourceHeight,
+		-canvasWidth / 2,
+		-canvasHeight / 2,
+		canvasWidth,
+		canvasHeight
 	);
 
 	outputCtx.restore();

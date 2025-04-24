@@ -18,7 +18,8 @@
 		Plus,
 		Save,
 		AlertTriangle,
-		Check
+		Check,
+		Image as ImageIcon
 	} from 'lucide-svelte';
 	import type { Level, EvalWithSections, EvalQuestion } from '$lib/types';
 	import type { FileEntry } from '$lib/types/app';
@@ -283,7 +284,6 @@
 				}
 			} catch (error) {
 				console.error('Error validando formato de imagen:', error);
-				// Asumir válido si hay error
 			}
 
 			const entry: FileEntry = {
@@ -374,14 +374,12 @@
 
 	async function selectEvalAndFetchQuestions(evalItem: EvalWithSections) {
 		selectedEval = evalItem;
-		// El modal se cierra automáticamente en el componente
 		fileEntries = fileEntries.map((entry) => ({
 			...entry,
 			status: 'pending',
 			result: null,
 			error: null,
 			saved: false,
-			// Mantener los valores de formato existentes
 			formatValid: entry.formatValid,
 			formatName: entry.formatName
 		}));
@@ -506,7 +504,7 @@
 
 					{#if pendingFilesCount > 0}
 						<button
-							class="btn btn-accent btn-sm"
+							class="btn btn-info btn-sm"
 							onclick={processAllPendingFiles}
 							disabled={!canProcess || isProcessingBatch || isSavingBatch}
 						>
@@ -547,7 +545,7 @@
 						/>
 						<button
 							type="submit"
-							class="btn btn-success btn-sm"
+							class="btn btn-success btn-soft btn-sm"
 							disabled={!canSave || isSavingBatch}
 						>
 							{#if isSavingBatch}
@@ -688,11 +686,9 @@
 				{:else}
 					<div class="card-body flex flex-col items-center justify-center p-8 text-center">
 						<div class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md">
-							<School size={64} class="text-primary/30 mx-auto mb-4" />
-							<h3 class="text-lg font-bold mb-2">Listo para procesar</h3>
-							<p class="text-base-content/70 mb-4">
-								Selecciona una evaluación y carga imágenes para comenzar.
-							</p>
+							<ImageIcon size={64} class="text-primary/30 mx-auto mb-4" />
+							<h3 class="text-lg font-bold mb-2">Listo para previsualizar</h3>
+							<p class="text-base-content/70 mb-4">Selecciona una imagen 😊</p>
 						</div>
 					</div>
 				{/if}

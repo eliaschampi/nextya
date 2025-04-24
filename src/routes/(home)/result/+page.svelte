@@ -193,7 +193,7 @@
 		aria-label="Seleccionar evaluación"
 	>
 		<School size={20} class="mr-2" />
-		{selectedEval ? `Evaluación: ${selectedEval.name}` : 'Seleccionar Evaluación'}
+		{selectedEval ? `${selectedEval.name}` : 'Seleccionar'}
 	</button>
 </PageTitle>
 

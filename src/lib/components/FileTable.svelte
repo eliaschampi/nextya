@@ -113,8 +113,7 @@
 	function getScoreDisplay(entry: FileEntry): { text: string; class: string } {
 		if (entry.status === 'success' && entry.result?.scores?.general) {
 			const score = entry.result.scores.general.score;
-			// Usar siempre el mismo color para todas las puntuaciones
-			return { text: score.toFixed(1), class: 'font-bold text-primary' };
+			return { text: score.toFixed(1), class: 'font-bold' };
 		}
 		return { text: '-', class: 'text-base-content/50' };
 	}

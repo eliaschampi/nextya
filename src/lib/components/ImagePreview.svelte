@@ -13,8 +13,9 @@
 		Loader2,
 		Save
 	} from 'lucide-svelte';
-	import { processImageWithCanvas } from '$lib/utils/imageUtils';
+	import { PAPER_FORMATS, processImageWithCanvas } from '$lib/utils/imageUtils';
 	import type { ApiOmrErrorData } from '$lib/types/api';
+	import type { FileStatus } from '$lib/types/app';
 
 	// Props
 	const {
@@ -26,7 +27,7 @@
 		onImageSave
 	} = $props<{
 		imageUrl: string;
-		status?: 'pending' | 'processing' | 'success' | 'error';
+		status?: FileStatus;
 		fileIndex?: number;
 		totalFiles?: number;
 		error?: ApiOmrErrorData | null | undefined;
@@ -34,15 +35,15 @@
 	}>();
 
 	// Constants
-	const A5_RATIO = 1 / 1.414; // A5 vertical ratio
+	const A5_RATIO = PAPER_FORMATS.A5_VERTICAL.ratio;
 	const ZOOM_MIN = 1;
 	const ZOOM_MAX = 3;
-	const ZOOM_STEP = 0.05;
+	const ZOOM_STEP = 0.03;
 
 	// State
 	let containerRef = $state<HTMLDivElement>();
-	let baseImageUrl = $state(imageUrl); // Base for processing
-	let displayedImageUrl = $state(imageUrl); // Displayed image
+	let baseImageUrl = $state(imageUrl);
+	let displayedImageUrl = $state(imageUrl);
 	let naturalWidth = $state(0);
 	let naturalHeight = $state(0);
 	let pendingOperation = $state<'rotate' | 'flip' | 'crop' | null>(null);
@@ -299,29 +300,28 @@
 			</div>
 		{/if}
 	</header>
-
 	{#if displayedImageUrl}
 		<div class="flex flex-wrap justify-center gap-2 mb-4">
 			{#if !cropMode}
 				<div class="join">
-					<button class="btn btn-sm join-item" onclick={() => rotate(false)} disabled={processing}
-						><RotateCcw size={16} /></button
-					>
-					<button class="btn btn-sm join-item" onclick={() => rotate(true)} disabled={processing}
-						><RotateCw size={16} /></button
-					>
+					<button class="btn btn-sm join-item" onclick={() => rotate(false)} disabled={processing}>
+						<RotateCcw size={16} />
+					</button>
+					<button class="btn btn-sm join-item" onclick={() => rotate(true)} disabled={processing}>
+						<RotateCw size={16} />
+					</button>
 				</div>
 				<div class="join">
-					<button class="btn btn-sm join-item" onclick={() => flip(true)} disabled={processing}
-						><FlipHorizontal size={16} /></button
-					>
-					<button class="btn btn-sm join-item" onclick={() => flip(false)} disabled={processing}
-						><FlipVertical size={16} /></button
-					>
+					<button class="btn btn-sm join-item" onclick={() => flip(true)} disabled={processing}>
+						<FlipHorizontal size={16} />
+					</button>
+					<button class="btn btn-sm join-item" onclick={() => flip(false)} disabled={processing}>
+						<FlipVertical size={16} />
+					</button>
 				</div>
-				<button class="btn btn-sm" onclick={revert} disabled={processing || !canRevert}
-					><RefreshCcw size={16} /></button
-				>
+				<button class="btn btn-sm" onclick={revert} disabled={processing || !canRevert}>
+					<RefreshCcw size={16} />
+				</button>
 			{/if}
 			<button
 				class="btn btn-sm {cropMode ? 'btn-warning' : 'btn-primary'}"
@@ -339,16 +339,19 @@
 					<button
 						class="btn btn-sm join-item"
 						onclick={() => zoom('out')}
-						disabled={zoomLevel <= ZOOM_MIN || processing}><ZoomOut size={16} /></button
-					>
-					<span class="btn btn-sm join-item bg-base-200 w-12 text-center"
-						>{Math.round(zoomLevel * 100)}%</span
-					>
+						disabled={zoomLevel <= ZOOM_MIN || processing}
+						><ZoomOut size={16} />
+					</button>
+					<span class="btn btn-sm join-item bg-base-200 w-12 text-center">
+						{Math.round(zoomLevel * 100)}%
+					</span>
 					<button
 						class="btn btn-sm join-item"
 						onclick={() => zoom('in')}
-						disabled={zoomLevel >= ZOOM_MAX || processing}><ZoomIn size={16} /></button
+						disabled={zoomLevel >= ZOOM_MAX || processing}
 					>
+						<ZoomIn size={16} />
+					</button>
 				</div>
 			{/if}
 			{#if canSave}
@@ -400,7 +403,6 @@
 				style="left: {cropFrame.x}px; top: {cropFrame.y}px; width: {cropFrame.w}px; height: {cropFrame.h}px;"
 				onmousedown={startDrag}
 			></div>
-			<!-- Áreas oscurecidas para el backdrop -->
 			<div
 				class="absolute top-0 left-0 right-0"
 				style="height: {cropFrame.y}px; background: rgba(0,0,0,0.65);"
