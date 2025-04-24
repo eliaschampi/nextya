@@ -13,20 +13,16 @@
 		Sun,
 		Table,
 		UserCog,
-		UserRound,
-		User
+		UserRound
 	} from 'lucide-svelte';
 
 	import { page } from '$app/state';
 	import { getInitials } from '$lib/utils/initialName';
 	import { theme } from '$lib/stores/theme';
 	import Background from '$lib/components/background.svelte';
-	import StudentSearchModal from '$lib/components/StudentSearchModal.svelte';
-	import { goto } from '$app/navigation';
-	import type { Student } from '$lib/types';
+
 	let { children } = $props();
 
-	let studentSearchModalOpen = $state(false);
 	let isDarkTheme = $derived($theme === 'dark');
 
 	interface UserMetadata {
@@ -36,15 +32,6 @@
 	}
 
 	let userMetadata = $state<UserMetadata>((page.data.user?.user_metadata as UserMetadata) || {});
-
-	function openStudentSearchModal() {
-		studentSearchModalOpen = true;
-	}
-
-	function handleSelectStudent(student: Student) {
-		studentSearchModalOpen = false;
-		goto(`/result/student?student=${student.code}`);
-	}
 
 	function toggleTheme() {
 		theme.toggle();
@@ -60,11 +47,6 @@
 <div class="drawer lg:drawer-open h-screen overflow-hidden">
 	<input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
 
-	<StudentSearchModal
-		open={studentSearchModalOpen}
-		onClose={() => (studentSearchModalOpen = false)}
-		onSelectStudent={handleSelectStudent}
-	/>
 	<div class="drawer-content flex flex-col h-screen overflow-y-auto">
 		<nav class="navbar bg-base-200 shadow-sm px-4 h-16 sticky top-0 z-30">
 			<label for="drawer-toggle" class="drawer-button lg:hidden">
@@ -78,15 +60,6 @@
 			</div>
 			<!-- Navbar Actions -->
 			<div class="flex items-center gap-2">
-				<!-- Student Search Button -->
-				<button
-					class="btn btn-ghost btn-sm btn-circle"
-					aria-label="search student"
-					onclick={openStudentSearchModal}
-				>
-					<User class="w-4 h-4" />
-				</button>
-
 				<!-- Theme Toggle -->
 				<button
 					class="btn btn-ghost btn-sm btn-circle"
