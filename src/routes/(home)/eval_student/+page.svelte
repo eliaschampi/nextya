@@ -202,8 +202,8 @@
 
 <PageTitle
 	title={selectedStudent
-		? `Resultados de ${selectedStudent.name} ${selectedStudent.last_name}`
-		: 'Historial de Resultados'}
+		? `Informe de ${selectedStudent.name} ${selectedStudent.last_name}`
+		: 'Informe general'}
 	description="Visualiza el historial de resultados de un estudiante."
 >
 	<button
@@ -377,19 +377,13 @@
 				<p class="text-base-content/70 mb-4 text-center">
 					Para ver el historial de resultados, primero debes seleccionar un estudiante.
 				</p>
-				<div class="flex justify-center">
-					<button class="btn btn-primary" onclick={openStudentSearchModal}>
-						<User size={20} class="mr-2" />
-						Buscar Estudiante
-					</button>
-				</div>
 			</div>
 		</div>
 	{/if}
 </main>
 
 <!-- Modal de búsqueda de estudiantes -->
-<dialog bind:this={modal} class="modal modal-bottom sm:modal-middle">
+<dialog bind:this={modal} class="modal">
 	<div class="modal-box max-w-md">
 		<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onclick={closeModal}>
 			<X size={20} />

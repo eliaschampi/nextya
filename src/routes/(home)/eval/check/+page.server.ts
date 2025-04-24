@@ -79,7 +79,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		levels,
 		serverQuestions: [],
-		title: 'Procesar Evaluación OMR'
+		title: 'Procesar OMR'
 	};
 };
 

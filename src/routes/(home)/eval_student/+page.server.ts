@@ -5,7 +5,7 @@ export const load: PageServerLoad = async ({ url }) => {
 	const studentCode = url.searchParams.get('student');
 
 	return {
-		title: 'Historial de Resultados',
+		title: 'Estudiante',
 		studentCode
 	};
 };
