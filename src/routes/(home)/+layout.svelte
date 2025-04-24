@@ -9,20 +9,24 @@
 		LogOut,
 		Menu,
 		Moon,
-		Search,
 		Settings,
 		Sun,
 		Table,
 		UserCog,
-		UserRound
+		UserRound,
+		User
 	} from 'lucide-svelte';
 
 	import { page } from '$app/state';
 	import { getInitials } from '$lib/utils/initialName';
 	import { theme } from '$lib/stores/theme';
 	import Background from '$lib/components/background.svelte';
+	import StudentSearchModal from '$lib/components/StudentSearchModal.svelte';
+	import { goto } from '$app/navigation';
+	import type { Student } from '$lib/types';
 	let { children } = $props();
-	let modal: HTMLDialogElement | null = null;
+
+	let studentSearchModalOpen = $state(false);
 	let isDarkTheme = $derived($theme === 'dark');
 
 	interface UserMetadata {
@@ -33,8 +37,13 @@
 
 	let userMetadata = $state<UserMetadata>((page.data.user?.user_metadata as UserMetadata) || {});
 
-	function openModal() {
-		modal?.showModal();
+	function openStudentSearchModal() {
+		studentSearchModalOpen = true;
+	}
+
+	function handleSelectStudent(student: Student) {
+		studentSearchModalOpen = false;
+		goto(`/result/student?student=${student.code}`);
 	}
 
 	function toggleTheme() {
@@ -50,6 +59,12 @@
 
 <div class="drawer lg:drawer-open h-screen overflow-hidden">
 	<input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
+
+	<StudentSearchModal
+		open={studentSearchModalOpen}
+		onClose={() => (studentSearchModalOpen = false)}
+		onSelectStudent={handleSelectStudent}
+	/>
 	<div class="drawer-content flex flex-col h-screen overflow-y-auto">
 		<nav class="navbar bg-base-200 shadow-sm px-4 h-16 sticky top-0 z-30">
 			<label for="drawer-toggle" class="drawer-button lg:hidden">
@@ -63,9 +78,13 @@
 			</div>
 			<!-- Navbar Actions -->
 			<div class="flex items-center gap-2">
-				<!-- Search Button -->
-				<button class="btn btn-ghost btn-sm btn-circle" aria-label="search" onclick={openModal}>
-					<Search class="w-4 h-4" />
+				<!-- Student Search Button -->
+				<button
+					class="btn btn-ghost btn-sm btn-circle"
+					aria-label="search student"
+					onclick={openStudentSearchModal}
+				>
+					<User class="w-4 h-4" />
 				</button>
 
 				<!-- Theme Toggle -->
@@ -132,30 +151,6 @@
 						</ul>
 					</div>
 				{/if}
-
-				<dialog bind:this={modal} class="modal modal-bottom sm:modal-middle">
-					<div class="modal-box">
-						<h3 class="text-lg font-bold">Búsqueda</h3>
-						<div class="relative my-4">
-							<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-								<Search class="w-4 h-4 text-gray-500" />
-							</div>
-							<input
-								type="search"
-								class="input input-bordered w-full ps-10"
-								placeholder="Buscar..."
-							/>
-						</div>
-						<div class="modal-action">
-							<form method="dialog">
-								<button class="btn">Cerrar</button>
-							</form>
-						</div>
-					</div>
-					<form method="dialog" class="modal-backdrop">
-						<button>cerrar</button>
-					</form>
-				</dialog>
 			</div>
 		</nav>
 		<main class="flex-1 p-6">
@@ -229,7 +224,7 @@
 							</summary>
 							<ul class="pl-4">
 								<li><a href="/result">Listado</a></li>
-								<li><a href="/result/student">Estudiante</a></li>
+								<li><a href="/eval_student">Historial</a></li>
 							</ul>
 						</details>
 					</li>

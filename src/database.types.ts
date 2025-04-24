@@ -417,6 +417,71 @@ export type Database = {
 			};
 		};
 		Views: {
+			student_register_results: {
+				Row: {
+					blank_count: number | null;
+					calculated_at: string | null;
+					correct_count: number | null;
+					eval_code: string | null;
+					eval_date: string | null;
+					eval_name: string | null;
+					incorrect_count: number | null;
+					level_code: string | null;
+					level_name: string | null;
+					register_code: string | null;
+					register_group_name: string | null;
+					result_code: string | null;
+					roll_code: string | null;
+					score: number | null;
+					student_code: string | null;
+					student_last_name: string | null;
+					student_name: string | null;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'fk_eval_results_eval';
+						columns: ['eval_code'];
+						isOneToOne: false;
+						referencedRelation: 'evals';
+						referencedColumns: ['code'];
+					},
+					{
+						foreignKeyName: 'fk_eval_results_register';
+						columns: ['register_code'];
+						isOneToOne: false;
+						referencedRelation: 'registers';
+						referencedColumns: ['code'];
+					},
+					{
+						foreignKeyName: 'fk_eval_results_register';
+						columns: ['register_code'];
+						isOneToOne: false;
+						referencedRelation: 'student_registers';
+						referencedColumns: ['register_code'];
+					},
+					{
+						foreignKeyName: 'fk_registers_level';
+						columns: ['level_code'];
+						isOneToOne: false;
+						referencedRelation: 'levels';
+						referencedColumns: ['code'];
+					},
+					{
+						foreignKeyName: 'fk_registers_student';
+						columns: ['student_code'];
+						isOneToOne: false;
+						referencedRelation: 'student_registers';
+						referencedColumns: ['student_code'];
+					},
+					{
+						foreignKeyName: 'fk_registers_student';
+						columns: ['student_code'];
+						isOneToOne: false;
+						referencedRelation: 'students';
+						referencedColumns: ['code'];
+					}
+				];
+			};
 			student_registers: {
 				Row: {
 					created_at: string | null;
@@ -443,27 +508,13 @@ export type Database = {
 			};
 		};
 		Functions: {
-			has_permission: {
-				Args: { entity_name: string; permission: string };
-				Returns: boolean;
-			};
-			upsert_eval_results: {
-				Args: {
-					p_eval_code: string;
-					p_register_code: string;
-					p_answers: Json;
-					p_general_result: Json;
-					p_section_results: Json;
-				};
-				Returns: undefined;
-			};
 			get_register_eval_results: {
 				Args: { p_eval_code: string };
 				Returns: {
 					result_code: string;
 					register_code: string;
 					eval_code: string;
-					section_code: string | null;
+					section_code: string;
 					correct_count: number;
 					incorrect_count: number;
 					blank_count: number;
@@ -477,6 +528,20 @@ export type Database = {
 					last_name: string;
 					level_name: string;
 				}[];
+			};
+			has_permission: {
+				Args: { entity_name: string; permission: string };
+				Returns: boolean;
+			};
+			upsert_eval_results: {
+				Args: {
+					p_eval_code: string;
+					p_register_code: string;
+					p_answers: Json;
+					p_general_result: Json;
+					p_section_results: Json;
+				};
+				Returns: undefined;
 			};
 		};
 		Enums: {
