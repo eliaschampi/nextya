@@ -229,7 +229,7 @@
 							</summary>
 							<ul class="pl-4">
 								<li><a href="/result">Listado</a></li>
-								<li><a href="/">Estudiante</a></li>
+								<li><a href="/result/student">Estudiante</a></li>
 							</ul>
 						</details>
 					</li>
