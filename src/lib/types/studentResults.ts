@@ -113,7 +113,6 @@ export interface EvaluationResult {
 		code: string;
 		name: string;
 		last_name: string;
-		email?: string;
 	};
 	register: {
 		code: string;

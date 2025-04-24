@@ -24,8 +24,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 					level_code,
 					students!inner(
 						name,
-						last_name,
-						email
+						last_name
 					)
 				),
 				evals!inner(
@@ -150,8 +149,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			student: {
 				code: mainResult.registers.student_code,
 				name: mainResult.registers.students.name,
-				last_name: mainResult.registers.students.last_name,
-				email: mainResult.registers.students.email
+				last_name: mainResult.registers.students.last_name
 			},
 			register: {
 				code: mainResult.registers.code,

@@ -180,13 +180,11 @@
 		}
 	}
 
-	// Limpiar búsqueda al cerrar modal
 	function resetSearch() {
 		searchQuery = '';
 		searchResults = [];
 	}
 
-	// Configurar eventos del modal
 	onMount(() => {
 		modal?.addEventListener('close', resetSearch);
 	});
@@ -203,7 +201,7 @@
 <PageTitle
 	title={selectedStudent
 		? `Informe de ${selectedStudent.name} ${selectedStudent.last_name}`
-		: 'Informe general'}
+		: 'Informe historico'}
 	description="Visualiza el historial de resultados de un estudiante."
 >
 	<button
@@ -219,15 +217,13 @@
 <main class="container mx-auto p-4">
 	{#if selectedStudent}
 		<!-- Vista de resultados del estudiante -->
-		<div class="card bg-base-100 shadow-lg mb-6 border border-base-300/30">
+		<div class="card bg-base-200/80 shadow-lg mb-6 border border-base-300/30">
 			<div class="card-body">
 				<h2 class="card-title text-primary flex items-center gap-2">
 					<User size={20} />
 					{selectedStudent.name}
 					{selectedStudent.last_name}
 				</h2>
-				<p class="text-sm opacity-70">{selectedStudent.email || 'Sin correo electrónico'}</p>
-
 				{#if registers.length > 0}
 					<div class="flex flex-wrap gap-2 mt-2">
 						<button
@@ -243,7 +239,7 @@
 									: 'btn-outline'}"
 								onclick={() => filterByRegister(register.code)}
 							>
-								{register.levels.name} - {register.group_name} ({register.roll_code})
+								{register.levels.name} - {register.group_name}
 							</button>
 						{/each}
 					</div>
@@ -256,7 +252,7 @@
 				<span class="loading loading-spinner loading-lg text-primary"></span>
 			</div>
 		{:else if filteredResults.length > 0}
-			<div class="card bg-base-100 shadow-lg border border-base-300/30">
+			<div class="card bg-base-200/80 shadow-lg border border-base-300/30">
 				<div class="card-body">
 					<div class="flex justify-between items-center mb-4">
 						<h3 class="text-lg font-bold flex items-center gap-2">
@@ -356,7 +352,7 @@
 				</div>
 			</div>
 		{:else}
-			<div class="card bg-base-100 shadow-lg border border-base-300/30">
+			<div class="card bg-base-200/80 shadow-lg border border-base-300/30">
 				<div class="card-body flex flex-col items-center justify-center py-12">
 					<ListChecks size={64} class="text-primary/30 mb-4" />
 					<h3 class="text-lg font-bold mb-2">No hay resultados disponibles</h3>
@@ -371,7 +367,7 @@
 	{:else}
 		<!-- Vista de selección de estudiante -->
 		<div class="flex justify-center items-center py-16">
-			<div class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md">
+			<div class="bg-base-200/80 rounded-lg border border-base-300/30 p-8 w-full max-w-md">
 				<User size={64} class="text-primary/30 mx-auto mb-4" />
 				<h3 class="text-lg font-bold mb-2 text-center">Selecciona un estudiante</h3>
 				<p class="text-base-content/70 mb-4 text-center">
@@ -401,6 +397,7 @@
 				class="input input-bordered join-item flex-1"
 				bind:value={searchQuery}
 				onkeydown={handleKeyDown}
+				autocomplete="off"
 			/>
 			<button
 				class="btn btn-primary join-item"
@@ -427,9 +424,6 @@
 							type="button"
 						>
 							<div class="font-medium">{student.name} {student.last_name}</div>
-							{#if student.email}
-								<div class="text-xs opacity-70">{student.email}</div>
-							{/if}
 						</button>
 					</li>
 				{/each}

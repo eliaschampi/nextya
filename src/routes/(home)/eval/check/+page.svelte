@@ -453,7 +453,7 @@
 </script>
 
 <PageTitle
-	title="Procesar Evaluación OMR"
+	title="Procesar Respuestas"
 	description="Carga, procesa y guarda hojas de respuestas escaneadas."
 >
 	<button

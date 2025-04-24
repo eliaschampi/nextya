@@ -5,6 +5,7 @@
 	import { goto } from '$app/navigation';
 
 	import type { EvaluationResult } from '$lib/types';
+	import Message from '$lib/components/Message.svelte';
 
 	// Props from server
 	const { data } = $props<{
@@ -65,7 +66,7 @@
 	}
 
 	function goToStudentResults() {
-		goto(`/eval_student/${result.student.code}`);
+		goto(`/eval_student?student=${result.student.code}`);
 	}
 </script>
 
@@ -80,7 +81,7 @@
 </PageTitle>
 
 <main class="container mx-auto p-4">
-	<div class="card bg-base-100 shadow-lg mb-6 border border-base-300/30">
+	<div class="card bg-base-200/80 shadow-lg mb-6 border border-base-300/30">
 		<div class="card-body">
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 				<div>
@@ -88,9 +89,8 @@
 						<User size={20} />
 						Información del Estudiante
 					</h2>
-					<div class="bg-base-200 p-3 rounded-lg">
+					<div class="p-3 rounded-lg">
 						<div class="font-medium">{result.student.name} {result.student.last_name}</div>
-						<div class="text-sm opacity-70">{result.student.email || 'Sin correo electrónico'}</div>
 						<div class="text-sm mt-1">
 							<span class="font-medium">Código de registro:</span>
 							{result.register.roll_code}
@@ -107,7 +107,7 @@
 						<School size={20} />
 						Información de la Evaluación
 					</h2>
-					<div class="bg-base-200 p-3 rounded-lg">
+					<div class="p-3 rounded-lg">
 						<div class="font-medium">{result.eval.name}</div>
 						<div class="text-sm flex items-center gap-1 mt-1">
 							<Calendar size={14} />
@@ -120,12 +120,12 @@
 					</div>
 				</div>
 			</div>
-
+			<div class="divider"></div>
 			<!-- Tabs Navigation -->
-			<div class="tabs tabs-box mb-4">
+			<div class="tabs tabs-box w-full">
 				<button
 					role="tab"
-					class="tab w-full {activeTab === 'details' ? 'tab-active' : ''}"
+					class="tab {activeTab === 'details' ? 'tab-active' : ''}"
 					onclick={() => switchTab('details')}
 					tabindex={0}
 				>
@@ -133,7 +133,7 @@
 				</button>
 				<button
 					role="tab"
-					class="tab w-full {activeTab === 'answers' ? 'tab-active' : ''}"
+					class="tab {activeTab === 'answers' ? 'tab-active' : ''}"
 					onclick={() => switchTab('answers')}
 					tabindex={0}
 				>
@@ -144,7 +144,7 @@
 			<!-- Tab Content: Details -->
 			{#if activeTab === 'details'}
 				<!-- Estadísticas Generales -->
-				<div class="stats shadow mb-4 w-full bg-base-100">
+				<div class="stats bg-base-300/50 mb-4 w-full">
 					<div class="stat">
 						<div class="stat-title">Correctas</div>
 						<div class="stat-value text-success">{result.scores.general.correct_count}</div>
@@ -172,7 +172,7 @@
 					<div class="overflow-x-auto">
 						<table class="table table-zebra w-full">
 							<thead>
-								<tr>
+								<tr class="bg-base-300/50">
 									<th>Sección</th>
 									<th class="text-center">Correctas</th>
 									<th class="text-center">Incorrectas</th>
@@ -200,7 +200,6 @@
 					</div>
 				{/if}
 			{:else if activeTab === 'answers'}
-				<!-- Tab Content: Answers -->
 				{#if result.answers.length > 0}
 					{#each sectionAnswers as [sectionCode, section] (sectionCode)}
 						{@const typedSection = section as {
@@ -209,7 +208,7 @@
 						}}
 						<div class="mb-6">
 							<h3 class="font-medium text-lg mb-2">{typedSection.name}</h3>
-							<div class="overflow-x-auto bg-base-200 rounded-lg">
+							<div class="overflow-x-auto">
 								<table class="table table-zebra table-sm w-full">
 									<thead>
 										<tr>
@@ -272,12 +271,7 @@
 						</div>
 					{/each}
 				{:else}
-					<div class="alert alert-info">
-						<div>
-							<h3 class="font-bold">Sin respuestas</h3>
-							<p>No hay respuestas disponibles para este estudiante.</p>
-						</div>
-					</div>
+					<Message type="info" description="No hay respuestas disponibles para este estudiante." />
 				{/if}
 			{/if}
 		</div>

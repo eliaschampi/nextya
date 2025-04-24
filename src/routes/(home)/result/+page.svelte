@@ -179,12 +179,10 @@
 		if (selectedLevelCode) loadEvaluationsByLevel();
 		else availableEvals = [];
 	});
-
-	// No initial eval loading needed
 </script>
 
 <PageTitle
-	title="Resultados de Evaluaciones"
+	title="Resultados"
 	description="Visualiza los resultados de las evaluaciones por estudiante."
 >
 	<button

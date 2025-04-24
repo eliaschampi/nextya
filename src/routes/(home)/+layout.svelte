@@ -196,7 +196,7 @@
 								<span>Resultados</span>
 							</summary>
 							<ul class="pl-4">
-								<li><a href="/result">Listado</a></li>
+								<li><a href="/result">Reporte general</a></li>
 								<li><a href="/eval_student">Estudiante</a></li>
 							</ul>
 						</details>
