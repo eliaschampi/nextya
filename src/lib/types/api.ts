@@ -11,6 +11,7 @@ export interface StudentAnswer {
 	is_blank: boolean;
 	is_multiple: boolean;
 	section_code: string;
+	section_name?: string | null;
 }
 
 /** Resultado del procesamiento exitoso de una hoja OMR */

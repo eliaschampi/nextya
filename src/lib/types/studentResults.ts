@@ -56,6 +56,7 @@ export interface StudentResult {
 
 /**
  * Represents a student answer to a question
+ * This is a more detailed version of StudentAnswer from api.ts
  */
 export interface StudentQuestionAnswer {
 	// Required fields
@@ -64,20 +65,20 @@ export interface StudentQuestionAnswer {
 
 	// Answer can be null for blank answers
 	answer: string | null;
-	student_answer?: string | null; // Alternative name used in some contexts
+	student_answer: string | null; // Ensure consistency with StudentAnswer
 
 	// Section information
 	section_code: string | null;
 	section_name?: string | null;
 
 	// Question metadata
-	order_in_eval?: number;
-	correct_key?: string;
+	order_in_eval: number; // Make required for consistency
+	correct_key: string; // Make required for consistency
 	score_percent?: number;
 
 	// Answer status flags
-	is_blank?: boolean;
-	is_multiple?: boolean;
+	is_blank: boolean; // Make required for consistency
+	is_multiple: boolean; // Make required for consistency
 }
 
 /**
