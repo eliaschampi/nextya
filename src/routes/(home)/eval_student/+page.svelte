@@ -178,8 +178,8 @@
 			window.history.pushState({}, '', url);
 		}
 
-		// Redirect to the eval_answer page
-		goto(`/eval_answer/${result.result_code}`);
+		// Redirect to the eval_answer page with fromPage parameter
+		goto(`/eval_answer/${result.result_code}?from=eval_student&student=${selectedStudent?.code}`);
 	}
 
 	function goToPage(pageNum: number) {
@@ -195,6 +195,13 @@
 
 	onMount(() => {
 		modal?.addEventListener('close', resetSearch);
+
+		// Add popstate event listener to handle browser back/forward navigation
+		window.addEventListener('popstate', handlePopState);
+
+		return () => {
+			window.removeEventListener('popstate', handlePopState);
+		};
 	});
 
 	onDestroy(() => {
@@ -204,6 +211,22 @@
 			modal.close();
 		}
 	});
+
+	// Handle browser back/forward navigation
+	function handlePopState() {
+		const url = new URL(window.location.href);
+		const newStudentCode = url.searchParams.get('student');
+
+		// If student code changed or was removed, update accordingly
+		if (newStudentCode && (!selectedStudent || newStudentCode !== selectedStudent.code)) {
+			loadStudentInfo(newStudentCode);
+		} else if (!newStudentCode && selectedStudent) {
+			// Reset if student parameter was removed
+			selectedStudent = null;
+			registers = [];
+			results = [];
+		}
+	}
 </script>
 
 <PageTitle

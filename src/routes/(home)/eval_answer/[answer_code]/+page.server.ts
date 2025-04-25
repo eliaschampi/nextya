@@ -2,8 +2,10 @@ import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
 import type { SectionScore, StudentQuestionAnswer } from '$lib/types';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const { answer_code } = params;
+	// Get the 'from' parameter to know where to go back to
+	const fromPage = url.searchParams.get('from');
 
 	if (!answer_code) {
 		throw error(404, 'Código de respuesta no proporcionado');
@@ -177,7 +179,11 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				},
 				answers: formattedAnswers
 			},
-			title: `Detalle de Evaluación`
+			title: `Detalle de Evaluación`,
+			fromPage: fromPage || 'result', // Default to 'result' if not specified
+			studentCode: mainResult.registers.student_code,
+			evalCode: mainResult.eval_code,
+			levelCode: mainResult.evals.level_code
 		};
 	} catch (err) {
 		console.error('Unexpected error:', err);

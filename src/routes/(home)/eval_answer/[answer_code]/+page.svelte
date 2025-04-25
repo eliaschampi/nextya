@@ -12,6 +12,10 @@
 		data: {
 			result: EvaluationResult;
 			title: string;
+			fromPage: string;
+			studentCode: string;
+			evalCode: string;
+			levelCode: string;
 		};
 	}>();
 
@@ -66,7 +70,13 @@
 	}
 
 	function goToResults() {
-		goto(`/result`);
+		// Navigate back to the appropriate page based on fromPage parameter
+		if (data.fromPage === 'eval_student') {
+			goto(`/eval_student?student=${data.studentCode}`);
+		} else {
+			// Default to result page
+			goto(`/result?level=${data.levelCode}&eval=${data.evalCode}`);
+		}
 	}
 </script>
 
@@ -75,8 +85,13 @@
 	description={`Resultados de ${result.student.name} ${result.student.last_name}`}
 >
 	<button class="btn btn-outline btn-primary" onclick={goToResults}>
-		<Eye size={18} class="mr-2" />
-		Volver a Resultados
+		{#if data.fromPage === 'eval_student'}
+			<User size={18} class="mr-2" />
+			Volver a Historial del Estudiante
+		{:else}
+			<Eye size={18} class="mr-2" />
+			Volver a Resultados
+		{/if}
 	</button>
 </PageTitle>
 

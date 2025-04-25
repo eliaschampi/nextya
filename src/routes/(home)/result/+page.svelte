@@ -162,8 +162,10 @@
 	}
 
 	function viewStudentDetails(result: ResultItem) {
-		// Redirect to the eval_answer page
-		goto(`/eval_answer/${result.result_code}`);
+		// Redirect to the eval_answer page with fromPage parameter
+		goto(
+			`/eval_answer/${result.result_code}?from=result&level=${selectedLevelCode}&eval=${selectedEval?.code}`
+		);
 	}
 
 	// Effects
@@ -188,7 +190,42 @@
 		if (data.levelCode && data.evalCode && selectedLevelCode) {
 			loadEvaluationsByLevel();
 		}
+
+		// Add popstate event listener to handle browser back/forward navigation
+		window.addEventListener('popstate', handlePopState);
+
+		return () => {
+			// Clean up event listener on component unmount
+			window.removeEventListener('popstate', handlePopState);
+		};
 	});
+
+	// Handle browser back/forward navigation
+	function handlePopState() {
+		const url = new URL(window.location.href);
+		const newLevelCode = url.searchParams.get('level');
+		const newEvalCode = url.searchParams.get('eval');
+
+		// Update level code if changed
+		if (newLevelCode && newLevelCode !== selectedLevelCode) {
+			selectedLevelCode = newLevelCode;
+			loadEvaluationsByLevel();
+		} else if (!newLevelCode && selectedLevelCode) {
+			// Reset if level parameter was removed
+			selectedLevelCode = '';
+			availableEvals = [];
+			selectedEval = null;
+			results = [];
+		}
+
+		// If we have evaluations loaded and a new eval code, select it
+		if (newEvalCode && availableEvals.length > 0) {
+			const evalItem = availableEvals.find((e) => e.code === newEvalCode);
+			if (evalItem && (!selectedEval || selectedEval.code !== newEvalCode)) {
+				selectEval(evalItem);
+			}
+		}
+	}
 </script>
 
 <PageTitle
