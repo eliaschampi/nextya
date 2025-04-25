@@ -1,6 +1,6 @@
 <script lang="ts">
 	import PageTitle from '$lib/components/PageTitle.svelte';
-	import { Check, X, AlertCircle, ListChecks, User, Calendar, School } from 'lucide-svelte';
+	import { Check, X, AlertCircle, ListChecks, User, Calendar, School, Eye } from 'lucide-svelte';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { goto } from '$app/navigation';
 
@@ -65,8 +65,8 @@
 		return 'text-error';
 	}
 
-	function goToStudentResults() {
-		goto(`/eval_student?student=${result.student.code}`);
+	function goToResults() {
+		goto(`/result`);
 	}
 </script>
 
@@ -74,8 +74,8 @@
 	title={`Detalle de Evaluación: ${result.eval.name}`}
 	description={`Resultados de ${result.student.name} ${result.student.last_name}`}
 >
-	<button class="btn btn-outline btn-primary" onclick={goToStudentResults}>
-		<User size={18} class="mr-2" />
+	<button class="btn btn-outline btn-primary" onclick={goToResults}>
+		<Eye size={18} class="mr-2" />
 		Volver a Resultados
 	</button>
 </PageTitle>

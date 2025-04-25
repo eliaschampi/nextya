@@ -171,6 +171,14 @@
 	}
 
 	function viewResultDetails(result: StudentResult) {
+		// Update URL with student parameter before redirecting
+		if (selectedStudent) {
+			const url = new URL(window.location.href);
+			url.searchParams.set('student', selectedStudent.code);
+			window.history.pushState({}, '', url);
+		}
+
+		// Redirect to the eval_answer page
 		goto(`/eval_answer/${result.result_code}`);
 	}
 
@@ -217,7 +225,9 @@
 <main class="container mx-auto p-4">
 	{#if selectedStudent}
 		<!-- Vista de resultados del estudiante -->
-		<div class="card bg-base-200/80 shadow-lg mb-6 border border-base-300/30">
+		<div
+			class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-base-300/30 rounded-xl mb-6"
+		>
 			<div class="card-body">
 				<h2 class="card-title text-primary flex items-center gap-2">
 					<User size={20} />
@@ -227,15 +237,15 @@
 				{#if registers.length > 0}
 					<div class="flex flex-wrap gap-2 mt-2">
 						<button
-							class="btn btn-sm {selectedRegister === null ? 'btn-primary' : 'btn-outline'}"
+							class="btn btn-sm btn-primary {selectedRegister === null ? '' : 'btn-outline'}"
 							onclick={() => filterByRegister(null)}
 						>
 							Todos
 						</button>
 						{#each registers as register (register.code)}
 							<button
-								class="btn btn-sm {selectedRegister === register.code
-									? 'btn-primary'
+								class="btn btn-sm btn-primary {selectedRegister === register.code
+									? ''
 									: 'btn-outline'}"
 								onclick={() => filterByRegister(register.code)}
 							>
@@ -252,7 +262,9 @@
 				<span class="loading loading-spinner loading-lg text-primary"></span>
 			</div>
 		{:else if filteredResults.length > 0}
-			<div class="card bg-base-200/80 shadow-lg border border-base-300/30">
+			<div
+				class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-base-300/30 rounded-xl"
+			>
 				<div class="card-body">
 					<div class="flex justify-between items-center mb-4">
 						<h3 class="text-lg font-bold flex items-center gap-2">
@@ -260,20 +272,21 @@
 							Resultados ({filteredResults.length})
 						</h3>
 						<button
-							class="btn btn-sm btn-ghost btn-circle"
+							class="btn btn-sm btn-primary btn-outline"
 							onclick={toggleSortOrder}
 							title={sortOrder === 'desc' ? 'Más recientes primero' : 'Más antiguos primero'}
 						>
+							<span class="mr-1">Fecha</span>
 							{#if sortOrder === 'desc'}
-								<SortDesc size={18} />
+								<SortDesc size={16} />
 							{:else}
-								<SortAsc size={18} />
+								<SortAsc size={16} />
 							{/if}
 						</button>
 					</div>
 
 					<div class="overflow-x-auto">
-						<table class="table table-zebra table-pin-rows">
+						<table class="table table-zebra w-full">
 							<thead>
 								<tr>
 									<th>Fecha</th>
@@ -288,16 +301,23 @@
 							</thead>
 							<tbody>
 								{#each paginatedResults as result (result.result_code)}
-									<tr class="hover">
-										<td>{formatDate(result.eval_date)}</td>
-										<td class="font-medium">{result.eval_name}</td>
-										<td class="text-center">
+									<tr
+										class="hover:bg-base-300 transition-colors border-b border-base-300 cursor-pointer"
+										onclick={() => viewResultDetails(result)}
+									>
+										<td class="py-3 px-4">{formatDate(result.eval_date)}</td>
+										<td class="py-3 px-4 font-medium">{result.eval_name}</td>
+										<td class="py-3 px-4 text-center">
 											{result.correct_count + result.incorrect_count + result.blank_count}
 										</td>
-										<td class="text-center text-success font-medium">{result.correct_count}</td>
-										<td class="text-center text-error font-medium">{result.incorrect_count}</td>
-										<td class="text-center opacity-70">{result.blank_count}</td>
-										<td class="text-center font-bold">
+										<td class="py-3 px-4 text-center text-success font-medium"
+											>{result.correct_count}</td
+										>
+										<td class="py-3 px-4 text-center text-error font-medium"
+											>{result.incorrect_count}</td
+										>
+										<td class="py-3 px-4 text-center opacity-70">{result.blank_count}</td>
+										<td class="py-3 px-4 text-center font-bold">
 											<span
 												class="badge badge-lg {result.score >= 10.5
 													? 'badge-success'
@@ -306,13 +326,13 @@
 												{result.score.toFixed(1)}
 											</span>
 										</td>
-										<td class="text-center">
+										<td class="py-3 px-4 text-center" onclick={(e) => e.stopPropagation()}>
 											<button
-												class="btn btn-sm btn-ghost btn-circle"
+												class="btn btn-sm btn-primary btn-outline"
 												onclick={() => viewResultDetails(result)}
 												title="Ver detalles"
 											>
-												<Eye size={16} />
+												<Eye size={16} class="mr-1" /> Ver
 											</button>
 										</td>
 									</tr>
@@ -322,27 +342,31 @@
 					</div>
 
 					{#if totalPages > 1}
-						<div class="flex justify-center mt-4">
+						<div class="flex justify-center mt-6">
 							<div class="join">
 								<button
-									class="join-item btn btn-sm"
+									class="join-item btn btn-sm btn-primary btn-outline {currentPage === 1
+										? 'btn-disabled'
+										: ''}"
 									onclick={() => goToPage(currentPage - 1)}
-									disabled={currentPage === 1}
 								>
 									«
 								</button>
 								{#each Array.from({ length: totalPages }, (_, i) => i + 1) as pageNum (pageNum)}
 									<button
-										class="join-item btn btn-sm {currentPage === pageNum ? 'btn-active' : ''}"
+										class="join-item btn btn-sm {currentPage === pageNum
+											? 'btn-primary'
+											: 'btn-outline'}"
 										onclick={() => goToPage(pageNum)}
 									>
 										{pageNum}
 									</button>
 								{/each}
 								<button
-									class="join-item btn btn-sm"
+									class="join-item btn btn-sm btn-primary btn-outline {currentPage === totalPages
+										? 'btn-disabled'
+										: ''}"
 									onclick={() => goToPage(currentPage + 1)}
-									disabled={currentPage === totalPages}
 								>
 									»
 								</button>
@@ -352,7 +376,9 @@
 				</div>
 			</div>
 		{:else}
-			<div class="card bg-base-200/80 shadow-lg border border-base-300/30">
+			<div
+				class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-base-300/30 rounded-xl"
+			>
 				<div class="card-body flex flex-col items-center justify-center py-12">
 					<ListChecks size={64} class="text-primary/30 mb-4" />
 					<h3 class="text-lg font-bold mb-2">No hay resultados disponibles</h3>
@@ -367,7 +393,9 @@
 	{:else}
 		<!-- Vista de selección de estudiante -->
 		<div class="flex justify-center items-center py-16">
-			<div class="bg-base-200/80 rounded-lg border border-base-300/30 p-8 w-full max-w-md">
+			<div
+				class="bg-gradient-to-br from-base-200 to-base-100 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-base-300/30 rounded-xl p-8 w-full max-w-md"
+			>
 				<User size={64} class="text-primary/30 mx-auto mb-4" />
 				<h3 class="text-lg font-bold mb-2 text-center">Selecciona un estudiante</h3>
 				<p class="text-base-content/70 mb-4 text-center">

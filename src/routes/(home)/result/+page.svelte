@@ -2,34 +2,31 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import EvaluationSelectionModal from '$lib/components/EvaluationSelectionModal.svelte';
 	import EvalHeader from '$lib/components/EvalHeader.svelte';
-	import OmrDetailsModal from '$lib/components/OmrDetailsModal.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { Eye, School, Search, SortAsc, SortDesc } from 'lucide-svelte';
-	import type { EvalWithSections, ResultItem, EvalQuestion } from '$lib/types';
-	import type { StudentAnswer } from '$lib/types/api';
+	import type { EvalWithSections, ResultItem } from '$lib/types';
+	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 
 	// Props from server
 	const { data } = $props<{
 		data: {
 			levels: { code: string; name: string }[];
+			levelCode: string | null;
+			evalCode: string | null;
 		};
 	}>();
 
 	// State variables
-	let selectedLevelCode = $state('');
+	let selectedLevelCode = $state(data.levelCode || '');
 	let availableEvals = $state<EvalWithSections[]>([]);
 	let selectedEval = $state<EvalWithSections | null>(null);
 	let evalSelectionModalOpen = $state(false);
-	let detailsModalOpen = $state(false);
-	let selectedResult = $state<ResultItem | null>(null);
 	let loadingEvals = $state(false);
 	let loadingResults = $state(false);
-	let loadingAnswers = $state(false);
 	let results = $state<ResultItem[]>([]);
 	let sortOrder = $state<'asc' | 'desc'>('desc'); // Default sort by highest score
 	let searchQuery = $state('');
-	let dummyQuestions = $state<EvalQuestion[]>([]);
-	let studentAnswers = $state<StudentAnswer[]>([]);
 
 	// Caché de resultados por evaluación
 	const resultsCache = $state<Record<string, { data: ResultItem[]; timestamp: number }>>({});
@@ -78,6 +75,15 @@
 			availableEvals = [];
 			return;
 		}
+
+		// Update URL with level parameter
+		const url = new URL(window.location.href);
+		url.searchParams.set('level', selectedLevelCode);
+		if (!data.evalCode) {
+			url.searchParams.delete('eval');
+		}
+		window.history.pushState({}, '', url);
+
 		loadingEvals = true;
 		try {
 			const response = await fetch(`/api/eval/${selectedLevelCode}`);
@@ -93,6 +99,13 @@
 
 	async function selectEval(eval_item: EvalWithSections) {
 		selectedEval = eval_item;
+
+		// Update URL without reloading the page
+		const url = new URL(window.location.href);
+		url.searchParams.set('level', selectedLevelCode);
+		url.searchParams.set('eval', eval_item.code);
+		window.history.pushState({}, '', url);
+
 		await loadResults(eval_item.code);
 	}
 
@@ -148,36 +161,33 @@
 		});
 	}
 
-	async function viewStudentDetails(result: ResultItem) {
-		// Show details modal
-		selectedResult = result;
-		detailsModalOpen = true;
-
-		// Cargar las respuestas del estudiante
-		await loadStudentAnswers(result.register_code, result.eval_code);
-	}
-
-	async function loadStudentAnswers(registerCode: string, evalCode: string) {
-		loadingAnswers = true;
-		try {
-			const response = await fetch(`/api/eval/answers/${registerCode}/${evalCode}`);
-			if (!response.ok) {
-				throw new Error('Error al cargar respuestas');
-			}
-			studentAnswers = await response.json();
-		} catch (error) {
-			console.error('Error cargando respuestas:', error);
-			showToast('No se pudieron cargar las respuestas del estudiante', 'danger');
-			studentAnswers = [];
-		} finally {
-			loadingAnswers = false;
-		}
+	function viewStudentDetails(result: ResultItem) {
+		// Redirect to the eval_answer page
+		goto(`/eval_answer/${result.result_code}`);
 	}
 
 	// Effects
 	$effect(() => {
 		if (selectedLevelCode) loadEvaluationsByLevel();
 		else availableEvals = [];
+	});
+
+	// Load evaluation from URL parameters if available
+	$effect(() => {
+		if (data.levelCode && data.evalCode) {
+			// Find the evaluation in the available evaluations
+			const evalItem = availableEvals.find((e) => e.code === data.evalCode);
+			if (evalItem) {
+				selectEval(evalItem);
+			}
+		}
+	});
+
+	// Initial load from URL parameters
+	onMount(() => {
+		if (data.levelCode && data.evalCode && selectedLevelCode) {
+			loadEvaluationsByLevel();
+		}
 	});
 </script>
 
@@ -201,12 +211,14 @@
 			<EvalHeader evaluation={selectedEval} />
 		</div>
 
-		<div class="card bg-base-200/80 shadow-md border border-base-300/30 mb-6">
+		<div
+			class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-base-300/30 rounded-xl mb-6"
+		>
 			<div class="card-body p-4">
 				<div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
 					<div class="flex items-center gap-2">
 						<button
-							class="btn btn-sm btn-outline"
+							class="btn btn-sm btn-primary btn-outline"
 							onclick={toggleSortOrder}
 							title={sortOrder === 'desc' ? 'Ordenar por nota menor' : 'Ordenar por nota mayor'}
 						>
@@ -228,7 +240,7 @@
 								class="input input-bordered join-item w-full"
 								bind:value={searchQuery}
 							/>
-							<button class="btn join-item">
+							<button class="btn btn-primary join-item">
 								<Search size={18} />
 							</button>
 						</div>
@@ -241,7 +253,7 @@
 					</div>
 				{:else if filteredResults.length > 0}
 					<div class="overflow-x-auto">
-						<table class="table table-zebra table-pin-rows">
+						<table class="table table-zebra w-full">
 							<thead>
 								<tr>
 									<th class="w-24">Código</th>
@@ -257,17 +269,24 @@
 							</thead>
 							<tbody>
 								{#each paginatedResults as result (result.result_code)}
-									<tr class="hover">
-										<td class="font-mono text-accent">{result.roll_code}</td>
-										<td class="font-medium">{result.name}</td>
-										<td>{result.last_name}</td>
-										<td class="text-center">
-											<span class="badge badge-ghost badge-sm">{result.group_name}</span>
+									<tr
+										class="hover:bg-base-300 transition-colors border-b border-base-300 cursor-pointer"
+										onclick={() => viewStudentDetails(result)}
+									>
+										<td class="py-3 px-4 font-mono text-accent font-medium">{result.roll_code}</td>
+										<td class="py-3 px-4 font-medium">{result.name}</td>
+										<td class="py-3 px-4">{result.last_name}</td>
+										<td class="py-3 px-4 text-center">
+											<span class="badge badge-secondary">{result.group_name}</span>
 										</td>
-										<td class="text-center text-success font-medium">{result.correct_count}</td>
-										<td class="text-center text-error font-medium">{result.incorrect_count}</td>
-										<td class="text-center opacity-70">{result.blank_count}</td>
-										<td class="text-center font-bold">
+										<td class="py-3 px-4 text-center text-success font-medium"
+											>{result.correct_count}</td
+										>
+										<td class="py-3 px-4 text-center text-error font-medium"
+											>{result.incorrect_count}</td
+										>
+										<td class="py-3 px-4 text-center opacity-70">{result.blank_count}</td>
+										<td class="py-3 px-4 text-center font-bold">
 											<span
 												class="badge badge-lg {result.score >= 10.5
 													? 'badge-success'
@@ -276,13 +295,13 @@
 												{result.score.toFixed(1)}
 											</span>
 										</td>
-										<td class="text-center">
+										<td class="py-3 px-4 text-center" onclick={(e) => e.stopPropagation()}>
 											<button
-												class="btn btn-sm btn-ghost btn-circle"
+												class="btn btn-sm btn-primary btn-outline"
 												onclick={() => viewStudentDetails(result)}
 												title="Ver detalles"
 											>
-												<Eye size={16} />
+												<Eye size={16} class="mr-1" /> Ver
 											</button>
 										</td>
 									</tr>
@@ -292,10 +311,12 @@
 
 						<!-- Paginación -->
 						{#if totalPages > 1}
-							<div class="flex justify-center mt-4">
+							<div class="flex justify-center mt-6">
 								<div class="join">
 									<button
-										class="join-item btn btn-sm {currentPage === 1 ? 'btn-disabled' : ''}"
+										class="join-item btn btn-sm btn-primary btn-outline {currentPage === 1
+											? 'btn-disabled'
+											: ''}"
 										onclick={() => goToPage(currentPage - 1)}
 									>
 										«
@@ -305,7 +326,9 @@
 										return index + 1 + Math.max(0, Math.min(totalPages - 5, currentPage - 3));
 									}) as pageNum (pageNum)}
 										<button
-											class="join-item btn btn-sm {pageNum === currentPage ? 'btn-active' : ''}"
+											class="join-item btn btn-sm {pageNum === currentPage
+												? 'btn-primary'
+												: 'btn-outline'}"
 											onclick={() => goToPage(pageNum)}
 										>
 											{pageNum}
@@ -313,7 +336,9 @@
 									{/each}
 
 									<button
-										class="join-item btn btn-sm {currentPage === totalPages ? 'btn-disabled' : ''}"
+										class="join-item btn btn-sm btn-primary btn-outline {currentPage === totalPages
+											? 'btn-disabled'
+											: ''}"
 										onclick={() => goToPage(currentPage + 1)}
 									>
 										»
@@ -323,24 +348,32 @@
 						{/if}
 					</div>
 				{:else if searchQuery}
-					<div class="alert alert-info">
-						<div>
-							<h3 class="font-bold">Sin resultados</h3>
-							<p>No se encontraron estudiantes que coincidan con la búsqueda "{searchQuery}".</p>
-						</div>
+					<div
+						class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md mx-auto text-center"
+					>
+						<Search size={48} class="text-primary/30 mx-auto mb-4" />
+						<h3 class="text-lg font-bold mb-2">Sin resultados</h3>
+						<p class="text-base-content/70 mb-4">
+							No se encontraron estudiantes que coincidan con la búsqueda "{searchQuery}".
+						</p>
 					</div>
 				{:else}
-					<div class="alert alert-info">
-						<div>
-							<h3 class="font-bold">Sin resultados</h3>
-							<p>No hay resultados disponibles para esta evaluación.</p>
-						</div>
+					<div
+						class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md mx-auto text-center"
+					>
+						<School size={48} class="text-primary/30 mx-auto mb-4" />
+						<h3 class="text-lg font-bold mb-2">Sin resultados</h3>
+						<p class="text-base-content/70 mb-4">
+							No hay resultados disponibles para esta evaluación.
+						</p>
 					</div>
 				{/if}
 			</div>
 		</div>
 	{:else}
-		<div class="card bg-base-200/80 shadow-md border border-base-300/30">
+		<div
+			class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-base-300/30 rounded-xl"
+		>
 			<div class="card-body flex flex-col items-center justify-center p-8 text-center">
 				<div class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md">
 					<School size={64} class="text-primary/30 mx-auto mb-4" />
@@ -367,36 +400,4 @@
 		loadEvaluationsByLevel();
 	}}
 	onSelectEval={selectEval}
-/>
-
-<OmrDetailsModal
-	result={{
-		roll_code: selectedResult?.roll_code || '',
-		register_code: selectedResult?.register_code || '',
-		student: selectedResult
-			? {
-					name: selectedResult.name,
-					last_name: selectedResult.last_name
-				}
-			: null,
-		scores: {
-			general: {
-				correct_count: selectedResult?.correct_count || 0,
-				incorrect_count: selectedResult?.incorrect_count || 0,
-				blank_count: selectedResult?.blank_count || 0,
-				total_questions:
-					(selectedResult?.correct_count || 0) +
-					(selectedResult?.incorrect_count || 0) +
-					(selectedResult?.blank_count || 0),
-				score: selectedResult?.score || 0
-			},
-			by_section: {}
-		},
-		answers: studentAnswers
-	}}
-	questions={dummyQuestions}
-	open={detailsModalOpen}
-	title="Detalles del Resultado"
-	onClose={() => (detailsModalOpen = false)}
-	loading={loadingAnswers}
 />
