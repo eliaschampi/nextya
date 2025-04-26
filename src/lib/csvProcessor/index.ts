@@ -1,7 +1,8 @@
 // src/lib/csvProcessor/index.ts
 
-export { importCsv } from './importCsv';
+export { importCsv, createNameKey } from './importCsv';
 export { exportCsv } from './exportCsv';
+export { CsvProcessorErrorCode } from './types';
 
 export type {
 	ImportResult,
@@ -9,5 +10,8 @@ export type {
 	OmittedRowDetail,
 	ValidationErrorDetail,
 	ExportDataRow,
-	CsvInputRow
+	CsvInputRow,
+	CommitResult,
+	CommitErrorDetail,
+	ExistingStudentDetail
 } from './types';

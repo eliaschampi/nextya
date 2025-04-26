@@ -23,12 +23,28 @@
 	let validRows = $state<StudentRegisterData[]>([]);
 	let omittedRows = $state<OmittedRowDetail[]>([]);
 
+	// Import summary
+	let importSummary = $state<{
+		totalProcessed: number;
+		validCount: number;
+		omittedCount: number;
+		successRate: number;
+	} | null>(null);
+
 	// Commit results
 	let commitResults = $state<{
 		inserted: number;
-		errors: { row: StudentRegisterData; error: string }[];
-		duplicates: { row: StudentRegisterData; error: string }[];
+		errors: { row: StudentRegisterData; error: string; code: string }[];
+		duplicates: { row: StudentRegisterData; error: string; code: string }[];
+		existingStudents: { row: StudentRegisterData; studentCode: string; studentName?: string }[];
+		summary?: {
+			totalProcessed: number;
+			successRate: number;
+		};
 	} | null>(null);
+
+	// Active tab for results
+	let activeTab = $state('valid');
 
 	// Handle file selection
 	function handleFileChange(event: Event) {
@@ -68,10 +84,11 @@
 
 			validRows = result.data.validRows;
 			omittedRows = result.data.omittedRows;
+			importSummary = result.data.summary || null;
 			showFileInput = false;
 
 			showToast(
-				`Archivo procesado: ${validRows.length} registros válidos, ${omittedRows.length} omitidos`,
+				`Archivo procesado: ${validRows.length} registros válidos, ${omittedRows.length} omitidos (${result.data.summary?.successRate || 0}% éxito)`,
 				'success'
 			);
 		} catch (error) {
@@ -130,7 +147,9 @@
 		file = null;
 		validRows = [];
 		omittedRows = [];
+		importSummary = null;
 		commitResults = null;
+		activeTab = 'valid';
 		showFileInput = true;
 	}
 
@@ -236,6 +255,37 @@
 			</div>
 		</div>
 
+		{#if importSummary}
+			<div
+				class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl mb-6"
+			>
+				<div class="card-body p-4">
+					<h3 class="card-title mb-2">
+						<FileText size={20} class="mr-2 text-primary" />
+						Resumen de Procesamiento
+					</h3>
+					<div class="stats stats-vertical lg:stats-horizontal shadow w-full">
+						<div class="stat">
+							<div class="stat-title">Total Procesados</div>
+							<div class="stat-value">{importSummary.totalProcessed}</div>
+						</div>
+						<div class="stat">
+							<div class="stat-title">Válidos</div>
+							<div class="stat-value text-success">{importSummary.validCount}</div>
+						</div>
+						<div class="stat">
+							<div class="stat-title">Omitidos</div>
+							<div class="stat-value text-warning">{importSummary.omittedCount}</div>
+						</div>
+						<div class="stat">
+							<div class="stat-title">Tasa de Éxito</div>
+							<div class="stat-value text-info">{importSummary.successRate}%</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		{/if}
+
 		{#if commitResults}
 			<div
 				class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl mb-6"
@@ -245,54 +295,41 @@
 						<Check size={20} class="mr-2" />
 						Importación Completada
 					</h3>
+
+					<!-- Results Summary -->
 					<div class="stats stats-vertical lg:stats-horizontal shadow w-full">
 						<div class="stat">
 							<div class="stat-title">Registros Insertados</div>
 							<div class="stat-value text-success">{commitResults.inserted}</div>
+							{#if commitResults.summary}
+								<div class="stat-desc">
+									{commitResults.summary.successRate}% de éxito
+								</div>
+							{/if}
 						</div>
 						<div class="stat">
-							<div class="stat-title">Errores</div>
-							<div class="stat-value text-error">{commitResults.errors.length}</div>
-						</div>
-						<div class="stat">
-							<div class="stat-title">Duplicados</div>
-							<div class="stat-value text-warning">{commitResults.duplicates.length}</div>
+							<div class="stat-title">Problemas</div>
+							<div class="stat-value text-warning">
+								{commitResults.errors.length + commitResults.duplicates.length}
+							</div>
 						</div>
 					</div>
 
+					<!-- Results Details -->
 					{#if commitResults.errors.length > 0 || commitResults.duplicates.length > 0}
-						<div class="mt-4">
-							<div class="tabs tabs-boxed">
-								{#if commitResults.errors.length > 0}
-									<button class="tab tab-active">Errores ({commitResults.errors.length})</button>
-								{/if}
-								{#if commitResults.duplicates.length > 0}
-									<button class="tab">Duplicados ({commitResults.duplicates.length})</button>
-								{/if}
-							</div>
-							<div class="mt-2 max-h-64 overflow-y-auto">
-								<table class="table table-zebra table-sm w-full">
-									<thead>
-										<tr>
-											<th>Nombre</th>
-											<th>Apellidos</th>
-											<th>Código</th>
-											<th>Grupo</th>
-											<th>Error</th>
-										</tr>
-									</thead>
-									<tbody>
-										{#each commitResults.errors as item, i (i)}
-											<tr>
-												<td>{item.row.name}</td>
-												<td>{item.row.last_name}</td>
-												<td class="font-mono">{item.row.roll_code}</td>
-												<td>{item.row.group_name}</td>
-												<td class="text-error">{item.error}</td>
-											</tr>
-										{/each}
-									</tbody>
-								</table>
+						<div class="alert alert-warning mt-4">
+							<div>
+								<AlertCircle size={20} class="mr-2" />
+								<span>
+									Se encontraron {commitResults.errors.length + commitResults.duplicates.length} problemas
+									durante la importación.
+									{#if commitResults.errors.length > 0}
+										{commitResults.errors.length} errores.
+									{/if}
+									{#if commitResults.duplicates.length > 0}
+										{commitResults.duplicates.length} duplicados.
+									{/if}
+								</span>
 							</div>
 						</div>
 					{/if}
@@ -300,17 +337,30 @@
 			</div>
 		{/if}
 
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-			<!-- Valid Rows Table -->
-			<div
-				class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl"
-			>
-				<div class="card-body p-4">
-					<h3 class="card-title text-success mb-2">
-						<Check size={20} class="mr-2" />
-						Registros Válidos ({validRows.length})
-					</h3>
-					<div class="overflow-x-auto max-h-96">
+		<!-- Consolidated Data Table -->
+		<div
+			class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl"
+		>
+			<div class="card-body p-4">
+				<div class="tabs tabs-boxed mb-4">
+					<button
+						class="tab {activeTab === 'valid' ? 'tab-active' : ''}"
+						onclick={() => (activeTab = 'valid')}
+					>
+						<Check size={16} class="mr-1 text-success" />
+						Válidos ({validRows.length})
+					</button>
+					<button
+						class="tab {activeTab === 'omitted' ? 'tab-active' : ''}"
+						onclick={() => (activeTab = 'omitted')}
+					>
+						<AlertCircle size={16} class="mr-1 text-warning" />
+						Omitidos ({omittedRows.length})
+					</button>
+				</div>
+
+				<div class="overflow-x-auto max-h-96">
+					{#if activeTab === 'valid'}
 						<table class="table table-zebra table-sm w-full">
 							<thead>
 								<tr>
@@ -333,25 +383,14 @@
 								{/each}
 							</tbody>
 						</table>
-					</div>
-				</div>
-			</div>
-
-			<!-- Omitted Rows Table -->
-			<div
-				class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl"
-			>
-				<div class="card-body p-4">
-					<h3 class="card-title text-error mb-2">
-						<AlertCircle size={20} class="mr-2" />
-						Registros Omitidos ({omittedRows.length})
-					</h3>
-					<div class="overflow-x-auto max-h-96">
+					{:else if activeTab === 'omitted'}
 						<table class="table table-zebra table-sm w-full">
 							<thead>
 								<tr>
 									<th>Fila</th>
-									<th>Datos</th>
+									<th>Nombre</th>
+									<th>Apellidos</th>
+									<th>Código</th>
 									<th>Razón</th>
 								</tr>
 							</thead>
@@ -359,17 +398,15 @@
 								{#each omittedRows as omitted, i (i)}
 									<tr>
 										<td class="font-mono">{omitted.rowNumber}</td>
-										<td class="text-xs">
-											{omitted.row.name || '-'}
-											{omitted.row.last_name || '-'}
-											({omitted.row.roll_code || '-'})
-										</td>
+										<td>{omitted.row.name || '-'}</td>
+										<td>{omitted.row.last_name || '-'}</td>
+										<td class="font-mono">{omitted.row.roll_code || '-'}</td>
 										<td class="text-error text-xs">{omitted.reason}</td>
 									</tr>
 								{/each}
 							</tbody>
 						</table>
-					</div>
+					{/if}
 				</div>
 			</div>
 		</div>

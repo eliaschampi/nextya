@@ -1,13 +1,149 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { importCsv } from '$lib/csvProcessor';
-import type { ImportResult } from '$lib/csvProcessor';
+import { importCsv, createNameKey, CsvProcessorErrorCode } from '$lib/csvProcessor';
+import type { ImportResult, StudentRegisterData } from '$lib/csvProcessor';
+import { ApiErrorCode, createApiError, type ApiResponse } from '$lib/types/apiError';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+/**
+ * Checks for duplicates in the database and moves them from validRows to omittedRows
+ * @param result - The import result to modify
+ * @param levelCode - The level code to check against
+ * @param supabase - The Supabase client
+ */
+async function checkDatabaseDuplicates(
+	result: ImportResult,
+	levelCode: string,
+	supabase: SupabaseClient
+): Promise<void> {
+	if (result.validRows.length === 0) return;
+
+	// 1. Check for duplicate roll_codes in the database
+	const rollCodesToCheck = result.validRows.map((row) => row.roll_code);
+
+	const { data: existingRollCodes, error: rollCodeError } = await supabase
+		.from('registers')
+		.select('roll_code')
+		.eq('level_code', levelCode)
+		.in('roll_code', rollCodesToCheck);
+
+	if (rollCodeError) {
+		console.error('Error checking roll codes:', rollCodeError);
+		return;
+	}
+
+	// Create a set of existing roll codes for efficient lookup
+	const existingRollCodeSet = new Set(existingRollCodes?.map((r) => r.roll_code) || []);
+
+	// 2. Check for duplicate students by name + last_name
+	// Create a map of name keys for efficient lookup
+	const nameKeyMap = new Map<string, number>(); // nameKey -> index in validRows
+	result.validRows.forEach((row, index) => {
+		const nameKey = createNameKey(row.name, row.last_name);
+		nameKeyMap.set(nameKey, index);
+	});
+
+	// Get all unique name+lastname pairs for the query
+	const nameLastNamePairs = Array.from(nameKeyMap.keys()).map((key) => {
+		const [name, lastName] = key.split('||');
+		return { name, last_name: lastName };
+	});
+
+	// Query for existing students with the same name+last_name
+	const { data: existingStudents, error: studentError } = await supabase
+		.from('students')
+		.select('name, last_name')
+		.or(
+			nameLastNamePairs
+				.map((pair) => `and(name.ilike.${pair.name},last_name.ilike.${pair.last_name})`)
+				.join(',')
+		);
+
+	if (studentError) {
+		console.error('Error checking students:', studentError);
+		return;
+	}
+
+	// Create a set of existing name keys for efficient lookup
+	const existingNameKeySet = new Set(
+		existingStudents?.map((s) => createNameKey(s.name, s.last_name)) || []
+	);
+
+	// 3. Move duplicates from validRows to omittedRows
+	// We need to process in reverse order to avoid index shifting when removing items
+	const rowsToMove: {
+		row: StudentRegisterData;
+		reason: string;
+		code: CsvProcessorErrorCode;
+		rowNumber: number;
+	}[] = [];
+
+	result.validRows.forEach((row, index) => {
+		// Check for duplicate roll_code in database
+		if (existingRollCodeSet.has(row.roll_code)) {
+			rowsToMove.push({
+				row,
+				reason: `Código '${row.roll_code}' ya existe en la base de datos.`,
+				code: CsvProcessorErrorCode.DUPLICATE_ROLL_CODE,
+				rowNumber: index + 1 // Assuming 1-based row numbers
+			});
+			return;
+		}
+
+		// Check for duplicate name+last_name in database
+		const nameKey = createNameKey(row.name, row.last_name);
+		if (existingNameKeySet.has(nameKey)) {
+			rowsToMove.push({
+				row,
+				reason: `Estudiante '${row.name} ${row.last_name}' ya existe en la base de datos.`,
+				code: CsvProcessorErrorCode.DUPLICATE_NAME,
+				rowNumber: index + 1
+			});
+			return;
+		}
+	});
+
+	// Remove duplicates from validRows and add to omittedRows
+	// Sort by index in descending order to avoid index shifting
+	rowsToMove.sort((a, b) => b.rowNumber - a.rowNumber);
+
+	for (const item of rowsToMove) {
+		// Find the index in the current validRows array (may have changed due to removals)
+		const currentIndex = result.validRows.findIndex(
+			(row) =>
+				row.roll_code === item.row.roll_code &&
+				row.name === item.row.name &&
+				row.last_name === item.row.last_name
+		);
+
+		if (currentIndex !== -1) {
+			// Remove from validRows
+			result.validRows.splice(currentIndex, 1);
+
+			// Add to omittedRows
+			result.omittedRows.push({
+				row: {
+					name: item.row.name,
+					last_name: item.row.last_name,
+					phone: item.row.phone || undefined,
+					email: item.row.email || undefined,
+					group_name: item.row.group_name,
+					roll_code: item.row.roll_code
+				},
+				rowNumber: item.rowNumber,
+				reason: item.reason,
+				code: item.code
+			});
+		}
+	}
+}
 
 /**
  * API endpoint for importing CSV data
  * Receives a CSV file, processes it, and returns the validation results
+ * Performs validation and checks for duplicates in the database
  */
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
 		// Get the form data from the request
 		const formData = await request.formData();
@@ -19,9 +155,10 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json(
 				{
 					success: false,
-					error: {
-						message: 'No se ha proporcionado un archivo CSV'
-					}
+					error: createApiError(
+						ApiErrorCode.CSV_MISSING_FILE,
+						'No se ha proporcionado un archivo CSV'
+					)
 				},
 				{ status: 400 }
 			);
@@ -31,41 +168,91 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json(
 				{
 					success: false,
-					error: {
-						message: 'No se ha proporcionado un nivel'
-					}
+					error: createApiError(ApiErrorCode.CSV_MISSING_LEVEL, 'No se ha proporcionado un nivel')
 				},
 				{ status: 400 }
 			);
 		}
 
-		// Convert the file to a buffer
-		const arrayBuffer = await file.arrayBuffer();
-		const buffer = Buffer.from(arrayBuffer);
+		// Check if file is empty
+		if (file.size === 0) {
+			return json(
+				{
+					success: false,
+					error: createApiError(ApiErrorCode.CSV_EMPTY_ERROR, 'El archivo CSV está vacío')
+				},
+				{ status: 400 }
+			);
+		}
 
-		// Process the CSV file
-		const result: ImportResult = await importCsv(buffer);
+		// Leer el archivo como texto
+		const text = await file.text();
 
-		// Return the processed data
+		// Process the CSV file for basic validation and in-file duplicates
+		const result: ImportResult = await importCsv(text);
+
+		// Check for duplicates in the database
+		if (result.validRows.length > 0) {
+			await checkDatabaseDuplicates(result, levelCode, locals.supabase);
+		}
+
+		// Calculate summary statistics for better UI feedback
+		const totalRows = result.validRows.length + result.omittedRows.length;
+		const successRate = totalRows > 0 ? Math.round((result.validRows.length / totalRows) * 100) : 0;
+
 		return json({
 			success: true,
 			data: {
-				...result,
-				level_code: levelCode
+				validRows: result.validRows,
+				omittedRows: result.omittedRows,
+				level_code: levelCode,
+				summary: {
+					totalProcessed: totalRows,
+					validCount: result.validRows.length,
+					omittedCount: result.omittedRows.length,
+					successRate
+				}
 			}
-		});
+		} as ApiResponse<
+			ImportResult & {
+				level_code: string;
+				summary: {
+					totalProcessed: number;
+					validCount: number;
+					omittedCount: number;
+					successRate: number;
+				};
+			}
+		>);
 	} catch (error) {
 		console.error('Error processing CSV:', error);
 		const message = error instanceof Error ? error.message : 'Error desconocido';
 
+		// Determine more specific error codes based on error message
+		let errorCode = ApiErrorCode.UNKNOWN_ERROR;
+		let status = 500;
+
+		if (error instanceof Error) {
+			if (error.message.includes('parsear CSV')) {
+				errorCode = ApiErrorCode.CSV_PARSE_ERROR;
+				status = 400; // Bad request for parsing errors
+			} else if (error.message.includes('formato')) {
+				errorCode = ApiErrorCode.CSV_FORMAT_ERROR;
+				status = 400;
+			} else if (error.message.includes('codificación')) {
+				errorCode = ApiErrorCode.CSV_ENCODING_ERROR;
+				status = 400;
+			}
+		}
+
 		return json(
 			{
 				success: false,
-				error: {
-					message: `Error al procesar el archivo CSV: ${message}`
-				}
-			},
-			{ status: 500 }
+				error: createApiError(errorCode, `Error al procesar el archivo CSV: ${message}`, {
+					originalError: error instanceof Error ? error.name : 'UnknownError'
+				})
+			} as ApiResponse<never>,
+			{ status }
 		);
 	}
 };
