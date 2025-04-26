@@ -10,7 +10,7 @@ import type {
 import { CsvProcessorErrorCode } from './types';
 
 // Constantes para validaciones
-const ALLOWED_GROUP_NAMES: ReadonlyArray<string> = ['A', 'B', 'C', 'D', 'E'];
+const ALLOWED_GROUP_NAMES: ReadonlyArray<string> = ['A', 'B', 'C', 'D']; // Must match database constraint
 const ROLL_CODE_REGEX: Readonly<RegExp> = /^\d{4}$/;
 const EMAIL_REGEX: Readonly<RegExp> = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

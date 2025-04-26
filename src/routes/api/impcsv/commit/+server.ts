@@ -81,8 +81,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		const rowsToProcess = validRows;
 
-		// Log the number of rows to process
+		// Log the number of rows to process and level code
 		console.log(`Processing ${rowsToProcess.length} rows in batches of ${BATCH_SIZE}`);
+		console.log(`Level code: ${levelCode} (type: ${typeof levelCode})`);
+
+		// Log a sample of the data being processed (first row)
+		if (rowsToProcess.length > 0) {
+			console.log('Sample data (first row):', JSON.stringify(rowsToProcess[0]));
+		}
 
 		// --- 5. Process rows in batches ---
 		// Split rows into batches for more efficient processing
@@ -99,6 +105,17 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 							row,
 							error: 'Nivel no definido',
 							code: CsvProcessorErrorCode.UNEXPECTED_ERROR
+						};
+					}
+
+					// Ensure level_code is a valid UUID
+					// Validate UUID format
+					if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(levelCode)) {
+						return {
+							success: false,
+							row,
+							error: `Código de nivel '${levelCode}' no es un UUID válido.`,
+							code: CsvProcessorErrorCode.INVALID_FORMAT
 						};
 					}
 
@@ -119,7 +136,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 							rpcError
 						);
 
-						// Check if it's the roll_code unique constraint violation
+						// Check for specific constraint violations
 						if (rpcError.message.includes('uq_registers_roll_code')) {
 							return {
 								success: false,
@@ -127,7 +144,38 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 								error: `Código '${row.roll_code}' ya existe.`,
 								code: CsvProcessorErrorCode.DUPLICATE_ROLL_CODE
 							};
+						} else if (rpcError.message.includes('uq_student_name_lastname')) {
+							return {
+								success: false,
+								row,
+								error: `Estudiante '${row.name} ${row.last_name}' ya existe.`,
+								code: CsvProcessorErrorCode.DUPLICATE_NAME
+							};
+						} else if (rpcError.message.includes('ck_registers_group')) {
+							return {
+								success: false,
+								row,
+								error: `Grupo '${row.group_name}' inválido. Debe ser A, B, C o D.`,
+								code: CsvProcessorErrorCode.INVALID_VALUE
+							};
+						} else if (rpcError.message.includes('Invalid group_name')) {
+							return {
+								success: false,
+								row,
+								error: `Grupo '${row.group_name}' inválido. Debe ser A, B, C o D.`,
+								code: CsvProcessorErrorCode.INVALID_VALUE
+							};
+						} else if (rpcError.message.includes('invalid input syntax for type uuid')) {
+							return {
+								success: false,
+								row,
+								error: `Error de tipo de datos: El código de nivel no es un UUID válido.`,
+								code: CsvProcessorErrorCode.INVALID_FORMAT
+							};
 						} else {
+							// Log the full error for debugging
+							console.error('Full RPC error:', JSON.stringify(rpcError));
+
 							// Generic error for other RPC issues
 							return {
 								success: false,
