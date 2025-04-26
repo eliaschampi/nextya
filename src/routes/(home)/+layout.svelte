@@ -172,6 +172,7 @@
 								<li><a href="/levels">Niveles</a></li>
 								<li><a href="/courses">Cursos</a></li>
 								<li><a href="/student">Estudiantes</a></li>
+								<li><a href="/impcsv">Importar</a></li>
 							</ul>
 						</details>
 					</li>

@@ -533,6 +533,19 @@ export type Database = {
 				Args: { entity_name: string; permission: string };
 				Returns: boolean;
 			};
+			import_student_register: {
+				Args: {
+					p_name: string;
+					p_last_name: string;
+					p_phone: string;
+					p_email: string;
+					p_level_code: string;
+					p_group_name: string;
+					p_roll_code: string;
+					p_user_code: string;
+				};
+				Returns: undefined;
+			};
 			upsert_eval_results: {
 				Args: {
 					p_eval_code: string;

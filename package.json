@@ -38,6 +38,7 @@
 		"@tailwindcss/vite": "^4.1.4",
 		"@u4/opencv4nodejs": "^7.1.2",
 		"daisyui": "^5.0.25",
+		"fast-csv": "^5.0.2",
 		"lucide-svelte": "^0.488.0",
 		"tailwindcss": "^4.1.4",
 		"zod": "^3.24.2"
