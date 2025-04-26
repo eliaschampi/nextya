@@ -54,7 +54,10 @@
 		}
 	}
 
-	// Process the CSV file
+	/**
+	 * Process the CSV file
+	 * Validates and parses the CSV file, checking for duplicates and formatting issues
+	 */
 	async function processFile() {
 		if (!file || !levelCode) {
 			showToast('Selecciona un archivo y un nivel', 'warning');
@@ -62,15 +65,18 @@
 		}
 
 		loading = true;
+		// Reset state
 		validRows = [];
 		omittedRows = [];
 		commitResults = null;
 
 		try {
+			// Create form data for file upload
 			const formData = new FormData();
 			formData.append('file', file);
 			formData.append('level_code', levelCode);
 
+			// Send to API for processing
 			const response = await fetch('/api/impcsv/import', {
 				method: 'POST',
 				body: formData
@@ -82,27 +88,31 @@
 				throw new Error(result.error.message);
 			}
 
+			// Update state with results
 			validRows = result.data.validRows;
 			omittedRows = result.data.omittedRows;
 			importSummary = result.data.summary || null;
 			showFileInput = false;
 
+			// Show success message
+			const successRate = result.data.summary?.successRate || 0;
 			showToast(
-				`Archivo procesado: ${validRows.length} registros válidos, ${omittedRows.length} omitidos (${result.data.summary?.successRate || 0}% éxito)`,
+				`Archivo procesado: ${validRows.length} registros válidos, ${omittedRows.length} omitidos (${successRate}% éxito)`,
 				'success'
 			);
 		} catch (error) {
-			console.error('Error processing file:', error);
-			showToast(
-				error instanceof Error ? error.message : 'Error al procesar el archivo',
-				'danger' as ToastType
-			);
+			// Handle errors
+			const errorMessage = error instanceof Error ? error.message : 'Error al procesar el archivo';
+			showToast(errorMessage, 'danger' as ToastType);
 		} finally {
 			loading = false;
 		}
 	}
 
-	// Commit the validated data to the database
+	/**
+	 * Commit the validated data to the database
+	 * Sends the validated rows to the API for insertion into the database
+	 */
 	async function commitData() {
 		if (validRows.length === 0) {
 			showToast('No hay datos válidos para importar', 'warning');
@@ -112,6 +122,7 @@
 		committing = true;
 
 		try {
+			// Send data to API for database insertion
 			const response = await fetch('/api/impcsv/commit', {
 				method: 'POST',
 				headers: {
@@ -129,21 +140,24 @@
 				throw new Error(result.error.message);
 			}
 
+			// Update state with results
 			commitResults = result.data;
 			showToast(`Importación completada: ${result.data.inserted} registros insertados`, 'success');
 		} catch (error) {
-			console.error('Error committing data:', error);
-			showToast(
-				error instanceof Error ? error.message : 'Error al guardar los datos',
-				'danger' as ToastType
-			);
+			// Handle errors
+			const errorMessage = error instanceof Error ? error.message : 'Error al guardar los datos';
+			showToast(errorMessage, 'danger' as ToastType);
 		} finally {
 			committing = false;
 		}
 	}
 
-	// Reset the form
+	/**
+	 * Reset the form to initial state
+	 * Clears all data and returns to file input view
+	 */
 	function resetForm() {
+		// Reset all state variables to initial values
 		file = null;
 		validRows = [];
 		omittedRows = [];
@@ -153,12 +167,12 @@
 		showFileInput = true;
 	}
 
-	// Get level name by code
-	function getLevelName(code: string): string {
-		return (
-			data.levels.find((level: { code: string; name: string }) => level.code === code)?.name || code
-		);
-	}
+	// Derived state for level name - more efficient than calling a function repeatedly
+	const levelName = $derived(
+		data.levels.find((level: { code: string; name: string }) => level.code === levelCode)?.name ||
+			levelCode ||
+			''
+	);
 </script>
 
 <PageTitle
@@ -231,7 +245,7 @@
 					Archivo: <span class="font-bold">{file?.name}</span>
 				</h3>
 				<p class="text-sm opacity-70">
-					Nivel: <span class="font-medium">{getLevelName(levelCode)}</span>
+					Nivel: <span class="font-medium">{levelName}</span>
 				</p>
 			</div>
 			<div class="flex gap-2">

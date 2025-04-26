@@ -10,10 +10,40 @@ import { ApiErrorCode, createApiError, type ApiResponse } from '$lib/types/apiEr
 // Constants for batch processing
 const BATCH_SIZE = 100; // Process 100 records at a time for better performance
 
+// Error message mapping for common database errors
+const ERROR_PATTERNS = [
+	{
+		pattern: 'uq_registers_roll_code',
+		code: CsvProcessorErrorCode.DUPLICATE_ROLL_CODE,
+		getMessage: (row: StudentRegisterData) => `Código '${row.roll_code}' ya existe.`
+	},
+	{
+		pattern: 'uq_student_name_lastname',
+		code: CsvProcessorErrorCode.DUPLICATE_NAME,
+		getMessage: (row: StudentRegisterData) => `Estudiante '${row.name} ${row.last_name}' ya existe.`
+	},
+	{
+		pattern: 'ck_registers_group',
+		code: CsvProcessorErrorCode.INVALID_VALUE,
+		getMessage: (row: StudentRegisterData) =>
+			`Grupo '${row.group_name}' inválido. Debe ser A, B, C o D.`
+	},
+	{
+		pattern: 'Invalid group_name',
+		code: CsvProcessorErrorCode.INVALID_VALUE,
+		getMessage: (row: StudentRegisterData) =>
+			`Grupo '${row.group_name}' inválido. Debe ser A, B, C o D.`
+	},
+	{
+		pattern: 'invalid input syntax for type uuid',
+		code: CsvProcessorErrorCode.INVALID_FORMAT,
+		getMessage: () => `Error de tipo de datos: El código de nivel no es un UUID válido.`
+	}
+];
+
 /**
  * API endpoint for committing validated CSV data.
- * Performs bulk checks for existing roll_codes (within the level) and potentially existing students (by name).
- * Calls the import_student_register PostgreSQL function for rows without duplicate roll_codes.
+ * Calls the import_student_register PostgreSQL function for each row.
  * Implements batch processing for better performance with large datasets.
  */
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -34,6 +64,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				{ status: 400 }
 			);
 		}
+
 		// Filter ensure validRows is an array of actual StudentRegisterData objects
 		const validRows = (Array.isArray(rawValidRows) ? rawValidRows : []).filter(
 			(row): row is StudentRegisterData =>
@@ -56,6 +87,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				{ status: 400 }
 			);
 		}
+
 		const user_code = locals.session?.user.id;
 		if (!user_code) {
 			return json(
@@ -75,115 +107,45 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			existingStudents: []
 		};
 
-		// Since we've already checked for duplicates in the import endpoint,
-		// we can skip the redundant checks here and process all rows directly.
-		// The import_student_register function will handle any remaining edge cases.
-
-		const rowsToProcess = validRows;
-
-		// Log the number of rows to process and level code
-		console.log(`Processing ${rowsToProcess.length} rows in batches of ${BATCH_SIZE}`);
-		console.log(`Level code: ${levelCode} (type: ${typeof levelCode})`);
-
-		// Log a sample of the data being processed (first row)
-		if (rowsToProcess.length > 0) {
-			console.log('Sample data (first row):', JSON.stringify(rowsToProcess[0]));
-		}
-
-		// --- 5. Process rows in batches ---
-		// Split rows into batches for more efficient processing
-		for (let i = 0; i < rowsToProcess.length; i += BATCH_SIZE) {
-			const batch = rowsToProcess.slice(i, i + BATCH_SIZE);
+		// --- Process rows in batches ---
+		for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
+			const batch = validRows.slice(i, i + BATCH_SIZE);
 
 			// Process each row in the batch
 			const batchPromises = batch.map(async (row) => {
 				try {
-					// Ensure levelCode is defined (it should be at this point)
-					if (!levelCode) {
-						return {
-							success: false,
-							row,
-							error: 'Nivel no definido',
-							code: CsvProcessorErrorCode.UNEXPECTED_ERROR
-						};
-					}
-
-					// Ensure level_code is a valid UUID
-					// Validate UUID format
-					if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(levelCode)) {
-						return {
-							success: false,
-							row,
-							error: `Código de nivel '${levelCode}' no es un UUID válido.`,
-							code: CsvProcessorErrorCode.INVALID_FORMAT
-						};
-					}
-
+					// At this point levelCode is guaranteed to be defined due to earlier validation
 					const { error: rpcError } = await locals.supabase.rpc('import_student_register', {
 						p_name: row.name,
 						p_last_name: row.last_name,
 						p_phone: row.phone || '',
 						p_email: row.email || '',
-						p_level_code: levelCode,
+						p_level_code: levelCode as string,
 						p_group_name: row.group_name,
 						p_roll_code: row.roll_code,
 						p_user_code: user_code
 					});
 
 					if (rpcError) {
-						console.error(
-							`RPC Error for roll_code ${row.roll_code} (Name: ${row.name} ${row.last_name}):`,
-							rpcError
-						);
-
-						// Check for specific constraint violations
-						if (rpcError.message.includes('uq_registers_roll_code')) {
-							return {
-								success: false,
-								row,
-								error: `Código '${row.roll_code}' ya existe.`,
-								code: CsvProcessorErrorCode.DUPLICATE_ROLL_CODE
-							};
-						} else if (rpcError.message.includes('uq_student_name_lastname')) {
-							return {
-								success: false,
-								row,
-								error: `Estudiante '${row.name} ${row.last_name}' ya existe.`,
-								code: CsvProcessorErrorCode.DUPLICATE_NAME
-							};
-						} else if (rpcError.message.includes('ck_registers_group')) {
-							return {
-								success: false,
-								row,
-								error: `Grupo '${row.group_name}' inválido. Debe ser A, B, C o D.`,
-								code: CsvProcessorErrorCode.INVALID_VALUE
-							};
-						} else if (rpcError.message.includes('Invalid group_name')) {
-							return {
-								success: false,
-								row,
-								error: `Grupo '${row.group_name}' inválido. Debe ser A, B, C o D.`,
-								code: CsvProcessorErrorCode.INVALID_VALUE
-							};
-						} else if (rpcError.message.includes('invalid input syntax for type uuid')) {
-							return {
-								success: false,
-								row,
-								error: `Error de tipo de datos: El código de nivel no es un UUID válido.`,
-								code: CsvProcessorErrorCode.INVALID_FORMAT
-							};
-						} else {
-							// Log the full error for debugging
-							console.error('Full RPC error:', JSON.stringify(rpcError));
-
-							// Generic error for other RPC issues
-							return {
-								success: false,
-								row,
-								error: `Error al procesar: ${rpcError.message}`,
-								code: CsvProcessorErrorCode.UNEXPECTED_ERROR
-							};
+						// Check for specific error patterns
+						for (const pattern of ERROR_PATTERNS) {
+							if (rpcError.message.includes(pattern.pattern)) {
+								return {
+									success: false,
+									row,
+									error: pattern.getMessage(row),
+									code: pattern.code
+								};
+							}
 						}
+
+						// Generic error for other RPC issues
+						return {
+							success: false,
+							row,
+							error: `Error al procesar: ${rpcError.message}`,
+							code: CsvProcessorErrorCode.UNEXPECTED_ERROR
+						};
 					}
 
 					return { success: true, row };
@@ -201,17 +163,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			// Wait for all promises in the batch to resolve
 			const batchResults = await Promise.all(batchPromises);
 
-			// Log batch results
-			console.log(
-				`Batch completed: ${batchResults.length} rows processed, ${batchResults.filter((r) => r.success).length} successful`
-			);
-
 			// Process batch results
 			batchResults.forEach((result) => {
 				if (result.success) {
 					results.inserted++;
 				} else if (result.error && result.code) {
-					// Ensure we have error message and code
+					// Sort errors by type
 					if (result.code === CsvProcessorErrorCode.DUPLICATE_ROLL_CODE) {
 						results.duplicates.push({
 							row: result.row,
@@ -236,7 +193,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			});
 		}
 
-		// Calculate summary statistics for better UI feedback
+		// Calculate summary statistics
 		const totalProcessed = validRows.length;
 		const successRate =
 			totalProcessed > 0 ? Math.round((results.inserted / totalProcessed) * 100) : 0;
@@ -253,7 +210,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		} as ApiResponse<CommitResult>);
 	} catch (error: unknown) {
 		// --- Enhanced Error Handling ---
-		console.error(`Error committing CSV data (Level: ${levelCode ?? 'N/A'}):`, error);
+		console.error(`Error committing CSV data:`, error);
 
 		let status = 500;
 		let errorCode = ApiErrorCode.UNKNOWN_ERROR;
@@ -267,9 +224,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			message = error.message.startsWith('Error: ') ? error.message.substring(7) : error.message;
 
 			// Determine more specific error codes based on error message
-			if (message.includes('verificar matrículas')) {
-				errorCode = ApiErrorCode.DB_QUERY_ERROR;
-			} else if (message.includes('verificar estudiantes')) {
+			if (message.includes('verificar matrículas') || message.includes('verificar estudiantes')) {
 				errorCode = ApiErrorCode.DB_QUERY_ERROR;
 			}
 		}
