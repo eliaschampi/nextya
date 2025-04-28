@@ -13,7 +13,7 @@
 
 <div class="container mx-auto max-w-3xl px-4">
 	<!-- System info card -->
-	<div class="card bg-base-200 shadow-md border border-base-300/30 mb-8">
+	<div class="card bg-base-200 shadow border border-base-300/30 mb-8">
 		<div class="card-body">
 			<div class="flex items-center gap-4 mb-2">
 				<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">

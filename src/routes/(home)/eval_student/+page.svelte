@@ -249,7 +249,7 @@
 	{#if selectedStudent}
 		<!-- Vista de resultados del estudiante -->
 		<div
-			class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-base-300/30 rounded-xl mb-6"
+			class="card bg-gradient-to-br from-base-200 to-base-100 shadow duration-300 border border-base-300/30 rounded-xl mb-6"
 		>
 			<div class="card-body">
 				<h2 class="card-title text-primary flex items-center gap-2">
@@ -286,7 +286,7 @@
 			</div>
 		{:else if filteredResults.length > 0}
 			<div
-				class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-base-300/30 rounded-xl"
+				class="card bg-gradient-to-br from-base-200 to-base-100 shadow duration-300 border border-base-300/30 rounded-xl"
 			>
 				<div class="card-body">
 					<div class="flex justify-between items-center mb-4">
@@ -400,7 +400,7 @@
 			</div>
 		{:else}
 			<div
-				class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-base-300/30 rounded-xl"
+				class="card bg-gradient-to-br from-base-200 to-base-100 shadow duration-300 border border-base-300/30 rounded-xl"
 			>
 				<div class="card-body flex flex-col items-center justify-center py-12">
 					<ListChecks size={64} class="text-primary/30 mb-4" />
@@ -417,7 +417,7 @@
 		<!-- Vista de selección de estudiante -->
 		<div class="flex justify-center items-center py-16">
 			<div
-				class="bg-gradient-to-br from-base-200 to-base-100 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-base-300/30 rounded-xl p-8 w-full max-w-md"
+				class="bg-gradient-to-br from-base-200 to-base-100 shadow duration-300 border border-base-300/30 rounded-xl p-8 w-full max-w-md"
 			>
 				<User size={64} class="text-primary/30 mx-auto mb-4" />
 				<h3 class="text-lg font-bold mb-2 text-center">Selecciona un estudiante</h3>

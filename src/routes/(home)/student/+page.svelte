@@ -263,7 +263,7 @@
 
 {#if selectedLevelCode && students.length > 0}
 	<div
-		class="card bg-gradient-to-br from-base-200 to-base-100 shadow hover:shadow-lg transition-shadow duration-300 border border-base-300/30 rounded-xl overflow-hidden"
+		class="card bg-gradient-to-br from-base-200 to-base-100 shadow border border-base-300/30 rounded-xl overflow-hidden"
 	>
 		<div class="card-body overflow-x-auto">
 			<table class="table table-zebra w-full">

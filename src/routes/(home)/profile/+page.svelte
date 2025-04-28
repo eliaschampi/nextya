@@ -108,7 +108,7 @@
 	</div>
 
 	<!-- Tabs -->
-	<div class="card bg-base-100 shadow-md border border-base-300/30">
+	<div class="card bg-base-100 shadow border border-base-300/30">
 		<div class="card-body p-0">
 			<!-- Tab Headers -->
 			<div class="tabs tabs-boxed bg-base-200 p-1 rounded-t-box">

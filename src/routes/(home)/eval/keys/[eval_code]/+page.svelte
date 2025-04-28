@@ -263,7 +263,7 @@
 		form="keysForm"
 		class="btn btn-md {isValid
 			? 'btn-success'
-			: 'btn-primary'} gap-2 w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-300"
+			: 'btn-primary'} gap-2 w-full sm:w-auto shadow transition-all duration-300"
 		disabled={!isValid || isSaving || !$canCreate}
 	>
 		{#if isSaving}

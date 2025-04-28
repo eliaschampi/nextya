@@ -54,10 +54,6 @@
 		}
 	}
 
-	/**
-	 * Process the CSV file
-	 * Validates and parses the CSV file, checking for duplicates and formatting issues
-	 */
 	async function processFile() {
 		if (!file || !levelCode) {
 			showToast('Selecciona un archivo y un nivel', 'warning');
@@ -109,10 +105,6 @@
 		}
 	}
 
-	/**
-	 * Commit the validated data to the database
-	 * Sends the validated rows to the API for insertion into the database
-	 */
 	async function commitData() {
 		if (validRows.length === 0) {
 			showToast('No hay datos válidos para importar', 'warning');
@@ -152,10 +144,6 @@
 		}
 	}
 
-	/**
-	 * Reset the form to initial state
-	 * Clears all data and returns to file input view
-	 */
 	function resetForm() {
 		// Reset all state variables to initial values
 		file = null;
@@ -185,30 +173,22 @@
 <div class="container mx-auto px-4 py-6">
 	{#if showFileInput}
 		<div
-			class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-base-300/30 rounded-xl mb-6"
+			class="card bg-gradient-to-br from-base-200 to-base-100 shadow border border-base-300/30 rounded-xl mb-6"
 		>
 			<div class="card-body p-6">
 				<h2 class="card-title mb-4 flex items-center">
 					<FileText size={20} class="mr-2 text-primary" />
 					Importar Estudiantes desde CSV
 				</h2>
-
-				<div class="form-control mb-4">
-					<label class="label" for="level-select">
-						<span class="label-text">Nivel</span>
-					</label>
-					<select id="level-select" class="select select-bordered w-full" bind:value={levelCode}>
+				<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border p-4">
+					<label class="label" for="level-select"> Nivel </label>
+					<select id="level-select" class="select select-bordered" bind:value={levelCode}>
 						<option value="" disabled selected>Selecciona un nivel</option>
 						{#each data.levels as level (level.code)}
 							<option value={level.code}>{level.name}</option>
 						{/each}
 					</select>
-				</div>
-
-				<div class="form-control mb-6">
-					<label class="label" for="file-input">
-						<span class="label-text">Archivo CSV</span>
-					</label>
+					<label class="label mt-4" for="file-input"> Archivo CSV </label>
 					<input
 						type="file"
 						id="file-input"
@@ -219,7 +199,9 @@
 					<div class="text-xs text-info mt-2">
 						El archivo debe tener las columnas: name, last_name, phone, email, group_name, roll_code
 					</div>
-				</div>
+				</fieldset>
+
+				<div class="form-control mb-6"></div>
 
 				<div class="card-actions justify-end">
 					<button
@@ -271,7 +253,7 @@
 
 		{#if importSummary}
 			<div
-				class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl mb-6"
+				class="card bg-gradient-to-br from-base-200 to-base-100 shadow border border-base-300/30 rounded-xl mb-6"
 			>
 				<div class="card-body p-4">
 					<h3 class="card-title mb-2">
@@ -302,7 +284,7 @@
 
 		{#if commitResults}
 			<div
-				class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl mb-6"
+				class="card bg-gradient-to-br from-base-200 to-base-100 shadow border border-base-300/30 rounded-xl mb-6"
 			>
 				<div class="card-body p-6">
 					<h3 class="card-title text-success mb-2">
@@ -353,7 +335,7 @@
 
 		<!-- Consolidated Data Table -->
 		<div
-			class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl"
+			class="card bg-gradient-to-br from-base-200 to-base-100 shadow border border-base-300/30 rounded-xl"
 		>
 			<div class="card-body p-4">
 				<div class="tabs tabs-boxed mb-4">

@@ -25,6 +25,23 @@
 	// Computed values
 	const result = data.result;
 
+	// Calculate percentages for radial progress
+	const correctPercent = $derived(
+		Math.round(
+			(result.scores.general.correct_count / result.scores.general.total_questions) * 100
+		) || 0
+	);
+	const incorrectPercent = $derived(
+		Math.round(
+			(result.scores.general.incorrect_count / result.scores.general.total_questions) * 100
+		) || 0
+	);
+	const blankPercent = $derived(
+		Math.round((result.scores.general.blank_count / result.scores.general.total_questions) * 100) ||
+			0
+	);
+	const scorePercent = $derived(Math.round((result.scores.general.score / 20) * 100) || 0);
+
 	// Group answers by section
 	type SectionGroup = {
 		name: string;
@@ -96,7 +113,7 @@
 </PageTitle>
 
 <main class="container mx-auto p-4">
-	<div class="card bg-base-200/80 shadow-lg mb-6 border border-base-300/30">
+	<div class="card bg-base-200/80 shadow mb-6 border border-base-300/30">
 		<div class="card-body">
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 				<div>
@@ -159,59 +176,115 @@
 			<!-- Tab Content: Details -->
 			{#if activeTab === 'details'}
 				<!-- Estadísticas Generales -->
-				<div class="stats bg-base-300/50 mb-4 w-full">
-					<div class="stat">
-						<div class="stat-title">Correctas</div>
-						<div class="stat-value text-success">{result.scores.general.correct_count}</div>
-					</div>
-					<div class="stat">
-						<div class="stat-title">Incorrectas</div>
-						<div class="stat-value text-error">{result.scores.general.incorrect_count}</div>
-					</div>
-					<div class="stat">
-						<div class="stat-title">En blanco</div>
-						<div class="stat-value text-warning">{result.scores.general.blank_count}</div>
-					</div>
-					<div class="stat">
-						<div class="stat-title">Nota General</div>
-						<div class={`stat-value ${getScoreColorClass(result.scores.general.score)}`}>
-							{result.scores.general.score.toFixed(2)}
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+					<!-- Correctas -->
+					<div class="card bg-base-200 shadow">
+						<div class="card-body p-4 items-center text-center">
+							<h3 class="card-title text-success mb-2">Correctas</h3>
+							<div class="flex items-center justify-center">
+								<div
+									class="radial-progress bg-base-100 text-success border-success border-4"
+									style="--value:{correctPercent};"
+									aria-valuenow={correctPercent}
+									role="progressbar"
+								>
+									{result.scores.general.correct_count}
+								</div>
+							</div>
+							<p class="text-xs mt-2">de {result.scores.general.total_questions} preguntas</p>
 						</div>
-						<div class="stat-desc">/ 20.00</div>
+					</div>
+
+					<!-- Incorrectas -->
+					<div class="card bg-base-200 shadow">
+						<div class="card-body p-4 items-center text-center">
+							<h3 class="card-title text-error mb-2">Incorrectas</h3>
+							<div class="flex items-center justify-center">
+								<div
+									class="radial-progress bg-base-100 text-error border-error border-4"
+									style="--value:{incorrectPercent};"
+									aria-valuenow={incorrectPercent}
+									role="progressbar"
+								>
+									{result.scores.general.incorrect_count}
+								</div>
+							</div>
+							<p class="text-xs mt-2">de {result.scores.general.total_questions} preguntas</p>
+						</div>
+					</div>
+
+					<!-- En blanco -->
+					<div class="card bg-base-200 shadow">
+						<div class="card-body p-4 items-center text-center">
+							<h3 class="card-title text-warning mb-2">En blanco</h3>
+							<div class="flex items-center justify-center">
+								<div
+									class="radial-progress bg-base-100 text-warning border-warning border-4"
+									style="--value:{blankPercent};"
+									aria-valuenow={blankPercent}
+									role="progressbar"
+								>
+									{result.scores.general.blank_count}
+								</div>
+							</div>
+							<p class="text-xs mt-2">de {result.scores.general.total_questions} preguntas</p>
+						</div>
+					</div>
+
+					<!-- Nota General -->
+					<div class="card bg-base-200 shadow">
+						<div class="card-body p-4 items-center text-center">
+							<h3 class="card-title mb-2">Nota General</h3>
+							<div class="flex items-center justify-center">
+								<div
+									class={`radial-progress bg-base-100 ${getScoreColorClass(result.scores.general.score)} border-4`}
+									style={`--value:${scorePercent}; border-color: ${result.scores.general.score >= 14 ? 'var(--success)' : result.scores.general.score >= 10.5 ? 'var(--warning)' : 'var(--error)'};`}
+									aria-valuenow={scorePercent}
+									role="progressbar"
+								>
+									{result.scores.general.score.toFixed(1)}
+								</div>
+							</div>
+							<p class="text-xs mt-2">de 20.00 puntos</p>
+						</div>
 					</div>
 				</div>
 
 				<!-- Puntajes por Sección -->
 				{#if Object.keys(result.scores.by_section).length > 0}
-					<div class="font-medium mb-2">Puntajes por Sección</div>
-					<div class="overflow-x-auto">
-						<table class="table table-zebra w-full">
-							<thead>
-								<tr class="bg-base-300/50">
-									<th>Sección</th>
-									<th class="text-center">Correctas</th>
-									<th class="text-center">Incorrectas</th>
-									<th class="text-center">Blanco</th>
-									<th class="text-center">Total</th>
-									<th class="text-center">Nota</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each Object.entries(result.scores.by_section) as [sectionCode, sectionScore] (sectionCode)}
-									{@const typedScore = sectionScore as import('$lib/types').SectionScore}
-									<tr>
-										<td class="font-medium">{typedScore.section_name}</td>
-										<td class="text-center text-success">{typedScore.correct_count}</td>
-										<td class="text-center text-error">{typedScore.incorrect_count}</td>
-										<td class="text-center text-warning">{typedScore.blank_count}</td>
-										<td class="text-center">{typedScore.total_questions}</td>
-										<td class="text-center font-bold {getScoreColorClass(typedScore.score)}">
-											{typedScore.score.toFixed(1)}
-										</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
+					<div class="card bg-base-200 shadow mb-6">
+						<div class="card-body">
+							<h3 class="card-title text-primary mb-2">Puntajes por Sección</h3>
+							<div class="overflow-x-auto">
+								<table class="table table-zebra w-full">
+									<thead>
+										<tr class="bg-base-300/50">
+											<th>Sección</th>
+											<th class="text-center">Correctas</th>
+											<th class="text-center">Incorrectas</th>
+											<th class="text-center">Blanco</th>
+											<th class="text-center">Total</th>
+											<th class="text-center">Nota</th>
+										</tr>
+									</thead>
+									<tbody>
+										{#each Object.entries(result.scores.by_section) as [sectionCode, sectionScore] (sectionCode)}
+											{@const typedScore = sectionScore as import('$lib/types').SectionScore}
+											<tr>
+												<td class="font-medium">{typedScore.section_name}</td>
+												<td class="text-center text-success">{typedScore.correct_count}</td>
+												<td class="text-center text-error">{typedScore.incorrect_count}</td>
+												<td class="text-center text-warning">{typedScore.blank_count}</td>
+												<td class="text-center">{typedScore.total_questions}</td>
+												<td class="text-center font-bold {getScoreColorClass(typedScore.score)}">
+													{typedScore.score.toFixed(1)}
+												</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						</div>
 					</div>
 				{/if}
 			{:else if activeTab === 'answers'}
@@ -221,67 +294,69 @@
 							name: string;
 							answers: import('$lib/types').StudentQuestionAnswer[];
 						}}
-						<div class="mb-6">
-							<h3 class="font-medium text-lg mb-2">{typedSection.name}</h3>
-							<div class="overflow-x-auto">
-								<table class="table table-zebra table-sm w-full">
-									<thead>
-										<tr>
-											<th class="w-12 text-center">N°</th>
-											<th class="w-20 text-center">Respuesta</th>
-											<th class="w-20 text-center">Correcta</th>
-											<th>Estado</th>
-										</tr>
-									</thead>
-									<tbody>
-										{#each typedSection.answers as answer (answer.question_code)}
-											<tr>
-												<td class="text-center font-medium">{answer.order_in_eval}</td>
-												<td class="text-center">
-													<span class="badge badge-lg font-mono">
-														{answer.is_blank
-															? '-'
-															: answer.is_multiple
-																? 'Multi'
-																: answer.student_answer}
-													</span>
-												</td>
-												<td class="text-center">
-													<span class="badge badge-outline badge-primary badge-lg font-mono">
-														{answer.correct_key}
-													</span>
-												</td>
-												<td>
-													<span
-														class={`badge gap-1 ${
-															answer.is_blank
-																? 'badge-warning'
-																: answer.is_multiple
-																	? 'badge-error'
-																	: answer.is_correct
-																		? 'badge-success'
-																		: 'badge-error'
-														}`}
-													>
-														{#if answer.is_correct}
-															<Check size={12} />
-															Correcta
-														{:else if answer.is_blank}
-															<AlertCircle size={12} />
-															En blanco
-														{:else if answer.is_multiple}
-															<X size={12} />
-															Múltiple
-														{:else}
-															<X size={12} />
-															Incorrecta
-														{/if}
-													</span>
-												</td>
+						<div class="card bg-base-200 shadow mb-6">
+							<div class="card-body">
+								<h3 class="card-title text-primary mb-2">{typedSection.name}</h3>
+								<div class="overflow-x-auto">
+									<table class="table table-zebra table-sm w-full">
+										<thead>
+											<tr class="bg-base-300/50">
+												<th class="w-12 text-center">N°</th>
+												<th class="w-20 text-center">Respuesta</th>
+												<th class="w-20 text-center">Correcta</th>
+												<th>Estado</th>
 											</tr>
-										{/each}
-									</tbody>
-								</table>
+										</thead>
+										<tbody>
+											{#each typedSection.answers as answer (answer.question_code)}
+												<tr>
+													<td class="text-center font-medium">{answer.order_in_eval}</td>
+													<td class="text-center">
+														<span class="badge badge-lg font-mono">
+															{answer.is_blank
+																? '-'
+																: answer.is_multiple
+																	? 'Multi'
+																	: answer.student_answer}
+														</span>
+													</td>
+													<td class="text-center">
+														<span class="badge badge-outline badge-primary badge-lg font-mono">
+															{answer.correct_key}
+														</span>
+													</td>
+													<td>
+														<span
+															class={`badge gap-1 ${
+																answer.is_blank
+																	? 'badge-warning'
+																	: answer.is_multiple
+																		? 'badge-error'
+																		: answer.is_correct
+																			? 'badge-success'
+																			: 'badge-error'
+															}`}
+														>
+															{#if answer.is_correct}
+																<Check size={12} />
+																Correcta
+															{:else if answer.is_blank}
+																<AlertCircle size={12} />
+																En blanco
+															{:else if answer.is_multiple}
+																<X size={12} />
+																Múltiple
+															{:else}
+																<X size={12} />
+																Incorrecta
+															{/if}
+														</span>
+													</td>
+												</tr>
+											{/each}
+										</tbody>
+									</table>
+								</div>
 							</div>
 						</div>
 					{/each}

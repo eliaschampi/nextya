@@ -105,7 +105,7 @@
 						<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 						<ul
 							tabindex="0"
-							class="dropdown-content menu bg-base-100 rounded-box shadow-lg w-52 mt-2 p-2 z-50"
+							class="dropdown-content menu bg-base-100 rounded-box shadow w-52 mt-2 p-2 z-50"
 						>
 							<li class="menu-title pt-0 pb-2">
 								<span class="font-medium">{userMetadata.name} {userMetadata.last_name}</span>
@@ -132,7 +132,7 @@
 		</main>
 	</div>
 
-	<div class="drawer-side shadow-md z-20">
+	<div class="drawer-side shadow z-20">
 		<!-- Clicking this label closes the sidebar on mobile -->
 		<label for="drawer-toggle" aria-label="Close sidebar" class="drawer-overlay"></label>
 		<aside class="bg-base-200 text-base-content h-screen w-72 flex flex-col overflow-y-auto">

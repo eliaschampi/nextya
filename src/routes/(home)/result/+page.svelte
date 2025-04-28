@@ -249,7 +249,7 @@
 		</div>
 
 		<div
-			class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-base-300/30 rounded-xl mb-6"
+			class="card bg-gradient-to-br from-base-200 to-base-100 shadow duration-300 border border-base-300/30 rounded-xl mb-6"
 		>
 			<div class="card-body p-4">
 				<div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
@@ -409,7 +409,7 @@
 		</div>
 	{:else}
 		<div
-			class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-base-300/30 rounded-xl"
+			class="card bg-gradient-to-br from-base-200 to-base-100 shadow duration-300 border border-base-300/30 rounded-xl"
 		>
 			<div class="card-body flex flex-col items-center justify-center p-8 text-center">
 				<div class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md">
