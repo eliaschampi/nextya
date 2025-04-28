@@ -7,6 +7,7 @@
 	import type { EvalWithSections, ResultItem } from '$lib/types';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { permissionsStore } from '$lib/stores/permissions';
 
 	// Props from server
 	const { data } = $props<{
@@ -27,6 +28,9 @@
 	let results = $state<ResultItem[]>([]);
 	let sortOrder = $state<'asc' | 'desc'>('desc'); // Default sort by highest score
 	let searchQuery = $state('');
+
+	// Permissions
+	const canViewDetails = permissionsStore.has({ entity: 'eval_results', action: 'read' });
 
 	// Caché de resultados por evaluación
 	const resultsCache = $state<Record<string, { data: ResultItem[]; timestamp: number }>>({});
@@ -306,10 +310,7 @@
 							</thead>
 							<tbody>
 								{#each paginatedResults as result (result.result_code)}
-									<tr
-										class="hover:bg-base-300 transition-colors border-b border-base-300 cursor-pointer"
-										onclick={() => viewStudentDetails(result)}
-									>
+									<tr class="hover:bg-base-300 transition-colors border-b border-base-300">
 										<td class="py-3 px-4 font-mono text-accent font-medium">{result.roll_code}</td>
 										<td class="py-3 px-4 font-medium">{result.name}</td>
 										<td class="py-3 px-4">{result.last_name}</td>
@@ -337,6 +338,7 @@
 												class="btn btn-sm btn-primary btn-outline"
 												onclick={() => viewStudentDetails(result)}
 												title="Ver detalles"
+												disabled={!$canViewDetails}
 											>
 												<Eye size={16} class="mr-1" /> Ver
 											</button>

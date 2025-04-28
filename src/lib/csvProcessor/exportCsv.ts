@@ -45,6 +45,6 @@ export async function exportCsv(
 		return Buffer.from(csvString, 'utf-8');
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
-		throw new Error(`Failed to generate CSV: ${message}`);
+		throw new Error(`Fallo al general CSV: ${message}`);
 	}
 }

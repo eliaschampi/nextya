@@ -6,6 +6,7 @@
 
 	import type { EvaluationResult } from '$lib/types';
 	import Message from '$lib/components/Message.svelte';
+	import { permissionsStore } from '$lib/stores/permissions';
 
 	// Props from server
 	const { data } = $props<{
@@ -21,6 +22,12 @@
 
 	// State
 	let activeTab = $state<'details' | 'answers'>('details');
+
+	// Permissions
+	const canNavigateBack = permissionsStore.has({
+		entity: data.fromPage === 'eval_student' ? 'eval_results' : 'results',
+		action: 'read'
+	});
 
 	// Computed values
 	const result = data.result;
@@ -101,7 +108,7 @@
 	title={`Detalle de Evaluación: ${result.eval.name}`}
 	description={`Resultados de ${result.student.name} ${result.student.last_name}`}
 >
-	<button class="btn btn-outline btn-primary" onclick={goToResults}>
+	<button class="btn btn-outline btn-primary" onclick={goToResults} disabled={!$canNavigateBack}>
 		{#if data.fromPage === 'eval_student'}
 			<User size={18} class="mr-2" />
 			Volver a Historial del Estudiante

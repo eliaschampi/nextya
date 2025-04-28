@@ -27,6 +27,7 @@
 	import { base64ToFile, validateA5Proportion } from '$lib/utils/imageUtils';
 	import type { ApiOmrResponse, ResultToSave } from '$lib/types/api';
 	import { goto } from '$app/navigation';
+	import { permissionsStore } from '$lib/stores/permissions';
 
 	interface ValidationError {
 		id: string;
@@ -40,6 +41,9 @@
 			serverQuestions: EvalQuestion[];
 		};
 	}>();
+
+	// Permissions
+	const canSaveResults = permissionsStore.has({ entity: 'eval_results', action: 'create' });
 
 	// Estado
 	let selectedEval = $state<EvalWithSections | null>(null);
@@ -546,7 +550,7 @@
 						<button
 							type="submit"
 							class="btn btn-success btn-soft btn-sm"
-							disabled={!canSave || isSavingBatch}
+							disabled={!canSave || isSavingBatch || !$canSaveResults}
 						>
 							{#if isSavingBatch}
 								<Loader2 class="animate-spin mr-1" size={16} /> Guardando...

@@ -7,6 +7,7 @@
 	import { formatDate } from '$lib/utils/formatDate';
 	import { goto } from '$app/navigation';
 	import Message from '$lib/components/Message.svelte';
+	import { permissionsStore } from '$lib/stores/permissions';
 
 	// Referencias y estados
 	let modal = $state<HTMLDialogElement | null>(null);
@@ -40,6 +41,9 @@
 			studentCode: string | null;
 		};
 	}>();
+
+	// Permissions
+	const canViewDetails = permissionsStore.has({ entity: 'eval_results', action: 'read' });
 
 	// Cargar estudiante si hay un código en la URL
 	$effect(() => {
@@ -324,10 +328,7 @@
 							</thead>
 							<tbody>
 								{#each paginatedResults as result (result.result_code)}
-									<tr
-										class="hover:bg-base-300 transition-colors border-b border-base-300 cursor-pointer"
-										onclick={() => viewResultDetails(result)}
-									>
+									<tr class="hover:bg-base-300 transition-colors border-b border-base-300}">
 										<td class="py-3 px-4">{formatDate(result.eval_date)}</td>
 										<td class="py-3 px-4 font-medium">{result.eval_name}</td>
 										<td class="py-3 px-4 text-center">
@@ -354,6 +355,7 @@
 												class="btn btn-sm btn-primary btn-outline"
 												onclick={() => viewResultDetails(result)}
 												title="Ver detalles"
+												disabled={!$canViewDetails}
 											>
 												<Eye size={16} class="mr-1" /> Ver
 											</button>

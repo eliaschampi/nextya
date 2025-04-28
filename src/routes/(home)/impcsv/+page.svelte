@@ -4,6 +4,7 @@
 	import type { StudentRegisterData, OmittedRowDetail } from '$lib/csvProcessor';
 	import { showToast } from '$lib/stores/Toast';
 	import type { ToastType } from '$lib/types';
+	import { permissionsStore } from '$lib/stores/permissions';
 
 	// Props from server
 	const { data } = $props<{
@@ -16,6 +17,9 @@
 	let loading = $state(false);
 	let committing = $state(false);
 	let showFileInput = $state(true);
+
+	// Permissions
+	const canSaveImport = permissionsStore.has({ entity: 'students', action: 'create' });
 
 	// Data
 	let file = $state<File | null>(null);
@@ -207,7 +211,7 @@
 					<button
 						class="btn btn-primary"
 						onclick={processFile}
-						disabled={loading || !file || !levelCode}
+						disabled={loading || !file || !levelCode || !$canSaveImport}
 					>
 						{#if loading}
 							<span class="loading loading-spinner loading-sm mr-2"></span>
@@ -234,7 +238,10 @@
 				<button
 					class="btn btn-primary"
 					onclick={commitData}
-					disabled={committing || validRows.length === 0 || commitResults !== null}
+					disabled={committing ||
+						validRows.length === 0 ||
+						commitResults !== null ||
+						!$canSaveImport}
 				>
 					{#if committing}
 						<span class="loading loading-spinner loading-sm mr-2"></span>
