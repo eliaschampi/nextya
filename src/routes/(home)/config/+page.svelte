@@ -34,7 +34,7 @@
 				</div>
 				<div class="flex justify-between py-1 border-b border-base-300/50">
 					<span class="text-base-content/70">Framework</span>
-					<span class="font-medium">Svelte 5</span>
+					<span class="font-medium">SSR</span>
 				</div>
 				<div class="flex justify-between py-1 border-b border-base-300/50">
 					<span class="text-base-content/70">Desarrollador</span>
