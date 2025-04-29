@@ -6,7 +6,6 @@
 
 	import type { EvaluationResult } from '$lib/types';
 	import Message from '$lib/components/Message.svelte';
-	import { permissionsStore } from '$lib/stores/permissions';
 
 	// Props from server
 	const { data } = $props<{
@@ -22,12 +21,6 @@
 
 	// State
 	let activeTab = $state<'details' | 'answers'>('details');
-
-	// Permissions
-	const canNavigateBack = permissionsStore.has({
-		entity: data.fromPage === 'eval_student' ? 'eval_results' : 'results',
-		action: 'read'
-	});
 
 	// Computed values
 	const result = data.result;
@@ -96,9 +89,34 @@
 	function goToResults() {
 		// Navigate back to the appropriate page based on fromPage parameter
 		if (data.fromPage === 'eval_student') {
+			// Store state in sessionStorage for better back navigation
+			try {
+				sessionStorage.setItem(
+					'student_page_state',
+					JSON.stringify({
+						studentCode: data.studentCode,
+						timestamp: Date.now()
+					})
+				);
+			} catch (e) {
+				console.error('Error storing state in sessionStorage:', e);
+			}
 			goto(`/eval_student?student=${data.studentCode}`);
 		} else {
 			// Default to result page
+			// Store state in sessionStorage for better back navigation
+			try {
+				sessionStorage.setItem(
+					'result_page_state',
+					JSON.stringify({
+						levelCode: data.levelCode,
+						evalCode: data.evalCode,
+						timestamp: Date.now()
+					})
+				);
+			} catch (e) {
+				console.error('Error storing state in sessionStorage:', e);
+			}
 			goto(`/result?level=${data.levelCode}&eval=${data.evalCode}`);
 		}
 	}
@@ -108,7 +126,7 @@
 	title={`Detalle de Evaluación: ${result.eval.name}`}
 	description={`Resultados de ${result.student.name} ${result.student.last_name}`}
 >
-	<button class="btn btn-outline btn-primary" onclick={goToResults} disabled={!$canNavigateBack}>
+	<button class="btn btn-outline btn-primary" onclick={goToResults}>
 		{#if data.fromPage === 'eval_student'}
 			<User size={18} class="mr-2" />
 			Volver a Historial del Estudiante

@@ -47,6 +47,29 @@
 
 	// Cargar estudiante si hay un código en la URL
 	$effect(() => {
+		// Check if we have stored state from a previous navigation
+		try {
+			const storedState = sessionStorage.getItem('student_page_state');
+			if (storedState) {
+				const state = JSON.parse(storedState);
+				const isRecent = Date.now() - state.timestamp < 5 * 60 * 1000; // 5 minutes
+
+				if (isRecent && state.studentCode) {
+					// Clear the stored state to avoid using it again
+					sessionStorage.removeItem('student_page_state');
+
+					// If the stored state matches the URL parameters, use it
+					if (state.studentCode === data.studentCode) {
+						loadStudentInfo(state.studentCode);
+						return;
+					}
+				}
+			}
+		} catch (e) {
+			console.error('Error reading from sessionStorage:', e);
+		}
+
+		// Normal flow if no stored state or stored state is invalid
 		if (data.studentCode) {
 			loadStudentInfo(data.studentCode);
 		}
@@ -102,10 +125,12 @@
 	async function handleSelectStudent(student: Student) {
 		closeModal();
 
-		// Actualizar la URL sin recargar la página
-		const url = new URL(window.location.href);
-		url.searchParams.set('student', student.code);
-		window.history.pushState({}, '', url);
+		// Use SvelteKit's goto to update the URL
+		goto(`/eval_student?student=${student.code}`, {
+			keepFocus: true,
+			noScroll: true,
+			replaceState: true
+		});
 
 		// Cargar información del estudiante
 		await loadStudentInfo(student.code);
@@ -175,11 +200,19 @@
 	}
 
 	function viewResultDetails(result: StudentResult) {
-		// Update URL with student parameter before redirecting
-		if (selectedStudent) {
-			const url = new URL(window.location.href);
-			url.searchParams.set('student', selectedStudent.code);
-			window.history.pushState({}, '', url);
+		// Store current state in sessionStorage for better back navigation
+		try {
+			if (selectedStudent) {
+				sessionStorage.setItem(
+					'student_page_state',
+					JSON.stringify({
+						studentCode: selectedStudent.code,
+						timestamp: Date.now()
+					})
+				);
+			}
+		} catch (e) {
+			console.error('Error storing state in sessionStorage:', e);
 		}
 
 		// Redirect to the eval_answer page with fromPage parameter
@@ -199,13 +232,6 @@
 
 	onMount(() => {
 		modal?.addEventListener('close', resetSearch);
-
-		// Add popstate event listener to handle browser back/forward navigation
-		window.addEventListener('popstate', handlePopState);
-
-		return () => {
-			window.removeEventListener('popstate', handlePopState);
-		};
 	});
 
 	onDestroy(() => {
@@ -215,22 +241,6 @@
 			modal.close();
 		}
 	});
-
-	// Handle browser back/forward navigation
-	function handlePopState() {
-		const url = new URL(window.location.href);
-		const newStudentCode = url.searchParams.get('student');
-
-		// If student code changed or was removed, update accordingly
-		if (newStudentCode && (!selectedStudent || newStudentCode !== selectedStudent.code)) {
-			loadStudentInfo(newStudentCode);
-		} else if (!newStudentCode && selectedStudent) {
-			// Reset if student parameter was removed
-			selectedStudent = null;
-			registers = [];
-			results = [];
-		}
-	}
 </script>
 
 <PageTitle

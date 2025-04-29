@@ -80,17 +80,19 @@
 			return;
 		}
 
-		// Update URL with level parameter
-		const url = new URL(window.location.href);
-		url.searchParams.set('level', selectedLevelCode);
-		if (!data.evalCode) {
-			url.searchParams.delete('eval');
-		}
-		window.history.pushState({}, '', url);
+		// Use SvelteKit's goto to update the URL
+		goto(`/result?level=${selectedLevelCode}${data.evalCode ? `&eval=${data.evalCode}` : ''}`, {
+			keepFocus: true,
+			noScroll: true,
+			replaceState: true
+		});
 
 		loadingEvals = true;
 		try {
 			const response = await fetch(`/api/eval/${selectedLevelCode}`);
+			if (!response.ok) {
+				throw new Error('Error al cargar evaluaciones');
+			}
 			availableEvals = await response.json();
 		} catch (error) {
 			console.error('Error cargando evaluaciones:', error);
@@ -104,11 +106,12 @@
 	async function selectEval(eval_item: EvalWithSections) {
 		selectedEval = eval_item;
 
-		// Update URL without reloading the page
-		const url = new URL(window.location.href);
-		url.searchParams.set('level', selectedLevelCode);
-		url.searchParams.set('eval', eval_item.code);
-		window.history.pushState({}, '', url);
+		// Use SvelteKit's goto to update the URL
+		goto(`/result?level=${selectedLevelCode}&eval=${eval_item.code}`, {
+			keepFocus: true,
+			noScroll: true,
+			replaceState: true
+		});
 
 		await loadResults(eval_item.code);
 	}
@@ -166,6 +169,20 @@
 	}
 
 	function viewStudentDetails(result: ResultItem) {
+		// Store current state in sessionStorage for better back navigation
+		try {
+			sessionStorage.setItem(
+				'result_page_state',
+				JSON.stringify({
+					levelCode: selectedLevelCode,
+					evalCode: selectedEval?.code,
+					timestamp: Date.now()
+				})
+			);
+		} catch (e) {
+			console.error('Error storing state in sessionStorage:', e);
+		}
+
 		// Redirect to the eval_answer page with fromPage parameter
 		goto(
 			`/eval_answer/${result.result_code}?from=result&level=${selectedLevelCode}&eval=${selectedEval?.code}`
@@ -174,13 +191,37 @@
 
 	// Effects
 	$effect(() => {
+		// Check if we have stored state from a previous navigation
+		try {
+			const storedState = sessionStorage.getItem('result_page_state');
+			if (storedState) {
+				const state = JSON.parse(storedState);
+				const isRecent = Date.now() - state.timestamp < 5 * 60 * 1000; // 5 minutes
+
+				if (isRecent && state.levelCode && state.evalCode) {
+					// Clear the stored state to avoid using it again
+					sessionStorage.removeItem('result_page_state');
+
+					// If the stored state matches the URL parameters, use it
+					if (state.levelCode === data.levelCode && state.evalCode === data.evalCode) {
+						selectedLevelCode = state.levelCode;
+						loadEvaluationsByLevel();
+						return;
+					}
+				}
+			}
+		} catch (e) {
+			console.error('Error reading from sessionStorage:', e);
+		}
+
+		// Normal flow if no stored state or stored state is invalid
 		if (selectedLevelCode) loadEvaluationsByLevel();
 		else availableEvals = [];
 	});
 
 	// Load evaluation from URL parameters if available
 	$effect(() => {
-		if (data.levelCode && data.evalCode) {
+		if (data.levelCode && data.evalCode && availableEvals.length > 0) {
 			// Find the evaluation in the available evaluations
 			const evalItem = availableEvals.find((e) => e.code === data.evalCode);
 			if (evalItem) {
@@ -194,42 +235,7 @@
 		if (data.levelCode && data.evalCode && selectedLevelCode) {
 			loadEvaluationsByLevel();
 		}
-
-		// Add popstate event listener to handle browser back/forward navigation
-		window.addEventListener('popstate', handlePopState);
-
-		return () => {
-			// Clean up event listener on component unmount
-			window.removeEventListener('popstate', handlePopState);
-		};
 	});
-
-	// Handle browser back/forward navigation
-	function handlePopState() {
-		const url = new URL(window.location.href);
-		const newLevelCode = url.searchParams.get('level');
-		const newEvalCode = url.searchParams.get('eval');
-
-		// Update level code if changed
-		if (newLevelCode && newLevelCode !== selectedLevelCode) {
-			selectedLevelCode = newLevelCode;
-			loadEvaluationsByLevel();
-		} else if (!newLevelCode && selectedLevelCode) {
-			// Reset if level parameter was removed
-			selectedLevelCode = '';
-			availableEvals = [];
-			selectedEval = null;
-			results = [];
-		}
-
-		// If we have evaluations loaded and a new eval code, select it
-		if (newEvalCode && availableEvals.length > 0) {
-			const evalItem = availableEvals.find((e) => e.code === newEvalCode);
-			if (evalItem && (!selectedEval || selectedEval.code !== newEvalCode)) {
-				selectEval(evalItem);
-			}
-		}
-	}
 </script>
 
 <PageTitle
