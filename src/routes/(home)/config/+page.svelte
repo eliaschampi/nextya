@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Moon, Sun, Palette, HelpCircle, InfoIcon } from 'lucide-svelte';
+	import { Moon, Sun, Palette, HelpCircle, InfoIcon, MessageCircle } from 'lucide-svelte';
 	import { theme } from '$lib/stores/theme';
 
 	// Theme options
@@ -11,7 +11,7 @@
 	}
 </script>
 
-<div class="container mx-auto max-w-3xl px-4">
+<div class="container max-w-3xl px-4">
 	<!-- System info card -->
 	<div class="card bg-base-200 shadow border border-base-300/30 mb-8">
 		<div class="card-body">
@@ -24,7 +24,6 @@
 
 			<p class="text-base-content/80 mb-4">
 				Esta aplicación está diseñada para ofrecerte una experiencia limpia, rápida y eficiente.
-				Personaliza tu experiencia con las opciones a continuación.
 			</p>
 
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -102,9 +101,9 @@
 				</div>
 				<h2 class="text-xl font-semibold">Ayuda</h2>
 			</div>
-			<div class="grid grid-cols-1 gap-4 mt-2">
+			<div class="text-center">
 				<a href="/" class="btn btn-outline btn-primary gap-2">
-					<HelpCircle class="w-5 h-5" />
+					<MessageCircle class="w-5 h-5" />
 					Solicitar soporte
 				</a>
 			</div>
