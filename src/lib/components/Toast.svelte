@@ -14,6 +14,9 @@
 		},
 		warning: {
 			icon: 'text-yellow-500 bg-yellow-100 dark:bg-yellow-800 dark:text-yellow-200'
+		},
+		info: {
+			icon: 'text-blue-500 bg-blue-100 dark:bg-blue-800 dark:text-blue-200'
 		}
 	};
 </script>

@@ -47,7 +47,7 @@ export type EvalWithSections = Eval & {
 	levels?: { name: string };
 };
 
-export type ToastType = 'success' | 'danger' | 'warning';
+export type ToastType = 'success' | 'danger' | 'warning' | 'info';
 
 export interface ToastState {
 	id: number;

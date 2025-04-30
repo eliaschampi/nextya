@@ -3,7 +3,7 @@
 	import EvaluationSelectionModal from '$lib/components/EvaluationSelectionModal.svelte';
 	import EvalHeader from '$lib/components/EvalHeader.svelte';
 	import { showToast } from '$lib/stores/Toast';
-	import { Eye, School, Search, SortAsc, SortDesc } from 'lucide-svelte';
+	import { Eye, School, Search, SortAsc, SortDesc, FileDown } from 'lucide-svelte';
 	import type { EvalWithSections, ResultItem } from '$lib/types';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
@@ -189,6 +189,54 @@
 		);
 	}
 
+	async function exportToExcel() {
+		if (!selectedEval) return;
+
+		try {
+			showToast('Preparando exportación...', 'info');
+
+			// Use the browser's fetch API to download the file
+			const response = await fetch(`/api/impcsv/export?eval_code=${selectedEval.code}`, {
+				method: 'GET'
+			});
+
+			if (!response.ok) {
+				throw new Error('Error al exportar resultados');
+			}
+
+			// Get the filename from the Content-Disposition header or use a default
+			const contentDisposition = response.headers.get('Content-Disposition');
+			let filename = 'resultados.csv';
+
+			if (contentDisposition) {
+				const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+				if (filenameMatch && filenameMatch[1]) {
+					filename = filenameMatch[1];
+				}
+			}
+
+			// Convert the response to a blob
+			const blob = await response.blob();
+
+			// Create a download link and trigger the download
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+
+			// Clean up
+			URL.revokeObjectURL(url);
+			document.body.removeChild(a);
+
+			showToast('Resultados exportados correctamente', 'success');
+		} catch (error) {
+			console.error('Error exportando resultados:', error);
+			showToast('No se pudieron exportar los resultados', 'danger');
+		}
+	}
+
 	// Effects
 	$effect(() => {
 		// Check if we have stored state from a previous navigation
@@ -275,6 +323,15 @@
 							{:else}
 								<SortAsc size={16} />
 							{/if}
+						</button>
+						<button
+							class="btn btn-sm btn-success btn-outline"
+							onclick={exportToExcel}
+							title="Exportar a Excel"
+							disabled={filteredResults.length === 0}
+						>
+							<FileDown size={16} class="mr-1" />
+							Excel
 						</button>
 						<span class="text-sm opacity-70">{filteredResults.length} estudiantes</span>
 					</div>

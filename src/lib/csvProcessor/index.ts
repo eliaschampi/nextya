@@ -1,7 +1,16 @@
 // src/lib/csvProcessor/index.ts
 
 export { importCsv, createNameKey } from './importCsv';
-export { exportCsv } from './exportCsv';
+export {
+	generateExcelCsv,
+	createExportFilename,
+	formatResultsForExport,
+	getResultsExportHeaders,
+	fetchEvaluationData,
+	fetchEvaluationResults,
+	createCsvResponse,
+	exportEvaluationResultsToCsv
+} from './exportExcel';
 export { CsvProcessorErrorCode } from './types';
 
 export type {
