@@ -1,7 +1,7 @@
 <script lang="ts">
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
-	import { User, X, Search, Eye, ListChecks, SortAsc, SortDesc } from 'lucide-svelte';
+	import { User, X, Search, Eye, ListChecks, SortAsc, SortDesc, FileDown } from 'lucide-svelte';
 	import type { Student, StudentRegister, StudentResult, SortOrder } from '$lib/types';
 	import { onMount, onDestroy } from 'svelte';
 	import { formatDate } from '$lib/utils/formatDate';
@@ -230,6 +230,55 @@
 		searchResults = [];
 	}
 
+	// Exportar resultados a Excel
+	async function exportToExcel() {
+		if (!selectedStudent) return;
+
+		try {
+			showToast('Preparando exportación...', 'info');
+
+			// Use the browser's fetch API to download the file
+			const response = await fetch(`/api/impcsv/student?student_code=${selectedStudent.code}`, {
+				method: 'GET'
+			});
+
+			if (!response.ok) {
+				throw new Error('Error al exportar resultados');
+			}
+
+			// Get the filename from the Content-Disposition header or use a default
+			const contentDisposition = response.headers.get('Content-Disposition');
+			let filename = 'evaluaciones.csv';
+
+			if (contentDisposition) {
+				const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+				if (filenameMatch && filenameMatch[1]) {
+					filename = filenameMatch[1];
+				}
+			}
+
+			// Convert the response to a blob
+			const blob = await response.blob();
+
+			// Create a download link and trigger the download
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+
+			// Clean up
+			URL.revokeObjectURL(url);
+			document.body.removeChild(a);
+
+			showToast('Evaluaciones exportadas correctamente', 'success');
+		} catch (error) {
+			console.error('Error exportando evaluaciones:', error);
+			showToast('No se pudieron exportar las evaluaciones', 'danger');
+		}
+	}
+
 	onMount(() => {
 		modal?.addEventListener('close', resetSearch);
 	});
@@ -308,18 +357,29 @@
 							<ListChecks size={20} class="text-primary" />
 							Resultados ({filteredResults.length})
 						</h3>
-						<button
-							class="btn btn-sm btn-primary btn-outline"
-							onclick={toggleSortOrder}
-							title={sortOrder === 'desc' ? 'Más recientes primero' : 'Más antiguos primero'}
-						>
-							<span class="mr-1">Fecha</span>
-							{#if sortOrder === 'desc'}
-								<SortDesc size={16} />
-							{:else}
-								<SortAsc size={16} />
-							{/if}
-						</button>
+						<div class="flex gap-2">
+							<button
+								class="btn btn-sm btn-success btn-outline"
+								onclick={exportToExcel}
+								title="Exportar a Excel"
+								disabled={filteredResults.length === 0}
+							>
+								<FileDown size={16} class="mr-1" />
+								Excel
+							</button>
+							<button
+								class="btn btn-sm btn-primary btn-outline"
+								onclick={toggleSortOrder}
+								title={sortOrder === 'desc' ? 'Más recientes primero' : 'Más antiguos primero'}
+							>
+								<span class="mr-1">Fecha</span>
+								{#if sortOrder === 'desc'}
+									<SortDesc size={16} />
+								{:else}
+									<SortAsc size={16} />
+								{/if}
+							</button>
+						</div>
 					</div>
 
 					<div class="overflow-x-auto">
