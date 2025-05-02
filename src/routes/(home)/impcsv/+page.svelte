@@ -1,9 +1,11 @@
 <script lang="ts">
 	import PageTitle from '$lib/components/PageTitle.svelte';
+	import Table from '$lib/components/Table.svelte';
 	import { Upload, FileText, Check, AlertCircle, Save } from 'lucide-svelte';
 	import type { StudentRegisterData, OmittedRowDetail } from '$lib/csvProcessor';
 	import { showToast } from '$lib/stores/Toast';
 	import type { ToastType } from '$lib/types';
+	import type { TableColumn } from '$lib/types/table';
 	import { permissionsStore } from '$lib/stores/permissions';
 
 	// Props from server
@@ -165,6 +167,39 @@
 			levelCode ||
 			''
 	);
+
+	// Define table columns for valid rows
+	const validRowsColumns: TableColumn<StudentRegisterData>[] = [
+		{ key: 'name', label: 'Nombre' },
+		{ key: 'last_name', label: 'Apellidos' },
+		{ key: 'roll_code', label: 'Código', class: 'font-mono' },
+		{ key: 'group_name', label: 'Grupo' },
+		{
+			key: 'email',
+			label: 'Email',
+			class: 'text-xs',
+			cell: (row: StudentRegisterData) => row.email || '-'
+		}
+	];
+
+	// Define table columns for omitted rows
+	const omittedRowsColumns: TableColumn<OmittedRowDetail>[] = [
+		{ key: 'rowNumber', label: 'Fila', class: 'font-mono' },
+		{
+			label: 'Nombre',
+			cell: (row: OmittedRowDetail) => row.row.name || '-'
+		},
+		{
+			label: 'Apellidos',
+			cell: (row: OmittedRowDetail) => row.row.last_name || '-'
+		},
+		{
+			label: 'Código',
+			class: 'font-mono',
+			cell: (row: OmittedRowDetail) => row.row.roll_code || '-'
+		},
+		{ key: 'reason', label: 'Razón', class: 'text-error text-xs' }
+	];
 </script>
 
 <PageTitle
@@ -364,51 +399,37 @@
 
 				<div class="overflow-x-auto max-h-96">
 					{#if activeTab === 'valid'}
-						<table class="table table-zebra table-sm w-full">
-							<thead>
-								<tr>
-									<th>Nombre</th>
-									<th>Apellidos</th>
-									<th>Código</th>
-									<th>Grupo</th>
-									<th>Email</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each validRows as row, i (i)}
-									<tr>
-										<td>{row.name}</td>
-										<td>{row.last_name}</td>
-										<td class="font-mono">{row.roll_code}</td>
-										<td>{row.group_name}</td>
-										<td class="text-xs">{row.email || '-'}</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
+						<Table
+							columns={validRowsColumns as unknown as {
+								key?: string;
+								label: string;
+								headerClass?: string;
+								class?: string;
+								cell?: (row: unknown) => unknown;
+							}[]}
+							rows={validRows as unknown[]}
+							striped={true}
+							hover={true}
+							bordered={true}
+							compact={true}
+							emptyMessage="No hay registros válidos para mostrar."
+						/>
 					{:else if activeTab === 'omitted'}
-						<table class="table table-zebra table-sm w-full">
-							<thead>
-								<tr>
-									<th>Fila</th>
-									<th>Nombre</th>
-									<th>Apellidos</th>
-									<th>Código</th>
-									<th>Razón</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each omittedRows as omitted, i (i)}
-									<tr>
-										<td class="font-mono">{omitted.rowNumber}</td>
-										<td>{omitted.row.name || '-'}</td>
-										<td>{omitted.row.last_name || '-'}</td>
-										<td class="font-mono">{omitted.row.roll_code || '-'}</td>
-										<td class="text-error text-xs">{omitted.reason}</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
+						<Table
+							columns={omittedRowsColumns as unknown as {
+								key?: string;
+								label: string;
+								headerClass?: string;
+								class?: string;
+								cell?: (row: unknown) => unknown;
+							}[]}
+							rows={omittedRows as unknown[]}
+							striped={true}
+							hover={true}
+							bordered={true}
+							compact={true}
+							emptyMessage="No hay registros omitidos para mostrar."
+						/>
 					{/if}
 				</div>
 			</div>

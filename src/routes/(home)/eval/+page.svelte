@@ -1,7 +1,11 @@
 <script lang="ts">
 	import PageTitle from '$lib/components/PageTitle.svelte';
+	import Table from '$lib/components/Table.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import type { Level, Course, FormSection, EvalWithSections } from '$lib/types';
+	import type { TableColumn } from '$lib/types/table';
+	// Define EventListener type
+	type EventListener = (event: Event) => void;
 	import {
 		ClipboardEdit,
 		Trash2,
@@ -9,15 +13,14 @@
 		AlertCircle,
 		ChevronUp,
 		ChevronDown,
-		Calendar,
 		BookOpen,
 		ClipboardList,
-		Key,
-		Edit
+		Search
 	} from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { permissionsStore } from '$lib/stores/permissions';
+	import { onMount } from 'svelte';
 
 	let modal: HTMLDialogElement | null = null;
 	let confirmModal: HTMLDialogElement | null = null;
@@ -40,8 +43,23 @@
 		name: '',
 		level_code: '',
 		eval_date: '',
-		group_name: ''
+		group_name: '',
+		searchQuery: ''
 	});
+
+	// Filtered evals based on search query
+	const filteredEvals = $derived(
+		formState.evals.filter((evalItem) => {
+			if (!formState.searchQuery.trim()) return true;
+
+			const query = formState.searchQuery.toLowerCase();
+			return (
+				evalItem.name?.toLowerCase().includes(query) ||
+				evalItem.levels?.name?.toLowerCase().includes(query) ||
+				evalItem.group_name?.toLowerCase().includes(query)
+			);
+		})
+	);
 
 	const { data } = $props<{ data: { levels: Level[]; courses: Course[] } }>();
 
@@ -209,6 +227,122 @@
 			showToast(responseMessage(res) || `Error eliminando "${deletedName}"`, 'danger');
 		}
 	}
+
+	// Define table columns for evaluations
+	const evalColumns: TableColumn<EvalWithSections>[] = [
+		{
+			key: 'name',
+			label: 'Nombre',
+			class: 'py-4 px-6 font-bold opacity-70'
+		},
+		{
+			key: 'levels.name',
+			label: 'Nivel',
+			class: 'py-4 px-6 text-center',
+			cell: (row: EvalWithSections) => `
+				<span class="badge badge-primary badge-outline flex items-center gap-1 justify-center mx-auto">
+					<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-open w-3 h-3"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+					${row.levels?.name || 'N/A'}
+				</span>
+			`
+		},
+		{
+			key: 'group_name',
+			label: 'Grupo',
+			class: 'py-4 px-6 text-center',
+			cell: (row: EvalWithSections) => row.group_name || 'N/A'
+		},
+		{
+			key: 'eval_date',
+			label: 'Fecha',
+			class: 'py-4 px-6 text-center',
+			cell: (row: EvalWithSections) => `
+				<div class="flex items-center justify-center gap-1 text-sm text-gray-500">
+					<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar w-3 h-3 opacity-70"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+					${formatDate(row.eval_date)}
+				</div>
+			`
+		},
+		{
+			label: 'Claves',
+			class: 'py-4 px-6 flex justify-center',
+			cell: (row: EvalWithSections) => `
+				<a
+					href="/eval/keys/${row.code}"
+					class="badge badge-soft flex items-center gap-1 justify-center"
+					aria-label="Gestionar preguntas"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-key w-3 h-3"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+					${row.eval_sections?.length || 0} Cursos
+				</a>
+			`
+		},
+		{
+			label: 'Acciones',
+			class: 'py-4 px-6',
+			cell: (row: EvalWithSections) => {
+				// Create SVG icons for the buttons
+				const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-edit w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+
+				const trashIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`;
+
+				return `
+					<div class="flex gap-2 justify-center">
+						<button
+							class="btn btn-xs sm:btn-sm btn-primary btn-soft ${!$canUpdate ? 'btn-disabled' : ''}"
+							onclick="document.dispatchEvent(new CustomEvent('eval-edit', {detail: '${row.code}'}))"
+							title="Editar examen"
+							aria-label="Editar examen ${row.name}"
+							${!$canUpdate ? 'disabled' : ''}
+						>
+							${editIcon}
+						</button>
+						<button
+							class="btn btn-xs sm:btn-sm btn-error btn-soft ${!$canDelete ? 'btn-disabled' : ''}"
+							onclick="document.dispatchEvent(new CustomEvent('eval-delete', {detail: '${row.code}'}))"
+							title="Eliminar examen"
+							aria-label="Eliminar examen ${row.name}"
+							${!$canDelete ? 'disabled' : ''}
+						>
+							${trashIcon}
+						</button>
+					</div>
+				`;
+			}
+		}
+	];
+
+	// Event handlers for custom events from table
+	function setupTableEventListeners() {
+		const handleEvalEdit = (event: CustomEvent) => {
+			const evalCode = event.detail;
+			const evalItem = formState.evals.find((e) => e.code === evalCode);
+			if (evalItem) {
+				openEditModal(evalItem);
+			}
+		};
+
+		const handleEvalDelete = (event: CustomEvent) => {
+			const evalCode = event.detail;
+			const evalItem = formState.evals.find((e) => e.code === evalCode);
+			if (evalItem) {
+				openDeleteConfirmModal(evalItem);
+			}
+		};
+
+		document.addEventListener('eval-edit', handleEvalEdit as EventListener);
+		document.addEventListener('eval-delete', handleEvalDelete as EventListener);
+
+		return () => {
+			document.removeEventListener('eval-edit', handleEvalEdit as EventListener);
+			document.removeEventListener('eval-delete', handleEvalDelete as EventListener);
+		};
+	}
+
+	onMount(() => {
+		const cleanup = setupTableEventListeners();
+		return () => cleanup();
+	});
 </script>
 
 <PageTitle title="Exámenes" description="Gestión de evaluaciones por nivel y grupo">
@@ -223,95 +357,69 @@
 <div
 	class="bg-base-200 rounded-xl mb-6 shadow-sm p-4 flex items-center justify-between flex-wrap gap-4"
 >
-	<label class="label font-semibold text-primary flex items-center">
-		<BookOpen class="w-5 h-5 mr-2" /> Selecciona un Nivel
-	</label>
-	<select
-		class="select select-bordered w-full sm:w-auto max-w-xs focus:ring-2 focus:ring-primary"
-		bind:value={formState.selectedLevelCode}
-		onchange={fetchEvalsByLevel}
-		aria-label="Seleccionar Nivel"
-	>
-		<option value="" disabled>Elige un nivel</option>
-		{#each data.levels as level (level.code)}
-			<option value={level.code}>{level.name}</option>
-		{/each}
-	</select>
+	<div class="flex items-center gap-4 flex-wrap">
+		<label class="label font-semibold text-primary flex items-center">
+			<BookOpen class="w-5 h-5 mr-2" /> Selecciona un Nivel
+		</label>
+		<select
+			class="select select-bordered w-full sm:w-auto max-w-xs focus:ring-2 focus:ring-primary"
+			bind:value={formState.selectedLevelCode}
+			onchange={fetchEvalsByLevel}
+			aria-label="Seleccionar Nivel"
+		>
+			<option value="" disabled>Elige un nivel</option>
+			{#each data.levels as level (level.code)}
+				<option value={level.code}>{level.name}</option>
+			{/each}
+		</select>
+	</div>
+
+	{#if formState.selectedLevelCode && formState.evals.length > 0}
+		<div class="relative w-full sm:w-auto flex-1 sm:flex-none sm:min-w-[300px]">
+			<div class="join w-full">
+				<input
+					type="text"
+					placeholder="Buscar examen..."
+					class="input input-bordered join-item w-full"
+					bind:value={formState.searchQuery}
+				/>
+				<button class="btn btn-primary join-item">
+					<Search size={18} />
+				</button>
+			</div>
+		</div>
+	{/if}
 </div>
 
 {#if formState.selectedLevelCode && formState.evals.length > 0}
 	<div class="card bg-gradient-to-br from-base-200 to-base-100 rounded-xl overflow-hidden mb-6">
 		<div class="card-body p-2 overflow-x-auto">
-			<table class="table table-zebra w-full">
-				<thead class="bg-base-200 sticky top-0 z-10">
-					<tr>
-						<th class="text-left px-6 py-3">Nombre</th>
-						<th class="text-center px-6 py-3">Nivel</th>
-						<th class="text-center px-6 py-3">Grupo</th>
-						<th class="text-center px-6 py-3">Fecha</th>
-						<th class="text-center px-6 py-3">Claves</th>
-						<th class="text-center px-6 py-3">Acciones</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each formState.evals as evalItem (evalItem.code)}
-						<tr
-							class="hover:bg-base-300 transition-colors border-b border-base-200 last:border-b-0"
-						>
-							<td class="py-4 px-6 font-bold opacity-70">{evalItem.name}</td>
-							<td class="py-4 px-6 text-center">
-								<span
-									class="badge badge-primary badge-outline flex items-center gap-1 justify-center mx-auto"
-								>
-									<BookOpen class="w-3 h-3" />
-									{evalItem.levels?.name || 'N/A'}
-								</span>
-							</td>
-							<td class="py-4 px-6 text-center">
-								{evalItem.group_name || 'N/A'}
-							</td>
-							<td class="py-4 px-6 text-center">
-								<div class="flex items-center justify-center gap-1 text-sm text-gray-500">
-									<Calendar class="w-3 h-3 opacity-70" />
-									{formatDate(evalItem.eval_date)}
-								</div>
-							</td>
-							<td class="py-4 px-6 flex justify-center">
-								<a
-									href={`/eval/keys/${evalItem.code}`}
-									class="badge badge-soft flex items-center gap-1 justify-center"
-									aria-label="Gestionar preguntas"
-								>
-									<Key class="w-3 h-3" />
-									{evalItem.eval_sections?.length || 0} Cursos
-								</a>
-							</td>
-							<td class="py-4 px-6">
-								<div class="flex gap-2 justify-center">
-									<button
-										class="btn btn-xs sm:btn-sm btn-primary btn-soft"
-										title="Editar examen"
-										onclick={() => openEditModal(evalItem)}
-										aria-label="Editar examen {evalItem.name}"
-										disabled={!$canUpdate}
-									>
-										<Edit class="w-4 h-4" />
-									</button>
-									<button
-										class="btn btn-xs sm:btn-sm btn-error btn-soft"
-										title="Eliminar examen"
-										onclick={() => openDeleteConfirmModal(evalItem)}
-										aria-label="Eliminar examen {evalItem.name}"
-										disabled={!$canDelete}
-									>
-										<Trash2 class="w-4 h-4" />
-									</button>
-								</div>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+			{#if filteredEvals.length > 0}
+				<Table
+					columns={evalColumns as unknown as {
+						key?: string;
+						label: string;
+						headerClass?: string;
+						class?: string;
+						cell?: (row: unknown) => unknown;
+					}[]}
+					rows={filteredEvals as unknown[]}
+					striped={true}
+					hover={true}
+					bordered={true}
+					emptyMessage="No hay exámenes para mostrar."
+				/>
+			{:else if formState.searchQuery}
+				<div
+					class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md mx-auto text-center"
+				>
+					<Search size={48} class="text-primary/30 mx-auto mb-4" />
+					<h3 class="text-lg font-bold mb-2">Sin resultados</h3>
+					<p class="text-base-content/70 mb-4">
+						No se encontraron exámenes que coincidan con la búsqueda "{formState.searchQuery}".
+					</p>
+				</div>
+			{/if}
 		</div>
 	</div>
 {:else if formState.selectedLevelCode}

@@ -1,10 +1,14 @@
 <script lang="ts">
 	import Message from '$lib/components/Message.svelte';
 	import PageTitle from '$lib/components/PageTitle.svelte';
+	import Table from '$lib/components/Table.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
 	import type { Level, RegisterStudent, SelectForDelete, Student } from '$lib/types';
-	import { Book, Pencil, Search, Trash2, UserPlus } from 'lucide-svelte';
+	import type { TableColumn } from '$lib/types/table';
+	// Define EventListener type
+	type EventListener = (event: Event) => void;
+	import { Search, UserPlus } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { permissionsStore } from '$lib/stores/permissions';
@@ -22,6 +26,21 @@
 	let selectedGroup = $state('');
 	let students = $state<RegisterStudent[]>([]);
 
+	// Filtered students based on search query
+	const filteredStudents = $derived(
+		students.filter((student) => {
+			if (!searchQuery.trim()) return true;
+
+			const query = searchQuery.toLowerCase();
+			return (
+				student.name?.toLowerCase().includes(query) ||
+				student.last_name?.toLowerCase().includes(query) ||
+				student.roll_code?.toLowerCase().includes(query) ||
+				student.phone?.toLowerCase().includes(query)
+			);
+		})
+	);
+
 	let nameInput: HTMLInputElement | null = $state(null);
 	let lastNameInput: HTMLInputElement | null = $state(null);
 	let phoneInput: HTMLInputElement | null = $state(null);
@@ -36,6 +55,109 @@
 
 	const { data } = $props<{ data: { levels: Level[] } }>();
 	const groupOptions = ['A', 'B', 'C', 'D'];
+
+	// Define table columns
+	const studentColumns: TableColumn<RegisterStudent>[] = [
+		{ key: 'roll_code', label: 'Código', class: 'text-accent font-medium' },
+		{ key: 'name', label: 'Nombre', class: 'font-medium' },
+		{ key: 'last_name', label: 'Apellido' },
+		{
+			key: 'phone',
+			label: 'Teléfono',
+			class: 'text-center',
+			cell: (row: RegisterStudent) => row.phone || 'N/A'
+		},
+		{
+			key: 'level',
+			label: 'Nivel',
+			class: 'text-center',
+			cell: (row: RegisterStudent) =>
+				`<span class="badge badge-primary badge-outline">${row.level}</span>`
+		},
+		{
+			key: 'group_name',
+			label: 'Grupo',
+			class: 'text-center',
+			cell: (row: RegisterStudent) => `<span class="badge badge-secondary">${row.group_name}</span>`
+		},
+		{
+			key: 'created_at',
+			label: 'Fecha de registro',
+			class: 'text-sm text-gray-500',
+			cell: (row: RegisterStudent) => formatDate(row.created_at)
+		},
+		{
+			label: 'Acciones',
+			headerClass: 'text-center',
+			cell: (row: RegisterStudent) => {
+				// Create SVG icons for the buttons
+				const pencilIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil w-4 h-4"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>`;
+
+				const trashIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`;
+
+				const bookIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book w-4 h-4"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>`;
+
+				return `
+					<div class="flex gap-2 justify-center">
+						<button
+							class="btn btn-sm btn-primary btn-outline ${!$canUpdate ? 'btn-disabled' : ''}"
+							onclick="document.dispatchEvent(new CustomEvent('student-edit', {detail: '${row.student_code}'}))"
+							aria-label="Editar estudiante"
+							${!$canUpdate ? 'disabled' : ''}
+						>
+							${pencilIcon}
+						</button>
+						<button
+							class="btn btn-sm btn-error btn-outline ${!$canDelete ? 'btn-disabled' : ''}"
+							onclick="document.dispatchEvent(new CustomEvent('student-delete', {detail: '${row.student_code}'}))"
+							aria-label="Eliminar estudiante"
+							${!$canDelete ? 'disabled' : ''}
+						>
+							${trashIcon}
+						</button>
+						<button
+							class="btn btn-sm btn-secondary btn-outline"
+							aria-label="Ver matrículas"
+						>
+							${bookIcon}
+						</button>
+					</div>
+				`;
+			}
+		}
+	];
+
+	// Event handlers for custom events from table
+	function setupTableEventListeners() {
+		const handleStudentEdit = (event: CustomEvent) => {
+			const studentCode = event.detail;
+			const student = students.find((s) => s.student_code === studentCode);
+			if (student) {
+				openEditModal(student);
+			}
+		};
+
+		const handleStudentDelete = (event: CustomEvent) => {
+			const studentCode = event.detail;
+			const student = students.find((s) => s.student_code === studentCode);
+			if (student) {
+				openDeleteConfirmModal(student);
+			}
+		};
+
+		document.addEventListener('student-edit', handleStudentEdit as EventListener);
+		document.addEventListener('student-delete', handleStudentDelete as EventListener);
+
+		return () => {
+			document.removeEventListener('student-edit', handleStudentEdit as EventListener);
+			document.removeEventListener('student-delete', handleStudentDelete as EventListener);
+		};
+	}
+
+	onMount(() => {
+		const cleanup = setupTableEventListeners();
+		return () => cleanup();
+	});
 
 	async function fetchStudentsByFilter(group?: string) {
 		if (group !== undefined) {
@@ -259,67 +381,55 @@
 			{/each}
 		</div>
 	{/if}
+
+	{#if selectedLevelCode && students.length > 0}
+		<div class="relative w-full sm:w-auto flex-1 sm:flex-none sm:min-w-[300px] ml-auto">
+			<div class="join w-full">
+				<input
+					type="text"
+					placeholder="Buscar estudiante..."
+					class="input input-bordered join-item w-full"
+					bind:value={searchQuery}
+				/>
+				<button class="btn btn-primary join-item">
+					<Search size={18} />
+				</button>
+			</div>
+		</div>
+	{/if}
 </div>
 
 {#if selectedLevelCode && students.length > 0}
 	<div
 		class="card bg-gradient-to-br from-base-200 to-base-100 shadow border border-base-300/30 rounded-xl overflow-hidden"
 	>
-		<div class="card-body overflow-x-auto">
-			<table class="table table-zebra w-full">
-				<thead>
-					<tr>
-						<th>Codigo</th>
-						<th>Nombre</th>
-						<th>Apellido</th>
-						<th>Telefono</th>
-						<th>Nivel</th>
-						<th>Grupo</th>
-						<th>Fecha de registro</th>
-						<th class="text-center">Acciones</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each students as student (student.student_code)}
-						<tr class="hover:bg-base-300 transition-colors border-b border-base-300">
-							<td class="py-3 px-4 text-accent font-medium">{student.roll_code}</td>
-							<td class="py-3 px-4 font-medium">{student.name}</td>
-							<td class="py-3 px-4">{student.last_name}</td>
-							<td class="py-3 px-4">{student.phone || 'N/A'}</td>
-							<td class="py-3 px-4">
-								<span class="badge badge-primary badge-outline">{student.level}</span>
-							</td>
-							<td class="py-3 px-4 text-center">
-								<span class="badge badge-secondary">{student.group_name}</span>
-							</td>
-							<td class="py-3 px-4 text-sm text-gray-500">{formatDate(student.created_at)}</td>
-							<td class="py-3 px-4">
-								<div class="flex gap-2 justify-center">
-									<button
-										class="btn btn-sm btn-primary btn-outline"
-										onclick={() => openEditModal(student)}
-										aria-label="Editar estudiante"
-										disabled={!$canUpdate}
-									>
-										<Pencil class="w-4 h-4" />
-									</button>
-									<button
-										class="btn btn-sm btn-error btn-outline"
-										onclick={() => openDeleteConfirmModal(student)}
-										aria-label="Eliminar estudiante"
-										disabled={!$canDelete}
-									>
-										<Trash2 class="w-4 h-4" />
-									</button>
-									<button class="btn btn-sm btn-secondary btn-outline" aria-label="Ver matrículas">
-										<Book class="w-4 h-4" />
-									</button>
-								</div>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+		<div class="card-body">
+			{#if filteredStudents.length > 0}
+				<Table
+					columns={studentColumns as unknown as {
+						key?: string;
+						label: string;
+						headerClass?: string;
+						class?: string;
+						cell?: (row: unknown) => unknown;
+					}[]}
+					rows={filteredStudents as unknown[]}
+					striped={true}
+					hover={true}
+					bordered={true}
+					emptyMessage="No hay estudiantes en este nivel y grupo."
+				/>
+			{:else if searchQuery}
+				<div
+					class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md mx-auto text-center"
+				>
+					<Search size={48} class="text-primary/30 mx-auto mb-4" />
+					<h3 class="text-lg font-bold mb-2">Sin resultados</h3>
+					<p class="text-base-content/70 mb-4">
+						No se encontraron estudiantes que coincidan con la búsqueda "{searchQuery}".
+					</p>
+				</div>
+			{/if}
 		</div>
 	</div>
 {:else if selectedLevelCode}

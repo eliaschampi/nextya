@@ -1,10 +1,12 @@
 <script lang="ts">
 	import PageTitle from '$lib/components/PageTitle.svelte';
-	import { Check, X, AlertCircle, ListChecks, User, Calendar, School, Eye } from 'lucide-svelte';
+	import Table from '$lib/components/Table.svelte';
+	import { Check, ListChecks, User, Calendar, School, Eye } from 'lucide-svelte';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { goto } from '$app/navigation';
 
-	import type { EvaluationResult } from '$lib/types';
+	import type { EvaluationResult, SectionScore, StudentQuestionAnswer } from '$lib/types';
+	import type { TableColumn } from '$lib/types/table';
 	import Message from '$lib/components/Message.svelte';
 
 	// Props from server
@@ -119,6 +121,90 @@
 			}
 			goto(`/result?level=${data.levelCode}&eval=${data.evalCode}`);
 		}
+	}
+
+	// Define table columns for section scores
+	const sectionScoreColumns: TableColumn<SectionScore>[] = [
+		{ key: 'section_name', label: 'Sección', class: 'font-medium' },
+		{ key: 'correct_count', label: 'Correctas', class: 'text-center text-success' },
+		{ key: 'incorrect_count', label: 'Incorrectas', class: 'text-center text-error' },
+		{ key: 'blank_count', label: 'Blanco', class: 'text-center text-warning' },
+		{ key: 'total_questions', label: 'Total', class: 'text-center' },
+		{
+			key: 'score',
+			label: 'Nota',
+			class: 'text-center font-bold',
+			cell: (row: SectionScore) => `
+				<span class="${getScoreColorClass(row.score)}">
+					${row.score.toFixed(1)}
+				</span>
+			`
+		}
+	];
+
+	// Define table columns for student answers
+	function createAnswerColumns(): TableColumn<StudentQuestionAnswer>[] {
+		return [
+			{
+				key: 'order_in_eval',
+				label: 'N°',
+				class: 'w-12 text-center font-medium'
+			},
+			{
+				label: 'Respuesta',
+				class: 'w-20 text-center',
+				cell: (row: StudentQuestionAnswer) => `
+					<span class="badge badge-lg font-mono">
+						${row.is_blank ? '-' : row.is_multiple ? 'Multi' : row.student_answer}
+					</span>
+				`
+			},
+			{
+				key: 'correct_key',
+				label: 'Correcta',
+				class: 'w-20 text-center',
+				cell: (row: StudentQuestionAnswer) => `
+					<span class="badge badge-outline badge-primary badge-lg font-mono">
+						${row.correct_key}
+					</span>
+				`
+			},
+			{
+				label: 'Estado',
+				cell: (row: StudentQuestionAnswer) => {
+					const badgeClass = row.is_blank
+						? 'badge-warning'
+						: row.is_multiple
+							? 'badge-error'
+							: row.is_correct
+								? 'badge-success'
+								: 'badge-error';
+
+					const checkIcon =
+						'<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg>';
+					const alertIcon =
+						'<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-alert-circle w-3 h-3"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
+					const xIcon =
+						'<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x w-3 h-3"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>';
+
+					const icon = row.is_correct ? checkIcon : row.is_blank ? alertIcon : xIcon;
+
+					const text = row.is_correct
+						? 'Correcta'
+						: row.is_blank
+							? 'En blanco'
+							: row.is_multiple
+								? 'Múltiple'
+								: 'Incorrecta';
+
+					return `
+						<span class="badge gap-1 ${badgeClass}">
+							${icon} ${text}
+						</span>
+					`;
+				}
+			}
+		];
 	}
 </script>
 
@@ -281,33 +367,20 @@
 						<div class="card-body">
 							<h3 class="card-title text-primary mb-2">Puntajes por Sección</h3>
 							<div class="overflow-x-auto">
-								<table class="table table-zebra w-full">
-									<thead>
-										<tr class="bg-base-300/50">
-											<th>Sección</th>
-											<th class="text-center">Correctas</th>
-											<th class="text-center">Incorrectas</th>
-											<th class="text-center">Blanco</th>
-											<th class="text-center">Total</th>
-											<th class="text-center">Nota</th>
-										</tr>
-									</thead>
-									<tbody>
-										{#each Object.entries(result.scores.by_section) as [sectionCode, sectionScore] (sectionCode)}
-											{@const typedScore = sectionScore as import('$lib/types').SectionScore}
-											<tr>
-												<td class="font-medium">{typedScore.section_name}</td>
-												<td class="text-center text-success">{typedScore.correct_count}</td>
-												<td class="text-center text-error">{typedScore.incorrect_count}</td>
-												<td class="text-center text-warning">{typedScore.blank_count}</td>
-												<td class="text-center">{typedScore.total_questions}</td>
-												<td class="text-center font-bold {getScoreColorClass(typedScore.score)}">
-													{typedScore.score.toFixed(1)}
-												</td>
-											</tr>
-										{/each}
-									</tbody>
-								</table>
+								<Table
+									columns={sectionScoreColumns as unknown as {
+										key?: string;
+										label: string;
+										headerClass?: string;
+										class?: string;
+										cell?: (row: unknown) => unknown;
+									}[]}
+									rows={Object.values(result.scores.by_section) as unknown[]}
+									striped={true}
+									hover={true}
+									bordered={true}
+									emptyMessage="No hay secciones para mostrar."
+								/>
 							</div>
 						</div>
 					</div>
@@ -323,64 +396,21 @@
 							<div class="card-body">
 								<h3 class="card-title text-primary mb-2">{typedSection.name}</h3>
 								<div class="overflow-x-auto">
-									<table class="table table-zebra table-sm w-full">
-										<thead>
-											<tr class="bg-base-300/50">
-												<th class="w-12 text-center">N°</th>
-												<th class="w-20 text-center">Respuesta</th>
-												<th class="w-20 text-center">Correcta</th>
-												<th>Estado</th>
-											</tr>
-										</thead>
-										<tbody>
-											{#each typedSection.answers as answer (answer.question_code)}
-												<tr>
-													<td class="text-center font-medium">{answer.order_in_eval}</td>
-													<td class="text-center">
-														<span class="badge badge-lg font-mono">
-															{answer.is_blank
-																? '-'
-																: answer.is_multiple
-																	? 'Multi'
-																	: answer.student_answer}
-														</span>
-													</td>
-													<td class="text-center">
-														<span class="badge badge-outline badge-primary badge-lg font-mono">
-															{answer.correct_key}
-														</span>
-													</td>
-													<td>
-														<span
-															class={`badge gap-1 ${
-																answer.is_blank
-																	? 'badge-warning'
-																	: answer.is_multiple
-																		? 'badge-error'
-																		: answer.is_correct
-																			? 'badge-success'
-																			: 'badge-error'
-															}`}
-														>
-															{#if answer.is_correct}
-																<Check size={12} />
-																Correcta
-															{:else if answer.is_blank}
-																<AlertCircle size={12} />
-																En blanco
-															{:else if answer.is_multiple}
-																<X size={12} />
-																Múltiple
-															{:else}
-																<X size={12} />
-																Incorrecta
-															{/if}
-														</span>
-													</td>
-												</tr>
-											{/each}
-										</tbody>
-									</table>
+									<Table
+										columns={createAnswerColumns() as unknown as {
+											key?: string;
+											label: string;
+											headerClass?: string;
+											class?: string;
+											cell?: (row: unknown) => unknown;
+										}[]}
+										rows={typedSection.answers as unknown[]}
+										striped={true}
+										hover={true}
+										bordered={true}
+										compact={true}
+										emptyMessage="No hay respuestas para mostrar."
+									/>
 								</div>
 							</div>
 						</div>

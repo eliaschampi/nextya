@@ -2,9 +2,13 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import EvaluationSelectionModal from '$lib/components/EvaluationSelectionModal.svelte';
 	import EvalHeader from '$lib/components/EvalHeader.svelte';
+	import Table from '$lib/components/Table.svelte';
 	import { showToast } from '$lib/stores/Toast';
-	import { Eye, School, Search, SortAsc, SortDesc, FileDown } from 'lucide-svelte';
+	import { School, Search, SortAsc, SortDesc, FileDown } from 'lucide-svelte';
 	import type { EvalWithSections, ResultItem } from '$lib/types';
+	import type { TableColumn } from '$lib/types/table';
+	// Define EventListener type
+	type EventListener = (event: Event) => void;
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { permissionsStore } from '$lib/stores/permissions';
@@ -284,6 +288,84 @@
 			loadEvaluationsByLevel();
 		}
 	});
+
+	// Define table columns
+	const resultColumns: TableColumn<ResultItem>[] = [
+		{ key: 'roll_code', label: 'Código', class: 'font-mono text-accent font-medium' },
+		{ key: 'name', label: 'Nombre', class: 'font-medium' },
+		{ key: 'last_name', label: 'Apellidos' },
+		{
+			key: 'group_name',
+			label: 'Grupo',
+			class: 'text-center',
+			cell: (row: ResultItem) => `<span class="badge badge-secondary">${row.group_name}</span>`
+		},
+		{
+			key: 'correct_count',
+			label: 'Correctas',
+			class: 'text-center text-success font-medium'
+		},
+		{
+			key: 'incorrect_count',
+			label: 'Incorrectas',
+			class: 'text-center text-error font-medium'
+		},
+		{
+			key: 'blank_count',
+			label: 'En blanco',
+			class: 'text-center opacity-70'
+		},
+		{
+			key: 'score',
+			label: 'Nota',
+			class: 'text-center font-bold',
+			cell: (row: ResultItem) => `
+				<span class="badge badge-lg ${row.score >= 10.5 ? 'badge-success' : 'badge-error'}">
+					${row.score.toFixed(1)}
+				</span>
+			`
+		},
+		{
+			label: 'Acciones',
+			class: 'text-center',
+			cell: (row: ResultItem) => {
+				const eyeIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye w-4 h-4 mr-1"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+
+				return `
+					<button
+						class="btn btn-sm btn-primary btn-outline ${!$canViewDetails ? 'btn-disabled' : ''}"
+						onclick="document.dispatchEvent(new CustomEvent('view-result', {detail: '${row.result_code}'}))"
+						title="Ver detalles"
+						${!$canViewDetails ? 'disabled' : ''}
+					>
+						${eyeIcon} Ver
+					</button>
+				`;
+			}
+		}
+	];
+
+	// Event handlers for custom events from table
+	function setupTableEventListeners() {
+		const handleViewResult = (event: CustomEvent) => {
+			const resultCode = event.detail;
+			const result = results.find((r) => r.result_code === resultCode);
+			if (result) {
+				viewStudentDetails(result);
+			}
+		};
+
+		document.addEventListener('view-result', handleViewResult as EventListener);
+
+		return () => {
+			document.removeEventListener('view-result', handleViewResult as EventListener);
+		};
+	}
+
+	onMount(() => {
+		const cleanup = setupTableEventListeners();
+		return () => cleanup();
+	});
 </script>
 
 <PageTitle
@@ -355,110 +437,73 @@
 					<div class="flex justify-center py-12">
 						<span class="loading loading-spinner loading-lg text-primary"></span>
 					</div>
-				{:else if filteredResults.length > 0}
-					<div class="overflow-x-auto">
-						<table class="table table-zebra w-full">
-							<thead>
-								<tr>
-									<th class="w-24">Código</th>
-									<th>Nombre</th>
-									<th>Apellidos</th>
-									<th class="text-center">Grupo</th>
-									<th class="text-center">Correctas</th>
-									<th class="text-center">Incorrectas</th>
-									<th class="text-center">En blanco</th>
-									<th class="text-center">Nota</th>
-									<th class="text-center">Acciones</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each paginatedResults as result (result.result_code)}
-									<tr class="hover:bg-base-300 transition-colors border-b border-base-300">
-										<td class="py-3 px-4 font-mono text-accent font-medium">{result.roll_code}</td>
-										<td class="py-3 px-4 font-medium">{result.name}</td>
-										<td class="py-3 px-4">{result.last_name}</td>
-										<td class="py-3 px-4 text-center">
-											<span class="badge badge-secondary">{result.group_name}</span>
-										</td>
-										<td class="py-3 px-4 text-center text-success font-medium"
-											>{result.correct_count}</td
-										>
-										<td class="py-3 px-4 text-center text-error font-medium"
-											>{result.incorrect_count}</td
-										>
-										<td class="py-3 px-4 text-center opacity-70">{result.blank_count}</td>
-										<td class="py-3 px-4 text-center font-bold">
-											<span
-												class="badge badge-lg {result.score >= 10.5
-													? 'badge-success'
-													: 'badge-error'}"
-											>
-												{result.score.toFixed(1)}
-											</span>
-										</td>
-										<td class="py-3 px-4 text-center" onclick={(e) => e.stopPropagation()}>
-											<button
-												class="btn btn-sm btn-primary btn-outline"
-												onclick={() => viewStudentDetails(result)}
-												title="Ver detalles"
-												disabled={!$canViewDetails}
-											>
-												<Eye size={16} class="mr-1" /> Ver
-											</button>
-										</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
+				{:else if results.length > 0}
+					{#if filteredResults.length > 0}
+						<div class="overflow-x-auto">
+							<Table
+								columns={resultColumns as unknown as {
+									key?: string;
+									label: string;
+									headerClass?: string;
+									class?: string;
+									cell?: (row: unknown) => unknown;
+								}[]}
+								rows={paginatedResults as unknown[]}
+								striped={true}
+								hover={true}
+								bordered={true}
+								emptyMessage="No hay resultados para mostrar."
+							/>
 
-						<!-- Paginación -->
-						{#if totalPages > 1}
-							<div class="flex justify-center mt-6">
-								<div class="join">
-									<button
-										class="join-item btn btn-sm btn-primary btn-outline {currentPage === 1
-											? 'btn-disabled'
-											: ''}"
-										onclick={() => goToPage(currentPage - 1)}
-									>
-										«
-									</button>
-
-									{#each Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
-										return index + 1 + Math.max(0, Math.min(totalPages - 5, currentPage - 3));
-									}) as pageNum (pageNum)}
+							<!-- Paginación -->
+							{#if totalPages > 1}
+								<div class="flex justify-center mt-6">
+									<div class="join">
 										<button
-											class="join-item btn btn-sm {pageNum === currentPage
-												? 'btn-primary'
-												: 'btn-outline'}"
-											onclick={() => goToPage(pageNum)}
+											class="join-item btn btn-sm btn-primary btn-soft {currentPage === 1
+												? 'btn-disabled'
+												: ''}"
+											onclick={() => goToPage(currentPage - 1)}
 										>
-											{pageNum}
+											«
 										</button>
-									{/each}
 
-									<button
-										class="join-item btn btn-sm btn-primary btn-outline {currentPage === totalPages
-											? 'btn-disabled'
-											: ''}"
-										onclick={() => goToPage(currentPage + 1)}
-									>
-										»
-									</button>
+										{#each Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
+											return index + 1 + Math.max(0, Math.min(totalPages - 5, currentPage - 3));
+										}) as pageNum (pageNum)}
+											<button
+												class="join-item btn btn-sm {pageNum === currentPage
+													? 'btn-primary'
+													: 'btn-soft'}"
+												onclick={() => goToPage(pageNum)}
+											>
+												{pageNum}
+											</button>
+										{/each}
+
+										<button
+											class="join-item btn btn-sm btn-primary btn-soft {currentPage === totalPages
+												? 'btn-disabled'
+												: ''}"
+											onclick={() => goToPage(currentPage + 1)}
+										>
+											»
+										</button>
+									</div>
 								</div>
-							</div>
-						{/if}
-					</div>
-				{:else if searchQuery}
-					<div
-						class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md mx-auto text-center"
-					>
-						<Search size={48} class="text-primary/30 mx-auto mb-4" />
-						<h3 class="text-lg font-bold mb-2">Sin resultados</h3>
-						<p class="text-base-content/70 mb-4">
-							No se encontraron estudiantes que coincidan con la búsqueda "{searchQuery}".
-						</p>
-					</div>
+							{/if}
+						</div>
+					{:else if searchQuery}
+						<div
+							class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md mx-auto text-center"
+						>
+							<Search size={48} class="text-primary/30 mx-auto mb-4" />
+							<h3 class="text-lg font-bold mb-2">Sin resultados</h3>
+							<p class="text-base-content/70 mb-4">
+								No se encontraron estudiantes que coincidan con la búsqueda "{searchQuery}".
+							</p>
+						</div>
+					{/if}
 				{:else}
 					<div
 						class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md mx-auto text-center"
