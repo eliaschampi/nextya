@@ -1,13 +1,18 @@
 <script lang="ts">
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
-	import { User, X, Search, Eye, ListChecks, SortAsc, SortDesc, FileDown } from 'lucide-svelte';
+	import { User, X, Search, ListChecks, SortAsc, SortDesc, FileDown } from 'lucide-svelte';
 	import type { Student, StudentRegister, StudentResult, SortOrder } from '$lib/types';
+	import type { TableColumn } from '$lib/types/table';
 	import { onMount, onDestroy } from 'svelte';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { goto } from '$app/navigation';
 	import Message from '$lib/components/Message.svelte';
+	import Table from '$lib/components/Table.svelte';
 	import { permissionsStore } from '$lib/stores/permissions';
+
+	// Define EventListener type for custom events
+	type EventListener = (event: Event) => void;
 
 	// Referencias y estados
 	let modal = $state<HTMLDialogElement | null>(null);
@@ -24,11 +29,27 @@
 	let sortOrder = $state<SortOrder>('desc');
 	let currentPage = $state(1);
 	const itemsPerPage = 10;
+	let resultsSearchQuery = $state('');
 
 	// Computed values
-	let filteredResults = $derived(
+	let filteredByRegister = $derived(
 		results.filter((r) => !selectedRegister || r.register_code === selectedRegister)
 	);
+
+	// Filter by search query
+	let filteredResults = $derived(
+		filteredByRegister.filter((result) => {
+			if (!resultsSearchQuery.trim()) return true;
+
+			const query = resultsSearchQuery.toLowerCase();
+			return (
+				result.eval_name?.toLowerCase().includes(query) ||
+				formatDate(result.eval_date).toLowerCase().includes(query) ||
+				result.score.toString().includes(query)
+			);
+		})
+	);
+
 	let totalPages = $derived(Math.ceil(filteredResults.length / itemsPerPage));
 	let paginatedResults = $derived(
 		filteredResults.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
@@ -44,6 +65,66 @@
 
 	// Permissions
 	const canViewDetails = permissionsStore.has({ entity: 'eval_results', action: 'read' });
+
+	// Define table columns
+	const resultColumns: TableColumn<StudentResult>[] = [
+		{
+			label: 'Fecha',
+			cell: (row: StudentResult) => formatDate(row.eval_date)
+		},
+		{
+			label: 'Evaluación',
+			key: 'eval_name',
+			class: 'font-medium'
+		},
+		{
+			label: 'Preguntas',
+			class: 'text-center',
+			cell: (row: StudentResult) => row.correct_count + row.incorrect_count + row.blank_count
+		},
+		{
+			label: 'Correctas',
+			key: 'correct_count',
+			class: 'text-center text-success font-medium'
+		},
+		{
+			label: 'Incorrectas',
+			key: 'incorrect_count',
+			class: 'text-center text-error font-medium'
+		},
+		{
+			label: 'En blanco',
+			key: 'blank_count',
+			class: 'text-center opacity-70'
+		},
+		{
+			label: 'Nota',
+			class: 'text-center font-bold',
+			cell: (row: StudentResult) => `
+				<span class="badge badge-lg ${row.score >= 10.5 ? 'badge-success' : 'badge-error'}">
+					${row.score.toFixed(1)}
+				</span>
+			`
+		},
+		{
+			label: 'Acciones',
+			class: 'text-center',
+			cell: (row: StudentResult) => {
+				const eyeIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye w-4 h-4 mr-1"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+
+				return `
+					<button
+						class="btn btn-sm btn-primary btn-outline ${!$canViewDetails ? 'btn-disabled' : ''}"
+						onclick="document.dispatchEvent(new CustomEvent('view-result', {detail: '${row.result_code}'}))"
+						title="Ver detalles"
+						${!$canViewDetails ? 'disabled' : ''}
+					>
+						${eyeIcon} Ver
+					</button>
+				`;
+			}
+		}
+	];
 
 	// Cargar estudiante si hay un código en la URL
 	$effect(() => {
@@ -279,8 +360,27 @@
 		}
 	}
 
+	// Event handlers for custom events from table
+	function setupTableEventListeners() {
+		const handleViewResult = (event: CustomEvent) => {
+			const resultCode = event.detail;
+			const result = results.find((r) => r.result_code === resultCode);
+			if (result) {
+				viewResultDetails(result);
+			}
+		};
+
+		document.addEventListener('view-result', handleViewResult as EventListener);
+
+		return () => {
+			document.removeEventListener('view-result', handleViewResult as EventListener);
+		};
+	}
+
 	onMount(() => {
 		modal?.addEventListener('close', resetSearch);
+		const cleanup = setupTableEventListeners();
+		return () => cleanup();
 	});
 
 	onDestroy(() => {
@@ -347,22 +447,44 @@
 			<div class="flex justify-center py-12">
 				<span class="loading loading-spinner loading-lg text-primary"></span>
 			</div>
-		{:else if filteredResults.length > 0}
+		{:else if results.length > 0}
 			<div
 				class="card bg-gradient-to-br from-base-200 to-base-100 shadow duration-300 border border-base-300/30 rounded-xl"
 			>
 				<div class="card-body">
-					<div class="flex justify-between items-center mb-4">
+					<div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
 						<h3 class="text-lg font-bold flex items-center gap-2">
 							<ListChecks size={20} class="text-primary" />
-							Resultados ({filteredResults.length})
+							Resultados ({filteredByRegister.length})
 						</h3>
-						<div class="flex gap-2">
+						<div class="flex flex-wrap gap-2 items-center">
+							<div class="relative w-full sm:w-auto flex-1 sm:flex-none sm:min-w-[250px]">
+								<div class="join w-full">
+									<input
+										type="text"
+										placeholder="Buscar evaluación..."
+										class="input input-bordered join-item w-full input-sm"
+										bind:value={resultsSearchQuery}
+									/>
+									{#if resultsSearchQuery}
+										<button
+											class="btn btn-error join-item btn-sm"
+											onclick={() => (resultsSearchQuery = '')}
+											title="Limpiar búsqueda"
+										>
+											<X size={16} />
+										</button>
+									{/if}
+									<button class="btn btn-primary join-item btn-sm">
+										<Search size={16} />
+									</button>
+								</div>
+							</div>
 							<button
 								class="btn btn-sm btn-success btn-outline"
 								onclick={exportToExcel}
 								title="Exportar a Excel"
-								disabled={filteredResults.length === 0}
+								disabled={filteredByRegister.length === 0}
 							>
 								<FileDown size={16} class="mr-1" />
 								Excel
@@ -382,90 +504,81 @@
 						</div>
 					</div>
 
-					<div class="overflow-x-auto">
-						<table class="table table-zebra w-full">
-							<thead>
-								<tr>
-									<th>Fecha</th>
-									<th>Evaluación</th>
-									<th class="text-center">Preguntas</th>
-									<th class="text-center">Correctas</th>
-									<th class="text-center">Incorrectas</th>
-									<th class="text-center">En blanco</th>
-									<th class="text-center">Nota</th>
-									<th class="text-center">Acciones</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each paginatedResults as result (result.result_code)}
-									<tr class="hover:bg-base-300 transition-colors border-b border-base-300}">
-										<td class="py-3 px-4">{formatDate(result.eval_date)}</td>
-										<td class="py-3 px-4 font-medium">{result.eval_name}</td>
-										<td class="py-3 px-4 text-center">
-											{result.correct_count + result.incorrect_count + result.blank_count}
-										</td>
-										<td class="py-3 px-4 text-center text-success font-medium"
-											>{result.correct_count}</td
-										>
-										<td class="py-3 px-4 text-center text-error font-medium"
-											>{result.incorrect_count}</td
-										>
-										<td class="py-3 px-4 text-center opacity-70">{result.blank_count}</td>
-										<td class="py-3 px-4 text-center font-bold">
-											<span
-												class="badge badge-lg {result.score >= 10.5
-													? 'badge-success'
-													: 'badge-error'}"
-											>
-												{result.score.toFixed(1)}
-											</span>
-										</td>
-										<td class="py-3 px-4 text-center" onclick={(e) => e.stopPropagation()}>
-											<button
-												class="btn btn-sm btn-primary btn-outline"
-												onclick={() => viewResultDetails(result)}
-												title="Ver detalles"
-												disabled={!$canViewDetails}
-											>
-												<Eye size={16} class="mr-1" /> Ver
-											</button>
-										</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
+					{#if filteredByRegister.length > 0}
+						{#if filteredResults.length > 0}
+							<div class="overflow-x-auto">
+								<Table
+									columns={resultColumns as unknown as {
+										key?: string;
+										label: string;
+										headerClass?: string;
+										class?: string;
+										cell?: (row: unknown) => unknown;
+									}[]}
+									rows={paginatedResults as unknown[]}
+									striped={true}
+									hover={true}
+									bordered={true}
+									emptyMessage="No hay resultados para mostrar."
+								/>
+							</div>
 
-					{#if totalPages > 1}
-						<div class="flex justify-center mt-6">
-							<div class="join">
-								<button
-									class="join-item btn btn-sm btn-primary btn-outline {currentPage === 1
-										? 'btn-disabled'
-										: ''}"
-									onclick={() => goToPage(currentPage - 1)}
-								>
-									«
-								</button>
-								{#each Array.from({ length: totalPages }, (_, i) => i + 1) as pageNum (pageNum)}
-									<button
-										class="join-item btn btn-sm {currentPage === pageNum
-											? 'btn-primary'
-											: 'btn-outline'}"
-										onclick={() => goToPage(pageNum)}
-									>
-										{pageNum}
-									</button>
-								{/each}
-								<button
-									class="join-item btn btn-sm btn-primary btn-outline {currentPage === totalPages
-										? 'btn-disabled'
-										: ''}"
-									onclick={() => goToPage(currentPage + 1)}
-								>
-									»
+							{#if totalPages > 1}
+								<div class="flex justify-center mt-6">
+									<div class="join">
+										<button
+											class="join-item btn btn-sm btn-primary btn-outline {currentPage === 1
+												? 'btn-disabled'
+												: ''}"
+											onclick={() => goToPage(currentPage - 1)}
+										>
+											«
+										</button>
+										{#each Array.from({ length: totalPages }, (_, i) => i + 1) as pageNum (pageNum)}
+											<button
+												class="join-item btn btn-sm {currentPage === pageNum
+													? 'btn-primary'
+													: 'btn-outline'}"
+												onclick={() => goToPage(pageNum)}
+											>
+												{pageNum}
+											</button>
+										{/each}
+										<button
+											class="join-item btn btn-sm btn-primary btn-outline {currentPage ===
+											totalPages
+												? 'btn-disabled'
+												: ''}"
+											onclick={() => goToPage(currentPage + 1)}
+										>
+											»
+										</button>
+									</div>
+								</div>
+							{/if}
+						{:else if resultsSearchQuery}
+							<div
+								class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md mx-auto text-center"
+							>
+								<Search size={48} class="text-primary/30 mx-auto mb-4" />
+								<h3 class="text-lg font-bold mb-2">Sin resultados</h3>
+								<p class="text-base-content/70 mb-4">
+									No se encontraron evaluaciones que coincidan con la búsqueda "{resultsSearchQuery}".
+								</p>
+								<button class="btn btn-primary btn-sm" onclick={() => (resultsSearchQuery = '')}>
+									Limpiar búsqueda
 								</button>
 							</div>
+						{/if}
+					{:else}
+						<div
+							class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md mx-auto text-center"
+						>
+							<ListChecks size={48} class="text-primary/30 mx-auto mb-4" />
+							<h3 class="text-lg font-bold mb-2">Sin resultados</h3>
+							<p class="text-base-content/70 mb-4">
+								No hay resultados disponibles para este registro.
+							</p>
 						</div>
 					{/if}
 				</div>
@@ -554,7 +667,7 @@
 		{:else if searchQuery && !searchLoading}
 			<Message
 				description="No se encontraron estudiantes con ese criterio de búsqueda."
-				type="warning"
+				type="info"
 			/>
 		{/if}
 	</div>
