@@ -77,7 +77,7 @@
 
 	function getScoreColorClass(score: number): string {
 		if (score >= 14) return 'text-success';
-		if (score >= 10.5) return 'text-warning'; // Punto medio de 0-20 es 10, aprobado > 10.5?
+		if (score >= 10.5) return 'text-warning';
 		return 'text-error';
 	}
 </script>
@@ -226,12 +226,7 @@
 						</table>
 					</div>
 				{:else}
-					<div class="alert alert-info">
-						<div>
-							<h3 class="font-bold">Sin respuestas</h3>
-							<p>No hay respuestas disponibles para este estudiante.</p>
-						</div>
-					</div>
+					<Message type="info" description="No hay respuestas disponibles para este estudiante." />
 				{/if}
 			{/if}
 		</div>

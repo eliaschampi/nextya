@@ -52,7 +52,6 @@ const createPermissionsStore = () => {
 	const has = (check: PermissionCheck): Readable<boolean> => {
 		return derived(permissions, ($permissions) => {
 			if (!$permissions.length) return false;
-			// Check if the user has the specific action permission for the entity
 			return $permissions.some((p) => p.entity === check.entity && p.user_action === check.action);
 		});
 	};

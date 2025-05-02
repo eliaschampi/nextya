@@ -158,8 +158,8 @@
 
 		if (!fileEntries[entryIndex].formatValid) {
 			showToast(
-				`No se puede procesar: ${fileEntries[entryIndex].formatName}. Recorta la imagen primero.`,
-				'danger'
+				`No se puede procesar: ${fileEntries[entryIndex].formatName}. Recorta la imagen.`,
+				'info'
 			);
 			return;
 		}
@@ -215,7 +215,6 @@
 				}
 			}
 		} catch (error) {
-			console.error('Error procesando archivo:', error);
 			fileEntries[entryIndex].status = 'error';
 			fileEntries[entryIndex].error = {
 				code: 'INTERNAL_ERROR',
@@ -309,11 +308,11 @@
 
 		if (invalidFormatCount > 0) {
 			showToast(
-				`${newFiles.length} imagen(es) cargada(s). ${invalidFormatCount} con formato no A5.`,
+				`${newFiles.length} imagen(es) cargada(s). ${invalidFormatCount} no admitidos.`,
 				'warning'
 			);
 		} else {
-			showToast(`${newFiles.length} imagen(es) cargada(s)`, 'success');
+			showToast(`${newFiles.length} imagen(es) cargada(s)`, 'info');
 		}
 
 		input.value = '';

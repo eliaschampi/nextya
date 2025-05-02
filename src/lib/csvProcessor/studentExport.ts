@@ -81,7 +81,7 @@ export function formatStudentReportsForExport(reports: StudentEvalReport[]): {
 		// Añadir columnas dinámicas para cada curso
 		allCourses.forEach((courseName) => {
 			const courseScore = report.course_scores[courseName];
-			row[`Nota ${courseName}`] = courseScore ? Number(courseScore.toFixed(1)) : '';
+			row[`${courseName}`] = courseScore ? Number(courseScore.toFixed(1)) : '';
 		});
 
 		return row;
@@ -102,7 +102,7 @@ export function getStudentReportHeaders(allCourses: string[]): string[] {
 	const fixedHeaders = ['Nombre Examen', 'Fecha', 'Nota General'];
 
 	// Añadir encabezados dinámicos para cada curso
-	const courseHeaders = allCourses.map((courseName) => `Nota ${courseName}`);
+	const courseHeaders = allCourses.map((courseName) => `${courseName}`);
 
 	return [...fixedHeaders, ...courseHeaders];
 }
@@ -133,7 +133,7 @@ export function createStudentExportFilename(studentName: string, studentLastName
 		.trim()
 		.replace(/\s+/g, '_');
 
-	return `evaluaciones_${sanitizedName}_${sanitizedLastName}_${formattedDate}.csv`;
+	return `constancia_${sanitizedName}_${sanitizedLastName}_${formattedDate}.csv`;
 }
 
 /**
