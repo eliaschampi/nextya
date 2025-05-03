@@ -4,7 +4,6 @@ import type {
 	GroupData,
 	EvalChartData,
 	GroupChartData,
-	CourseChartData,
 	AnswerDistribution,
 	StudentPerformance,
 	DashboardData
@@ -93,13 +92,11 @@ export async function getDashboardData(
 		const scoresByGroup = processScoresByGroup(evalResults, uniqueGroups);
 		const correctVsIncorrect = processCorrectVsIncorrect(evalResults);
 		const studentPerformance = processStudentPerformance(evalResults);
-		const scoresByCourse = processScoresByCourse(evalResults);
 
 		// Prepare response data
 		const responseData: DashboardData = {
 			scoresByEval,
 			scoresByGroup,
-			scoresByCourse,
 			correctVsIncorrect,
 			studentPerformance,
 			evaluations: evals,
@@ -315,52 +312,6 @@ function processStudentPerformance(results: StudentRegisterResult[]): StudentPer
 			.slice(0, 10); // Get top 10 students
 	} catch (error) {
 		console.error('Error processing student performance data:', error);
-		return [];
-	}
-}
-
-/**
- * Process data for scores by course
- */
-function processScoresByCourse(results: StudentRegisterResult[]): CourseChartData[] {
-	if (!results || !Array.isArray(results) || results.length === 0) {
-		return [];
-	}
-
-	const courseMap = new Map();
-
-	try {
-		// Group results by section (which corresponds to courses)
-		results.forEach((result) => {
-			// Use section information if available
-			if (result.section_code && result.section_name && result.score !== null) {
-				if (!courseMap.has(result.section_code)) {
-					courseMap.set(result.section_code, {
-						name: result.section_name,
-						totalScore: result.score,
-						count: 1
-					});
-				} else {
-					const courseData = courseMap.get(result.section_code);
-					courseData.totalScore += result.score;
-					courseData.count += 1;
-				}
-			}
-		});
-
-		if (courseMap.size === 0) {
-			return [];
-		}
-
-		return Array.from(courseMap.entries())
-			.map(([code, data]) => ({
-				code,
-				name: data.name || 'Curso sin nombre',
-				averageScore: parseFloat((data.totalScore / data.count).toFixed(2))
-			}))
-			.sort((a, b) => b.averageScore - a.averageScore);
-	} catch (error) {
-		console.error('Error processing course data:', error);
 		return [];
 	}
 }

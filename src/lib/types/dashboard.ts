@@ -21,15 +21,6 @@ export interface GroupChartData {
 }
 
 /**
- * Represents course data for charts
- */
-export interface CourseChartData {
-	code: string;
-	name: string;
-	averageScore: number;
-}
-
-/**
  * Represents answer distribution data
  */
 export interface AnswerDistribution {
@@ -62,7 +53,6 @@ export interface EvaluationData {
 export interface DashboardData {
 	scoresByEval: EvalChartData[];
 	scoresByGroup: GroupChartData[];
-	scoresByCourse: CourseChartData[];
 	correctVsIncorrect: AnswerDistribution;
 	studentPerformance: StudentPerformance[];
 	evaluations: EvaluationData[];

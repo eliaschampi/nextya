@@ -22,7 +22,6 @@
 	// Chart references
 	let scoresByEvalChart: Chart | null = $state(null);
 	let scoresByGroupChart: Chart | null = $state(null);
-	let scoresByCourseChart: Chart | null = $state(null);
 	let correctVsIncorrectChart: Chart | null = $state(null);
 	let studentPerformanceChart: Chart | null = $state(null);
 
@@ -40,7 +39,6 @@
 	// Derived values for chart data
 	const scoresByEvalData = $derived(getScoresByEvalData(chartData));
 	const scoresByGroupData = $derived(getScoresByGroupData(chartData));
-	const scoresByCourseData = $derived(getScoresByCourseData(chartData));
 	const correctVsIncorrectData = $derived(getCorrectVsIncorrectData(chartData));
 	const studentPerformanceData = $derived(getStudentPerformanceData(chartData));
 
@@ -189,30 +187,6 @@
 		}
 	}
 
-	function getScoresByCourseData(data: DashboardData | null): {
-		labels: string[];
-		values: number[];
-	} {
-		if (
-			!data ||
-			!data.scoresByCourse ||
-			!Array.isArray(data.scoresByCourse) ||
-			!data.scoresByCourse.length
-		) {
-			return { labels: [], values: [] };
-		}
-
-		try {
-			return {
-				labels: data.scoresByCourse.map((item) => item.name || 'Sin nombre'),
-				values: data.scoresByCourse.map((item) => item.averageScore || 0)
-			};
-		} catch (error) {
-			console.error('Error processing scoresByCourse data:', error);
-			return { labels: [], values: [] };
-		}
-	}
-
 	/**
 	 * Render all charts in parallel
 	 * This improves performance by rendering charts concurrently
@@ -222,7 +196,6 @@
 		Promise.all([
 			renderScoresByEvalChart(),
 			renderScoresByGroupChart(),
-			renderScoresByCourseChart(),
 			renderCorrectVsIncorrectChart(),
 			renderStudentPerformanceChart()
 		]).catch((error) => {
@@ -338,62 +311,6 @@
 				resolve();
 			} catch (error) {
 				console.error('Error rendering scores by group chart:', error);
-				reject(error);
-			}
-		});
-	}
-
-	/**
-	 * Render scores by course chart
-	 * Shows average scores by course
-	 */
-	function renderScoresByCourseChart() {
-		if (!scoresByCourseData.labels.length) {
-			return Promise.resolve();
-		}
-
-		return new Promise<void>((resolve, reject) => {
-			const ctx = document.getElementById('scoresByCourseChart') as HTMLCanvasElement;
-			if (!ctx) {
-				resolve();
-				return;
-			}
-
-			try {
-				scoresByCourseChart = new Chart(ctx, {
-					type: 'bar',
-					data: {
-						labels: scoresByCourseData.labels,
-						datasets: [
-							{
-								label: 'Promedio de Puntaje',
-								data: scoresByCourseData.values,
-								backgroundColor: chartColors.tertiary,
-								borderColor: chartColors.tertiary,
-								borderWidth: 1
-							}
-						]
-					},
-					options: {
-						responsive: true,
-						maintainAspectRatio: false,
-						scales: {
-							y: {
-								beginAtZero: true,
-								max: 20
-							}
-						},
-						plugins: {
-							title: {
-								display: true,
-								text: 'Puntajes Promedio por Curso'
-							}
-						}
-					}
-				});
-				resolve();
-			} catch (error) {
-				console.error('Error rendering scores by course chart:', error);
 				reject(error);
 			}
 		});
@@ -516,11 +433,6 @@
 			scoresByGroupChart = null;
 		}
 
-		if (scoresByCourseChart) {
-			scoresByCourseChart.destroy();
-			scoresByCourseChart = null;
-		}
-
 		if (correctVsIncorrectChart) {
 			correctVsIncorrectChart.destroy();
 			correctVsIncorrectChart = null;
@@ -534,42 +446,40 @@
 </script>
 
 <PageTitle title={data.title} description="Estadísticas y análisis de rendimiento">
-	<div></div>
+	{#if selectedLevelCode}
+		<div>
+			<button
+				class="btn btn-soft btn-sm"
+				onclick={() => loadDashboardData(selectedLevelCode)}
+				disabled={isLoading}
+			>
+				{#if isLoading}
+					<span class="loading loading-spinner loading-xs"></span>
+				{/if}
+				Actualizar datos
+			</button>
+		</div>
+	{/if}
 </PageTitle>
 
 <div class="card bg-base-200 shadow-sm mb-6">
 	<div class="card-body">
-		<div class="flex flex-col sm:flex-row items-center gap-4">
-			<div class="form-control w-full sm:w-auto">
-				<label for="level-select" class="label">
-					<span class="label-text font-medium">Selecciona un nivel para ver estadísticas</span>
-				</label>
-				<select
-					id="level-select"
-					class="select select-bordered w-full sm:w-auto"
-					bind:value={selectedLevelCode}
-					onchange={() => loadDashboardData(selectedLevelCode)}
-				>
-					<option value="" disabled selected>Selecciona un nivel</option>
-					{#each data.levels as level (level.code)}
-						<option value={level.code}>{level.name}</option>
-					{/each}
-				</select>
-			</div>
-
-			{#if selectedLevelCode}
-				<button
-					class="btn btn-outline btn-sm mt-4 sm:mt-8"
-					onclick={() => loadDashboardData(selectedLevelCode)}
-					disabled={isLoading}
-				>
-					{#if isLoading}
-						<span class="loading loading-spinner loading-xs"></span>
-					{/if}
-					Actualizar datos
-				</button>
-			{/if}
-		</div>
+		<fieldset>
+			<label for="level-select" class="label">
+				<span class="label-text font-medium">Selecciona un nivel </span>
+			</label>
+			<select
+				id="level-select"
+				class="select select-bordered"
+				bind:value={selectedLevelCode}
+				onchange={() => loadDashboardData(selectedLevelCode)}
+			>
+				<option value="" disabled selected>Selecciona un nivel</option>
+				{#each data.levels as level (level.code)}
+					<option value={level.code}>{level.name}</option>
+				{/each}
+			</select>
+		</fieldset>
 	</div>
 </div>
 
@@ -590,7 +500,7 @@
 		</div>
 	</div>
 {:else if chartData}
-	{#if scoresByEvalData.labels.length || scoresByGroupData.labels.length || scoresByCourseData.labels.length || correctVsIncorrectData.values.length || studentPerformanceData.labels.length}
+	{#if scoresByEvalData.labels.length || scoresByGroupData.labels.length || correctVsIncorrectData.values.length || studentPerformanceData.labels.length}
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 			<!-- Scores by Evaluation Chart -->
 			{#if scoresByEvalData.labels.length}
@@ -617,21 +527,6 @@
 						</div>
 						<div class="h-64 relative">
 							<canvas id="scoresByGroupChart"></canvas>
-						</div>
-					</div>
-				</div>
-			{/if}
-
-			<!-- Scores by Course Chart -->
-			{#if scoresByCourseData.labels.length}
-				<div class="card bg-base-200 shadow-sm">
-					<div class="card-body">
-						<div class="flex items-center gap-2 mb-2">
-							<div class="w-5 h-5 text-tertiary">📚</div>
-							<h3 class="card-title text-lg">Puntajes por Curso</h3>
-						</div>
-						<div class="h-64 relative">
-							<canvas id="scoresByCourseChart"></canvas>
 						</div>
 					</div>
 				</div>
@@ -676,14 +571,6 @@
 				<p class="text-base-content/70 mt-2">
 					Asegúrate de que existan evaluaciones y resultados registrados para este nivel
 				</p>
-				<div class="mt-4">
-					<button
-						class="btn btn-outline btn-sm"
-						onclick={() => loadDashboardData(selectedLevelCode)}
-					>
-						Reintentar
-					</button>
-				</div>
 			</div>
 		</div>
 	{/if}
