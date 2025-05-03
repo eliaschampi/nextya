@@ -64,9 +64,12 @@
 		};
 	});
 
-	// Load dashboard data from API
+	/**
+	 * Load dashboard data from API
+	 * Uses the optimized dashboard API endpoint
+	 */
 	async function loadDashboardData(levelCode: string) {
-		if (isLoading) return;
+		if (!levelCode || isLoading) return;
 
 		isLoading = true;
 		destroyCharts();
@@ -75,7 +78,9 @@
 			const response = await fetch(`/api/dashboard/${levelCode}`);
 
 			if (!response.ok) {
-				throw new Error('Error al cargar datos del dashboard');
+				const errorData = await response.json().catch(() => ({}));
+				const errorMessage = errorData.error || 'Error al cargar datos del dashboard';
+				throw new Error(errorMessage);
 			}
 
 			const data = await response.json();
@@ -90,7 +95,10 @@
 			chartData = data;
 		} catch (error) {
 			console.error('Error loading dashboard data:', error);
-			showToast('No se pudieron cargar los datos del dashboard', 'danger');
+			showToast(
+				error instanceof Error ? error.message : 'No se pudieron cargar los datos del dashboard',
+				'danger'
+			);
 			chartData = null;
 		} finally {
 			isLoading = false;
@@ -205,213 +213,293 @@
 		}
 	}
 
-	// Render all charts
+	/**
+	 * Render all charts in parallel
+	 * This improves performance by rendering charts concurrently
+	 */
 	function renderCharts() {
-		renderScoresByEvalChart();
-		renderScoresByGroupChart();
-		renderScoresByCourseChart();
-		renderCorrectVsIncorrectChart();
-		renderStudentPerformanceChart();
+		// Use Promise.all to render charts in parallel
+		Promise.all([
+			renderScoresByEvalChart(),
+			renderScoresByGroupChart(),
+			renderScoresByCourseChart(),
+			renderCorrectVsIncorrectChart(),
+			renderStudentPerformanceChart()
+		]).catch((error) => {
+			console.error('Error rendering charts:', error);
+		});
 	}
 
-	// Render scores by evaluation chart
+	/**
+	 * Render scores by evaluation chart
+	 * Shows the evolution of scores over time
+	 */
 	function renderScoresByEvalChart() {
 		if (!scoresByEvalData.labels.length) {
-			return;
+			return Promise.resolve();
 		}
 
-		const ctx = document.getElementById('scoresByEvalChart') as HTMLCanvasElement;
-		if (!ctx) {
-			return;
-		}
+		return new Promise<void>((resolve, reject) => {
+			const ctx = document.getElementById('scoresByEvalChart') as HTMLCanvasElement;
+			if (!ctx) {
+				resolve();
+				return;
+			}
 
-		try {
-			scoresByEvalChart = new Chart(ctx, {
-				type: 'line',
-				data: {
-					labels: scoresByEvalData.labels,
-					datasets: [
-						{
-							label: 'Promedio de Puntaje',
-							data: scoresByEvalData.values,
-							backgroundColor: chartColors.primary,
-							borderColor: chartColors.primary,
-							tension: 0.3,
-							fill: false
-						}
-					]
-				},
-				options: {
-					responsive: true,
-					maintainAspectRatio: false,
-					scales: {
-						y: {
-							beginAtZero: true,
-							max: 20
-						}
+			try {
+				scoresByEvalChart = new Chart(ctx, {
+					type: 'line',
+					data: {
+						labels: scoresByEvalData.labels,
+						datasets: [
+							{
+								label: 'Promedio de Puntaje',
+								data: scoresByEvalData.values,
+								backgroundColor: chartColors.primary,
+								borderColor: chartColors.primary,
+								tension: 0.3,
+								fill: false
+							}
+						]
 					},
-					plugins: {
-						title: {
-							display: true,
-							text: 'Evolución de Puntajes por Evaluación'
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						scales: {
+							y: {
+								beginAtZero: true,
+								max: 20
+							}
+						},
+						plugins: {
+							title: {
+								display: true,
+								text: 'Evolución de Puntajes por Evaluación'
+							}
 						}
 					}
-				}
-			});
-		} catch (error) {
-			console.error('Error rendering scores by eval chart:', error);
-		}
+				});
+				resolve();
+			} catch (error) {
+				console.error('Error rendering scores by eval chart:', error);
+				reject(error);
+			}
+		});
 	}
 
-	// Render scores by group chart
+	/**
+	 * Render scores by group chart
+	 * Shows average scores by student group
+	 */
 	function renderScoresByGroupChart() {
-		if (!scoresByGroupData.labels.length) return;
+		if (!scoresByGroupData.labels.length) {
+			return Promise.resolve();
+		}
 
-		const ctx = document.getElementById('scoresByGroupChart') as HTMLCanvasElement;
-		if (!ctx) return;
+		return new Promise<void>((resolve, reject) => {
+			const ctx = document.getElementById('scoresByGroupChart') as HTMLCanvasElement;
+			if (!ctx) {
+				resolve();
+				return;
+			}
 
-		scoresByGroupChart = new Chart(ctx, {
-			type: 'bar',
-			data: {
-				labels: scoresByGroupData.labels,
-				datasets: [
-					{
-						label: 'Promedio de Puntaje',
-						data: scoresByGroupData.values,
-						backgroundColor: chartColors.secondary,
-						borderColor: chartColors.secondary,
-						borderWidth: 1
+			try {
+				scoresByGroupChart = new Chart(ctx, {
+					type: 'bar',
+					data: {
+						labels: scoresByGroupData.labels,
+						datasets: [
+							{
+								label: 'Promedio de Puntaje',
+								data: scoresByGroupData.values,
+								backgroundColor: chartColors.secondary,
+								borderColor: chartColors.secondary,
+								borderWidth: 1
+							}
+						]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						scales: {
+							y: {
+								beginAtZero: true,
+								max: 20
+							}
+						},
+						plugins: {
+							title: {
+								display: true,
+								text: 'Puntajes Promedio por Grupo'
+							}
+						}
 					}
-				]
-			},
-			options: {
-				responsive: true,
-				maintainAspectRatio: false,
-				scales: {
-					y: {
-						beginAtZero: true,
-						max: 20
-					}
-				},
-				plugins: {
-					title: {
-						display: true,
-						text: 'Puntajes Promedio por Grupo'
-					}
-				}
+				});
+				resolve();
+			} catch (error) {
+				console.error('Error rendering scores by group chart:', error);
+				reject(error);
 			}
 		});
 	}
 
-	// Render scores by course chart
+	/**
+	 * Render scores by course chart
+	 * Shows average scores by course
+	 */
 	function renderScoresByCourseChart() {
-		if (!scoresByCourseData.labels.length) return;
+		if (!scoresByCourseData.labels.length) {
+			return Promise.resolve();
+		}
 
-		const ctx = document.getElementById('scoresByCourseChart') as HTMLCanvasElement;
-		if (!ctx) return;
+		return new Promise<void>((resolve, reject) => {
+			const ctx = document.getElementById('scoresByCourseChart') as HTMLCanvasElement;
+			if (!ctx) {
+				resolve();
+				return;
+			}
 
-		scoresByCourseChart = new Chart(ctx, {
-			type: 'bar',
-			data: {
-				labels: scoresByCourseData.labels,
-				datasets: [
-					{
-						label: 'Promedio de Puntaje',
-						data: scoresByCourseData.values,
-						backgroundColor: chartColors.tertiary,
-						borderColor: chartColors.tertiary,
-						borderWidth: 1
+			try {
+				scoresByCourseChart = new Chart(ctx, {
+					type: 'bar',
+					data: {
+						labels: scoresByCourseData.labels,
+						datasets: [
+							{
+								label: 'Promedio de Puntaje',
+								data: scoresByCourseData.values,
+								backgroundColor: chartColors.tertiary,
+								borderColor: chartColors.tertiary,
+								borderWidth: 1
+							}
+						]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						scales: {
+							y: {
+								beginAtZero: true,
+								max: 20
+							}
+						},
+						plugins: {
+							title: {
+								display: true,
+								text: 'Puntajes Promedio por Curso'
+							}
+						}
 					}
-				]
-			},
-			options: {
-				responsive: true,
-				maintainAspectRatio: false,
-				scales: {
-					y: {
-						beginAtZero: true,
-						max: 20
-					}
-				},
-				plugins: {
-					title: {
-						display: true,
-						text: 'Puntajes Promedio por Curso'
-					}
-				}
+				});
+				resolve();
+			} catch (error) {
+				console.error('Error rendering scores by course chart:', error);
+				reject(error);
 			}
 		});
 	}
 
-	// Render correct vs incorrect chart
+	/**
+	 * Render correct vs incorrect chart
+	 * Shows distribution of correct, incorrect, and blank answers
+	 */
 	function renderCorrectVsIncorrectChart() {
-		if (!correctVsIncorrectData.values.length) return;
+		if (!correctVsIncorrectData.values.length) {
+			return Promise.resolve();
+		}
 
-		const ctx = document.getElementById('correctVsIncorrectChart') as HTMLCanvasElement;
-		if (!ctx) return;
+		return new Promise<void>((resolve, reject) => {
+			const ctx = document.getElementById('correctVsIncorrectChart') as HTMLCanvasElement;
+			if (!ctx) {
+				resolve();
+				return;
+			}
 
-		correctVsIncorrectChart = new Chart(ctx, {
-			type: 'doughnut',
-			data: {
-				labels: ['Correctas', 'Incorrectas', 'En blanco'],
-				datasets: [
-					{
-						data: correctVsIncorrectData.values,
-						backgroundColor: [chartColors.correct, chartColors.incorrect, chartColors.blank],
-						borderWidth: 1
+			try {
+				correctVsIncorrectChart = new Chart(ctx, {
+					type: 'doughnut',
+					data: {
+						labels: ['Correctas', 'Incorrectas', 'En blanco'],
+						datasets: [
+							{
+								data: correctVsIncorrectData.values,
+								backgroundColor: [chartColors.correct, chartColors.incorrect, chartColors.blank],
+								borderWidth: 1
+							}
+						]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						plugins: {
+							title: {
+								display: true,
+								text: 'Distribución de Respuestas'
+							}
+						}
 					}
-				]
-			},
-			options: {
-				responsive: true,
-				maintainAspectRatio: false,
-				plugins: {
-					title: {
-						display: true,
-						text: 'Distribución de Respuestas'
-					}
-				}
+				});
+				resolve();
+			} catch (error) {
+				console.error('Error rendering correct vs incorrect chart:', error);
+				reject(error);
 			}
 		});
 	}
 
-	// Render student performance chart
+	/**
+	 * Render student performance chart
+	 * Shows top 10 students by average score
+	 */
 	function renderStudentPerformanceChart() {
-		if (!studentPerformanceData.labels.length) return;
+		if (!studentPerformanceData.labels.length) {
+			return Promise.resolve();
+		}
 
-		const ctx = document.getElementById('studentPerformanceChart') as HTMLCanvasElement;
-		if (!ctx) return;
+		return new Promise<void>((resolve, reject) => {
+			const ctx = document.getElementById('studentPerformanceChart') as HTMLCanvasElement;
+			if (!ctx) {
+				resolve();
+				return;
+			}
 
-		studentPerformanceChart = new Chart(ctx, {
-			type: 'bar',
-			data: {
-				labels: studentPerformanceData.labels,
-				datasets: [
-					{
-						label: 'Promedio de Puntaje',
-						data: studentPerformanceData.values,
-						backgroundColor: chartColors.tertiary,
-						borderColor: chartColors.tertiary,
-						borderWidth: 1
+			try {
+				studentPerformanceChart = new Chart(ctx, {
+					type: 'bar',
+					data: {
+						labels: studentPerformanceData.labels,
+						datasets: [
+							{
+								label: 'Promedio de Puntaje',
+								data: studentPerformanceData.values,
+								backgroundColor: chartColors.tertiary,
+								borderColor: chartColors.tertiary,
+								borderWidth: 1
+							}
+						]
+					},
+					options: {
+						indexAxis: 'y',
+						responsive: true,
+						maintainAspectRatio: false,
+						scales: {
+							x: {
+								beginAtZero: true,
+								max: 20
+							}
+						},
+						plugins: {
+							title: {
+								display: true,
+								text: 'Top 10 Estudiantes por Rendimiento'
+							}
+						}
 					}
-				]
-			},
-			options: {
-				indexAxis: 'y',
-				responsive: true,
-				maintainAspectRatio: false,
-				scales: {
-					x: {
-						beginAtZero: true,
-						max: 20
-					}
-				},
-				plugins: {
-					title: {
-						display: true,
-						text: 'Top 10 Estudiantes por Rendimiento'
-					}
-				}
+				});
+				resolve();
+			} catch (error) {
+				console.error('Error rendering student performance chart:', error);
+				reject(error);
 			}
 		});
 	}
@@ -449,33 +537,56 @@
 	<div></div>
 </PageTitle>
 
-<div class="p-4 bg-base-200 rounded-box mb-4">
-	<div class="flex flex-col sm:flex-row items-center gap-4">
-		<select
-			class="select w-full sm:w-auto"
-			bind:value={selectedLevelCode}
-			onchange={() => loadDashboardData(selectedLevelCode)}
-		>
-			<option value="" disabled selected>Selecciona un nivel</option>
-			{#each data.levels as level (level.code)}
-				<option value={level.code}>{level.name}</option>
-			{/each}
-		</select>
+<div class="card bg-base-200 shadow-sm mb-6">
+	<div class="card-body">
+		<div class="flex flex-col sm:flex-row items-center gap-4">
+			<div class="form-control w-full sm:w-auto">
+				<label for="level-select" class="label">
+					<span class="label-text font-medium">Selecciona un nivel para ver estadísticas</span>
+				</label>
+				<select
+					id="level-select"
+					class="select select-bordered w-full sm:w-auto"
+					bind:value={selectedLevelCode}
+					onchange={() => loadDashboardData(selectedLevelCode)}
+				>
+					<option value="" disabled selected>Selecciona un nivel</option>
+					{#each data.levels as level (level.code)}
+						<option value={level.code}>{level.name}</option>
+					{/each}
+				</select>
+			</div>
+
+			{#if selectedLevelCode}
+				<button
+					class="btn btn-outline btn-sm mt-4 sm:mt-8"
+					onclick={() => loadDashboardData(selectedLevelCode)}
+					disabled={isLoading}
+				>
+					{#if isLoading}
+						<span class="loading loading-spinner loading-xs"></span>
+					{/if}
+					Actualizar datos
+				</button>
+			{/if}
+		</div>
 	</div>
 </div>
 
 {#if isLoading}
 	<div class="flex justify-center items-center h-64">
 		<div class="loading loading-spinner loading-lg text-primary"></div>
+		<span class="ml-4 text-base-content/70">Cargando datos del dashboard...</span>
 	</div>
 {:else if !selectedLevelCode}
 	<div class="card bg-base-200 shadow-sm">
 		<div class="card-body text-center">
 			<div class="w-16 h-16 mx-auto text-base-content opacity-50">📊</div>
-			<h2 class="text-xl font-semibold mt-4">Selecciona un nivel para ver estadísticas</h2>
+			<h2 class="text-xl font-semibold mt-4">Dashboard de Rendimiento</h2>
 			<p class="text-base-content/70">
 				Visualiza el rendimiento de estudiantes, grupos y evaluaciones
 			</p>
+			<p class="text-base-content/70 mt-2">Selecciona un nivel en el menú superior para comenzar</p>
 		</div>
 	</div>
 {:else if chartData}
@@ -559,11 +670,20 @@
 	{:else}
 		<div class="card bg-base-200 shadow-sm">
 			<div class="card-body text-center">
-				<h2 class="text-xl font-semibold">No hay datos disponibles</h2>
+				<div class="w-16 h-16 mx-auto text-base-content opacity-50">🔍</div>
+				<h2 class="text-xl font-semibold mt-4">No hay datos disponibles</h2>
 				<p class="text-base-content/70">No se encontraron resultados para el nivel seleccionado</p>
 				<p class="text-base-content/70 mt-2">
 					Asegúrate de que existan evaluaciones y resultados registrados para este nivel
 				</p>
+				<div class="mt-4">
+					<button
+						class="btn btn-outline btn-sm"
+						onclick={() => loadDashboardData(selectedLevelCode)}
+					>
+						Reintentar
+					</button>
+				</div>
 			</div>
 		</div>
 	{/if}
