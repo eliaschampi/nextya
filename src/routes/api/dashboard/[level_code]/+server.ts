@@ -19,29 +19,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	}
 
 	try {
-		// First check if the level exists
-		const { data: levelCheck, error: levelError } = await locals.supabase
-			.from('levels')
-			.select('code')
-			.eq('code', level_code)
-			.single();
-
-		if (levelError || !levelCheck) {
-			// Return empty data with 200 status if level not found
-			return json(
-				{
-					scoresByEval: [],
-					scoresByGroup: [],
-					scoresByCourse: [],
-					correctVsIncorrect: { correct: 0, incorrect: 0, blank: 0 },
-					studentPerformance: [],
-					evaluations: [],
-					groups: []
-				} as DashboardData,
-				{ status: 200 }
-			);
-		}
-
 		// Run queries for student results, groups, and evaluations in parallel
 		const [evalResultsResponse, groupsResponse, evalsResponse] = await Promise.all([
 			// Get evaluation results for the level
