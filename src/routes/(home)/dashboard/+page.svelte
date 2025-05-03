@@ -464,10 +464,8 @@
 
 <div class="card bg-base-200 shadow-sm mb-6">
 	<div class="card-body">
-		<fieldset>
-			<label for="level-select" class="label">
-				<span class="label-text font-medium">Selecciona un nivel </span>
-			</label>
+		<fieldset class="fieldset">
+			<label for="level-select" class="fieldset-legend"> Selecciona un nivel </label>
 			<select
 				id="level-select"
 				class="select select-bordered"

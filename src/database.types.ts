@@ -386,7 +386,7 @@ export type Database = {
 				Row: {
 					code: string;
 					created_at: string | null;
-					email: string;
+					email: string | null;
 					last_name: string;
 					name: string;
 					phone: string | null;
@@ -396,7 +396,7 @@ export type Database = {
 				Insert: {
 					code?: string;
 					created_at?: string | null;
-					email: string;
+					email?: string | null;
 					last_name: string;
 					name: string;
 					phone?: string | null;
@@ -406,7 +406,7 @@ export type Database = {
 				Update: {
 					code?: string;
 					created_at?: string | null;
-					email?: string;
+					email?: string | null;
 					last_name?: string;
 					name?: string;
 					phone?: string | null;
@@ -508,6 +508,15 @@ export type Database = {
 			};
 		};
 		Functions: {
+			get_level_course_scores: {
+				Args: { p_level_code: string };
+				Returns: {
+					course_code: string;
+					course_name: string;
+					course_abr: string;
+					average_score: number;
+				}[];
+			};
 			get_register_eval_results: {
 				Args: { p_eval_code: string };
 				Returns: {
@@ -527,6 +536,18 @@ export type Database = {
 					name: string;
 					last_name: string;
 					level_name: string;
+				}[];
+			};
+			get_student_eval_report: {
+				Args: { p_student_code: string };
+				Returns: {
+					eval_name: string;
+					eval_code: string;
+					eval_date: string;
+					general_score: number;
+					register_code: string;
+					result_code: string;
+					course_scores: Json;
 				}[];
 			};
 			has_permission: {

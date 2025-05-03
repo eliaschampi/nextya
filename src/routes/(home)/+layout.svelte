@@ -158,6 +158,7 @@
 							</summary>
 							<ul class="pl-4">
 								<li><a href="/dashboard">General</a></li>
+								<li><a href="/course_dashboard">Cursos</a></li>
 							</ul>
 						</details>
 					</li>
