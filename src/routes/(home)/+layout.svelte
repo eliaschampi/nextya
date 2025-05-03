@@ -105,7 +105,7 @@
 						<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 						<ul
 							tabindex="0"
-							class="dropdown-content menu bg-base-100 rounded-box shadow w-52 mt-2 p-2 z-50"
+							class="dropdown-content menu bg-base-200 rounded-box shadow w-52 mt-2 p-2 z-50"
 						>
 							<li class="menu-title pt-0 pb-2">
 								<span class="font-medium">{userMetadata.name} {userMetadata.last_name}</span>
