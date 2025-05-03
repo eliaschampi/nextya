@@ -6,8 +6,7 @@
 		BookOpen,
 		School,
 		FileText,
-		Activity,
-		FileSpreadsheet,
+		Activity,	
 		UserRound,
 		ChartBar
 	} from 'lucide-svelte';
