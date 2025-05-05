@@ -156,7 +156,6 @@
 		}
 	});
 
-	// Abrir modal de búsqueda
 	function openStudentSearchModal() {
 		modal?.showModal();
 		// Enfocar el campo de búsqueda

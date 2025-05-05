@@ -30,7 +30,6 @@ export type Database = {
 		Tables: {
 			courses: {
 				Row: {
-					abr: string;
 					code: string;
 					created_at: string | null;
 					name: string;
@@ -38,7 +37,6 @@ export type Database = {
 					user_code: string;
 				};
 				Insert: {
-					abr: string;
 					code?: string;
 					created_at?: string | null;
 					name: string;
@@ -46,7 +44,6 @@ export type Database = {
 					user_code: string;
 				};
 				Update: {
-					abr?: string;
 					code?: string;
 					created_at?: string | null;
 					name?: string;

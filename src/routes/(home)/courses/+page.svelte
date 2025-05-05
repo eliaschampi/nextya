@@ -23,25 +23,20 @@
 	const canUpdate = permissionsStore.has({ entity: 'courses', action: 'update' });
 	const canDelete = permissionsStore.has({ entity: 'courses', action: 'delete' });
 
-	// Abrir modal para crear
 	function openCreateModal() {
 		isEditing = false;
 		modal?.showModal();
 	}
 
-	// Abrir modal para editar
 	function openEditModal(course: Course) {
 		isEditing = true;
 		selectedcourse = course;
 		modal?.showModal();
 
 		const nameInput = modal?.querySelector<HTMLInputElement>('#name');
-		const abrInput = modal?.querySelector<HTMLTextAreaElement>('#abr');
 		if (nameInput) nameInput.value = course.name || '';
-		if (abrInput) abrInput.value = course.abr || '';
 	}
 
-	// Abrir modal para confirmar eliminación
 	function openDeleteConfirmModal(course: Course) {
 		selectedcourse = course;
 		confirmModal?.showModal();
@@ -50,9 +45,7 @@
 	// Validar formulario
 	function validateForm(formData: FormData): boolean {
 		const name = (formData.get('name') as string)?.trim();
-		const abr = (formData.get('abr') as string)?.trim();
-
-		if (!name || !abr) {
+		if (!name) {
 			message = 'Todos los campos son obligatorios';
 			return false;
 		}
@@ -190,18 +183,6 @@
 					class="input w-full validator"
 					placeholder="Ej: Matemática, Química, etc."
 				/>
-				<div class="mt-2">
-					<label class="fieldset-legend" for="abr">Abreviatura</label>
-					<input
-						id="abr"
-						name="abr"
-						required
-						maxlength="4"
-						type="text"
-						class="input w-full validator"
-						placeholder="Ej: Art"
-					/>
-				</div>
 			</fieldset>
 			{#if message}
 				<div class="px-2 mt-2">
@@ -237,7 +218,6 @@
 		<div class="flex items-center justify-between">
 			<div class="flex-1">
 				<div class="font-medium text-base-content">{item.name}</div>
-				<div class="text-sm text-base-content/70">{item.abr}</div>
 			</div>
 			<div class="flex items-center gap-2">
 				{#if $canUpdate}

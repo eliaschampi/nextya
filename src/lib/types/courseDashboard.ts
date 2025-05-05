@@ -8,7 +8,6 @@
 export interface CourseScore {
 	course_code: string;
 	course_name: string;
-	course_abr: string;
 	average_score: number;
 }
 

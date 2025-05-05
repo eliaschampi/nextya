@@ -3,7 +3,6 @@ CREATE OR REPLACE FUNCTION get_level_course_scores(p_level_code TEXT)
 RETURNS TABLE (
     course_code UUID,
     course_name VARCHAR,
-    course_abr TEXT,
     average_score NUMERIC
 ) LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
@@ -13,7 +12,6 @@ BEGIN
         SELECT
             es.course_code,
             c.name AS course_name,
-            c.abr AS course_abr,
             er.score
         FROM
             eval_results er
@@ -28,12 +26,11 @@ BEGIN
     SELECT
         cr.course_code,
         cr.course_name,
-        cr.course_abr,
         ROUND(AVG(cr.score)::NUMERIC, 2) AS average_score
     FROM
         course_results cr
     GROUP BY
-        cr.course_code, cr.course_name, cr.course_abr
+        cr.course_code, cr.course_name
     ORDER BY
         average_score DESC;
 END;

@@ -42,14 +42,12 @@
 		return userId === page.data.user?.id;
 	};
 
-	// Abrir modal para crear
 	function openCreateModal() {
 		isEditing = false;
 		selectedAvatar = 'avatar.svg';
 		modal?.showModal();
 	}
 
-	// Abrir modal para editar
 	function openEditModal(user: User) {
 		isEditing = true;
 		selectedUser = user;
@@ -67,20 +65,17 @@
 		if (passwordInput) passwordInput.value = '';
 	}
 
-	// Abrir modal para confirmar eliminación
 	function openDeleteConfirmModal(user: User) {
 		selectedUser = user;
 		confirmModal?.showModal();
 	}
 
-	// Abrir modal para cambiar contraseña
 	function openPasswordModal(user: User) {
 		selectedUser = user;
 		passwordMessage = '';
 		passwordModal?.showModal();
 	}
 
-	// Abrir modal de permisos
 	function openPermissionsModal(user: User) {
 		selectedUser = user;
 		showPermissionsModal = true;
