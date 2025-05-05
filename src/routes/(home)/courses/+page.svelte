@@ -5,7 +5,7 @@
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
 	import type { Course } from '$lib/types';
-	import { EllipsisVertical } from 'lucide-svelte';
+	import { EllipsisVertical, ChevronUp, ChevronDown } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { permissionsStore } from '$lib/stores/permissions';
 
@@ -15,6 +15,7 @@
 	let isEditing = $state(false);
 	let message = $state('');
 	let selectedcourse = $state<Course | null>(null);
+	let isReordering = $state(false);
 
 	const { data } = $props<{ data: { courses: Course[] } }>();
 
@@ -132,6 +133,34 @@
 			showToast('Error en la eliminación del curso', 'danger');
 		}
 	}
+
+	// Manejar reordenamiento
+	async function handleReorder(course: Course, direction: 'up' | 'down') {
+		if (isReordering) return;
+
+		isReordering = true;
+		const dataToSend = new FormData();
+		dataToSend.append('code', course.code);
+		dataToSend.append('direction', direction);
+
+		try {
+			const response = await fetch('?/reorder', {
+				method: 'POST',
+				body: dataToSend
+			});
+			const res = await response.json();
+
+			if (res.type === 'success') {
+				await invalidate('courses:load');
+			} else {
+				showToast(responseMessage(res) ?? 'Error al reordenar', 'danger');
+			}
+		} catch {
+			showToast('Error al reordenar el curso', 'danger');
+		} finally {
+			isReordering = false;
+		}
+	}
 </script>
 
 <PageTitle title="Cursos" description="Aquí puedes ver y gestionar los cursos disponibles">
@@ -210,20 +239,44 @@
 				<div class="font-medium text-base-content">{item.name}</div>
 				<div class="text-sm text-base-content/70">{item.abr}</div>
 			</div>
-			<div class="dropdown dropdown-end">
-				<button type="button" class="m-1 cursor-pointer">
-					<EllipsisVertical class="w-4 h-4" />
-				</button>
-				<ul class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
-					<li>
-						<button onclick={() => openEditModal(item)} disabled={!$canUpdate}>Editar</button>
-					</li>
-					<li>
-						<button onclick={() => openDeleteConfirmModal(item)} disabled={!$canDelete}>
-							Eliminar
+			<div class="flex items-center gap-2">
+				{#if $canUpdate}
+					<div class="flex flex-col">
+						<button
+							type="button"
+							class="btn btn-xs btn-ghost btn-square"
+							onclick={() => handleReorder(item, 'up')}
+							disabled={isReordering}
+							title="Mover arriba"
+						>
+							<ChevronUp class="w-4 h-4" />
 						</button>
-					</li>
-				</ul>
+						<button
+							type="button"
+							class="btn btn-xs btn-ghost btn-square"
+							onclick={() => handleReorder(item, 'down')}
+							disabled={isReordering}
+							title="Mover abajo"
+						>
+							<ChevronDown class="w-4 h-4" />
+						</button>
+					</div>
+				{/if}
+				<div class="dropdown dropdown-end">
+					<button type="button" class="m-1 cursor-pointer">
+						<EllipsisVertical class="w-4 h-4" />
+					</button>
+					<ul class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+						<li>
+							<button onclick={() => openEditModal(item)} disabled={!$canUpdate}>Editar</button>
+						</li>
+						<li>
+							<button onclick={() => openDeleteConfirmModal(item)} disabled={!$canDelete}>
+								Eliminar
+							</button>
+						</li>
+					</ul>
+				</div>
 			</div>
 		</div>
 	</div>

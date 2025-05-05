@@ -34,6 +34,7 @@ export type Database = {
 					code: string;
 					created_at: string | null;
 					name: string;
+					order: number;
 					user_code: string;
 				};
 				Insert: {
@@ -41,6 +42,7 @@ export type Database = {
 					code?: string;
 					created_at?: string | null;
 					name: string;
+					order?: number;
 					user_code: string;
 				};
 				Update: {
@@ -48,6 +50,7 @@ export type Database = {
 					code?: string;
 					created_at?: string | null;
 					name?: string;
+					order?: number;
 					user_code?: string;
 				};
 				Relationships: [];

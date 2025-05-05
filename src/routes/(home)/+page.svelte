@@ -6,12 +6,10 @@
 		BookOpen,
 		School,
 		FileText,
-		Activity,	
+		Activity,
 		UserRound,
 		ChartBar,
-
 		ChartArea
-
 	} from 'lucide-svelte';
 	import { showToast } from '$lib/stores/Toast';
 
