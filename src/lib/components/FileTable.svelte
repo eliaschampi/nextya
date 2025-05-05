@@ -124,7 +124,7 @@
 
 		// Prioridad 2: Error de formato A5
 		if (!entry.formatValid) {
-			return `Formato no A5: ${entry.formatName}. Recorta la imagen primero.`;
+			return `Formato no A5: ${entry.formatName}.`;
 		}
 
 		// Otros estados
@@ -143,9 +143,12 @@
 	{@const Icon = getStatusIcon(entry)}
 	{@const statusColor = getStatusColor(entry)}
 	{@const tooltip = getTooltip(entry)}
-	<span class="tooltip tooltip-right" data-tip={tooltip}>
+	<div class="tooltip tooltip-right">
+		<div class="tooltip-content">
+			<div class="max-w-[6rem]">{tooltip}</div>
+		</div>
 		<Icon size={16} class={statusColor} />
-	</span>
+	</div>
 {/snippet}
 {#snippet rollCodeEditor(entry: FileEntry)}
 	<div class="join h-7">
@@ -274,12 +277,10 @@
 						<div class="flex gap-1 justify-end items-center h-7">
 							{#if (entry.status === 'pending' || entry.status === 'error') && editingId !== entry.id}
 								<button
-									class="btn btn-xs tooltip btn-primary"
+									class="btn btn-xs btn-primary"
 									onclick={() => onProcess(entry.id)}
 									disabled={!evalSelected || isBusy || !entry.formatValid}
-									data-tip={!entry.formatValid
-										? 'Formato no A5. Recorta la imagen primero.'
-										: 'Procesar'}
+									title={!entry.formatValid ? 'Formato no A5' : 'Procesar'}
 								>
 									{#if isProcessing}
 										<Loader2 size={14} class="animate-spin" />
