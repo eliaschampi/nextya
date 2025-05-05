@@ -2,6 +2,7 @@
 	import Message from '$lib/components/Message.svelte';
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import Table from '$lib/components/Table.svelte';
+	import RegistersModal from '$lib/components/RegistersModal.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
 	import type { Level, RegisterStudent, SelectForDelete, Student } from '$lib/types';
@@ -26,6 +27,14 @@
 	let selectedGroup = $state('');
 	let students = $state<RegisterStudent[]>([]);
 
+	// Estado para el modal de matrículas
+	let registersModalOpen = $state(false);
+	let selectedStudentForRegisters = $state<{ code: string; name: string } | null>(null);
+
+	// Pagination state
+	let currentPage = $state(1);
+	let pageSize = $state(20); // Resultados por página
+
 	// Filtered students based on search query
 	const filteredStudents = $derived(
 		students.filter((student) => {
@@ -40,6 +49,20 @@
 			);
 		})
 	);
+
+	// Resultados paginados
+	const paginatedStudents = $derived(
+		filteredStudents.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+	);
+
+	// Total de páginas
+	const totalPages = $derived(Math.ceil(filteredStudents.length / pageSize));
+
+	// Función para cambiar de página
+	function goToPage(page: number) {
+		if (page < 1 || page > totalPages) return;
+		currentPage = page;
+	}
 
 	let nameInput: HTMLInputElement | null = $state(null);
 	let lastNameInput: HTMLInputElement | null = $state(null);
@@ -117,6 +140,7 @@
 						</button>
 						<button
 							class="btn btn-sm btn-secondary btn-outline"
+							onclick="document.dispatchEvent(new CustomEvent('student-registers', {detail: '${row.student_code}'}))"
 							aria-label="Ver matrículas"
 						>
 							${bookIcon}
@@ -145,13 +169,31 @@
 			}
 		};
 
+		const handleViewRegisters = (event: CustomEvent) => {
+			const studentCode = event.detail;
+			const student = students.find((s) => s.student_code === studentCode);
+			if (student) {
+				openRegistersModal(student);
+			}
+		};
+
 		document.addEventListener('student-edit', handleStudentEdit as EventListener);
 		document.addEventListener('student-delete', handleStudentDelete as EventListener);
+		document.addEventListener('student-registers', handleViewRegisters as EventListener);
 
 		return () => {
 			document.removeEventListener('student-edit', handleStudentEdit as EventListener);
 			document.removeEventListener('student-delete', handleStudentDelete as EventListener);
+			document.removeEventListener('student-registers', handleViewRegisters as EventListener);
 		};
+	}
+
+	function openRegistersModal(student: RegisterStudent) {
+		selectedStudentForRegisters = {
+			code: student.student_code,
+			name: `${student.name} ${student.last_name}`
+		};
+		registersModalOpen = true;
 	}
 
 	onMount(() => {
@@ -168,7 +210,11 @@
 			return;
 		}
 		const response = await fetch(`/api/student/${selectedLevelCode}/${selectedGroup}`);
-		if (response.ok) students = await response.json();
+		if (response.ok) {
+			students = await response.json();
+			// Reset to first page when loading new students
+			currentPage = 1;
+		}
 	}
 
 	function handleFillEmail() {
@@ -405,20 +451,60 @@
 	>
 		<div class="card-body">
 			{#if filteredStudents.length > 0}
-				<Table
-					columns={studentColumns as unknown as {
-						key?: string;
-						label: string;
-						headerClass?: string;
-						class?: string;
-						cell?: (row: unknown) => unknown;
-					}[]}
-					rows={filteredStudents as unknown[]}
-					striped={true}
-					hover={true}
-					bordered={true}
-					emptyMessage="No hay estudiantes en este nivel y grupo."
-				/>
+				<div class="overflow-x-auto">
+					<Table
+						columns={studentColumns as unknown as {
+							key?: string;
+							label: string;
+							headerClass?: string;
+							class?: string;
+							cell?: (row: unknown) => unknown;
+						}[]}
+						rows={paginatedStudents as unknown[]}
+						striped={true}
+						hover={true}
+						bordered={true}
+						emptyMessage="No hay estudiantes en este nivel y grupo."
+					/>
+
+					<!-- Paginación -->
+					{#if totalPages > 1}
+						<div class="flex justify-center mt-6">
+							<div class="join">
+								<button
+									class="join-item btn btn-sm btn-primary btn-soft {currentPage === 1
+										? 'btn-disabled'
+										: ''}"
+									onclick={() => goToPage(currentPage - 1)}
+								>
+									«
+								</button>
+
+								{#each Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
+									return index + 1 + Math.max(0, Math.min(totalPages - 5, currentPage - 3));
+								}) as pageNum (pageNum)}
+									<button
+										class="join-item btn btn-sm {pageNum === currentPage
+											? 'btn-primary'
+											: 'btn-soft'}"
+										onclick={() => goToPage(pageNum)}
+									>
+										{pageNum}
+									</button>
+								{/each}
+
+								<button
+									class="join-item btn btn-sm btn-primary btn-soft {currentPage === totalPages
+										? 'btn-disabled'
+										: ''}"
+									onclick={() => goToPage(currentPage + 1)}
+								>
+									»
+								</button>
+							</div>
+						</div>
+					{/if}
+				</div>
 			{:else if searchQuery}
 				<div
 					class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md mx-auto text-center"
@@ -655,3 +741,13 @@
 		</div>
 	</div>
 </dialog>
+
+<!-- Modal de matrículas -->
+{#if selectedStudentForRegisters}
+	<RegistersModal
+		studentCode={selectedStudentForRegisters.code}
+		studentName={selectedStudentForRegisters.name}
+		open={registersModalOpen}
+		onClose={() => (registersModalOpen = false)}
+	/>
+{/if}

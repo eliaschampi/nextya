@@ -3,7 +3,6 @@
 	import type { ApiOmrSuccessData, StudentAnswer } from '$lib/types/api';
 	import type { EvalQuestion } from '$lib/types';
 	import Message from './Message.svelte';
-	import { fade } from 'svelte/transition';
 
 	type Props = {
 		result: ApiOmrSuccessData | null;
@@ -84,7 +83,7 @@
 
 <dialog bind:this={modal} class="modal modal-bottom sm:modal-middle">
 	{#if result}
-		<div class="modal-box max-w-2xl" transition:fade>
+		<div class="modal-box max-w-2xl">
 			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onclick={closeModal}>
 				<X size={20} />
 			</button>
