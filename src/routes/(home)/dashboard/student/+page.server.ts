@@ -1,5 +1,5 @@
 import { getLevels } from '$lib/data/levels';
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad } from '../$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.session?.user.id;
@@ -11,6 +11,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	return {
 		levels,
-		title: 'Dashboard de Cursos'
+		title: 'Dashboard de Estudiante'
 	};
 };

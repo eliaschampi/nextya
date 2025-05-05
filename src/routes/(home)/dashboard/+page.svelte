@@ -3,6 +3,7 @@
 	import { Chart } from 'chart.js/auto';
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast.js';
+	import { Settings, ChartBar, ChartPie, Activity, Trophy } from 'lucide-svelte';
 	import type { Level } from '$lib/types';
 	import type { DashboardData } from '$lib/types/dashboard';
 
@@ -445,56 +446,94 @@
 	}
 </script>
 
-<PageTitle title={data.title} description="Estadísticas y análisis de rendimiento">
+<PageTitle title={data.title} description="Estadísticas y análisis de rendimiento académico">
 	{#if selectedLevelCode}
 		<div>
 			<button
-				class="btn btn-soft btn-sm"
+				class="btn btn-primary btn-sm"
 				onclick={() => loadDashboardData(selectedLevelCode)}
 				disabled={isLoading}
 			>
 				{#if isLoading}
-					<span class="loading loading-spinner loading-xs"></span>
+					<span class="loading loading-spinner loading-xs mr-1"></span>
+				{:else}
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-4 w-4 mr-1"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+						<path d="M3 3v5h5"></path>
+						<path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+						<path d="M16 21h5v-5"></path>
+					</svg>
 				{/if}
-				Actualizar datos
+				Actualizar
 			</button>
 		</div>
 	{/if}
 </PageTitle>
 
-<div class="card bg-base-200 shadow-sm mb-6">
-	<div class="card-body">
+<div class="card bg-base-200 shadow-lg border border-base-300/30 rounded-xl mb-6 overflow-hidden">
+	<div class="card-body p-5">
+		<div class="flex items-center gap-3 mb-2">
+			<div class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/10 text-primary">
+				<Settings class="h-5 w-5" />
+			</div>
+			<h3 class="text-lg font-medium">Configuración del Dashboard</h3>
+		</div>
+		<div class="divider my-1"></div>
 		<fieldset class="fieldset">
-			<label for="level-select" class="fieldset-legend"> Selecciona un nivel </label>
-			<select
-				id="level-select"
-				class="select select-bordered"
-				bind:value={selectedLevelCode}
-				onchange={() => loadDashboardData(selectedLevelCode)}
-			>
-				<option value="" disabled selected>Selecciona un nivel</option>
-				{#each data.levels as level (level.code)}
-					<option value={level.code}>{level.name}</option>
-				{/each}
-			</select>
+			<label for="level-select" class="fieldset-legend font-medium text-base-content/80">
+				Selecciona un nivel académico
+			</label>
+			<div class="mt-2">
+				<select
+					id="level-select"
+					class="select select-bordered w-full"
+					bind:value={selectedLevelCode}
+					onchange={() => loadDashboardData(selectedLevelCode)}
+				>
+					<option value="" disabled selected>Selecciona un nivel</option>
+					{#each data.levels as level (level.code)}
+						<option value={level.code}>{level.name}</option>
+					{/each}
+				</select>
+			</div>
 		</fieldset>
 	</div>
 </div>
 
 {#if isLoading}
-	<div class="flex justify-center items-center h-64">
+	<div
+		class="flex justify-center items-center h-64 bg-base-200 rounded-xl shadow-lg border border-base-300/30 p-6"
+	>
 		<div class="loading loading-spinner loading-lg text-primary"></div>
-		<span class="ml-4 text-base-content/70">Cargando datos del dashboard...</span>
+		<span class="ml-4 text-base-content/70 text-lg">Cargando datos del dashboard...</span>
 	</div>
 {:else if !selectedLevelCode}
-	<div class="card bg-base-200 shadow-sm">
-		<div class="card-body text-center">
-			<div class="w-16 h-16 mx-auto text-base-content opacity-50">📊</div>
-			<h2 class="text-xl font-semibold mt-4">Dashboard de Rendimiento</h2>
-			<p class="text-base-content/70">
+	<div
+		class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl overflow-hidden"
+	>
+		<div class="card-body p-8 text-center">
+			<div
+				class="w-20 h-20 mx-auto bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4"
+			>
+				<ChartBar class="w-10 h-10" />
+			</div>
+			<h2 class="text-2xl font-semibold">Dashboard de Rendimiento</h2>
+			<p class="text-base-content/70 text-lg mt-2 max-w-md mx-auto">
 				Visualiza el rendimiento de estudiantes, grupos y evaluaciones
 			</p>
-			<p class="text-base-content/70 mt-2">Selecciona un nivel en el menú superior para comenzar</p>
+			<div class="divider"></div>
+			<p class="text-base-content/70 mt-2">
+				Selecciona un nivel en el menú superior para comenzar a visualizar los datos
+			</p>
 		</div>
 	</div>
 {:else if chartData}
@@ -502,13 +541,20 @@
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 			<!-- Scores by Evaluation Chart -->
 			{#if scoresByEvalData.labels.length}
-				<div class="card bg-base-200 shadow-sm">
-					<div class="card-body">
-						<div class="flex items-center gap-2 mb-2">
-							<div class="w-5 h-5 text-primary">📈</div>
-							<h3 class="card-title text-lg">Evolución de Puntajes</h3>
+				<div
+					class="card bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg border border-primary/20 rounded-xl overflow-hidden"
+				>
+					<div class="card-body p-5">
+						<div class="flex items-center gap-3 mb-3">
+							<div
+								class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/15 text-primary"
+							>
+								<Activity class="h-5 w-5" />
+							</div>
+							<h3 class="text-lg font-medium">Evolución de Puntajes</h3>
 						</div>
-						<div class="h-64 relative">
+						<div class="divider my-0"></div>
+						<div class="h-64 relative mt-2">
 							<canvas id="scoresByEvalChart"></canvas>
 						</div>
 					</div>
@@ -517,13 +563,20 @@
 
 			<!-- Scores by Group Chart -->
 			{#if scoresByGroupData.labels.length}
-				<div class="card bg-base-200 shadow-sm">
-					<div class="card-body">
-						<div class="flex items-center gap-2 mb-2">
-							<div class="w-5 h-5 text-secondary">📊</div>
-							<h3 class="card-title text-lg">Puntajes por Grupo</h3>
+				<div
+					class="card bg-gradient-to-br from-secondary/10 to-secondary/5 shadow-lg border border-secondary/20 rounded-xl overflow-hidden"
+				>
+					<div class="card-body p-5">
+						<div class="flex items-center gap-3 mb-3">
+							<div
+								class="w-8 h-8 flex items-center justify-center rounded-lg bg-secondary/15 text-secondary"
+							>
+								<ChartBar class="h-5 w-5" />
+							</div>
+							<h3 class="text-lg font-medium">Puntajes por Grupo</h3>
 						</div>
-						<div class="h-64 relative">
+						<div class="divider my-0"></div>
+						<div class="h-64 relative mt-2">
 							<canvas id="scoresByGroupChart"></canvas>
 						</div>
 					</div>
@@ -532,13 +585,20 @@
 
 			<!-- Correct vs Incorrect Chart -->
 			{#if correctVsIncorrectData.values.length}
-				<div class="card bg-base-200 shadow-sm">
-					<div class="card-body">
-						<div class="flex items-center gap-2 mb-2">
-							<div class="w-5 h-5 text-accent">🍩</div>
-							<h3 class="card-title text-lg">Distribución de Respuestas</h3>
+				<div
+					class="card bg-gradient-to-br from-accent/10 to-accent/5 shadow-lg border border-accent/20 rounded-xl overflow-hidden"
+				>
+					<div class="card-body p-5">
+						<div class="flex items-center gap-3 mb-3">
+							<div
+								class="w-8 h-8 flex items-center justify-center rounded-lg bg-accent/15 text-accent"
+							>
+								<ChartPie class="h-5 w-5" />
+							</div>
+							<h3 class="text-lg font-medium">Distribución de Respuestas</h3>
 						</div>
-						<div class="h-64 relative">
+						<div class="divider my-0"></div>
+						<div class="h-64 relative mt-2">
 							<canvas id="correctVsIncorrectChart"></canvas>
 						</div>
 					</div>
@@ -547,13 +607,20 @@
 
 			<!-- Student Performance Chart -->
 			{#if studentPerformanceData.labels.length}
-				<div class="card bg-base-200 shadow-sm">
-					<div class="card-body">
-						<div class="flex items-center gap-2 mb-2">
-							<div class="w-5 h-5 text-warning">🏆</div>
-							<h3 class="card-title text-lg">Top 10 Estudiantes</h3>
+				<div
+					class="card bg-gradient-to-br from-warning/10 to-warning/5 shadow-lg border border-warning/20 rounded-xl overflow-hidden"
+				>
+					<div class="card-body p-5">
+						<div class="flex items-center gap-3 mb-3">
+							<div
+								class="w-8 h-8 flex items-center justify-center rounded-lg bg-warning/15 text-warning"
+							>
+								<Trophy class="h-5 w-5" />
+							</div>
+							<h3 class="text-lg font-medium">Top 10 Estudiantes</h3>
 						</div>
-						<div class="h-64 relative">
+						<div class="divider my-0"></div>
+						<div class="h-64 relative mt-2">
 							<canvas id="studentPerformanceChart"></canvas>
 						</div>
 					</div>
@@ -561,11 +628,20 @@
 			{/if}
 		</div>
 	{:else}
-		<div class="card bg-base-200 shadow-sm">
-			<div class="card-body text-center">
-				<div class="w-16 h-16 mx-auto text-base-content opacity-50">🔍</div>
-				<h2 class="text-xl font-semibold mt-4">No hay datos disponibles</h2>
-				<p class="text-base-content/70">No se encontraron resultados para el nivel seleccionado</p>
+		<div
+			class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl overflow-hidden"
+		>
+			<div class="card-body p-8 text-center">
+				<div
+					class="w-20 h-20 mx-auto bg-warning/10 text-warning rounded-full flex items-center justify-center mb-4"
+				>
+					<Settings class="w-10 h-10" />
+				</div>
+				<h2 class="text-2xl font-semibold">No hay datos disponibles</h2>
+				<p class="text-base-content/70 text-lg mt-2 max-w-md mx-auto">
+					No se encontraron resultados para el nivel seleccionado
+				</p>
+				<div class="divider"></div>
 				<p class="text-base-content/70 mt-2">
 					Asegúrate de que existan evaluaciones y resultados registrados para este nivel
 				</p>
@@ -573,10 +649,19 @@
 		</div>
 	{/if}
 {:else}
-	<div class="card bg-base-200 shadow-sm">
-		<div class="card-body text-center">
-			<h2 class="text-xl font-semibold">No hay datos disponibles</h2>
-			<p class="text-base-content/70">No se encontraron datos para el nivel seleccionado</p>
+	<div
+		class="card bg-gradient-to-br from-error/10 to-error/5 shadow-lg border border-error/20 rounded-xl overflow-hidden"
+	>
+		<div class="card-body p-8 text-center">
+			<div
+				class="w-20 h-20 mx-auto bg-error/10 text-error rounded-full flex items-center justify-center mb-4"
+			>
+				<Settings class="w-10 h-10" />
+			</div>
+			<h2 class="text-2xl font-semibold">No hay datos disponibles</h2>
+			<p class="text-base-content/70 text-lg mt-2">
+				No se encontraron datos para el nivel seleccionado
+			</p>
 		</div>
 	</div>
 {/if}

@@ -2,6 +2,7 @@ import type { Database } from '../../database.types';
 export * from './studentResults';
 export * from './studentExport';
 export * from './courseDashboard';
+export * from './studentDashboard';
 
 export type Level = Database['public']['Tables']['levels']['Row'];
 export type Course = Database['public']['Tables']['courses']['Row'];

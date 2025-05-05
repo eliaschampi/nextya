@@ -4,6 +4,7 @@
 		Bird,
 		ChartArea,
 		ChevronDown,
+		FileText,
 		FolderPen,
 		House,
 		LogOut,
@@ -11,7 +12,6 @@
 		Moon,
 		Settings,
 		Sun,
-		Table,
 		UserCog,
 		UserRound
 	} from 'lucide-svelte';
@@ -147,7 +147,7 @@
 					</li>
 
 					<li class="menu-title pt-2">
-						<span>Administración</span>
+						<span>Dashboards</span>
 					</li>
 
 					<li>
@@ -158,7 +158,25 @@
 							</summary>
 							<ul class="pl-4">
 								<li><a href="/dashboard">General</a></li>
-								<li><a href="/course_dashboard">Cursos</a></li>
+								<li><a href="/dashboard/course">Cursos</a></li>
+								<li><a href="/dashboard/student">Estudiantes</a></li>
+							</ul>
+						</details>
+					</li>
+
+					<li class="menu-title pt-2">
+						<span>Académico</span>
+					</li>
+
+					<li>
+						<details>
+							<summary class="flex gap-2.5 py-2">
+								<Settings class="h-4 w-4" />
+								<span>Estructura</span>
+							</summary>
+							<ul class="pl-4">
+								<li><a href="/levels">Niveles</a></li>
+								<li><a href="/courses">Cursos</a></li>
 							</ul>
 						</details>
 					</li>
@@ -166,14 +184,13 @@
 					<li>
 						<details>
 							<summary class="flex gap-2.5 py-2">
-								<Settings class="h-4 w-4" />
-								<span>Configuración</span>
+								<UserRound class="h-4 w-4" />
+								<span>Estudiantes</span>
 							</summary>
 							<ul class="pl-4">
-								<li><a href="/levels">Niveles</a></li>
-								<li><a href="/courses">Cursos</a></li>
-								<li><a href="/student">Estudiantes</a></li>
+								<li><a href="/student">Gestionar</a></li>
 								<li><a href="/impcsv">Importar</a></li>
+								<li><a href="/eval_student">Resultados</a></li>
 							</ul>
 						</details>
 					</li>
@@ -192,25 +209,19 @@
 					</li>
 
 					<li>
-						<details>
-							<summary class="flex gap-2.5 py-2">
-								<Table class="h-4 w-4" />
-								<span>Resultados</span>
-							</summary>
-							<ul class="pl-4">
-								<li><a href="/result">Reporte general</a></li>
-								<li><a href="/eval_student">Estudiante</a></li>
-							</ul>
-						</details>
+						<a href="/result" class="flex gap-2.5 py-2.5">
+							<FileText class="h-4 w-4" />
+							<span>Resultados</span>
+						</a>
 					</li>
 
 					<li class="menu-title pt-2">
-						<span>Sistema</span>
+						<span>Administración</span>
 					</li>
 
 					<li>
 						<a href="/users" class="flex gap-2.5 py-2.5">
-							<UserRound class="h-4 w-4" />
+							<UserCog class="h-4 w-4" />
 							<span>Usuarios</span>
 						</a>
 					</li>
@@ -218,7 +229,7 @@
 					<li>
 						<a href="/config" class="flex gap-2.5 py-2.5">
 							<Bird class="h-4 w-4" />
-							<span>Sistema</span>
+							<span>Configuración</span>
 						</a>
 					</li>
 				</ul>

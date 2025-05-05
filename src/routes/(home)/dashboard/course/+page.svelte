@@ -3,6 +3,7 @@
 	import { Chart } from 'chart.js/auto';
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast.js';
+	import { Settings, ChartPie, Activity } from 'lucide-svelte';
 	import type { Level, CourseScore, EvalScore, CourseChartData, EvalChartData } from '$lib/types';
 
 	// Props from server
@@ -88,7 +89,7 @@
 		if (courseScoresChart) courseScoresChart.destroy();
 
 		try {
-			const response = await fetch(`/api/course_dashboard/scores/${levelCode}`);
+			const response = await fetch(`/api/dashboard/course/scores/${levelCode}`);
 
 			if (!response.ok) {
 				const errorData = await response.json().catch(() => ({}));
@@ -134,7 +135,7 @@
 		if (evalScoresChart) evalScoresChart.destroy();
 
 		try {
-			const response = await fetch(`/api/course_dashboard/evals/${levelCode}/${courseCode}`);
+			const response = await fetch(`/api/dashboard/course/evals/${levelCode}/${courseCode}`);
 
 			if (!response.ok) {
 				const errorData = await response.json().catch(() => ({}));
@@ -351,101 +352,144 @@
 	}
 </script>
 
-<PageTitle title={data.title} description="Estadísticas y análisis de rendimiento">
+<PageTitle title={data.title} description="Estadísticas y análisis de rendimiento por curso">
 	<div></div>
 </PageTitle>
 
-<div class="container mx-auto px-4 py-6">
+<div class="container mx-auto px-0 py-6">
 	<!-- Selection Controls -->
-	<div class="bg-base-200 rounded-lg shadow p-4 mb-8">
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-			<fieldset class="fieldset">
-				<label for="levelSelect" class="fieldset-legend">Nivel</label>
-				<select
-					id="levelSelect"
-					class="select select-bordered"
-					onchange={handleLevelChange}
-					value={selectedLevelCode}
-				>
-					<option value="" disabled>Seleccionar nivel</option>
-					{#each data.levels as level (level.code)}
-						<option value={level.code}>{level.name}</option>
-					{/each}
-				</select>
-			</fieldset>
+	<div class="card bg-base-200 shadow-lg border border-base-300/30 rounded-xl mb-6 overflow-hidden">
+		<div class="card-body p-5">
+			<div class="flex items-center gap-3 mb-2">
+				<div class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/10 text-primary">
+					<Settings class="h-5 w-5" />
+				</div>
+				<h3 class="text-lg font-medium">Configuración del Dashboard</h3>
+			</div>
+			<div class="divider my-1"></div>
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<fieldset class="fieldset">
+					<label for="levelSelect" class="fieldset-legend font-medium text-base-content/80"
+						>Nivel</label
+					>
+					<div class="mt-2">
+						<select
+							id="levelSelect"
+							class="select select-bordered w-full"
+							onchange={handleLevelChange}
+							value={selectedLevelCode}
+						>
+							<option value="" disabled>Seleccionar nivel</option>
+							{#each data.levels as level (level.code)}
+								<option value={level.code}>{level.name}</option>
+							{/each}
+						</select>
+					</div>
+				</fieldset>
 
-			<fieldset class="fieldset">
-				<label for="courseSelect" class="fieldset-legend">Curso</label>
-				<select
-					id="courseSelect"
-					class="select select-bordered"
-					onchange={handleCourseChange}
-					value={selectedCourseCode}
-					disabled={!courseScores || courseScores.length === 0}
-				>
-					<option value="" disabled>Seleccionar curso</option>
-					{#if courseScores && courseScores.length > 0}
-						{#each courseScores as course (course.course_code)}
-							<option value={course.course_code}>{course.course_name}</option>
-						{/each}
-					{/if}
-				</select>
-			</fieldset>
+				<fieldset class="fieldset">
+					<label for="courseSelect" class="fieldset-legend font-medium text-base-content/80"
+						>Curso</label
+					>
+					<div class="mt-2">
+						<select
+							id="courseSelect"
+							class="select select-bordered w-full"
+							onchange={handleCourseChange}
+							value={selectedCourseCode}
+							disabled={!courseScores || courseScores.length === 0}
+						>
+							<option value="" disabled>Seleccionar curso</option>
+							{#if courseScores && courseScores.length > 0}
+								{#each courseScores as course (course.course_code)}
+									<option value={course.course_code}>{course.course_name}</option>
+								{/each}
+							{/if}
+						</select>
+					</div>
+				</fieldset>
+			</div>
 		</div>
 	</div>
 
 	<!-- Charts Grid -->
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 		<!-- Course Scores Chart -->
-		<div class="bg-base-200 rounded-lg shadow p-6">
-			<div class="flex items-center gap-2 mb-4">
-				<div class="w-5 h-5 text-primary">📊</div>
-				<h3 class="card-title text-lg">Promedio de Puntajes por Curso</h3>
-			</div>
+		<div
+			class="card bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg border border-primary/20 rounded-xl overflow-hidden"
+		>
+			<div class="card-body p-5">
+				<div class="flex items-center gap-3 mb-3">
+					<div
+						class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/15 text-primary"
+					>
+						<ChartPie class="h-5 w-5" />
+					</div>
+					<h3 class="text-lg font-medium">Promedio de Puntajes por Curso</h3>
+				</div>
+				<div class="divider my-0"></div>
 
-			{#if isLoading}
-				<div class="flex justify-center items-center h-64">
-					<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-				</div>
-			{:else if !selectedLevelCode}
-				<div class="flex justify-center items-center h-64 text-gray-500">
-					<p>Selecciona un nivel para ver los datos</p>
-				</div>
-			{:else if !courseScores || courseScores.length === 0}
-				<div class="flex justify-center items-center h-64 text-gray-500">
-					<p>No hay datos disponibles para este nivel</p>
-				</div>
-			{:else}
-				<div class="h-64 relative">
-					<canvas id="courseScoresChart"></canvas>
-				</div>
-			{/if}
+				{#if isLoading}
+					<div class="flex justify-center items-center h-64">
+						<div class="loading loading-spinner loading-lg text-primary"></div>
+					</div>
+				{:else if !selectedLevelCode}
+					<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+						<div class="text-4xl mb-4">📊</div>
+						<p class="text-lg font-medium">Selecciona un nivel</p>
+						<p class="text-sm mt-2">Para visualizar los datos de puntajes por curso</p>
+					</div>
+				{:else if !courseScores || courseScores.length === 0}
+					<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+						<div class="text-4xl mb-4">🔍</div>
+						<p class="text-lg font-medium">No hay datos disponibles</p>
+						<p class="text-sm mt-2">No se encontraron cursos para este nivel</p>
+					</div>
+				{:else}
+					<div class="h-64 relative mt-2">
+						<canvas id="courseScoresChart"></canvas>
+					</div>
+				{/if}
+			</div>
 		</div>
 
 		<!-- Eval Scores Chart -->
-		<div class="bg-base-200 rounded-lg shadow p-6">
-			<div class="flex items-center gap-2 mb-4">
-				<div class="w-5 h-5 text-primary">📈</div>
-				<h3 class="card-title text-lg">Evolución de Puntajes por Evaluación</h3>
-			</div>
+		<div
+			class="card bg-gradient-to-br from-secondary/10 to-secondary/5 shadow-lg border border-secondary/20 rounded-xl overflow-hidden"
+		>
+			<div class="card-body p-5">
+				<div class="flex items-center gap-3 mb-3">
+					<div
+						class="w-8 h-8 flex items-center justify-center rounded-lg bg-secondary/15 text-secondary"
+					>
+						<Activity class="h-5 w-5" />
+					</div>
+					<h3 class="text-lg font-medium">Evolución de Puntajes por Evaluación</h3>
+				</div>
+				<div class="divider my-0"></div>
 
-			{#if isLoading}
-				<div class="flex justify-center items-center h-64">
-					<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-				</div>
-			{:else if !selectedCourseCode}
-				<div class="flex justify-center items-center h-64 text-gray-500">
-					<p>Selecciona un curso para ver los datos</p>
-				</div>
-			{:else if !evalScores || evalScores.length === 0}
-				<div class="flex justify-center items-center h-64 text-gray-500">
-					<p>No hay datos disponibles para este curso</p>
-				</div>
-			{:else}
-				<div class="h-64 relative">
-					<canvas id="evalScoresChart"></canvas>
-				</div>
-			{/if}
+				{#if isLoading}
+					<div class="flex justify-center items-center h-64">
+						<div class="loading loading-spinner loading-lg text-secondary"></div>
+					</div>
+				{:else if !selectedCourseCode}
+					<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+						<div class="text-4xl mb-4">📈</div>
+						<p class="text-lg font-medium">Selecciona un curso</p>
+						<p class="text-sm mt-2">Para visualizar la evolución de puntajes</p>
+					</div>
+				{:else if !evalScores || evalScores.length === 0}
+					<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+						<div class="text-4xl mb-4">🔍</div>
+						<p class="text-lg font-medium">No hay datos disponibles</p>
+						<p class="text-sm mt-2">No se encontraron evaluaciones para este curso</p>
+					</div>
+				{:else}
+					<div class="h-64 relative mt-2">
+						<canvas id="evalScoresChart"></canvas>
+					</div>
+				{/if}
+			</div>
 		</div>
 	</div>
 </div>

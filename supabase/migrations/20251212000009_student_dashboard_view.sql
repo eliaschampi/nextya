@@ -1,0 +1,87 @@
+-- Create a function to get student-specific dashboard data
+-- This function returns score evolution data for a specific student
+CREATE OR REPLACE FUNCTION get_student_score_evolution(p_student_code TEXT)
+RETURNS TABLE (
+    eval_code TEXT,
+    eval_name VARCHAR,
+    eval_date DATE,
+    score NUMERIC
+) LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    RETURN QUERY
+    WITH student_results AS (
+        -- Get all results for this student
+        SELECT
+            er.eval_code,
+            e.name AS eval_name,
+            e.eval_date,
+            er.score
+        FROM
+            eval_results er
+            JOIN registers r ON er.register_code = r.code
+            JOIN evals e ON er.eval_code = e.code
+        WHERE
+            r.student_code = p_student_code::UUID
+            AND er.section_code IS NULL -- Only include general results
+        ORDER BY
+            e.eval_date ASC
+    )
+    SELECT
+        sr.eval_code::TEXT,
+        sr.eval_name,
+        sr.eval_date,
+        sr.score
+    FROM
+        student_results sr;
+END;
+$$;
+
+-- Create a function to get course-specific scores for a student
+CREATE OR REPLACE FUNCTION get_student_course_scores(p_student_code TEXT)
+RETURNS TABLE (
+    course_code TEXT,
+    course_name VARCHAR,
+    average_score NUMERIC
+) LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    RETURN QUERY
+    WITH course_results AS (
+        -- Get section-specific results for the student
+        SELECT
+            es.course_code,
+            c.name AS course_name,
+            er.score
+        FROM
+            eval_results er
+            JOIN eval_sections es ON er.section_code = es.code
+            JOIN courses c ON es.course_code = c.code
+            JOIN registers r ON er.register_code = r.code
+        WHERE
+            r.student_code = p_student_code::UUID
+            AND er.section_code IS NOT NULL
+    ),
+    course_averages AS (
+        -- Calculate average score per course
+        SELECT
+            cr.course_code,
+            cr.course_name,
+            AVG(cr.score) AS average_score
+        FROM
+            course_results cr
+        GROUP BY
+            cr.course_code, cr.course_name
+    )
+    SELECT
+        ca.course_code::TEXT,
+        ca.course_name,
+        ROUND(ca.average_score, 2) AS average_score
+    FROM
+        course_averages ca
+    ORDER BY
+        ca.course_name;
+END;
+$$;
+
+-- Grant execute permissions to authenticated users
+GRANT EXECUTE ON FUNCTION get_student_score_evolution(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_student_course_scores(TEXT) TO authenticated;
