@@ -6,13 +6,18 @@ import { permissionsStore } from '$lib/stores/permissions';
 
 // Configuración del cliente de Supabase
 const supabaseHandle: Handle = async ({ event, resolve }) => {
-	// Crear el cliente de Supabase para SSR
+	// Crear el cliente de Supabase para SSR con opciones de cookie para expiración de 24 horas
 	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
 		cookies: {
 			getAll: () => event.cookies.getAll(),
 			setAll: (cookies) =>
 				cookies.forEach(({ name, value, options }) =>
-					event.cookies.set(name, value, { ...options, path: '/' })
+					event.cookies.set(name, value, {
+						...options,
+						path: '/',
+						// Establecer tiempo de vida de la cookie a 24 horas (en segundos)
+						maxAge: 60 * 60 * 24
+					})
 				)
 		}
 	});
@@ -49,6 +54,17 @@ const supabaseHandle: Handle = async ({ event, resolve }) => {
 const authGuard: Handle = async ({ event, resolve }) => {
 	const { session } = await event.locals.getSession();
 	event.locals.session = session;
+
+	// Verificar si la sesión ha expirado (24 horas)
+	if (session) {
+		const now = Math.floor(Date.now() / 1000);
+		// Si la sesión ha expirado, cerrar sesión y redirigir a login
+		if (session.expires_at && session.expires_at < now) {
+			await event.locals.supabase.auth.signOut();
+			permissionsStore.clearPermissions();
+			throw redirect(303, '/auth');
+		}
+	}
 
 	// Redirigir si no hay sesión y la ruta no es `/auth`
 	if (!session && event.url.pathname !== '/auth') {

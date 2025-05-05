@@ -8,7 +8,10 @@
 		FileText,
 		Activity,	
 		UserRound,
-		ChartBar
+		ChartBar,
+
+		ChartArea
+
 	} from 'lucide-svelte';
 	import { showToast } from '$lib/stores/Toast';
 
@@ -193,7 +196,7 @@
 	<!-- Students Count -->
 	<a
 		href="/student"
-		class="card bg-gradient-to-br from-primary/20 to-primary/5 shadow-lg border border-primary/30 rounded-xl overflow-hidden cursor-pointer"
+		class="card bg-gradient-to-br from-primary/20 to-primary/5 shadow border border-primary/30 rounded-xl overflow-hidden cursor-pointer"
 	>
 		<div class="card-body p-6">
 			<div class="flex items-center justify-between">
@@ -216,7 +219,7 @@
 	<!-- Evaluations Count -->
 	<a
 		href="/eval"
-		class="card bg-gradient-to-br from-secondary/20 to-secondary/5 shadow-lg border border-secondary/30 rounded-xl overflow-hidden cursor-pointer"
+		class="card bg-gradient-to-br from-secondary/20 to-secondary/5 shadow border border-secondary/30 rounded-xl overflow-hidden cursor-pointer"
 	>
 		<div class="card-body p-6">
 			<div class="flex items-center justify-between">
@@ -239,7 +242,7 @@
 	<!-- Levels Count -->
 	<a
 		href="/levels"
-		class="card bg-gradient-to-br from-accent/20 to-accent/5 shadow-lg border border-accent/30 rounded-xl overflow-hidden cursor-pointer"
+		class="card bg-gradient-to-br from-accent/20 to-accent/5 shadow border border-accent/30 rounded-xl overflow-hidden cursor-pointer"
 	>
 		<div class="card-body p-6">
 			<div class="flex items-center justify-between">
@@ -262,7 +265,7 @@
 	<!-- Courses Count -->
 	<a
 		href="/courses"
-		class="card bg-gradient-to-br from-info/20 to-info/5 shadow-lg border border-info/30 rounded-xl overflow-hidden cursor-pointer"
+		class="card bg-gradient-to-br from-info/20 to-info/5 shadow border border-info/30 rounded-xl overflow-hidden cursor-pointer"
 	>
 		<div class="card-body p-6">
 			<div class="flex items-center justify-between">
@@ -285,7 +288,7 @@
 
 <!-- Chart Section -->
 <div
-	class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl overflow-hidden mb-8"
+	class="card bg-gradient-to-br from-base-200 to-base-100 shadow border border-base-300/30 rounded-xl overflow-hidden mb-8"
 >
 	<div class="card-body p-6">
 		<div class="flex items-center justify-between mb-4">
@@ -302,7 +305,9 @@
 			</div>
 		{:else if !registersByLevel || registersByLevel.length === 0}
 			<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
-				<div class="text-4xl mb-4">📊</div>
+				<div class="text-4xl mb-4">
+					<ChartArea class="w-4 h-4" />
+				</div>
 				<p class="text-lg font-medium">No hay datos disponibles para mostrar</p>
 				<p class="text-sm mt-2">No se encontraron registros de estudiantes por nivel</p>
 			</div>
@@ -320,7 +325,7 @@
 	<!-- Dashboard -->
 	<a
 		href="/dashboard"
-		class="card bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg border border-primary/20 rounded-xl overflow-hidden cursor-pointer"
+		class="card bg-gradient-to-br from-primary/10 to-primary/5 shadow border border-primary/20 rounded-xl overflow-hidden cursor-pointer"
 	>
 		<div class="card-body p-6">
 			<div class="flex flex-col items-center text-center">
@@ -335,7 +340,7 @@
 
 	<a
 		href="/course_dashboard"
-		class="card bg-gradient-to-br from-secondary/10 to-secondary/5 shadow-lg border border-secondary/20 rounded-xl overflow-hidden cursor-pointer"
+		class="card bg-gradient-to-br from-secondary/10 to-secondary/5 shadow border border-secondary/20 rounded-xl overflow-hidden cursor-pointer"
 	>
 		<div class="card-body p-6">
 			<div class="flex flex-col items-center text-center">
@@ -351,7 +356,7 @@
 	<!-- Profile -->
 	<a
 		href="/profile"
-		class="card bg-gradient-to-br from-accent/10 to-accent/5 shadow-lg border border-accent/20 rounded-xl overflow-hidden cursor-pointer"
+		class="card bg-gradient-to-br from-accent/10 to-accent/5 shadow border border-accent/20 rounded-xl overflow-hidden cursor-pointer"
 	>
 		<div class="card-body p-6">
 			<div class="flex flex-col items-center text-center">
