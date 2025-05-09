@@ -1,7 +1,7 @@
 {
 	"name": "nextapp",
 	"private": true,
-	"version": "0.0.1",
+	"version": "1.0.1",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -17,7 +17,7 @@
 	"devDependencies": {
 		"@eslint/compat": "^1.2.9",
 		"@eslint/js": "^9.25.1",
-		"@sveltejs/adapter-auto": "^6.0.0",
+		"@sveltejs/adapter-node": "^5.2.12",
 		"@sveltejs/kit": "^2.20.8",
 		"@sveltejs/vite-plugin-svelte": "^5.0.3",
 		"eslint": "^9.25.1",
