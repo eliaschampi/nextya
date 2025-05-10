@@ -54,19 +54,16 @@ export type Database = {
 			};
 			eval_answers: {
 				Row: {
-					code: string;
 					question_code: string;
 					register_code: string;
 					student_answer: string | null;
 				};
 				Insert: {
-					code?: string;
 					question_code: string;
 					register_code: string;
 					student_answer?: string | null;
 				};
 				Update: {
-					code?: string;
 					question_code?: string;
 					register_code?: string;
 					student_answer?: string | null;
