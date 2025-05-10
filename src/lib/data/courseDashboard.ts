@@ -5,15 +5,18 @@ import type { CourseScore, EvalScore } from '$lib/types';
  * Fetches course scores for a specific level
  * @param supabase Supabase client
  * @param levelCode Level code to get course scores for
+ * @param groupName Group name to filter results
  * @returns Array of course scores or null if error
  */
 export async function getCourseScores(
 	supabase: SupabaseClient,
-	levelCode: string
+	levelCode: string,
+	groupName: string
 ): Promise<CourseScore[] | null> {
 	try {
 		const { data, error } = await supabase.rpc('get_level_course_scores', {
-			p_level_code: levelCode
+			p_level_code: levelCode,
+			p_group_name: groupName
 		});
 
 		if (error) throw error;
