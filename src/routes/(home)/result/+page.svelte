@@ -202,9 +202,9 @@
 			console.error('Error storing state in sessionStorage:', e);
 		}
 
-		// Redirect to the eval_answer page with fromPage parameter
+		// Redirect to the eval/answer page with fromPage parameter
 		goto(
-			`/eval_answer/${result.result_code}?from=result&level=${selectedLevelCode}&eval=${selectedEval?.code}`
+			`/eval/answer/${result.result_code}?from=result&level=${selectedLevelCode}&eval=${selectedEval?.code}`
 		);
 	}
 
