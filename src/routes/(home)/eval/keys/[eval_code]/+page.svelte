@@ -3,7 +3,18 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { responseMessage } from '$lib/utils/responseMessage';
-	import { BookOpen, Save, ArrowLeft, Check, ChevronLeft, ChevronRight } from 'lucide-svelte';
+	import {
+		BookOpen,
+		Save,
+		ArrowLeft,
+		Check,
+		ChevronLeft,
+		ChevronRight,
+		Copy,
+		Clipboard,
+		X,
+		Eraser
+	} from 'lucide-svelte';
 	import type { EvalQuestion, EvalSection, Eval } from '$lib/types';
 	import { onMount } from 'svelte';
 	import Message from '$lib/components/Message.svelte';
@@ -27,6 +38,10 @@
 	let activeTab = $state(0);
 	let message = $state('');
 	let isSaving = $state(false);
+	let pasteModal = $state<HTMLDialogElement | null>(null);
+	let pasteContent = $state('');
+	let pasteError = $state('');
+	let isCreateMode = $state(false);
 
 	// Opciones de respuesta
 	const options = ['A', 'B', 'C', 'D', 'E'];
@@ -42,12 +57,19 @@
 	// Inicialización al montar el componente
 	onMount(() => {
 		initialize();
+
+		// Limpiar el contenido del modal cuando se cierra
+		pasteModal?.addEventListener('close', () => {
+			pasteContent = '';
+			pasteError = '';
+		});
 	});
 
 	/** Inicializa las preguntas y los puntos de inicio de las secciones */
 	function initialize() {
 		calculateSectionStarts();
 		initializeQuestions();
+		isCreateMode = data.existingQuestions.length === 0;
 	}
 
 	/** Calcula los puntos de inicio de cada sección para numeración global */
@@ -223,13 +245,98 @@
 			activeTab--;
 		}
 	}
+
+	/** Copia todas las claves al portapapeles */
+	async function copyAllKeys() {
+		try {
+			const allQuestions = Object.values(sectionQuestions)
+				.flat()
+				.sort((a, b) => a.order_in_eval - b.order_in_eval);
+			const keysString = allQuestions.map((q) => q.correct_key).join('');
+
+			await navigator.clipboard.writeText(keysString);
+			showToast('Claves copiadas al portapapeles', 'success');
+		} catch (err) {
+			console.error('Error al copiar claves:', err);
+			showToast('Error al copiar claves', 'warning');
+		}
+	}
+
+	/** Valida el contenido pegado */
+	function validatePasteContent(content: string): boolean {
+		// Verificar que solo contenga caracteres A-E
+		const validCharsRegex = /^[A-E]+$/;
+		if (!validCharsRegex.test(content)) {
+			pasteError = 'El contenido pegado solo debe contener letras A, B, C, D o E';
+			return false;
+		}
+
+		// Verificar que la longitud coincida con el número total de preguntas
+		const totalQuestions = Object.values(sectionQuestions).flat().length;
+		if (content.length !== totalQuestions) {
+			pasteError = `La longitud del contenido (${content.length}) no coincide con el número total de preguntas (${totalQuestions})`;
+			return false;
+		}
+
+		return true;
+	}
+
+	/** Aplica las claves pegadas a las preguntas */
+	function applyPastedKeys() {
+		if (!validatePasteContent(pasteContent)) {
+			return;
+		}
+
+		// Ordenar todas las preguntas por order_in_eval
+		const allQuestions = Object.values(sectionQuestions)
+			.flat()
+			.sort((a, b) => a.order_in_eval - b.order_in_eval);
+
+		// Aplicar las claves
+		for (let i = 0; i < allQuestions.length; i++) {
+			const question = allQuestions[i];
+			const key = pasteContent[i];
+			updateQuestion(question.section_code, question, 'correct_key', key);
+		}
+
+		pasteModal?.close();
+		pasteContent = '';
+		pasteError = '';
+		showToast('Claves aplicadas correctamente', 'success');
+	}
+
+	/** Abre el modal de pegar claves */
+	function openPasteModal() {
+		pasteContent = '';
+		pasteError = '';
+		pasteModal?.showModal();
+	}
+
+	/** Cierra el modal de pegar claves */
+	function closePasteModal() {
+		pasteModal?.close();
+		pasteContent = '';
+		pasteError = '';
+	}
+
+	/** Limpia todas las claves seleccionadas */
+	function clearAllKeys() {
+		// Recorrer todas las secciones y limpiar las claves
+		Object.entries(sectionQuestions).forEach(([sectionCode, questions]) => {
+			questions.forEach((question) => {
+				updateQuestion(sectionCode, question, 'correct_key', '');
+			});
+		});
+
+		showToast('Todas las claves han sido limpiadas', 'success');
+	}
 </script>
 
 <PageTitle
 	title={data.eval.name}
 	description={`Asignar claves - ${data.eval.levels.name} - Grupo ${data.eval.group_name}`}
 >
-	<a href="/eval" class="btn btn-outline gap-1 hover:bg-base-200 transition-all duration-300">
+	<a href="/eval" class="btn btn-outline gap-1 hover:bg-base-200">
 		<ArrowLeft size={18} />
 		Volver
 	</a>
@@ -237,7 +344,7 @@
 
 <!-- Progreso y Botón de Guardar -->
 <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
-	<div class="card bg-base-200/70 transition-all duration-300 flex-1 w-full sm:w-auto">
+	<div class="card bg-base-200/70 flex-1 w-full sm:w-auto">
 		<div class="p-4 flex flex-col">
 			<span class="text-sm text-base-content/70">Progreso Total</span>
 			<div class="flex items-center justify-between mt-1 mb-2">
@@ -255,15 +362,47 @@
 					style="width: {completionPercentage}%"
 				></div>
 			</div>
+
+			<!-- Botones de Copiar/Pegar/Limpiar -->
+			<div class="flex flex-wrap gap-2 mt-3">
+				{#if completionPercentage === 100}
+					<button
+						type="button"
+						class="btn btn-sm btn-outline gap-1 tooltip"
+						onclick={copyAllKeys}
+						data-tip="Copiar Claves"
+					>
+						<Copy size={16} />
+					</button>
+				{/if}
+
+				{#if isCreateMode}
+					<button
+						type="button"
+						class="btn btn-sm btn-outline gap-1 tooltip"
+						onclick={openPasteModal}
+						data-tip="Pegar Claves"
+					>
+						<Clipboard size={16} />
+					</button>
+				{/if}
+
+				<button
+					type="button"
+					class="btn btn-sm btn-outline btn-error gap-1 tooltip"
+					onclick={clearAllKeys}
+					data-tip="Limpiar Claves"
+				>
+					<Eraser size={16} />
+				</button>
+			</div>
 		</div>
 	</div>
 
 	<button
 		type="submit"
 		form="keysForm"
-		class="btn btn-md {isValid
-			? 'btn-success'
-			: 'btn-primary'} gap-2 w-full sm:w-auto shadow transition-all duration-300"
+		class="btn btn-md {isValid ? 'btn-success' : 'btn-primary'} gap-2 w-full sm:w-auto shadow"
 		disabled={!isValid || isSaving || !$canCreate}
 	>
 		{#if isSaving}
@@ -280,7 +419,7 @@
 </div>
 
 <!-- Contenido Principal -->
-<div class="card bg-base-200/90 border border-base-300 transition-all duration-300 mx-auto">
+<div class="card bg-base-200/90 border border-base-300 mx-auto">
 	<div class="card-body p-4 sm:p-6">
 		<form id="keysForm" class="space-y-8" onsubmit={handleSubmit}>
 			<!-- Pestañas de Secciones -->
@@ -293,8 +432,8 @@
 						{@const sectionEnd = sectionStart + section.question_count - 1}
 						<button
 							type="button"
-							class="tab flex-shrink-0 gap-1 whitespace-nowrap transition-all duration-300
-								{activeTab === i ? 'tab-active font-medium bg-primary/10' : ''} 
+							class="tab flex-shrink-0 gap-1 whitespace-nowrap
+								{activeTab === i ? 'tab-active font-medium bg-primary/10' : ''}
 								{isComplete ? 'text-success' : 'text-base-content'}"
 							onclick={() => (activeTab = i)}
 						>
@@ -339,7 +478,7 @@
 
 								<div
 									class="py-3 grid grid-cols-1 md:grid-cols-6 gap-4 items-center
-									{hasAnswer ? 'bg-primary/5' : ''} rounded-lg p-3 transition-all duration-300"
+									{hasAnswer ? 'bg-primary/5' : ''} rounded-lg p-3"
 								>
 									<!-- Número de Pregunta -->
 									<div class="md:col-span-1 flex items-center gap-2">
@@ -362,7 +501,7 @@
 									<div class="md:col-span-3 flex flex-wrap gap-2 justify-center md:justify-start">
 										{#each options as option (option)}
 											<label
-												class="flex items-center gap-2 cursor-pointer p-1 rounded-full transition-all duration-300
+												class="flex items-center gap-2 cursor-pointer p-1 rounded-full
 													{question.correct_key === option
 													? 'bg-primary text-white scale-105'
 													: 'bg-base-200 hover:bg-base-300'}"
@@ -415,7 +554,7 @@
 											max="1"
 											step="0.01"
 											placeholder="0.0-1.0"
-											class="input input-sm input-bordered w-20 text-center focus:ring-2 focus:ring-primary transition-all duration-300"
+											class="input input-sm input-bordered w-20 text-center focus:ring-2 focus:ring-primary"
 											value={question.score_percent}
 											oninput={(e) =>
 												handleScoreChange(
@@ -456,6 +595,48 @@
 		</form>
 	</div>
 </div>
+
+<!-- Modal para pegar claves -->
+<dialog bind:this={pasteModal} class="modal">
+	<div class="modal-box max-w-md">
+		<button
+			class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+			onclick={closePasteModal}
+		>
+			<X size={20} />
+		</button>
+		<h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+			<Clipboard size={20} />
+			Pegar Claves
+		</h3>
+
+		<p class="text-sm mb-4">
+			Pegue las claves en formato "ABCDEABCDABCD". Debe contener exactamente {Object.values(
+				sectionQuestions
+			).flat().length} caracteres (A-E).
+		</p>
+
+		<div class="form-control w-full">
+			<textarea
+				class="textarea textarea-bordered h-24 font-mono w-full"
+				placeholder="ABCDEABCDABCD..."
+				bind:value={pasteContent}
+			></textarea>
+
+			{#if pasteError}
+				<div class="text-error text-sm mt-2">{pasteError}</div>
+			{/if}
+		</div>
+
+		<div class="modal-action">
+			<button class="btn btn-outline" onclick={closePasteModal}>Cancelar</button>
+			<button class="btn btn-primary" onclick={applyPastedKeys} disabled={!pasteContent}>
+				Aplicar
+			</button>
+		</div>
+	</div>
+	<form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+</dialog>
 
 <style>
 	.tab-active {
