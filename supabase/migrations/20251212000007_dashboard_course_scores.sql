@@ -1,5 +1,5 @@
--- Create a function to get course-specific scores for a level
-CREATE OR REPLACE FUNCTION get_level_course_scores(p_level_code TEXT)
+-- Create a function to get course-specific scores for a level with required group filter
+CREATE OR REPLACE FUNCTION get_level_course_scores(p_level_code TEXT, p_group_name TEXT)
 RETURNS TABLE (
     course_code UUID,
     course_name VARCHAR,
@@ -21,6 +21,7 @@ BEGIN
         WHERE
             r.level_code = p_level_code::UUID
             AND er.section_code IS NOT NULL
+            AND r.group_name = p_group_name
     )
     -- Calculate average score per course
     SELECT
@@ -37,4 +38,4 @@ END;
 $$;
 
 -- Grant execute permissions to authenticated users
-GRANT EXECUTE ON FUNCTION get_level_course_scores(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_level_course_scores(TEXT, TEXT) TO authenticated;

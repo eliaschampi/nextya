@@ -17,9 +17,11 @@
 	// State
 	let selectedLevelCode = $state('');
 	let selectedCourseCode = $state('');
+	let selectedGroupName = $state('A'); // Default to group A
 	let isLoading = $state(false);
 	let courseScores = $state<CourseScore[] | null>(null);
 	let evalScores = $state<EvalScore[] | null>(null);
+	let availableGroups = $state<string[]>(['A', 'B', 'C', 'D']);
 
 	// Chart references
 	let courseScoresChart: Chart | null = $state(null);
@@ -82,14 +84,17 @@
 	/**
 	 * Load course scores data from API
 	 */
-	async function loadCourseScoresData(levelCode: string) {
-		if (!levelCode || isLoading) return;
+	async function loadCourseScoresData(levelCode: string, groupName: string) {
+		if (!levelCode || !groupName || isLoading) return;
 
 		isLoading = true;
 		if (courseScoresChart) courseScoresChart.destroy();
 
 		try {
-			const response = await fetch(`/api/dashboard/course/scores/${levelCode}`);
+			// Build URL with required group filter
+			const url = `/api/dashboard/course/scores/${levelCode}?group_name=${encodeURIComponent(groupName)}`;
+
+			const response = await fetch(url);
 
 			if (!response.ok) {
 				const errorData = await response.json().catch(() => ({}));
@@ -339,7 +344,7 @@
 			evalScoresChart = null;
 		}
 
-		loadCourseScoresData(selectedLevelCode);
+		loadCourseScoresData(selectedLevelCode, selectedGroupName);
 	}
 
 	/**
@@ -349,6 +354,23 @@
 		const target = event.target as HTMLSelectElement;
 		selectedCourseCode = target.value;
 		loadEvalScoresData(selectedLevelCode, selectedCourseCode);
+	}
+
+	/**
+	 * Handle group selection change
+	 */
+	function handleGroupChange(event: Event) {
+		const target = event.target as HTMLSelectElement;
+		selectedGroupName = target.value;
+		selectedCourseCode = '';
+		evalScores = null;
+
+		if (evalScoresChart) {
+			evalScoresChart.destroy();
+			evalScoresChart = null;
+		}
+
+		loadCourseScoresData(selectedLevelCode, selectedGroupName);
 	}
 </script>
 
@@ -367,7 +389,7 @@
 				<h3 class="text-lg font-medium">Configuración del Dashboard</h3>
 			</div>
 			<div class="divider my-1"></div>
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 				<fieldset class="fieldset">
 					<label for="levelSelect" class="fieldset-legend font-medium text-base-content/80"
 						>Nivel</label
@@ -382,6 +404,25 @@
 							<option value="" disabled>Seleccionar nivel</option>
 							{#each data.levels as level (level.code)}
 								<option value={level.code}>{level.name}</option>
+							{/each}
+						</select>
+					</div>
+				</fieldset>
+
+				<fieldset class="fieldset">
+					<label for="groupSelect" class="fieldset-legend font-medium text-base-content/80"
+						>Grupo</label
+					>
+					<div class="mt-2">
+						<select
+							id="groupSelect"
+							class="select select-bordered w-full"
+							onchange={handleGroupChange}
+							value={selectedGroupName}
+							disabled={!selectedLevelCode}
+						>
+							{#each availableGroups as group (group)}
+								<option value={group}>{group}</option>
 							{/each}
 						</select>
 					</div>

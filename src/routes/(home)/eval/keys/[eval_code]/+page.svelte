@@ -1,17 +1,40 @@
 <script lang="ts">
+	// SvelteKit imports
 	import { goto } from '$app/navigation';
-	import PageTitle from '$lib/components/PageTitle.svelte';
-	import { showToast } from '$lib/stores/Toast';
-	import { responseMessage } from '$lib/utils/responseMessage';
-	import { BookOpen, Save, ArrowLeft, Check, ChevronLeft, ChevronRight } from 'lucide-svelte';
-	import type { EvalQuestion, EvalSection, Eval } from '$lib/types';
 	import { onMount } from 'svelte';
+
+	// Component imports
+	import PageTitle from '$lib/components/PageTitle.svelte';
 	import Message from '$lib/components/Message.svelte';
+
+	// Store imports
+	import { showToast } from '$lib/stores/Toast';
 	import { permissionsStore } from '$lib/stores/permissions';
 
+	// Utility imports
+	import { responseMessage } from '$lib/utils/responseMessage';
+
+	// Type imports
+	import type { EvalQuestion, EvalSection, Eval } from '$lib/types';
+
+	// Icon imports
+	import {
+		BookOpen,
+		Save,
+		ArrowLeft,
+		Check,
+		ChevronLeft,
+		ChevronRight,
+		Copy,
+		Clipboard,
+		X,
+		Eraser
+	} from 'lucide-svelte';
+
+	// Permissions
 	const canCreate = permissionsStore.has({ entity: 'eval_questions', action: 'create' });
 
-	// Props recibidos
+	// Props from parent
 	const { data } = $props<{
 		data: {
 			eval: Eval & { levels: { name: string } };
@@ -21,37 +44,51 @@
 		};
 	}>();
 
-	// Estado reactivo
-	let sectionQuestions = $state<Record<string, EvalQuestion[]>>({});
-	let sectionStarts = $state<Record<string, number>>({});
+	// Constants
+	const DEFAULT_OMITABLE = false;
+	const DEFAULT_SCORE = 1.0;
+	const ANSWER_OPTIONS = ['A', 'B', 'C', 'D', 'E'];
+
+	// UI state
 	let activeTab = $state(0);
 	let message = $state('');
 	let isSaving = $state(false);
+	let isCreateMode = $state(false);
 
-	// Opciones de respuesta
-	const options = ['A', 'B', 'C', 'D', 'E'];
+	// Data state
+	let sectionQuestions = $state<Record<string, EvalQuestion[]>>({});
+	let sectionStarts = $state<Record<string, number>>({});
 
-	// Valores derivados
+	// Paste modal state
+	let pasteModal = $state<HTMLDialogElement | null>(null);
+	let pasteContent = $state('');
+	let pasteError = $state('');
+
+	// Derived values
 	let isValid = $derived(validateForm());
 	let completionPercentage = $derived(getCompletionPercentage());
 
-	// Constantes
-	const DEFAULT_OMITABLE = false;
-	const DEFAULT_SCORE = 1.0;
-
-	// Inicialización al montar el componente
+	// Lifecycle hooks
 	onMount(() => {
-		initialize();
+		initializeData();
+		setupEventListeners();
 	});
 
-	/** Inicializa las preguntas y los puntos de inicio de las secciones */
-	function initialize() {
-		calculateSectionStarts();
-		initializeQuestions();
+	function setupEventListeners(): void {
+		// Clean up modal content when it closes
+		pasteModal?.addEventListener('close', () => {
+			pasteContent = '';
+			pasteError = '';
+		});
 	}
 
-	/** Calcula los puntos de inicio de cada sección para numeración global */
-	function calculateSectionStarts() {
+	function initializeData(): void {
+		calculateSectionStarts();
+		initializeQuestions();
+		isCreateMode = data.existingQuestions.length === 0;
+	}
+
+	function calculateSectionStarts(): void {
 		const starts: Record<string, number> = {};
 		let currentStart = 1;
 
@@ -63,112 +100,126 @@
 		sectionStarts = starts;
 	}
 
-	/** Inicializa las preguntas existentes o crea nuevas */
-	function initializeQuestions() {
+	function initializeQuestions(): void {
 		if (data.existingQuestions.length > 0) {
-			const grouped = data.existingQuestions.reduce(
-				(acc: Record<string, EvalQuestion[]>, question: EvalQuestion) => {
-					if (!acc[question.section_code]) {
-						acc[question.section_code] = [];
-					}
-					acc[question.section_code].push(question);
-					return acc;
-				},
-				{}
-			);
-
-			for (const sectionCode in grouped) {
-				grouped[sectionCode].sort(
-					(a: { order_in_eval: number }, b: { order_in_eval: number }) =>
-						a.order_in_eval - b.order_in_eval
-				);
-			}
-
-			sectionQuestions = grouped;
+			initializeExistingQuestions();
 		} else {
-			const newSectionQuestions: Record<string, EvalQuestion[]> = {};
-
-			data.sections.forEach((section: EvalSection) => {
-				const sectionCode = section.code;
-				const questions: EvalQuestion[] = [];
-				const startNumber = sectionStarts[sectionCode] || 1;
-
-				for (let i = 0; i < section.question_count; i++) {
-					questions.push({
-						code: crypto.randomUUID(),
-						eval_code: data.eval.code,
-						section_code: sectionCode,
-						order_in_eval: startNumber + i,
-						correct_key: '',
-						omitable: DEFAULT_OMITABLE,
-						score_percent: DEFAULT_SCORE
-					});
-				}
-
-				newSectionQuestions[sectionCode] = questions;
-			});
-
-			sectionQuestions = newSectionQuestions;
+			createNewQuestions();
 		}
 	}
 
-	/** Obtiene el índice local de una pregunta dentro de su sección */
+	function initializeExistingQuestions(): void {
+		const grouped = data.existingQuestions.reduce(
+			(acc: Record<string, EvalQuestion[]>, question: EvalQuestion) => {
+				if (!acc[question.section_code]) {
+					acc[question.section_code] = [];
+				}
+				acc[question.section_code].push(question);
+				return acc;
+			},
+			{}
+		);
+
+		// Sort questions by order within each section
+		for (const sectionCode in grouped) {
+			grouped[sectionCode].sort(
+				(a: { order_in_eval: number }, b: { order_in_eval: number }) =>
+					a.order_in_eval - b.order_in_eval
+			);
+		}
+
+		sectionQuestions = grouped;
+	}
+
+	function createNewQuestions(): void {
+		const newSectionQuestions: Record<string, EvalQuestion[]> = {};
+
+		data.sections.forEach((section: EvalSection) => {
+			const sectionCode = section.code;
+			const questions: EvalQuestion[] = [];
+			const startNumber = sectionStarts[sectionCode] || 1;
+
+			for (let i = 0; i < section.question_count; i++) {
+				questions.push({
+					code: crypto.randomUUID(),
+					eval_code: data.eval.code,
+					section_code: sectionCode,
+					order_in_eval: startNumber + i,
+					correct_key: '',
+					omitable: DEFAULT_OMITABLE,
+					score_percent: DEFAULT_SCORE
+				});
+			}
+
+			newSectionQuestions[sectionCode] = questions;
+		});
+
+		sectionQuestions = newSectionQuestions;
+	}
+
 	function getSectionQuestionIndex(globalNumber: number, sectionCode: string): number {
 		const start = sectionStarts[sectionCode] || 1;
 		return globalNumber - start + 1;
 	}
 
-	/** Calcula el porcentaje de completitud */
 	function getCompletionPercentage(): number {
 		const allQuestions = Object.values(sectionQuestions).flat();
 		const answeredCount = allQuestions.filter((q) => q.correct_key !== '').length;
 		return allQuestions.length > 0 ? (answeredCount / allQuestions.length) * 100 : 0;
 	}
 
-	/** Valida el formulario */
 	function validateForm(): boolean {
 		const allSections = Object.values(sectionQuestions).flat();
 		return allSections.every((q) => q.correct_key !== '');
 	}
 
-	/** Obtiene el estado de completitud de una sección */
 	function getSectionCompletionStatus(sectionCode: string): { completed: number; total: number } {
 		const questions = sectionQuestions[sectionCode] || [];
 		const completedCount = questions.filter((q) => q.correct_key !== '').length;
 		return { completed: completedCount, total: questions.length };
 	}
 
-	/** Prepara los datos del formulario para enviar */
 	function prepareFormData(): FormData {
 		const formData = new FormData();
+
 		Object.entries(sectionQuestions).forEach(([sectionCode, questions]) => {
 			questions.forEach((question) => {
 				const localIndex = getSectionQuestionIndex(question.order_in_eval, sectionCode);
-				formData.set(`question_${sectionCode}_${localIndex}`, question.correct_key);
-				if (question.omitable) formData.set(`omitable_${sectionCode}_${localIndex}`, 'on');
-				formData.set(`score_${sectionCode}_${localIndex}`, question.score_percent.toString());
+				const questionKey = `question_${sectionCode}_${localIndex}`;
+				const omitableKey = `omitable_${sectionCode}_${localIndex}`;
+				const scoreKey = `score_${sectionCode}_${localIndex}`;
+
+				formData.set(questionKey, question.correct_key);
+				if (question.omitable) formData.set(omitableKey, 'on');
+				formData.set(scoreKey, question.score_percent.toString());
 			});
 		});
+
 		return formData;
 	}
 
-	/** Envía los datos al servidor */
 	async function submitForm(formData: FormData) {
-		const response = await fetch('?/saveQuestions', { method: 'POST', body: formData });
+		const response = await fetch('?/saveQuestions', {
+			method: 'POST',
+			body: formData
+		});
 		return response.json();
 	}
 
-	/** Maneja el envío del formulario */
-	async function handleSubmit(e: SubmitEvent) {
+	async function handleSubmit(e: SubmitEvent): Promise<void> {
 		e.preventDefault();
+
 		if (!isValid) {
 			message = 'Debe seleccionar una respuesta para cada pregunta.';
 			return;
 		}
+
 		isSaving = true;
+
 		try {
 			const formData = prepareFormData();
 			const result = await submitForm(formData);
+
 			if (result.type === 'success') {
 				showToast('Claves guardadas exitosamente', 'success');
 				goto('/eval');
@@ -183,45 +234,125 @@
 		}
 	}
 
-	/** Actualiza una propiedad de una pregunta */
 	function updateQuestion<K extends keyof EvalQuestion>(
 		sectionCode: string,
 		question: EvalQuestion,
 		field: K,
 		value: EvalQuestion[K]
-	) {
+	): void {
 		const sectionArr = [...(sectionQuestions[sectionCode] || [])];
 		const index = sectionArr.findIndex((q) => q.order_in_eval === question.order_in_eval);
+
 		if (index !== -1) {
 			sectionArr[index] = { ...sectionArr[index], [field]: value };
 			sectionQuestions = { ...sectionQuestions, [sectionCode]: sectionArr };
 		}
 	}
 
-	/** Maneja el cambio en las opciones de respuesta */
-	function handleRadioChange(section: string, question: EvalQuestion, value: string) {
+	function handleRadioChange(section: string, question: EvalQuestion, value: string): void {
 		updateQuestion(section, question, 'correct_key', value);
 	}
 
-	/** Maneja el cambio en la opción omitible */
-	function handleOmitableChange(section: string, question: EvalQuestion, checked: boolean) {
+	function handleOmitableChange(section: string, question: EvalQuestion, checked: boolean): void {
 		updateQuestion(section, question, 'omitable', checked);
 	}
 
-	/** Maneja el cambio en el valor de puntaje */
-	function handleScoreChange(section: string, question: EvalQuestion, value: string) {
+	function handleScoreChange(section: string, question: EvalQuestion, value: string): void {
 		const score = parseFloat(value);
 		if (isNaN(score) || score < 0 || score > 1) return;
 		updateQuestion(section, question, 'score_percent', score);
 	}
 
-	/** Navega entre pestañas */
-	function navigateTab(direction: 'next' | 'prev') {
+	function navigateTab(direction: 'next' | 'prev'): void {
 		if (direction === 'next' && activeTab < data.sections.length - 1) {
 			activeTab++;
 		} else if (direction === 'prev' && activeTab > 0) {
 			activeTab--;
 		}
+	}
+
+	async function copyAllKeys(): Promise<void> {
+		try {
+			// Get all questions sorted by their global order
+			const allQuestions = Object.values(sectionQuestions)
+				.flat()
+				.sort((a, b) => a.order_in_eval - b.order_in_eval);
+
+			// Create a string of all answer keys
+			const keysString = allQuestions.map((q) => q.correct_key).join('');
+
+			// Copy to clipboard
+			await navigator.clipboard.writeText(keysString);
+			showToast('Claves copiadas al portapapeles', 'success');
+		} catch (err) {
+			console.error('Error al copiar claves:', err);
+			showToast('Error al copiar claves', 'warning');
+		}
+	}
+
+	function validatePasteContent(content: string): boolean {
+		// Validate that content only contains A-E characters
+		const validCharsRegex = /^[A-E]+$/;
+		if (!validCharsRegex.test(content)) {
+			pasteError = 'El contenido pegado solo debe contener letras A, B, C, D o E';
+			return false;
+		}
+
+		// Validate that content length matches the total number of questions
+		const totalQuestions = Object.values(sectionQuestions).flat().length;
+		if (content.length !== totalQuestions) {
+			pasteError = `La longitud del contenido (${content.length}) no coincide con el número total de preguntas (${totalQuestions})`;
+			return false;
+		}
+
+		return true;
+	}
+
+	function applyPastedKeys(): void {
+		if (!validatePasteContent(pasteContent)) {
+			return;
+		}
+
+		// Sort all questions by their global order
+		const allQuestions = Object.values(sectionQuestions)
+			.flat()
+			.sort((a, b) => a.order_in_eval - b.order_in_eval);
+
+		// Apply the keys to each question
+		for (let i = 0; i < allQuestions.length; i++) {
+			const question = allQuestions[i];
+			const key = pasteContent[i];
+			updateQuestion(question.section_code, question, 'correct_key', key);
+		}
+
+		// Close the modal and show success message
+		pasteModal?.close();
+		pasteContent = '';
+		pasteError = '';
+		showToast('Claves aplicadas correctamente', 'success');
+	}
+
+	function openPasteModal(): void {
+		pasteContent = '';
+		pasteError = '';
+		pasteModal?.showModal();
+	}
+
+	function closePasteModal(): void {
+		pasteModal?.close();
+		pasteContent = '';
+		pasteError = '';
+	}
+
+	function clearAllKeys(): void {
+		// Iterate through all sections and questions to clear keys
+		Object.entries(sectionQuestions).forEach(([sectionCode, questions]) => {
+			questions.forEach((question) => {
+				updateQuestion(sectionCode, question, 'correct_key', '');
+			});
+		});
+
+		showToast('Todas las claves han sido limpiadas', 'success');
 	}
 </script>
 
@@ -229,7 +360,7 @@
 	title={data.eval.name}
 	description={`Asignar claves - ${data.eval.levels.name} - Grupo ${data.eval.group_name}`}
 >
-	<a href="/eval" class="btn btn-outline gap-1 hover:bg-base-200 transition-all duration-300">
+	<a href="/eval" class="btn btn-outline gap-1 hover:bg-base-200">
 		<ArrowLeft size={18} />
 		Volver
 	</a>
@@ -237,7 +368,7 @@
 
 <!-- Progreso y Botón de Guardar -->
 <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
-	<div class="card bg-base-200/70 transition-all duration-300 flex-1 w-full sm:w-auto">
+	<div class="card bg-base-200/70 flex-1 w-full sm:w-auto">
 		<div class="p-4 flex flex-col">
 			<span class="text-sm text-base-content/70">Progreso Total</span>
 			<div class="flex items-center justify-between mt-1 mb-2">
@@ -255,15 +386,47 @@
 					style="width: {completionPercentage}%"
 				></div>
 			</div>
+
+			<!-- Botones de Acción -->
+			<div class="flex flex-wrap gap-2 mt-3">
+				{#if completionPercentage === 100}
+					<button
+						type="button"
+						class="btn btn-sm btn-soft gap-1 tooltip"
+						data-tip="Copiar claves"
+						onclick={copyAllKeys}
+					>
+						<Copy size={16} />
+					</button>
+				{/if}
+
+				{#if isCreateMode}
+					<button
+						type="button"
+						class="btn btn-sm btn-soft gap-1 tooltip"
+						data-tip="Pegar claves"
+						onclick={openPasteModal}
+					>
+						<Clipboard size={16} />
+					</button>
+				{/if}
+
+				<button
+					type="button"
+					class="btn btn-sm btn-outline btn-error gap-1 tooltip"
+					data-tip="Limpiar"
+					onclick={clearAllKeys}
+				>
+					<Eraser size={16} />
+				</button>
+			</div>
 		</div>
 	</div>
 
 	<button
 		type="submit"
 		form="keysForm"
-		class="btn btn-md {isValid
-			? 'btn-success'
-			: 'btn-primary'} gap-2 w-full sm:w-auto shadow transition-all duration-300"
+		class="btn btn-md {isValid ? 'btn-success' : 'btn-primary'} gap-2 w-full sm:w-auto shadow"
 		disabled={!isValid || isSaving || !$canCreate}
 	>
 		{#if isSaving}
@@ -280,7 +443,7 @@
 </div>
 
 <!-- Contenido Principal -->
-<div class="card bg-base-200/90 border border-base-300 transition-all duration-300 mx-auto">
+<div class="card bg-base-200/90 border border-base-300 mx-auto">
 	<div class="card-body p-4 sm:p-6">
 		<form id="keysForm" class="space-y-8" onsubmit={handleSubmit}>
 			<!-- Pestañas de Secciones -->
@@ -293,8 +456,8 @@
 						{@const sectionEnd = sectionStart + section.question_count - 1}
 						<button
 							type="button"
-							class="tab flex-shrink-0 gap-1 whitespace-nowrap transition-all duration-300
-								{activeTab === i ? 'tab-active font-medium bg-primary/10' : ''} 
+							class="tab flex-shrink-0 gap-1 whitespace-nowrap
+								{activeTab === i ? 'tab-active font-medium bg-primary/10' : ''}
 								{isComplete ? 'text-success' : 'text-base-content'}"
 							onclick={() => (activeTab = i)}
 						>
@@ -339,7 +502,7 @@
 
 								<div
 									class="py-3 grid grid-cols-1 md:grid-cols-6 gap-4 items-center
-									{hasAnswer ? 'bg-primary/5' : ''} rounded-lg p-3 transition-all duration-300"
+									{hasAnswer ? 'bg-primary/5' : ''} rounded-lg p-3"
 								>
 									<!-- Número de Pregunta -->
 									<div class="md:col-span-1 flex items-center gap-2">
@@ -360,9 +523,9 @@
 
 									<!-- Opciones de Respuesta -->
 									<div class="md:col-span-3 flex flex-wrap gap-2 justify-center md:justify-start">
-										{#each options as option (option)}
+										{#each ANSWER_OPTIONS as option (option)}
 											<label
-												class="flex items-center gap-2 cursor-pointer p-1 rounded-full transition-all duration-300
+												class="flex items-center gap-2 cursor-pointer p-1 rounded-full
 													{question.correct_key === option
 													? 'bg-primary text-white scale-105'
 													: 'bg-base-200 hover:bg-base-300'}"
@@ -415,7 +578,7 @@
 											max="1"
 											step="0.01"
 											placeholder="0.0-1.0"
-											class="input input-sm input-bordered w-20 text-center focus:ring-2 focus:ring-primary transition-all duration-300"
+											class="input input-sm input-bordered w-20 text-center focus:ring-2 focus:ring-primary"
 											value={question.score_percent}
 											oninput={(e) =>
 												handleScoreChange(
@@ -456,6 +619,52 @@
 		</form>
 	</div>
 </div>
+
+<!-- Modal para pegar claves -->
+<dialog bind:this={pasteModal} class="modal">
+	<div class="modal-box max-w-md">
+		<button
+			class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+			onclick={closePasteModal}
+		>
+			<X size={20} />
+		</button>
+		<h3 class="font-bold text-lg mb-4 flex items-center gap-2 text-primary">
+			<Clipboard size={20} />
+			Pegar Claves
+		</h3>
+
+		<div class="bg-base-200 p-4 rounded-lg mb-4">
+			<p class="text-sm">
+				Pegue las claves en formato <span class="font-mono font-medium">ABCDEABCDABCD</span>. Debe
+				contener exactamente
+				<span class="badge badge-primary">{Object.values(sectionQuestions).flat().length}</span> caracteres
+				(A-E).
+			</p>
+		</div>
+
+		<div class="form-control w-full">
+			<textarea
+				class="textarea textarea-bordered h-24 font-mono w-full focus:ring-2 focus:ring-primary"
+				placeholder="ABCDEABCDABCD..."
+				bind:value={pasteContent}
+			></textarea>
+
+			{#if pasteError}
+				<div class="text-error text-sm mt-2 p-2 bg-error/10 rounded-lg">{pasteError}</div>
+			{/if}
+		</div>
+
+		<div class="modal-action flex justify-end gap-2 mt-6">
+			<button class="btn btn-outline" onclick={closePasteModal}>Cancelar</button>
+			<button class="btn btn-primary" onclick={applyPastedKeys} disabled={!pasteContent}>
+				<Check size={18} />
+				Aplicar
+			</button>
+		</div>
+	</div>
+	<form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+</dialog>
 
 <style>
 	.tab-active {

@@ -16,7 +16,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			.from('eval_answers')
 			.select(
 				`
-				code,
 				question_code,
 				student_answer,
 				eval_questions!inner(

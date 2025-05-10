@@ -1,9 +1,9 @@
-import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
 import { formatEvaluationResult } from '$lib/utils';
+import type { PageServerLoad } from '../../$types';
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
-	const { answer_code } = params;
+	const { answer_code } = params as { answer_code: string };
 	// Get the 'from' parameter to know where to go back to
 	const fromPage = url.searchParams.get('from');
 
@@ -77,7 +77,9 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			.from('eval_answers')
 			.select(
 				`
-				*,
+				question_code,
+				register_code,
+				student_answer,
 				eval_questions!inner(
 					code,
 					order_in_eval,

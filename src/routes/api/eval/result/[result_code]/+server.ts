@@ -75,7 +75,9 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			.from('eval_answers')
 			.select(
 				`
-				*,
+				question_code,
+				register_code,
+				student_answer,
 				eval_questions!inner(
 					code,
 					order_in_eval,

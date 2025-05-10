@@ -4,7 +4,15 @@
 	import EvalHeader from '$lib/components/EvalHeader.svelte';
 	import Table from '$lib/components/Table.svelte';
 	import { showToast } from '$lib/stores/Toast';
-	import { School, Search, SortAsc, SortDesc, FileDown } from 'lucide-svelte';
+	import {
+		School,
+		Search,
+		SortAsc,
+		SortDesc,
+		FileDown,
+		Trash2,
+		AlertTriangle
+	} from 'lucide-svelte';
 	import type { EvalWithSections, ResultItem } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
 	// Define EventListener type
@@ -35,6 +43,13 @@
 
 	// Permissions
 	const canViewDetails = permissionsStore.has({ entity: 'eval_results', action: 'read' });
+	const canDeleteResults = permissionsStore.has({ entity: 'eval_results', action: 'delete' });
+
+	// Delete state
+	let deleteModalOpen = $state(false);
+	let resultToDelete = $state<ResultItem | null>(null);
+	let deleteAllMode = $state(false);
+	let isDeleting = $state(false);
 
 	// Caché de resultados por evaluación
 	const resultsCache = $state<Record<string, { data: ResultItem[]; timestamp: number }>>({});
@@ -187,9 +202,9 @@
 			console.error('Error storing state in sessionStorage:', e);
 		}
 
-		// Redirect to the eval_answer page with fromPage parameter
+		// Redirect to the eval/answer page with fromPage parameter
 		goto(
-			`/eval_answer/${result.result_code}?from=result&level=${selectedLevelCode}&eval=${selectedEval?.code}`
+			`/eval/answer/${result.result_code}?from=result&level=${selectedLevelCode}&eval=${selectedEval?.code}`
 		);
 	}
 
@@ -238,6 +253,65 @@
 		} catch (error) {
 			console.error('Error exportando resultados:', error);
 			showToast('No se pudieron exportar los resultados', 'danger');
+		}
+	}
+
+	// Delete functions
+	function openDeleteModal(result: ResultItem | null = null) {
+		resultToDelete = result;
+		deleteAllMode = result === null;
+		deleteModalOpen = true;
+	}
+
+	function closeDeleteModal() {
+		deleteModalOpen = false;
+		resultToDelete = null;
+		deleteAllMode = false;
+	}
+
+	async function confirmDelete() {
+		if (!selectedEval) return;
+
+		isDeleting = true;
+		try {
+			const resultIds = deleteAllMode ? [] : resultToDelete ? [resultToDelete.result_code] : [];
+
+			const response = await fetch(`/api/eval/results/${selectedEval.code}`, {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ resultIds })
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || 'Error al eliminar resultados');
+			}
+
+			const data = await response.json();
+
+			// Remove deleted items from cache
+			if (deleteAllMode) {
+				// Clear cache for this eval
+				delete resultsCache[selectedEval.code];
+				results = [];
+			} else if (resultToDelete) {
+				// Remove single item from results
+				results = results.filter((r) => r.result_code !== resultToDelete?.result_code);
+
+				// Update cache
+				if (resultsCache[selectedEval.code]) {
+					resultsCache[selectedEval.code].data = results;
+				}
+			}
+
+			showToast(data.message || 'Resultados eliminados correctamente', 'success');
+			closeDeleteModal();
+		} catch (error) {
+			showToast(error instanceof Error ? error.message : 'Error al eliminar resultados', 'danger');
+		} finally {
+			isDeleting = false;
 		}
 	}
 
@@ -330,16 +404,27 @@
 			class: 'text-center',
 			cell: (row: ResultItem) => {
 				const eyeIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye w-4 h-4 mr-1"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+				const trashIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2 w-4 h-4 mr-1"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`;
 
 				return `
-					<button
-						class="btn btn-sm btn-primary btn-outline ${!$canViewDetails ? 'btn-disabled' : ''}"
-						onclick="document.dispatchEvent(new CustomEvent('view-result', {detail: '${row.result_code}'}))"
-						title="Ver detalles"
-						${!$canViewDetails ? 'disabled' : ''}
-					>
-						${eyeIcon} Ver
-					</button>
+					<div class="flex gap-2 justify-center">
+						<button
+							class="btn btn-sm btn-primary btn-outline ${!$canViewDetails ? 'btn-disabled' : ''}"
+							onclick="document.dispatchEvent(new CustomEvent('view-result', {detail: '${row.result_code}'}))"
+							title="Ver detalles"
+							${!$canViewDetails ? 'disabled' : ''}
+						>
+							${eyeIcon}
+						</button>
+						<button
+							class="btn btn-sm btn-error btn-outline ${!$canDeleteResults ? 'btn-disabled' : ''}"
+							onclick="document.dispatchEvent(new CustomEvent('delete-result', {detail: '${row.result_code}'}))"
+							title="Eliminar resultado"
+							${!$canDeleteResults ? 'disabled' : ''}
+						>
+							${trashIcon}
+						</button>
+					</div>
 				`;
 			}
 		}
@@ -355,10 +440,20 @@
 			}
 		};
 
+		const handleDeleteResult = (event: CustomEvent) => {
+			const resultCode = event.detail;
+			const result = results.find((r) => r.result_code === resultCode);
+			if (result) {
+				openDeleteModal(result);
+			}
+		};
+
 		document.addEventListener('view-result', handleViewResult as EventListener);
+		document.addEventListener('delete-result', handleDeleteResult as EventListener);
 
 		return () => {
 			document.removeEventListener('view-result', handleViewResult as EventListener);
+			document.removeEventListener('delete-result', handleDeleteResult as EventListener);
 		};
 	}
 
@@ -414,6 +509,14 @@
 						>
 							<FileDown size={16} class="mr-1" />
 							Excel
+						</button>
+						<button
+							class="btn btn-sm btn-error btn-outline"
+							onclick={() => openDeleteModal()}
+							title="Eliminar todos los resultados"
+							disabled={filteredResults.length === 0 || !$canDeleteResults}
+						>
+							<Trash2 size={16} class="mr-1" />
 						</button>
 						<span class="text-sm opacity-70">{filteredResults.length} estudiantes</span>
 					</div>
@@ -548,3 +651,41 @@
 	}}
 	onSelectEval={selectEval}
 />
+
+<!-- Delete Confirmation Modal -->
+<dialog class="modal modal-bottom sm:modal-middle" class:modal-open={deleteModalOpen}>
+	<div class="modal-box">
+		<h3 class="font-bold text-lg flex items-center gap-2">
+			<AlertTriangle class="text-error" size={24} />
+			Confirmar eliminación
+		</h3>
+		{#if deleteAllMode}
+			<p class="py-4">
+				¿Estás seguro de que deseas eliminar <strong>todos los resultados</strong> de esta evaluación?
+				Esta acción no se puede deshacer.
+			</p>
+		{:else if resultToDelete}
+			<p class="py-4">
+				¿Estás seguro de que deseas eliminar el resultado de
+				<strong>{resultToDelete.name} {resultToDelete.last_name}</strong>? Esta acción no se puede
+				deshacer.
+			</p>
+		{/if}
+		<div class="modal-action">
+			<button class="btn btn-ghost" onclick={closeDeleteModal} disabled={isDeleting}
+				>Cancelar</button
+			>
+			<button class="btn btn-error" onclick={confirmDelete} disabled={isDeleting}>
+				{#if isDeleting}
+					<span class="loading loading-spinner loading-xs"></span>
+					Eliminando...
+				{:else}
+					Eliminar
+				{/if}
+			</button>
+		</div>
+	</div>
+	<form method="dialog" class="modal-backdrop">
+		<button onclick={closeDeleteModal}>cerrar</button>
+	</form>
+</dialog>

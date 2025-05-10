@@ -190,7 +190,7 @@
 							<ul class="pl-4">
 								<li><a href="/student">Gestionar</a></li>
 								<li><a href="/impcsv">Importar</a></li>
-								<li><a href="/eval_student">Resultados</a></li>
+								<li><a href="/eval/student">Resultados</a></li>
 							</ul>
 						</details>
 					</li>

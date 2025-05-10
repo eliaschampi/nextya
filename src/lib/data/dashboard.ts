@@ -9,7 +9,7 @@ import type {
 	DashboardData
 } from '$lib/types/dashboard';
 
-// Cache for dashboard data by level
+// Cache for dashboard data by level and group
 const dashboardCache = new Map<string, { data: DashboardData; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
 
@@ -18,16 +18,20 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
  * @param supabase Supabase client
  * @param levelCode Level code to get dashboard data for
  * @param forceRefresh Whether to force a refresh of the data
+ * @param groupFilter Optional group filter (A, B, C, D)
  * @returns Dashboard data for charts and visualizations
  */
 export async function getDashboardData(
 	supabase: SupabaseClient,
 	levelCode: string,
-	forceRefresh = false
+	forceRefresh = false,
+	groupFilter: string
 ): Promise<DashboardData | null> {
 	// Return cached data if available and not forcing refresh
-	if (!forceRefresh && dashboardCache.has(levelCode)) {
-		const cache = dashboardCache.get(levelCode)!;
+	// Use combination of level and group as cache key
+	const cacheKey = `${levelCode}_${groupFilter}`;
+	if (!forceRefresh && dashboardCache.has(cacheKey)) {
+		const cache = dashboardCache.get(cacheKey)!;
 		const now = Date.now();
 
 		// If cache hasn't expired, return cached data
@@ -44,6 +48,7 @@ export async function getDashboardData(
 				.from('student_register_results')
 				.select('*')
 				.eq('level_code', levelCode)
+				.eq('register_group_name', groupFilter)
 				.order('eval_date', { ascending: true }),
 
 			// Get groups for the level
@@ -103,8 +108,8 @@ export async function getDashboardData(
 			groups: uniqueGroups.map((g: GroupData) => g.group_name)
 		};
 
-		// Update cache
-		dashboardCache.set(levelCode, {
+		// Update cache with level and group key
+		dashboardCache.set(cacheKey, {
 			data: responseData,
 			timestamp: Date.now()
 		});
@@ -118,12 +123,15 @@ export async function getDashboardData(
 
 /**
  * Process data for average scores by evaluation
+ * @param results The evaluation results
+ * @param groupFilter Group filter
  */
 function processScoresByEval(results: StudentRegisterResult[]): EvalChartData[] {
 	if (!results || !Array.isArray(results) || results.length === 0) {
 		return [];
 	}
 
+	// Results are already filtered by group in the query
 	const evalMap = new Map();
 
 	results.forEach((result) => {

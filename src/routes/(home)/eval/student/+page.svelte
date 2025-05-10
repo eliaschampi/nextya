@@ -206,7 +206,7 @@
 		closeModal();
 
 		// Use SvelteKit's goto to update the URL
-		goto(`/eval_student?student=${student.code}`, {
+		goto(`/eval/student?student=${student.code}`, {
 			keepFocus: true,
 			noScroll: true,
 			replaceState: true
@@ -295,8 +295,8 @@
 			console.error('Error storing state in sessionStorage:', e);
 		}
 
-		// Redirect to the eval_answer page with fromPage parameter
-		goto(`/eval_answer/${result.result_code}?from=eval_student&student=${selectedStudent?.code}`);
+		// Redirect to the eval/answer page with fromPage parameter
+		goto(`/eval/answer/${result.result_code}?from=eval/student&student=${selectedStudent?.code}`);
 	}
 
 	function goToPage(pageNum: number) {

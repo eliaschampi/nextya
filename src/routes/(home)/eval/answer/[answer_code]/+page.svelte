@@ -90,7 +90,7 @@
 
 	function goToResults() {
 		// Navigate back to the appropriate page based on fromPage parameter
-		if (data.fromPage === 'eval_student') {
+		if (data.fromPage === 'eval/student') {
 			// Store state in sessionStorage for better back navigation
 			try {
 				sessionStorage.setItem(
@@ -103,7 +103,7 @@
 			} catch (e) {
 				console.error('Error storing state in sessionStorage:', e);
 			}
-			goto(`/eval_student?student=${data.studentCode}`);
+			goto(`/eval/student?student=${data.studentCode}`);
 		} else {
 			// Default to result page
 			// Store state in sessionStorage for better back navigation
@@ -213,7 +213,7 @@
 	description={`Resultados de ${result.student.name} ${result.student.last_name}`}
 >
 	<button class="btn btn-outline btn-primary" onclick={goToResults}>
-		{#if data.fromPage === 'eval_student'}
+		{#if data.fromPage === 'eval/student'}
 			<User size={18} class="mr-2" />
 			Volver a Historial del Estudiante
 		{:else}

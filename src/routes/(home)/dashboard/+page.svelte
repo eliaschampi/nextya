@@ -17,8 +17,10 @@
 
 	// State
 	let selectedLevelCode = $state('');
+	let selectedGroupFilter = $state<string>('all'); // Cambiado a string con valor predeterminado 'all'
 	let isLoading = $state(false);
 	let chartData = $state<DashboardData | null>(null);
+	let availableGroups = $state<string[]>([]);
 
 	// Chart references
 	let scoresByEvalChart: Chart | null = $state(null);
@@ -67,14 +69,17 @@
 	 * Load dashboard data from API
 	 * Uses the optimized dashboard API endpoint
 	 */
-	async function loadDashboardData(levelCode: string) {
+	async function loadDashboardData(levelCode: string, groupFilter: string = 'all') {
 		if (!levelCode || isLoading) return;
 
 		isLoading = true;
 		destroyCharts();
 
 		try {
-			const response = await fetch(`/api/dashboard/${levelCode}`);
+			// Construir URL con parámetro de filtro de grupo (siempre incluido)
+			let url = `/api/dashboard/${levelCode}?group_filter=${encodeURIComponent(groupFilter)}`;
+
+			const response = await fetch(url);
 
 			if (!response.ok) {
 				const errorData = await response.json().catch(() => ({}));
@@ -92,6 +97,11 @@
 			}
 
 			chartData = data;
+
+			// Actualizar la lista de grupos disponibles
+			if (data.groups && Array.isArray(data.groups)) {
+				availableGroups = data.groups;
+			}
 		} catch (error) {
 			console.error('Error loading dashboard data:', error);
 			showToast(
@@ -451,7 +461,7 @@
 		<div>
 			<button
 				class="btn btn-primary btn-sm"
-				onclick={() => loadDashboardData(selectedLevelCode)}
+				onclick={() => loadDashboardData(selectedLevelCode, selectedGroupFilter)}
 				disabled={isLoading}
 			>
 				{#if isLoading}
@@ -488,24 +498,49 @@
 			<h3 class="text-lg font-medium">Configuración del Dashboard</h3>
 		</div>
 		<div class="divider my-1"></div>
-		<fieldset class="fieldset">
-			<label for="level-select" class="fieldset-legend font-medium text-base-content/80">
-				Selecciona un nivel académico
-			</label>
-			<div class="mt-2">
-				<select
-					id="level-select"
-					class="select select-bordered w-full"
-					bind:value={selectedLevelCode}
-					onchange={() => loadDashboardData(selectedLevelCode)}
-				>
-					<option value="" disabled selected>Selecciona un nivel</option>
-					{#each data.levels as level (level.code)}
-						<option value={level.code}>{level.name}</option>
-					{/each}
-				</select>
-			</div>
-		</fieldset>
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<fieldset class="fieldset">
+				<label for="level-select" class="fieldset-legend font-medium text-base-content/80">
+					Selecciona un nivel académico
+				</label>
+				<div class="mt-2">
+					<select
+						id="level-select"
+						class="select select-bordered w-full"
+						bind:value={selectedLevelCode}
+						onchange={() => {
+							selectedGroupFilter = 'all';
+							loadDashboardData(selectedLevelCode, 'all');
+						}}
+					>
+						<option value="" disabled selected>Selecciona un nivel</option>
+						{#each data.levels as level (level.code)}
+							<option value={level.code}>{level.name}</option>
+						{/each}
+					</select>
+				</div>
+			</fieldset>
+			{#if selectedLevelCode && availableGroups.length > 0}
+				<fieldset class="fieldset">
+					<label for="group-select" class="fieldset-legend font-medium text-base-content/80">
+						Filtrar por grupo
+					</label>
+					<div class="mt-2">
+						<select
+							id="group-select"
+							class="select select-bordered w-full"
+							bind:value={selectedGroupFilter}
+							onchange={() => loadDashboardData(selectedLevelCode, selectedGroupFilter)}
+						>
+							<option value="all" disabled>Seleccione un grupo</option>
+							{#each availableGroups as group (group)}
+								<option value={group}>{group}</option>
+							{/each}
+						</select>
+					</div>
+				</fieldset>
+			{/if}
+		</div>
 	</div>
 </div>
 
