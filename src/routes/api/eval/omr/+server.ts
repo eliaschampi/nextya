@@ -9,6 +9,9 @@ import { createErrorResult as createOmrErrorResultObject } from '$lib/omrProcess
 import type { EvalQuestion, EvalSection } from '$lib/types';
 import { fetchQuestions } from '$lib/data/question';
 
+
+const DEBUG_OMR = false;
+
 // Helper para crear respuestas de error estandarizadas
 function createApiErrorResponse(
 	code: ApiOmrErrorData['code'],
@@ -113,7 +116,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const buffer = Buffer.from(imageDataBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
 		// Pasa true para obtener imagen de debug si la librería lo soporta así
 		// Pasa el código manual como cuarto parámetro si existe y es válido
-		omrResult = await omrProcessor(buffer, numQuestions, true, providedRollCode);
+		omrResult = await omrProcessor(buffer, numQuestions, DEBUG_OMR, providedRollCode);
 		// Accede a la imagen de debug si existe
 		if (omrResult.debug) {
 			debugImage = null; // TODO: Implementar;
