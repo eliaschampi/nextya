@@ -6,9 +6,7 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		adapter: adapter({
-			bodySizeLimit: '10mb'
-		})
+		adapter: adapter()
 	}
 };
 
