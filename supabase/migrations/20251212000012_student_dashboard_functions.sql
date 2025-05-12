@@ -1,5 +1,7 @@
--- Create a function to get student-specific dashboard data
--- This function returns score evolution data for a specific student
+-- Create optimized functions for student dashboard data
+-- These functions replace the use of student_register_results view with more efficient queries
+
+-- Function to get student score evolution data
 CREATE OR REPLACE FUNCTION get_student_score_evolution(p_student_code TEXT)
 RETURNS TABLE (
     eval_code TEXT,
@@ -36,7 +38,7 @@ BEGIN
 END;
 $$;
 
--- Create a function to get course-specific scores for a student
+-- Function to get student course scores data
 CREATE OR REPLACE FUNCTION get_student_course_scores(p_student_code TEXT)
 RETURNS TABLE (
     course_code TEXT,

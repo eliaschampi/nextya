@@ -506,11 +506,10 @@ export type Database = {
 		};
 		Functions: {
 			get_level_course_scores: {
-				Args: { p_level_code: string };
+				Args: { p_level_code: string; p_group_name: string };
 				Returns: {
 					course_code: string;
 					course_name: string;
-					course_abr: string;
 					average_score: number;
 				}[];
 			};
@@ -573,6 +572,46 @@ export type Database = {
 					p_section_results: Json;
 				};
 				Returns: undefined;
+			};
+			get_level_dashboard_data: {
+				Args: { p_level_code: string };
+				Returns: {
+					data_type: string;
+					json_data: Json;
+				}[];
+			};
+			get_group_dashboard_data: {
+				Args: { p_level_code: string; p_group_name: string };
+				Returns: {
+					data_type: string;
+					json_data: Json;
+				}[];
+			};
+			get_course_eval_scores: {
+				Args: { p_level_code: string; p_course_code: string; p_group_name: string };
+				Returns: {
+					eval_code: string;
+					eval_name: string;
+					eval_date: string;
+					average_score: number;
+				}[];
+			};
+			get_student_score_evolution: {
+				Args: { p_student_code: string };
+				Returns: {
+					eval_code: string;
+					eval_name: string;
+					eval_date: string;
+					score: number;
+				}[];
+			};
+			get_student_course_scores: {
+				Args: { p_student_code: string };
+				Returns: {
+					course_code: string;
+					course_name: string;
+					average_score: number;
+				}[];
 			};
 		};
 		Enums: {

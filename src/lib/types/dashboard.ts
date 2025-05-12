@@ -52,30 +52,6 @@ export interface GroupDashboardData {
 }
 
 /**
- * Represents a student register result from the database
- */
-export interface StudentRegisterResult {
-	result_code?: string | null;
-	register_code?: string | null;
-	eval_code?: string | null;
-	eval_name?: string | null;
-	eval_date?: string | null;
-	register_group_name?: string | null;
-	student_code?: string | null;
-	student_name?: string | null;
-	student_last_name?: string | null;
-	correct_count?: number | null;
-	incorrect_count?: number | null;
-	blank_count?: number | null;
-	score?: number | null;
-	section_code?: string | null;
-	section_name?: string | null;
-	course_code?: string | null;
-	course_name?: string | null;
-	[key: string]: string | number | null | undefined; // For other properties that might be in the database
-}
-
-/**
  * Represents a group from the database
  */
 export interface GroupData {
