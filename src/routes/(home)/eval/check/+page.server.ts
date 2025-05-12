@@ -1,13 +1,13 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import type { ResultToSave } from '$lib/types/api';
+import type { OptimizedResultPayload } from '$lib/types/api';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getLevels } from '$lib/data/levels';
 
 /**
- * Empaqueta un resultado para el RPC de Supabase
+ * Empaqueta un resultado individual para el RPC de Supabase
  */
-function buildRpcPayload(result: ResultToSave) {
+function buildRpcPayload(evalCode: string, result: OptimizedResultPayload['results'][0]) {
 	const answers = result.answers.map((a) => ({
 		question_code: a.question_code,
 		student_answer: a.student_answer
@@ -31,7 +31,7 @@ function buildRpcPayload(result: ResultToSave) {
 	}
 
 	return {
-		p_eval_code: result.eval_code,
+		p_eval_code: evalCode,
 		p_register_code: result.register_code,
 		p_answers: answers,
 		p_general_result: general,
@@ -44,11 +44,11 @@ function buildRpcPayload(result: ResultToSave) {
  */
 async function saveAllResults(
 	supabase: SupabaseClient,
-	results: ResultToSave[]
+	payload: OptimizedResultPayload
 ): Promise<{ successCount: number; errors: string[] }> {
-	const tasks = results.map((r) => {
-		const payload = buildRpcPayload(r);
-		return supabase.rpc('upsert_eval_results', payload).then(({ error }) => {
+	const tasks = payload.results.map((r) => {
+		const rpcPayload = buildRpcPayload(payload.eval_code, r);
+		return supabase.rpc('upsert_eval_results', rpcPayload).then(({ error }) => {
 			if (error) throw new Error(`${r.roll_code}: ${error.message}`);
 		});
 	});
@@ -92,23 +92,25 @@ export const actions: Actions = {
 			return fail(400, { message: 'No se recibieron resultados para guardar.' });
 		}
 
-		let resultsToSave: ResultToSave[];
+		let payload: OptimizedResultPayload;
 		try {
-			resultsToSave = JSON.parse(resultsJson);
-			if (!Array.isArray(resultsToSave)) throw new Error('Invalid format');
+			payload = JSON.parse(resultsJson);
+			if (!payload.eval_code || !Array.isArray(payload.results)) {
+				throw new Error('Invalid format');
+			}
 		} catch {
 			return fail(400, { message: 'Formato de resultados inválido.' });
 		}
 
-		if (resultsToSave.length === 0) {
+		if (payload.results.length === 0) {
 			return fail(400, { message: 'No hay resultados válidos para guardar.' });
 		}
 
-		const { successCount, errors } = await saveAllResults(locals.supabase, resultsToSave);
+		const { successCount, errors } = await saveAllResults(locals.supabase, payload);
 
 		if (errors.length) {
 			return fail(500, {
-				message: `Se guardaron ${successCount} de ${resultsToSave.length}`,
+				message: `Se guardaron ${successCount} de ${payload.results.length}`,
 				savedCount: successCount,
 				errors
 			});

@@ -9,7 +9,6 @@ import { createErrorResult as createOmrErrorResultObject } from '$lib/omrProcess
 import type { EvalQuestion, EvalSection } from '$lib/types';
 import { fetchQuestions } from '$lib/data/question';
 
-
 const DEBUG_OMR = false;
 
 // Helper para crear respuestas de error estandarizadas

@@ -25,7 +25,7 @@
 	import type { FileEntry } from '$lib/types/app';
 	import { showToast } from '$lib/stores/Toast';
 	import { base64ToFile, validateA5Proportion } from '$lib/utils/imageUtils';
-	import type { ApiOmrResponse, ResultToSave } from '$lib/types/api';
+	import type { ApiOmrResponse } from '$lib/types/api';
 	import { goto } from '$app/navigation';
 	import { permissionsStore } from '$lib/stores/permissions';
 
@@ -540,11 +540,17 @@
 						<input
 							type="hidden"
 							name="resultsToSave"
-							value={JSON.stringify(
-								fileEntries
+							value={JSON.stringify({
+								eval_code: selectedEval && selectedEval.code,
+								results: fileEntries
 									.filter((e) => e.status === 'success' && !!e.result?.register_code && !e.saved)
-									.map((e) => ({ ...e.result, eval_code: selectedEval!.code }) as ResultToSave)
-							)}
+									.map((e) => ({
+										register_code: e.result!.register_code,
+										roll_code: e.result!.roll_code,
+										answers: e.result!.answers,
+										scores: e.result!.scores
+									}))
+							})}
 						/>
 						<button
 							type="submit"

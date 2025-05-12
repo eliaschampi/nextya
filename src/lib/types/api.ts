@@ -60,7 +60,18 @@ export type ApiOmrResponse =
 	| { success: true; data: ApiOmrSuccessData }
 	| { success: false; error: ApiOmrErrorData };
 
-/** Datos necesarios para guardar los resultados */
+/** Datos necesarios para guardar los resultados (formato anterior) */
 export interface ResultToSave extends ApiOmrSuccessData {
 	eval_code: string;
+}
+
+/** Estructura optimizada para enviar resultados */
+export interface OptimizedResultPayload {
+	eval_code: string;
+	results: Array<{
+		register_code: string;
+		roll_code: string;
+		answers: ApiOmrSuccessData['answers'];
+		scores: ApiOmrSuccessData['scores'];
+	}>;
 }
