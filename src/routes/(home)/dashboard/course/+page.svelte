@@ -133,14 +133,15 @@
 	/**
 	 * Load evaluation scores data from API
 	 */
-	async function loadEvalScoresData(levelCode: string, courseCode: string) {
-		if (!levelCode || !courseCode || isLoading) return;
+	async function loadEvalScoresData(levelCode: string, courseCode: string, groupName: string) {
+		if (!levelCode || !courseCode || !groupName || isLoading) return;
 
 		isLoading = true;
 		if (evalScoresChart) evalScoresChart.destroy();
 
 		try {
-			const response = await fetch(`/api/dashboard/course/evals/${levelCode}/${courseCode}`);
+			const url = `/api/dashboard/course/evals/${levelCode}/${courseCode}?group_name=${encodeURIComponent(groupName)}`;
+			const response = await fetch(url);
 
 			if (!response.ok) {
 				const errorData = await response.json().catch(() => ({}));
@@ -353,7 +354,7 @@
 	function handleCourseChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
 		selectedCourseCode = target.value;
-		loadEvalScoresData(selectedLevelCode, selectedCourseCode);
+		loadEvalScoresData(selectedLevelCode, selectedCourseCode, selectedGroupName);
 	}
 
 	/**
@@ -375,7 +376,40 @@
 </script>
 
 <PageTitle title={data.title} description="Estadísticas y análisis de rendimiento por curso">
-	<div></div>
+	{#if selectedLevelCode}
+		<div>
+			<button
+				class="btn btn-primary btn-sm"
+				onclick={() => {
+					loadCourseScoresData(selectedLevelCode, selectedGroupName);
+					if (selectedCourseCode)
+						loadEvalScoresData(selectedLevelCode, selectedCourseCode, selectedGroupName);
+				}}
+				disabled={isLoading}
+			>
+				{#if isLoading}
+					<span class="loading loading-spinner loading-xs mr-1"></span>
+				{:else}
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-4 w-4 mr-1"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+						<path d="M3 3v5h5"></path>
+						<path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+						<path d="M16 21h5v-5"></path>
+					</svg>
+				{/if}
+				Actualizar
+			</button>
+		</div>
+	{/if}
 </PageTitle>
 
 <div class="container mx-auto px-0 py-6">
@@ -453,84 +487,113 @@
 		</div>
 	</div>
 
-	<!-- Charts Grid -->
-	<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-		<!-- Course Scores Chart -->
+	{#if isLoading}
 		<div
-			class="card bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg border border-primary/20 rounded-xl overflow-hidden"
+			class="flex justify-center items-center h-64 bg-base-200 rounded-xl shadow-lg border border-base-300/30 p-6"
 		>
-			<div class="card-body p-5">
-				<div class="flex items-center gap-3 mb-3">
-					<div
-						class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/15 text-primary"
-					>
-						<ChartPie class="h-5 w-5" />
-					</div>
-					<h3 class="text-lg font-medium">Promedio de Puntajes por Curso</h3>
+			<div class="loading loading-spinner loading-lg text-primary"></div>
+			<span class="ml-4 text-base-content/70 text-lg">Cargando datos...</span>
+		</div>
+	{:else if !selectedLevelCode}
+		<div
+			class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl overflow-hidden"
+		>
+			<div class="card-body p-8 text-center">
+				<div
+					class="w-20 h-20 mx-auto bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4"
+				>
+					<ChartPie class="w-10 h-10" />
 				</div>
-				<div class="divider my-0"></div>
-
-				{#if isLoading}
-					<div class="flex justify-center items-center h-64">
-						<div class="loading loading-spinner loading-lg text-primary"></div>
-					</div>
-				{:else if !selectedLevelCode}
-					<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
-						<div class="text-4xl mb-4">📊</div>
-						<p class="text-lg font-medium">Selecciona un nivel</p>
-						<p class="text-sm mt-2">Para visualizar los datos de puntajes por curso</p>
-					</div>
-				{:else if !courseScores || courseScores.length === 0}
-					<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
-						<div class="text-4xl mb-4">🔍</div>
-						<p class="text-lg font-medium">No hay datos disponibles</p>
-						<p class="text-sm mt-2">No se encontraron cursos para este nivel</p>
-					</div>
-				{:else}
-					<div class="h-64 relative mt-2">
-						<canvas id="courseScoresChart"></canvas>
-					</div>
-				{/if}
+				<h2 class="text-2xl font-semibold">Dashboard de Cursos</h2>
+				<p class="text-base-content/70 text-lg mt-2 max-w-md mx-auto">
+					Visualiza el rendimiento por curso y evaluación
+				</p>
+				<div class="divider"></div>
+				<p class="text-base-content/70 mt-2">
+					Selecciona un nivel en el menú superior para comenzar a visualizar los datos
+				</p>
 			</div>
 		</div>
-
-		<!-- Eval Scores Chart -->
-		<div
-			class="card bg-gradient-to-br from-secondary/10 to-secondary/5 shadow-lg border border-secondary/20 rounded-xl overflow-hidden"
-		>
-			<div class="card-body p-5">
-				<div class="flex items-center gap-3 mb-3">
-					<div
-						class="w-8 h-8 flex items-center justify-center rounded-lg bg-secondary/15 text-secondary"
-					>
-						<Activity class="h-5 w-5" />
+	{:else}
+		<!-- Charts Grid -->
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+			<!-- Course Scores Chart -->
+			<div
+				class="card bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg border border-primary/20 rounded-xl overflow-hidden"
+			>
+				<div class="card-body p-5">
+					<div class="flex items-center gap-3 mb-3">
+						<div
+							class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/15 text-primary"
+						>
+							<ChartPie class="h-5 w-5" />
+						</div>
+						<h3 class="text-lg font-medium">
+							Promedio de Puntajes por Curso - Grupo {selectedGroupName}
+						</h3>
 					</div>
-					<h3 class="text-lg font-medium">Evolución de Puntajes por Evaluación</h3>
+					<div class="divider my-0"></div>
+
+					{#if !courseScores || courseScores.length === 0}
+						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+							<div class="text-4xl mb-4">🔍</div>
+							<p class="text-lg font-medium">No hay datos disponibles</p>
+							<p class="text-sm mt-2">No se encontraron cursos para este nivel y grupo</p>
+						</div>
+					{:else}
+						<div class="h-64 relative mt-2">
+							<canvas id="courseScoresChart"></canvas>
+						</div>
+					{/if}
 				</div>
-				<div class="divider my-0"></div>
+			</div>
 
-				{#if isLoading}
-					<div class="flex justify-center items-center h-64">
-						<div class="loading loading-spinner loading-lg text-secondary"></div>
+			<!-- Eval Scores Chart -->
+			<div
+				class="card bg-gradient-to-br from-secondary/10 to-secondary/5 shadow-lg border border-secondary/20 rounded-xl overflow-hidden"
+			>
+				<div class="card-body p-5">
+					<div class="flex items-center gap-3 mb-3">
+						<div
+							class="w-8 h-8 flex items-center justify-center rounded-lg bg-secondary/15 text-secondary"
+						>
+							<Activity class="h-5 w-5" />
+						</div>
+						<h3 class="text-lg font-medium">
+							{#if selectedCourseCode && courseScores}
+								{#each courseScores as course (course.course_code)}
+									{#if course.course_code === selectedCourseCode}
+										Evolución de Puntajes: {course.course_name}
+									{/if}
+								{/each}
+							{:else}
+								Evolución de Puntajes por Evaluación
+							{/if}
+						</h3>
 					</div>
-				{:else if !selectedCourseCode}
-					<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
-						<div class="text-4xl mb-4">📈</div>
-						<p class="text-lg font-medium">Selecciona un curso</p>
-						<p class="text-sm mt-2">Para visualizar la evolución de puntajes</p>
-					</div>
-				{:else if !evalScores || evalScores.length === 0}
-					<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
-						<div class="text-4xl mb-4">🔍</div>
-						<p class="text-lg font-medium">No hay datos disponibles</p>
-						<p class="text-sm mt-2">No se encontraron evaluaciones para este curso</p>
-					</div>
-				{:else}
-					<div class="h-64 relative mt-2">
-						<canvas id="evalScoresChart"></canvas>
-					</div>
-				{/if}
+					<div class="divider my-0"></div>
+
+					{#if !selectedCourseCode}
+						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+							<div class="text-4xl mb-4">📈</div>
+							<p class="text-lg font-medium">Selecciona un curso</p>
+							<p class="text-sm mt-2">Para visualizar la evolución de puntajes</p>
+						</div>
+					{:else if !evalScores || evalScores.length === 0}
+						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+							<div class="text-4xl mb-4">🔍</div>
+							<p class="text-lg font-medium">No hay datos disponibles</p>
+							<p class="text-sm mt-2">
+								No se encontraron evaluaciones para este curso en el grupo {selectedGroupName}
+							</p>
+						</div>
+					{:else}
+						<div class="h-64 relative mt-2">
+							<canvas id="evalScoresChart"></canvas>
+						</div>
+					{/if}
+				</div>
 			</div>
 		</div>
-	</div>
+	{/if}
 </div>

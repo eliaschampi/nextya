@@ -6,9 +6,7 @@
  * Represents evaluation data for charts
  */
 export interface EvalChartData {
-	code: string;
 	name: string;
-	date: string;
 	averageScore: number;
 }
 
@@ -33,30 +31,24 @@ export interface AnswerDistribution {
  * Represents student performance data
  */
 export interface StudentPerformance {
-	code: string;
 	name: string;
 	averageScore: number;
 }
 
 /**
- * Represents evaluation metadata
+ * Represents level dashboard data
  */
-export interface EvaluationData {
-	code: string;
-	name: string;
-	eval_date: string;
+export interface LevelDashboardData {
+	scoresByGroup: GroupChartData[];
+	correctVsIncorrect: AnswerDistribution;
 }
 
 /**
- * Represents the complete dashboard data
+ * Represents group dashboard data
  */
-export interface DashboardData {
+export interface GroupDashboardData {
 	scoresByEval: EvalChartData[];
-	scoresByGroup: GroupChartData[];
-	correctVsIncorrect: AnswerDistribution;
 	studentPerformance: StudentPerformance[];
-	evaluations: EvaluationData[];
-	groups: string[];
 }
 
 /**

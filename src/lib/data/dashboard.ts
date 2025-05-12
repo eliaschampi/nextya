@@ -6,49 +6,28 @@ import type {
 	GroupChartData,
 	AnswerDistribution,
 	StudentPerformance,
-	DashboardData
+	LevelDashboardData,
+	GroupDashboardData
 } from '$lib/types/dashboard';
-
-// Cache for dashboard data by level and group
-const dashboardCache = new Map<string, { data: DashboardData; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 /**
  * Fetches and processes dashboard data for a specific level
  * @param supabase Supabase client
  * @param levelCode Level code to get dashboard data for
- * @param forceRefresh Whether to force a refresh of the data
- * @param groupFilter Optional group filter (A, B, C, D)
- * @returns Dashboard data for charts and visualizations
+ * @returns Level dashboard data for charts and visualizations
  */
-export async function getDashboardData(
+export async function getLevelDashboardData(
 	supabase: SupabaseClient,
-	levelCode: string,
-	forceRefresh = false,
-	groupFilter: string
-): Promise<DashboardData | null> {
-	// Return cached data if available and not forcing refresh
-	// Use combination of level and group as cache key
-	const cacheKey = `${levelCode}_${groupFilter}`;
-	if (!forceRefresh && dashboardCache.has(cacheKey)) {
-		const cache = dashboardCache.get(cacheKey)!;
-		const now = Date.now();
-
-		// If cache hasn't expired, return cached data
-		if (now - cache.timestamp < CACHE_TTL) {
-			return cache.data;
-		}
-	}
-
+	levelCode: string
+): Promise<LevelDashboardData | null> {
 	try {
-		// Run queries for student results, groups, and evaluations in parallel
-		const [evalResultsResponse, groupsResponse, evalsResponse] = await Promise.all([
+		// Run queries for student results and groups in parallel
+		const [evalResultsResponse, groupsResponse] = await Promise.all([
 			// Get evaluation results for the level
 			supabase
 				.from('student_register_results')
 				.select('*')
 				.eq('level_code', levelCode)
-				.eq('register_group_name', groupFilter)
 				.order('eval_date', { ascending: true }),
 
 			// Get groups for the level
@@ -56,14 +35,7 @@ export async function getDashboardData(
 				.from('registers')
 				.select('group_name')
 				.eq('level_code', levelCode)
-				.order('group_name'),
-
-			// Get evaluations for the level
-			supabase
-				.from('evals')
-				.select('code, name, eval_date')
-				.eq('level_code', levelCode)
-				.order('eval_date', { ascending: true })
+				.order('group_name')
 		]);
 
 		// Check for errors in any of the queries
@@ -77,15 +49,9 @@ export async function getDashboardData(
 			return null;
 		}
 
-		if (evalsResponse.error) {
-			console.error('Error fetching evaluations:', evalsResponse.error);
-			return null;
-		}
-
 		// Extract data from responses
 		const evalResults = evalResultsResponse.data || [];
 		const groups = groupsResponse.data || [];
-		const evals = evalsResponse.data || [];
 
 		// Filter to get unique group names
 		const uniqueGroups = Array.from(new Set(groups.map((g) => g.group_name))).map((groupName) => ({
@@ -93,30 +59,57 @@ export async function getDashboardData(
 		}));
 
 		// Process data for charts
-		const scoresByEval = processScoresByEval(evalResults);
 		const scoresByGroup = processScoresByGroup(evalResults, uniqueGroups);
 		const correctVsIncorrect = processCorrectVsIncorrect(evalResults);
-		const studentPerformance = processStudentPerformance(evalResults);
 
 		// Prepare response data
-		const responseData: DashboardData = {
-			scoresByEval,
+		return {
 			scoresByGroup,
-			correctVsIncorrect,
-			studentPerformance,
-			evaluations: evals,
-			groups: uniqueGroups.map((g: GroupData) => g.group_name)
+			correctVsIncorrect
 		};
-
-		// Update cache with level and group key
-		dashboardCache.set(cacheKey, {
-			data: responseData,
-			timestamp: Date.now()
-		});
-
-		return responseData;
 	} catch (error) {
-		console.error('Error fetching dashboard data:', error);
+		console.error('Error fetching level dashboard data:', error);
+		return null;
+	}
+}
+
+/**
+ * Fetches and processes dashboard data for a specific level and group
+ * @param supabase Supabase client
+ * @param levelCode Level code to get dashboard data for
+ * @param groupName Group name to filter by
+ * @returns Group dashboard data for charts and visualizations
+ */
+export async function getGroupDashboardData(
+	supabase: SupabaseClient,
+	levelCode: string,
+	groupName: string
+): Promise<GroupDashboardData | null> {
+	try {
+		// Get evaluation results for the level and group
+		const { data: evalResults, error } = await supabase
+			.from('student_register_results')
+			.select('*')
+			.eq('level_code', levelCode)
+			.eq('register_group_name', groupName)
+			.order('eval_date', { ascending: true });
+
+		if (error) {
+			console.error('Error fetching evaluation results:', error);
+			return null;
+		}
+
+		// Process data for charts
+		const scoresByEval = processScoresByEval(evalResults || []);
+		const studentPerformance = processStudentPerformance(evalResults || []);
+
+		// Prepare response data
+		return {
+			scoresByEval,
+			studentPerformance
+		};
+	} catch (error) {
+		console.error('Error fetching group dashboard data:', error);
 		return null;
 	}
 }
@@ -124,7 +117,6 @@ export async function getDashboardData(
 /**
  * Process data for average scores by evaluation
  * @param results The evaluation results
- * @param groupFilter Group filter
  */
 function processScoresByEval(results: StudentRegisterResult[]): EvalChartData[] {
 	if (!results || !Array.isArray(results) || results.length === 0) {
@@ -157,17 +149,13 @@ function processScoresByEval(results: StudentRegisterResult[]): EvalChartData[] 
 
 	try {
 		return Array.from(evalMap.entries())
-			.map(([code, data]) => ({
-				code,
+			.map(([, data]) => ({
 				name: data.name,
-				date: data.date,
 				averageScore: parseFloat((data.totalScore / data.count).toFixed(2))
 			}))
 			.sort((a, b) => {
-				// Handle invalid dates
-				const dateA = new Date(a.date || 0).getTime();
-				const dateB = new Date(b.date || 0).getTime();
-				return dateA - dateB;
+				// Sort by name as a fallback
+				return a.name.localeCompare(b.name);
 			});
 	} catch (error) {
 		console.error('Error processing eval data:', error);
@@ -311,8 +299,7 @@ function processStudentPerformance(results: StudentRegisterResult[]): StudentPer
 		}
 
 		return Array.from(studentMap.entries())
-			.map(([code, data]) => ({
-				code,
+			.map(([, data]) => ({
 				name: data.name || 'Estudiante sin nombre',
 				averageScore: parseFloat((data.totalScore / data.count).toFixed(2))
 			}))

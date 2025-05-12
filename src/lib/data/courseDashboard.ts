@@ -33,63 +33,94 @@ export async function getCourseScores(
 }
 
 /**
- * Fetches evaluation scores for a specific level and course
+ * Fetches evaluation scores for a specific level, course and group
  * @param supabase Supabase client
  * @param levelCode Level code
  * @param courseCode Course code
+ * @param groupName Group name to filter results
  * @returns Array of evaluation scores or null if error
  */
 export async function getEvalScores(
 	supabase: SupabaseClient,
 	levelCode: string,
-	courseCode: string
+	courseCode: string,
+	groupName: string
 ): Promise<EvalScore[] | null> {
 	try {
-		// Get all evaluations for this level
-		const { data: evalsData, error: evalsError } = await supabase
-			.from('evals')
-			.select('code, name, eval_date')
-			.eq('level_code', levelCode)
-			.order('eval_date', { ascending: true });
-
-		if (evalsError) throw evalsError;
-
-		if (!evalsData || !Array.isArray(evalsData) || evalsData.length === 0) {
-			return [];
-		}
-
-		// Get all sections for this course and these evaluations
-		const evalCodes = evalsData.map((e) => e.code);
+		// Get all sections for this course in this level
 		const { data: sectionsData, error: sectionsError } = await supabase
 			.from('eval_sections')
-			.select('code, eval_code')
+			.select(
+				`
+				code,
+				eval_code,
+				evals!inner (
+					code,
+					name,
+					eval_date
+				)
+			`
+			)
 			.eq('course_code', courseCode)
-			.in('eval_code', evalCodes);
+			.eq('evals.level_code', levelCode)
+			.order('evals.eval_date', { ascending: true });
 
 		if (sectionsError) throw sectionsError;
 
 		if (!sectionsData || !Array.isArray(sectionsData) || sectionsData.length === 0) {
-			// No sections found for this course in any evaluation
-			return evalsData.map((evalItem) => ({
-				eval_code: evalItem.code,
-				eval_name: evalItem.name,
-				eval_date: evalItem.eval_date,
-				average_score: 0
-			}));
+			return [];
 		}
 
-		// Create a map of eval_code to section_code for faster lookup
-		const evalToSectionMap = new Map<string, string>();
+		// Create a map to store unique evaluations by code
+		const evalMap = new Map<string, { name: string; date: string }>();
 		sectionsData.forEach((section) => {
-			evalToSectionMap.set(section.eval_code, section.code);
+			// Supabase puede devolver diferentes estructuras para relaciones anidadas
+			// Definimos un tipo para la estructura esperada
+			type EvalData = { code: string; name: string; eval_date: string };
+
+			// Usamos unknown en lugar de any para mayor seguridad
+			const evalDataArray = section.evals as unknown;
+
+			// Si es un array, tomamos el primer elemento
+			if (Array.isArray(evalDataArray) && evalDataArray.length > 0) {
+				const evalData = evalDataArray[0] as EvalData;
+				if (!evalMap.has(evalData.code)) {
+					evalMap.set(evalData.code, {
+						name: evalData.name,
+						date: evalData.eval_date
+					});
+				}
+			} else {
+				// Si no es un array, asumimos que es un objeto directo
+				const evalData = evalDataArray as EvalData;
+				if (evalData && !evalMap.has(evalData.code)) {
+					evalMap.set(evalData.code, {
+						name: evalData.name,
+						date: evalData.eval_date
+					});
+				}
+			}
 		});
 
-		// Get all results for these sections in a single query
+		// Get section codes for query
 		const sectionCodes = sectionsData.map((s) => s.code);
+
+		// Get all results for these sections filtered by group
 		const { data: resultsData, error: resultsError } = await supabase
 			.from('eval_results')
-			.select('section_code, eval_code, score')
-			.in('section_code', sectionCodes);
+			.select(
+				`
+				section_code,
+				eval_code,
+				score,
+				register_code,
+				registers!inner (
+					group_name
+				)
+			`
+			)
+			.in('section_code', sectionCodes)
+			.eq('registers.group_name', groupName);
 
 		if (resultsError) throw resultsError;
 
@@ -112,20 +143,28 @@ export async function getEvalScores(
 		}
 
 		// Map evaluation data with scores
-		const evalScores = evalsData.map((evalItem) => {
-			const scores = evalScoresMap.get(evalItem.code);
-			const averageScore = scores ? parseFloat((scores.total / scores.count).toFixed(2)) : 0;
+		const evalScores: EvalScore[] = [];
 
-			return {
-				eval_code: evalItem.code,
-				eval_name: evalItem.name,
-				eval_date: evalItem.eval_date,
-				average_score: averageScore
-			};
+		evalMap.forEach((evalData, evalCode) => {
+			const scores = evalScoresMap.get(evalCode);
+			// Only include evaluations that have scores for this group
+			if (scores) {
+				const averageScore = parseFloat((scores.total / scores.count).toFixed(2));
+				evalScores.push({
+					eval_code: evalCode,
+					eval_name: evalData.name,
+					eval_date: evalData.date,
+					average_score: averageScore
+				});
+			}
 		});
 
-		// Filter out evaluations with no data
-		return evalScores.filter((item) => item.average_score > 0);
+		// Sort by date
+		return evalScores.sort((a, b) => {
+			const dateA = new Date(a.eval_date).getTime();
+			const dateB = new Date(b.eval_date).getTime();
+			return dateA - dateB;
+		});
 	} catch (error) {
 		console.error('Error fetching evaluation scores:', error);
 		return null;

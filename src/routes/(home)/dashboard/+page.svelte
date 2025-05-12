@@ -5,7 +5,7 @@
 	import { showToast } from '$lib/stores/Toast.js';
 	import { Settings, ChartBar, ChartPie, Activity, Trophy } from 'lucide-svelte';
 	import type { Level } from '$lib/types';
-	import type { DashboardData } from '$lib/types/dashboard';
+	import type { LevelDashboardData, GroupDashboardData } from '$lib/types/dashboard';
 
 	// Props from server
 	const { data } = $props<{
@@ -17,10 +17,14 @@
 
 	// State
 	let selectedLevelCode = $state('');
-	let selectedGroupFilter = $state<string>('all'); // Cambiado a string con valor predeterminado 'all'
-	let isLoading = $state(false);
-	let chartData = $state<DashboardData | null>(null);
-	let availableGroups = $state<string[]>([]);
+	let selectedGroupName = $state('');
+	let isLoadingLevel = $state(false);
+	let isLoadingGroup = $state(false);
+	let levelData = $state<LevelDashboardData | null>(null);
+	let groupData = $state<GroupDashboardData | null>(null);
+
+	// Grupos disponibles (A, B, C, D)
+	const availableGroups = ['A', 'B', 'C', 'D'];
 
 	// Chart references
 	let scoresByEvalChart: Chart | null = $state(null);
@@ -40,20 +44,36 @@
 	};
 
 	// Derived values for chart data
-	const scoresByEvalData = $derived(getScoresByEvalData(chartData));
-	const scoresByGroupData = $derived(getScoresByGroupData(chartData));
-	const correctVsIncorrectData = $derived(getCorrectVsIncorrectData(chartData));
-	const studentPerformanceData = $derived(getStudentPerformanceData(chartData));
+	const scoresByGroupData = $derived(levelData?.scoresByGroup || []);
+
+	const correctVsIncorrectData = $derived(
+		levelData?.correctVsIncorrect || { correct: 0, incorrect: 0, blank: 0 }
+	);
+
+	const scoresByEvalData = $derived(groupData?.scoresByEval || []);
+
+	const studentPerformanceData = $derived(groupData?.studentPerformance || []);
 
 	// Track chart data changes and render charts when data is available
-	let shouldRenderCharts = $derived(chartData !== null && !isLoading);
+	let shouldRenderLevelCharts = $derived(levelData !== null && !isLoadingLevel);
+	let shouldRenderGroupCharts = $derived(groupData !== null && !isLoadingGroup);
 
 	$effect(() => {
-		if (shouldRenderCharts) {
+		if (shouldRenderLevelCharts) {
 			// Ensure DOM is ready before rendering charts
 			setTimeout(() => {
-				destroyCharts();
-				renderCharts();
+				destroyLevelCharts();
+				renderLevelCharts();
+			}, 100); // Small delay to ensure DOM is ready
+		}
+	});
+
+	$effect(() => {
+		if (shouldRenderGroupCharts) {
+			// Ensure DOM is ready before rendering charts
+			setTimeout(() => {
+				destroyGroupCharts();
+				renderGroupCharts();
 			}, 100); // Small delay to ensure DOM is ready
 		}
 	});
@@ -66,20 +86,16 @@
 	});
 
 	/**
-	 * Load dashboard data from API
-	 * Uses the optimized dashboard API endpoint
+	 * Load level dashboard data from API
 	 */
-	async function loadDashboardData(levelCode: string, groupFilter: string = 'all') {
-		if (!levelCode || isLoading) return;
+	async function loadLevelDashboardData(levelCode: string) {
+		if (!levelCode || isLoadingLevel) return;
 
-		isLoading = true;
-		destroyCharts();
+		isLoadingLevel = true;
+		destroyLevelCharts();
 
 		try {
-			// Construir URL con parámetro de filtro de grupo (siempre incluido)
-			let url = `/api/dashboard/${levelCode}?group_filter=${encodeURIComponent(groupFilter)}`;
-
-			const response = await fetch(url);
+			const response = await fetch(`/api/dashboard/level/${levelCode}`);
 
 			if (!response.ok) {
 				const errorData = await response.json().catch(() => ({}));
@@ -92,126 +108,119 @@
 			// Check if we have valid data
 			if (!data || typeof data !== 'object') {
 				showToast('Formato de datos inválido', 'danger');
-				chartData = null;
+				levelData = null;
 				return;
 			}
 
-			chartData = data;
-
-			// Actualizar la lista de grupos disponibles
-			if (data.groups && Array.isArray(data.groups)) {
-				availableGroups = data.groups;
-			}
+			levelData = data;
 		} catch (error) {
-			console.error('Error loading dashboard data:', error);
+			console.error('Error loading level dashboard data:', error);
 			showToast(
 				error instanceof Error ? error.message : 'No se pudieron cargar los datos del dashboard',
 				'danger'
 			);
-			chartData = null;
+			levelData = null;
 		} finally {
-			isLoading = false;
-		}
-	}
-
-	// Helper functions to prepare chart data
-	function getScoresByEvalData(data: DashboardData | null): { labels: string[]; values: number[] } {
-		if (
-			!data ||
-			!data.scoresByEval ||
-			!Array.isArray(data.scoresByEval) ||
-			!data.scoresByEval.length
-		) {
-			return { labels: [], values: [] };
-		}
-
-		try {
-			return {
-				labels: data.scoresByEval.map((item) => item.name || 'Sin nombre'),
-				values: data.scoresByEval.map((item) => item.averageScore || 0)
-			};
-		} catch (error) {
-			console.error('Error processing scoresByEval data:', error);
-			return { labels: [], values: [] };
-		}
-	}
-
-	function getScoresByGroupData(data: DashboardData | null): {
-		labels: string[];
-		values: number[];
-	} {
-		if (
-			!data ||
-			!data.scoresByGroup ||
-			!Array.isArray(data.scoresByGroup) ||
-			!data.scoresByGroup.length
-		) {
-			return { labels: [], values: [] };
-		}
-
-		try {
-			return {
-				labels: data.scoresByGroup.map((item) => item.group || 'Sin grupo'),
-				values: data.scoresByGroup.map((item) => item.averageScore || 0)
-			};
-		} catch (error) {
-			console.error('Error processing scoresByGroup data:', error);
-			return { labels: [], values: [] };
-		}
-	}
-
-	function getCorrectVsIncorrectData(data: DashboardData | null): { values: number[] } {
-		if (!data || !data.correctVsIncorrect) {
-			return { values: [] };
-		}
-
-		try {
-			const { correct = 0, incorrect = 0, blank = 0 } = data.correctVsIncorrect;
-			return { values: [correct, incorrect, blank] };
-		} catch (error) {
-			console.error('Error processing correctVsIncorrect data:', error);
-			return { values: [] };
-		}
-	}
-
-	function getStudentPerformanceData(data: DashboardData | null): {
-		labels: string[];
-		values: number[];
-	} {
-		if (
-			!data ||
-			!data.studentPerformance ||
-			!Array.isArray(data.studentPerformance) ||
-			!data.studentPerformance.length
-		) {
-			return { labels: [], values: [] };
-		}
-
-		try {
-			return {
-				labels: data.studentPerformance.map((item) => item.name || 'Sin nombre'),
-				values: data.studentPerformance.map((item) => item.averageScore || 0)
-			};
-		} catch (error) {
-			console.error('Error processing studentPerformance data:', error);
-			return { labels: [], values: [] };
+			isLoadingLevel = false;
 		}
 	}
 
 	/**
-	 * Render all charts in parallel
-	 * This improves performance by rendering charts concurrently
+	 * Load group dashboard data from API
 	 */
-	function renderCharts() {
+	async function loadGroupDashboardData(levelCode: string, groupName: string) {
+		if (!levelCode || !groupName || isLoadingGroup) return;
+
+		isLoadingGroup = true;
+		destroyGroupCharts();
+
+		try {
+			const response = await fetch(`/api/dashboard/group/${levelCode}/${groupName}`);
+
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				const errorMessage = errorData.error || 'Error al cargar datos del dashboard';
+				throw new Error(errorMessage);
+			}
+
+			const data = await response.json();
+
+			// Check if we have valid data
+			if (!data || typeof data !== 'object') {
+				showToast('Formato de datos inválido', 'danger');
+				groupData = null;
+				return;
+			}
+
+			groupData = data;
+		} catch (error) {
+			console.error('Error loading group dashboard data:', error);
+			showToast(
+				error instanceof Error ? error.message : 'No se pudieron cargar los datos del dashboard',
+				'danger'
+			);
+			groupData = null;
+		} finally {
+			isLoadingGroup = false;
+		}
+	}
+
+	/**
+	 * Render level charts (scoresByGroup and correctVsIncorrect)
+	 */
+	function renderLevelCharts() {
 		// Use Promise.all to render charts in parallel
-		Promise.all([
-			renderScoresByEvalChart(),
-			renderScoresByGroupChart(),
-			renderCorrectVsIncorrectChart(),
-			renderStudentPerformanceChart()
-		]).catch((error) => {
-			console.error('Error rendering charts:', error);
+		Promise.all([renderScoresByGroupChart(), renderCorrectVsIncorrectChart()]).catch((error) => {
+			console.error('Error rendering level charts:', error);
 		});
+	}
+
+	/**
+	 * Render group charts (scoresByEval and studentPerformance)
+	 */
+	function renderGroupCharts() {
+		// Use Promise.all to render charts in parallel
+		Promise.all([renderScoresByEvalChart(), renderStudentPerformanceChart()]).catch((error) => {
+			console.error('Error rendering group charts:', error);
+		});
+	}
+
+	/**
+	 * Destroy level charts
+	 */
+	function destroyLevelCharts() {
+		if (scoresByGroupChart) {
+			scoresByGroupChart.destroy();
+			scoresByGroupChart = null;
+		}
+
+		if (correctVsIncorrectChart) {
+			correctVsIncorrectChart.destroy();
+			correctVsIncorrectChart = null;
+		}
+	}
+
+	/**
+	 * Destroy group charts
+	 */
+	function destroyGroupCharts() {
+		if (scoresByEvalChart) {
+			scoresByEvalChart.destroy();
+			scoresByEvalChart = null;
+		}
+
+		if (studentPerformanceChart) {
+			studentPerformanceChart.destroy();
+			studentPerformanceChart = null;
+		}
+	}
+
+	/**
+	 * Destroy all charts
+	 */
+	function destroyCharts() {
+		destroyLevelCharts();
+		destroyGroupCharts();
 	}
 
 	/**
@@ -219,7 +228,7 @@
 	 * Shows the evolution of scores over time
 	 */
 	function renderScoresByEvalChart() {
-		if (!scoresByEvalData.labels.length) {
+		if (!scoresByEvalData || scoresByEvalData.length === 0) {
 			return Promise.resolve();
 		}
 
@@ -231,14 +240,17 @@
 			}
 
 			try {
+				const labels = scoresByEvalData.map((item) => item.name);
+				const values = scoresByEvalData.map((item) => item.averageScore);
+
 				scoresByEvalChart = new Chart(ctx, {
 					type: 'line',
 					data: {
-						labels: scoresByEvalData.labels,
+						labels,
 						datasets: [
 							{
 								label: 'Promedio de Puntaje',
-								data: scoresByEvalData.values,
+								data: values,
 								backgroundColor: chartColors.primary,
 								borderColor: chartColors.primary,
 								tension: 0.3,
@@ -276,7 +288,7 @@
 	 * Shows average scores by student group
 	 */
 	function renderScoresByGroupChart() {
-		if (!scoresByGroupData.labels.length) {
+		if (!scoresByGroupData || scoresByGroupData.length === 0) {
 			return Promise.resolve();
 		}
 
@@ -288,14 +300,17 @@
 			}
 
 			try {
+				const labels = scoresByGroupData.map((item) => item.group);
+				const values = scoresByGroupData.map((item) => item.averageScore);
+
 				scoresByGroupChart = new Chart(ctx, {
 					type: 'bar',
 					data: {
-						labels: scoresByGroupData.labels,
+						labels,
 						datasets: [
 							{
 								label: 'Promedio de Puntaje',
-								data: scoresByGroupData.values,
+								data: values,
 								backgroundColor: chartColors.secondary,
 								borderColor: chartColors.secondary,
 								borderWidth: 1
@@ -332,7 +347,7 @@
 	 * Shows distribution of correct, incorrect, and blank answers
 	 */
 	function renderCorrectVsIncorrectChart() {
-		if (!correctVsIncorrectData.values.length) {
+		if (!correctVsIncorrectData) {
 			return Promise.resolve();
 		}
 
@@ -344,13 +359,19 @@
 			}
 
 			try {
+				const values = [
+					correctVsIncorrectData.correct,
+					correctVsIncorrectData.incorrect,
+					correctVsIncorrectData.blank
+				];
+
 				correctVsIncorrectChart = new Chart(ctx, {
 					type: 'doughnut',
 					data: {
 						labels: ['Correctas', 'Incorrectas', 'En blanco'],
 						datasets: [
 							{
-								data: correctVsIncorrectData.values,
+								data: values,
 								backgroundColor: [chartColors.correct, chartColors.incorrect, chartColors.blank],
 								borderWidth: 1
 							}
@@ -380,7 +401,7 @@
 	 * Shows top 10 students by average score
 	 */
 	function renderStudentPerformanceChart() {
-		if (!studentPerformanceData.labels.length) {
+		if (!studentPerformanceData || studentPerformanceData.length === 0) {
 			return Promise.resolve();
 		}
 
@@ -392,14 +413,17 @@
 			}
 
 			try {
+				const labels = studentPerformanceData.map((item) => item.name);
+				const values = studentPerformanceData.map((item) => item.averageScore);
+
 				studentPerformanceChart = new Chart(ctx, {
 					type: 'bar',
 					data: {
-						labels: studentPerformanceData.labels,
+						labels,
 						datasets: [
 							{
 								label: 'Promedio de Puntaje',
-								data: studentPerformanceData.values,
+								data: values,
 								backgroundColor: chartColors.tertiary,
 								borderColor: chartColors.tertiary,
 								borderWidth: 1
@@ -431,29 +455,6 @@
 			}
 		});
 	}
-
-	// Destroy all charts
-	function destroyCharts() {
-		if (scoresByEvalChart) {
-			scoresByEvalChart.destroy();
-			scoresByEvalChart = null;
-		}
-
-		if (scoresByGroupChart) {
-			scoresByGroupChart.destroy();
-			scoresByGroupChart = null;
-		}
-
-		if (correctVsIncorrectChart) {
-			correctVsIncorrectChart.destroy();
-			correctVsIncorrectChart = null;
-		}
-
-		if (studentPerformanceChart) {
-			studentPerformanceChart.destroy();
-			studentPerformanceChart = null;
-		}
-	}
 </script>
 
 <PageTitle title={data.title} description="Estadísticas y análisis de rendimiento académico">
@@ -461,10 +462,13 @@
 		<div>
 			<button
 				class="btn btn-primary btn-sm"
-				onclick={() => loadDashboardData(selectedLevelCode, selectedGroupFilter)}
-				disabled={isLoading}
+				onclick={() => {
+					loadLevelDashboardData(selectedLevelCode);
+					if (selectedGroupName) loadGroupDashboardData(selectedLevelCode, selectedGroupName);
+				}}
+				disabled={isLoadingLevel || isLoadingGroup}
 			>
-				{#if isLoading}
+				{#if isLoadingLevel || isLoadingGroup}
 					<span class="loading loading-spinner loading-xs mr-1"></span>
 				{:else}
 					<svg
@@ -509,8 +513,8 @@
 						class="select select-bordered w-full"
 						bind:value={selectedLevelCode}
 						onchange={() => {
-							selectedGroupFilter = 'all';
-							loadDashboardData(selectedLevelCode, 'all');
+							selectedGroupName = '';
+							loadLevelDashboardData(selectedLevelCode);
 						}}
 					>
 						<option value="" disabled selected>Selecciona un nivel</option>
@@ -520,7 +524,7 @@
 					</select>
 				</div>
 			</fieldset>
-			{#if selectedLevelCode && availableGroups.length > 0}
+			{#if selectedLevelCode}
 				<fieldset class="fieldset">
 					<label for="group-select" class="fieldset-legend font-medium text-base-content/80">
 						Filtrar por grupo
@@ -529,10 +533,14 @@
 						<select
 							id="group-select"
 							class="select select-bordered w-full"
-							bind:value={selectedGroupFilter}
-							onchange={() => loadDashboardData(selectedLevelCode, selectedGroupFilter)}
+							bind:value={selectedGroupName}
+							onchange={() => {
+								if (selectedGroupName) {
+									loadGroupDashboardData(selectedLevelCode, selectedGroupName);
+								}
+							}}
 						>
-							<option value="all" disabled>Seleccione un grupo</option>
+							<option value="" disabled selected>Seleccione un grupo</option>
 							{#each availableGroups as group (group)}
 								<option value={group}>{group}</option>
 							{/each}
@@ -544,7 +552,7 @@
 	</div>
 </div>
 
-{#if isLoading}
+{#if isLoadingLevel && isLoadingGroup}
 	<div
 		class="flex justify-center items-center h-64 bg-base-200 rounded-xl shadow-lg border border-base-300/30 p-6"
 	>
@@ -571,33 +579,13 @@
 			</p>
 		</div>
 	</div>
-{:else if chartData}
-	{#if scoresByEvalData.labels.length || scoresByGroupData.labels.length || correctVsIncorrectData.values.length || studentPerformanceData.labels.length}
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-			<!-- Scores by Evaluation Chart -->
-			{#if scoresByEvalData.labels.length}
-				<div
-					class="card bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg border border-primary/20 rounded-xl overflow-hidden"
-				>
-					<div class="card-body p-5">
-						<div class="flex items-center gap-3 mb-3">
-							<div
-								class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/15 text-primary"
-							>
-								<Activity class="h-5 w-5" />
-							</div>
-							<h3 class="text-lg font-medium">Evolución de Puntajes</h3>
-						</div>
-						<div class="divider my-0"></div>
-						<div class="h-64 relative mt-2">
-							<canvas id="scoresByEvalChart"></canvas>
-						</div>
-					</div>
-				</div>
-			{/if}
-
+{:else}
+	<!-- Level Data Section -->
+	{#if levelData}
+		<h2 class="text-xl font-semibold mb-4">Datos por Nivel</h2>
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
 			<!-- Scores by Group Chart -->
-			{#if scoresByGroupData.labels.length}
+			{#if levelData.scoresByGroup && levelData.scoresByGroup.length > 0}
 				<div
 					class="card bg-gradient-to-br from-secondary/10 to-secondary/5 shadow-lg border border-secondary/20 rounded-xl overflow-hidden"
 				>
@@ -619,7 +607,7 @@
 			{/if}
 
 			<!-- Correct vs Incorrect Chart -->
-			{#if correctVsIncorrectData.values.length}
+			{#if levelData.correctVsIncorrect}
 				<div
 					class="card bg-gradient-to-br from-accent/10 to-accent/5 shadow-lg border border-accent/20 rounded-xl overflow-hidden"
 				>
@@ -639,64 +627,80 @@
 					</div>
 				</div>
 			{/if}
-
-			<!-- Student Performance Chart -->
-			{#if studentPerformanceData.labels.length}
-				<div
-					class="card bg-gradient-to-br from-warning/10 to-warning/5 shadow-lg border border-warning/20 rounded-xl overflow-hidden"
-				>
-					<div class="card-body p-5">
-						<div class="flex items-center gap-3 mb-3">
-							<div
-								class="w-8 h-8 flex items-center justify-center rounded-lg bg-warning/15 text-warning"
-							>
-								<Trophy class="h-5 w-5" />
-							</div>
-							<h3 class="text-lg font-medium">Top 10 Estudiantes</h3>
-						</div>
-						<div class="divider my-0"></div>
-						<div class="h-64 relative mt-2">
-							<canvas id="studentPerformanceChart"></canvas>
-						</div>
-					</div>
-				</div>
-			{/if}
 		</div>
-	{:else}
-		<div
-			class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl overflow-hidden"
-		>
-			<div class="card-body p-8 text-center">
-				<div
-					class="w-20 h-20 mx-auto bg-warning/10 text-warning rounded-full flex items-center justify-center mb-4"
-				>
-					<Settings class="w-10 h-10" />
-				</div>
-				<h2 class="text-2xl font-semibold">No hay datos disponibles</h2>
-				<p class="text-base-content/70 text-lg mt-2 max-w-md mx-auto">
-					No se encontraron resultados para el nivel seleccionado
-				</p>
-				<div class="divider"></div>
-				<p class="text-base-content/70 mt-2">
-					Asegúrate de que existan evaluaciones y resultados registrados para este nivel
-				</p>
+	{:else if isLoadingLevel}
+		<div class="mb-8">
+			<div class="flex justify-center items-center h-32 bg-base-200 rounded-xl p-4">
+				<div class="loading loading-spinner loading-md text-primary"></div>
+				<span class="ml-4 text-base-content/70">Cargando datos del nivel...</span>
 			</div>
 		</div>
 	{/if}
-{:else}
-	<div
-		class="card bg-gradient-to-br from-error/10 to-error/5 shadow-lg border border-error/20 rounded-xl overflow-hidden"
-	>
-		<div class="card-body p-8 text-center">
-			<div
-				class="w-20 h-20 mx-auto bg-error/10 text-error rounded-full flex items-center justify-center mb-4"
-			>
-				<Settings class="w-10 h-10" />
+
+	<!-- Group Data Section -->
+	{#if selectedGroupName}
+		<h2 class="text-xl font-semibold mb-4">Datos del Grupo {selectedGroupName}</h2>
+		{#if groupData}
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				<!-- Scores by Evaluation Chart -->
+				{#if groupData.scoresByEval && groupData.scoresByEval.length > 0}
+					<div
+						class="card bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg border border-primary/20 rounded-xl overflow-hidden"
+					>
+						<div class="card-body p-5">
+							<div class="flex items-center gap-3 mb-3">
+								<div
+									class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/15 text-primary"
+								>
+									<Activity class="h-5 w-5" />
+								</div>
+								<h3 class="text-lg font-medium">Evolución de Puntajes</h3>
+							</div>
+							<div class="divider my-0"></div>
+							<div class="h-64 relative mt-2">
+								<canvas id="scoresByEvalChart"></canvas>
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Student Performance Chart -->
+				{#if groupData.studentPerformance && groupData.studentPerformance.length > 0}
+					<div
+						class="card bg-gradient-to-br from-warning/10 to-warning/5 shadow-lg border border-warning/20 rounded-xl overflow-hidden"
+					>
+						<div class="card-body p-5">
+							<div class="flex items-center gap-3 mb-3">
+								<div
+									class="w-8 h-8 flex items-center justify-center rounded-lg bg-warning/15 text-warning"
+								>
+									<Trophy class="h-5 w-5" />
+								</div>
+								<h3 class="text-lg font-medium">Top 10 Estudiantes</h3>
+							</div>
+							<div class="divider my-0"></div>
+							<div class="h-64 relative mt-2">
+								<canvas id="studentPerformanceChart"></canvas>
+							</div>
+						</div>
+					</div>
+				{/if}
 			</div>
-			<h2 class="text-2xl font-semibold">No hay datos disponibles</h2>
-			<p class="text-base-content/70 text-lg mt-2">
-				No se encontraron datos para el nivel seleccionado
-			</p>
+		{:else if isLoadingGroup}
+			<div class="flex justify-center items-center h-32 bg-base-200 rounded-xl p-4">
+				<div class="loading loading-spinner loading-md text-primary"></div>
+				<span class="ml-4 text-base-content/70">Cargando datos del grupo...</span>
+			</div>
+		{:else}
+			<div class="card bg-base-200 p-4 rounded-xl">
+				<p class="text-center text-base-content/70">
+					No hay datos disponibles para el grupo seleccionado
+				</p>
+			</div>
+		{/if}
+	{:else}
+		<div class="card bg-base-200 p-4 rounded-xl">
+			<p class="text-center text-base-content/70">Selecciona un grupo para ver datos específicos</p>
 		</div>
-	</div>
+	{/if}
 {/if}
