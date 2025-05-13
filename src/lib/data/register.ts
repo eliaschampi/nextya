@@ -10,22 +10,24 @@ export interface StudentRegisterInfo {
 }
 
 /**
- * Busca un registro de estudiante por su roll_code.
+ * Busca un registro de estudiante por su roll_code y verifica que pertenezca al grupo especificado.
  */
 export async function fetchRegisterByRollCode(
 	supabase: SupabaseClient,
-	rollCode: string
+	rollCode: string,
+	groupName: string
 ): Promise<StudentRegisterInfo | null> {
 	if (!rollCode || !/^\d{4}$/.test(rollCode)) {
 		return null; // Código inválido
 	}
 
-	const { data, error } = await supabase
+	const query = supabase
 		.from('registers')
-		.select('code, roll_code, student_code, students:student_code (name, last_name)')
+		.select('code, roll_code, group_name, student_code, students:student_code (name, last_name)')
 		.eq('roll_code', rollCode)
-		.limit(1)
-		.maybeSingle(); // Devuelve null si no se encuentra, en lugar de array vacío
+		.eq('group_name', groupName);
+
+	const { data, error } = await query.limit(1).maybeSingle(); // Devuelve null si no se encuentra, en lugar de array vacío
 
 	if (error) {
 		console.error('Error fetching register by roll code:', error);

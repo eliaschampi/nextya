@@ -250,7 +250,9 @@
 	}
 
 	function handleRadioChange(section: string, question: EvalQuestion, value: string): void {
-		updateQuestion(section, question, 'correct_key', value);
+		// If the selected value is equal to the current value, clear it (toggle behavior)
+		const newValue = question.correct_key === value ? '' : value;
+		updateQuestion(section, question, 'correct_key', newValue);
 	}
 
 	function handleOmitableChange(section: string, question: EvalQuestion, checked: boolean): void {
@@ -525,7 +527,7 @@
 									<div class="md:col-span-3 flex flex-wrap gap-2 justify-center md:justify-start">
 										{#each ANSWER_OPTIONS as option (option)}
 											<label
-												class="flex items-center gap-2 cursor-pointer p-1 rounded-full
+												class="flex items-center gap-2 cursor-pointer select-none p-1 rounded-full
 													{question.correct_key === option
 													? 'bg-primary text-white scale-105'
 													: 'bg-base-200 hover:bg-base-300'}"

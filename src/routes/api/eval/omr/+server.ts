@@ -38,7 +38,8 @@ function createApiErrorResponse(
 		CALCULATION_ERROR: 'Error en cálculos internos del procesador.',
 		UNEXPECTED_ERROR: 'Ocurrió un error inesperado durante el procesamiento OMR.',
 		VALIDATION_ERROR: 'El código del estudiante no es válido (debe tener 4 dígitos).',
-		STUDENT_NOT_FOUND: 'No se encontró un estudiante registrado con ese código.',
+		STUDENT_NOT_FOUND:
+			'No se encontró un estudiante registrado con ese código o pertenece a otro grupo.',
 		INTERNAL_ERROR: 'Ocurrió un error interno en el servidor.'
 	};
 
@@ -61,6 +62,7 @@ function createApiErrorResponse(
 export const POST: RequestHandler = async ({ request, locals }) => {
 	let imageDataBase64: string;
 	let evalCode: string;
+	let evalGroupName: string;
 	let providedRollCode: string | null = null;
 	let questions: EvalQuestion[] | null = null;
 	let sections: EvalSection[] | null = null;
@@ -69,12 +71,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const body = await request.json();
 		imageDataBase64 = body.imageData;
 		evalCode = body.evalCode;
+		evalGroupName = body.evalGroupName;
 		providedRollCode = body.rollCode || null;
 		questions = body.questions || null;
 		sections = body.sections || null;
 
-		if (!imageDataBase64 || !evalCode) {
-			return createApiErrorResponse('INVALID_PARAMS', 'Missing imageData or evalCode');
+		if (!imageDataBase64 || !evalCode || !evalGroupName) {
+			return createApiErrorResponse(
+				'INVALID_PARAMS',
+				'Missing imageData, evalCode or evalGroupName'
+			);
 		}
 	} catch {
 		return createApiErrorResponse('INVALID_PARAMS', 'Invalid JSON body');
@@ -145,7 +151,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const finalRollCode = providedRollCode || omrResult.studentCode;
 
 	// 4. Obtener Información del Registro del Estudiante
-	const registerInfo = await fetchRegisterByRollCode(locals.supabase, finalRollCode);
+	// Pasar el grupo de la evaluación para asegurar que solo se obtengan registros del mismo grupo
+	const registerInfo = await fetchRegisterByRollCode(locals.supabase, finalRollCode, evalGroupName);
 
 	// 5. Calcular Puntajes
 	const { detailedAnswers, scores } = calculateScores(omrResult.answers, sections, questions);
