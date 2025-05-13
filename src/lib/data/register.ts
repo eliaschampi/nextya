@@ -15,7 +15,8 @@ export interface StudentRegisterInfo {
 export async function fetchRegisterByRollCode(
 	supabase: SupabaseClient,
 	rollCode: string,
-	groupName: string
+	groupName: string,
+	evalLevelCode: string
 ): Promise<StudentRegisterInfo | null> {
 	if (!rollCode || !/^\d{4}$/.test(rollCode)) {
 		return null; // Código inválido
@@ -25,7 +26,8 @@ export async function fetchRegisterByRollCode(
 		.from('registers')
 		.select('code, roll_code, group_name, student_code, students:student_code (name, last_name)')
 		.eq('roll_code', rollCode)
-		.eq('group_name', groupName);
+		.eq('group_name', groupName)
+		.eq('level_code', evalLevelCode);
 
 	const { data, error } = await query.limit(1).maybeSingle(); // Devuelve null si no se encuentra, en lugar de array vacío
 

@@ -475,7 +475,7 @@
 						type="date"
 						class="input input-bordered w-full validator focus:ring-2 focus:ring-primary focus:border-primary"
 						required
-						min={new Date().toISOString().split('T')[0]}
+						min={new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0]}
 						bind:value={formState.eval_date}
 					/>
 				</div>

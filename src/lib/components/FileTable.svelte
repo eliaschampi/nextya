@@ -33,6 +33,7 @@
 
 	let editingId = $state<string | null>(null);
 	let editedRollCode = $state('');
+	let tableContainer = $state<HTMLDivElement | null>(null);
 
 	function startEditing(id: string, initialCode: string, event: MouseEvent) {
 		event.stopPropagation();
@@ -40,6 +41,34 @@
 		editingId = id;
 		editedRollCode = initialCode;
 	}
+
+	function handleKeyDown(event: KeyboardEvent) {
+		if (editingId !== null) return; // Don't navigate while editing
+		if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+
+		event.preventDefault(); // Prevent page scrolling
+
+		const currentIndex = entries.findIndex((entry) => entry.id === selectedId);
+		if (currentIndex === -1) return;
+
+		let newIndex: number;
+		if (event.key === 'ArrowUp') {
+			newIndex = currentIndex > 0 ? currentIndex - 1 : currentIndex;
+		} else {
+			newIndex = currentIndex < entries.length - 1 ? currentIndex + 1 : currentIndex;
+		}
+
+		if (newIndex !== currentIndex) {
+			onSelect(entries[newIndex].id);
+		}
+	}
+
+	// Focus the table container when entries change from empty to non-empty
+	$effect(() => {
+		if (entries.length > 0 && tableContainer) {
+			tableContainer.focus();
+		}
+	});
 
 	function confirmEdit(id: string, event: Event) {
 		event.stopPropagation();
@@ -214,7 +243,17 @@
 		{/if}
 	</div>
 {/snippet}
-<div class="max-h-[50rem] overflow-auto rounded-lg bg-base-200/50">
+<div
+	class="max-h-[50rem] overflow-auto rounded-lg bg-base-200/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
+	tabindex="0"
+	onkeydown={handleKeyDown}
+	role="grid"
+	aria-label="Tabla de archivos"
+	bind:this={tableContainer}
+>
+	<div class="text-xs text-right text-base-content/40 px-2 pt-1">
+		<kbd class="kbd kbd-xs">↑</kbd> <kbd class="kbd kbd-xs">↓</kbd> para navegar
+	</div>
 	<table class="table table-sm table-pin-rows w-full">
 		<thead>
 			<tr>
@@ -233,7 +272,10 @@
 				{@const isEditingOther = editingId !== null && editingId !== entry.id}
 				{@const isBusy = isProcessing || isEditingOther}
 				<tr
-					class={['cursor-pointer hover:bg-primary/10', selectedId === entry.id && 'bg-primary/10']}
+					class={[
+						'cursor-pointer hover:bg-primary/10',
+						selectedId === entry.id && 'bg-primary/10 outline outline-primary/30'
+					]}
 					onclick={() => onSelect(entry.id)}
 				>
 					<td class="text-center pl-2">

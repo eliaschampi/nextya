@@ -182,6 +182,7 @@
 					imageData,
 					evalCode: selectedEval.code,
 					evalGroupName: selectedEval.group_name,
+					evalLevelCode: selectedEval.level_code,
 					rollCode: rollCodeOverride,
 					sections: selectedEval.eval_sections,
 					questions: evalQuestions

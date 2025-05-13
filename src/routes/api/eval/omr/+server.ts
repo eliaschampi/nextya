@@ -63,6 +63,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	let imageDataBase64: string;
 	let evalCode: string;
 	let evalGroupName: string;
+	let evalLevelCode: string;
 	let providedRollCode: string | null = null;
 	let questions: EvalQuestion[] | null = null;
 	let sections: EvalSection[] | null = null;
@@ -72,6 +73,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		imageDataBase64 = body.imageData;
 		evalCode = body.evalCode;
 		evalGroupName = body.evalGroupName;
+		evalLevelCode = body.evalLevelCode;
 		providedRollCode = body.rollCode || null;
 		questions = body.questions || null;
 		sections = body.sections || null;
@@ -152,7 +154,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	// 4. Obtener Información del Registro del Estudiante
 	// Pasar el grupo de la evaluación para asegurar que solo se obtengan registros del mismo grupo
-	const registerInfo = await fetchRegisterByRollCode(locals.supabase, finalRollCode, evalGroupName);
+	const registerInfo = await fetchRegisterByRollCode(
+		locals.supabase,
+		finalRollCode,
+		evalGroupName,
+		evalLevelCode
+	);
 
 	// 5. Calcular Puntajes
 	const { detailedAnswers, scores } = calculateScores(omrResult.answers, sections, questions);
