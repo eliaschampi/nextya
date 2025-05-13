@@ -55,10 +55,7 @@ export interface ApiOmrErrorData {
 	omr_debug_image?: string | null; // Imagen base64 para depuración (opcional)
 }
 
-/** Respuesta unificada de la API /api/omr */
-export type ApiOmrResponse =
-	| { success: true; data: ApiOmrSuccessData }
-	| { success: false; error: ApiOmrErrorData };
+// ApiOmrResponse type removed - using batch API exclusively
 
 /** Datos necesarios para guardar los resultados (formato anterior) */
 export interface ResultToSave extends ApiOmrSuccessData {
@@ -74,4 +71,36 @@ export interface OptimizedResultPayload {
 		answers: ApiOmrSuccessData['answers'];
 		scores: ApiOmrSuccessData['scores'];
 	}>;
+}
+
+/** Item individual para procesamiento por lotes */
+export interface OmrBatchItem {
+	id: string; // Identificador único del item
+	success: boolean;
+	data?: ApiOmrSuccessData;
+	error?: ApiOmrErrorData;
+}
+
+/** Respuesta de la API de procesamiento por lotes */
+export interface ApiOmrBatchResponse {
+	success: boolean;
+	error?: {
+		code: string;
+		message: string;
+	};
+	results: OmrBatchItem[];
+}
+
+/** Solicitud para procesamiento por lotes */
+export interface ApiOmrBatchRequest {
+	evalCode: string;
+	evalGroupName: string;
+	evalLevelCode: string;
+	items: Array<{
+		id: string;
+		imageData: string;
+		rollCode?: string;
+	}>;
+	questions?: unknown[]; // Opcional, para evitar consultas redundantes
+	sections?: unknown[]; // Opcional, para evitar consultas redundantes
 }

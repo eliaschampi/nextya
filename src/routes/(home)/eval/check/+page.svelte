@@ -25,7 +25,7 @@
 	import type { FileEntry } from '$lib/types/app';
 	import { showToast } from '$lib/stores/Toast';
 	import { base64ToFile, validateA5Proportion } from '$lib/utils/imageUtils';
-	import type { ApiOmrResponse } from '$lib/types/api';
+	import type { ApiOmrBatchResponse, ApiOmrBatchRequest } from '$lib/types/api';
 	import { goto } from '$app/navigation';
 	import { permissionsStore } from '$lib/stores/permissions';
 
@@ -57,6 +57,7 @@
 	let detailsModalOpen = $state(false);
 	let evalSelectionModalOpen = $state(false);
 	let loadingEvals = $state(false);
+	let batchProgress = $state({ processed: 0, total: 0 });
 
 	// Valores derivados
 	let currentPreviewUrl = $derived.by(() => {
@@ -75,7 +76,6 @@
 	let pendingFilesCount = $derived(fileEntries.filter((e) => e.status === 'pending').length);
 	let successFilesCount = $derived(fileEntries.filter((e) => e.status === 'success').length);
 	let errorFilesCount = $derived(fileEntries.filter((e) => e.status === 'error').length);
-	let processedFilesCount = $derived(successFilesCount + errorFilesCount);
 	let saveableFilesCount = $derived(
 		fileEntries.filter((e) => e.status === 'success' && !!e.result?.register_code && !e.saved)
 			.length
@@ -175,45 +175,57 @@
 		try {
 			const file = fileEntries[entryIndex].file;
 			const imageData = await readFileAsDataURL(file);
-			const response = await fetch('/api/eval/omr', {
+
+			// Usar el endpoint de batch incluso para un solo archivo
+			// para mantener consistencia y reutilizar código
+			const response = await fetch('/api/eval/omr-batch', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					imageData,
 					evalCode: selectedEval.code,
 					evalGroupName: selectedEval.group_name,
 					evalLevelCode: selectedEval.level_code,
-					rollCode: rollCodeOverride,
+					items: [
+						{
+							id,
+							imageData,
+							rollCode: rollCodeOverride
+						}
+					],
 					sections: selectedEval.eval_sections,
 					questions: evalQuestions
-				})
+				} as ApiOmrBatchRequest)
 			});
 
-			const apiResponse = (await response.json()) as ApiOmrResponse;
+			if (!response.ok) {
+				throw new Error(`Error en la respuesta del servidor: ${response.status}`);
+			}
 
-			if (response.ok && apiResponse.success) {
+			const batchResponse = (await response.json()) as ApiOmrBatchResponse;
+
+			if (!batchResponse.success || batchResponse.results.length === 0) {
+				throw new Error(batchResponse.error?.message || 'Error desconocido en el procesamiento');
+			}
+
+			const result = batchResponse.results[0]; // Solo debería haber un resultado
+
+			if (result.success && result.data) {
 				fileEntries[entryIndex].status = 'success';
-				fileEntries[entryIndex].result = apiResponse.data;
+				fileEntries[entryIndex].result = result.data;
 				fileEntries[entryIndex].saved = false;
 				if (!isProcessingBatch) {
 					showToast(
-						apiResponse.data.student
-							? `Procesado: ${apiResponse.data.student.name} ${apiResponse.data.student.last_name}`
-							: `Procesado: Código ${apiResponse.data.roll_code} (Estudiante no encontrado)`,
+						result.data.student
+							? `Procesado: ${result.data.student.name} ${result.data.student.last_name}`
+							: `Procesado: Código ${result.data.roll_code} (Estudiante no encontrado)`,
 						'success'
 					);
 				}
-			} else if (!apiResponse.success) {
+			} else if (!result.success && result.error) {
 				fileEntries[entryIndex].status = 'error';
-				fileEntries[entryIndex].error = apiResponse.error || {
-					code: 'INTERNAL_ERROR',
-					message: 'Respuesta inesperada de la API.'
-				};
+				fileEntries[entryIndex].error = result.error;
 				if (!isProcessingBatch) {
-					showToast(
-						`Error en ${file.name}: ${apiResponse.error?.message || 'Desconocido'}`,
-						'warning'
-					);
+					showToast(`Error en ${file.name}: ${result.error?.message || 'Desconocido'}`, 'warning');
 				}
 			}
 		} catch (error) {
@@ -233,6 +245,7 @@
 		isProcessingBatch = true;
 
 		const previousSelectedId = selectedFileId;
+		const CHUNK_SIZE = 10; // Procesar en lotes de 10 archivos para evitar payloads demasiado grandes
 
 		try {
 			const pendingEntries = fileEntries.filter((e) => e.status === 'pending' && e.formatValid);
@@ -241,15 +254,111 @@
 				return;
 			}
 
+			// Inicializar progreso
+			batchProgress = { processed: 0, total: pendingEntries.length };
+
+			// Marcar todos los archivos pendientes como "processing"
 			for (const entry of pendingEntries) {
-				await processFile(entry.id, null, true);
+				const entryIndex = fileEntries.findIndex((e) => e.id === entry.id);
+				if (entryIndex !== -1) {
+					fileEntries[entryIndex].status = 'processing';
+					fileEntries[entryIndex].result = null;
+					fileEntries[entryIndex].error = null;
+				}
+			}
+
+			// Dividir en chunks para evitar payloads demasiado grandes
+			const chunks = [];
+			for (let i = 0; i < pendingEntries.length; i += CHUNK_SIZE) {
+				chunks.push(pendingEntries.slice(i, i + CHUNK_SIZE));
+			}
+
+			// Procesar cada chunk secuencialmente
+			for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+				const chunk = chunks[chunkIndex];
+
+				// Preparar los items para el procesamiento por lotes
+				const batchItems = await Promise.all(
+					chunk.map(async (entry) => {
+						const imageData = await readFileAsDataURL(entry.file);
+						return {
+							id: entry.id,
+							imageData
+							// No incluimos rollCode para procesamiento por lotes
+						};
+					})
+				);
+
+				// Enviar solicitud de procesamiento por lotes
+				const response = await fetch('/api/eval/omr-batch', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						evalCode: selectedEval.code,
+						evalGroupName: selectedEval.group_name,
+						evalLevelCode: selectedEval.level_code,
+						items: batchItems,
+						sections: selectedEval.eval_sections,
+						questions: evalQuestions
+					} as ApiOmrBatchRequest)
+				});
+
+				if (!response.ok) {
+					throw new Error(`Error en la respuesta del servidor: ${response.status}`);
+				}
+
+				const batchResponse = (await response.json()) as ApiOmrBatchResponse;
+
+				if (!batchResponse.success) {
+					throw new Error(
+						batchResponse.error?.message || 'Error desconocido en el procesamiento por lotes'
+					);
+				}
+
+				// Procesar resultados
+				for (const result of batchResponse.results) {
+					const entryIndex = fileEntries.findIndex((e) => e.id === result.id);
+					if (entryIndex === -1) continue;
+
+					if (result.success && result.data) {
+						fileEntries[entryIndex].status = 'success';
+						fileEntries[entryIndex].result = result.data;
+						fileEntries[entryIndex].error = null;
+						fileEntries[entryIndex].saved = false;
+					} else if (!result.success && result.error) {
+						fileEntries[entryIndex].status = 'error';
+						fileEntries[entryIndex].error = result.error;
+						fileEntries[entryIndex].result = null;
+					}
+
+					// Actualizar progreso
+					batchProgress.processed++;
+				}
+
+				// Mostrar progreso parcial
+				if (chunks.length > 1) {
+					showToast(
+						`Procesando lote ${chunkIndex + 1}/${chunks.length} (${batchProgress.processed}/${batchProgress.total})`,
+						'info'
+					);
+				}
 			}
 
 			showToast('Procesamiento por lotes completado', 'success');
 		} catch (error) {
+			// Marcar todos los archivos en procesamiento como pendientes nuevamente
+			for (const entry of fileEntries) {
+				if (entry.status === 'processing') {
+					entry.status = 'pending';
+				}
+			}
+
 			showToast('Error durante el procesamiento por lotes', 'danger');
 			console.error('Batch processing error:', error);
 		} finally {
+			// Reiniciar progreso
+			batchProgress = { processed: 0, total: 0 };
+
 			if (previousSelectedId && fileEntries.some((e) => e.id === previousSelectedId)) {
 				selectedFileId = previousSelectedId;
 			} else if (fileEntries.length > 0) {
@@ -573,12 +682,12 @@
 				<div class="mt-4">
 					<progress
 						class="progress progress-primary w-full"
-						value={processedFilesCount}
-						max={fileEntries.length}
+						value={batchProgress.processed}
+						max={batchProgress.total}
 					></progress>
 					<div class="text-xs text-right opacity-70 mt-1">
-						{processedFilesCount} de {fileEntries.length} ({Math.round(
-							(processedFilesCount / fileEntries.length) * 100
+						{batchProgress.processed} de {batchProgress.total} ({Math.round(
+							(batchProgress.processed / batchProgress.total) * 100 || 0
 						)}%)
 					</div>
 				</div>
