@@ -12,42 +12,45 @@ DECLARE
     v_scores_by_group JSONB;
 BEGIN
     -- Get correct vs incorrect data
-    SELECT 
+    SELECT
         jsonb_build_object(
             'correct', COALESCE(SUM(er.correct_count), 0),
             'incorrect', COALESCE(SUM(er.incorrect_count), 0),
             'blank', COALESCE(SUM(er.blank_count), 0)
         ) INTO v_correct_vs_incorrect
-    FROM 
+    FROM
         eval_results er
         JOIN registers r ON er.register_code = r.code
-    WHERE 
+    WHERE
         r.level_code = p_level_code::UUID
         AND er.section_code IS NULL;
 
     -- Get scores by group data
-    SELECT 
-        jsonb_agg(
-            jsonb_build_object(
-                'group', group_name,
-                'averageScore', ROUND(AVG(score)::numeric, 2)
-            )
-        ) INTO v_scores_by_group
-    FROM (
-        SELECT 
+    WITH group_scores AS (
+        SELECT
             r.group_name,
-            er.score
-        FROM 
+            ROUND(AVG(er.score)::numeric, 2) AS average_score
+        FROM
             eval_results er
             JOIN registers r ON er.register_code = r.code
-        WHERE 
+        WHERE
             r.level_code = p_level_code::UUID
             AND er.section_code IS NULL
-    ) AS group_scores
-    GROUP BY 
-        group_name
-    ORDER BY 
-        group_name;
+        GROUP BY
+            r.group_name
+        ORDER BY
+            r.group_name
+    )
+    SELECT
+        jsonb_agg(
+            jsonb_build_object(
+                'group', gs.group_name,
+                'averageScore', gs.average_score
+            )
+            ORDER BY gs.group_name
+        ) INTO v_scores_by_group
+    FROM
+        group_scores gs;
 
     -- Return the data
     RETURN QUERY
@@ -68,50 +71,62 @@ DECLARE
     v_student_performance JSONB;
 BEGIN
     -- Get scores by eval data
-    SELECT 
-        jsonb_agg(
-            jsonb_build_object(
-                'name', e.name,
-                'averageScore', ROUND(AVG(er.score)::numeric, 2)
-            )
-            ORDER BY e.eval_date ASC
-        ) INTO v_scores_by_eval
-    FROM 
-        eval_results er
-        JOIN registers r ON er.register_code = r.code
-        JOIN evals e ON er.eval_code = e.code
-    WHERE 
-        r.level_code = p_level_code::UUID
-        AND r.group_name = p_group_name
-        AND er.section_code IS NULL
-    GROUP BY 
-        e.code, e.name, e.eval_date;
-
-    -- Get student performance data (top 10)
-    SELECT 
-        jsonb_agg(
-            jsonb_build_object(
-                'name', student_name,
-                'averageScore', avg_score
-            )
-            ORDER BY avg_score DESC
-            LIMIT 10
-        ) INTO v_student_performance
-    FROM (
-        SELECT 
-            s.name || ' ' || s.last_name AS student_name,
-            ROUND(AVG(er.score)::numeric, 2) AS avg_score
-        FROM 
+    WITH eval_scores AS (
+        SELECT
+            e.name,
+            e.eval_date,
+            ROUND(AVG(er.score)::numeric, 2) AS average_score
+        FROM
             eval_results er
             JOIN registers r ON er.register_code = r.code
-            JOIN students s ON r.student_code = s.code
-        WHERE 
+            JOIN evals e ON er.eval_code = e.code
+        WHERE
             r.level_code = p_level_code::UUID
             AND r.group_name = p_group_name
             AND er.section_code IS NULL
-        GROUP BY 
+        GROUP BY
+            e.code, e.name, e.eval_date
+    )
+    SELECT
+        jsonb_agg(
+            jsonb_build_object(
+                'name', es.name,
+                'averageScore', es.average_score
+            )
+            ORDER BY es.eval_date ASC
+        ) INTO v_scores_by_eval
+    FROM
+        eval_scores es;
+
+    -- Get student performance data (top 10)
+    WITH student_scores AS (
+        SELECT
+            s.name || ' ' || s.last_name AS student_name,
+            ROUND(AVG(er.score)::numeric, 2) AS avg_score
+        FROM
+            eval_results er
+            JOIN registers r ON er.register_code = r.code
+            JOIN students s ON r.student_code = s.code
+        WHERE
+            r.level_code = p_level_code::UUID
+            AND r.group_name = p_group_name
+            AND er.section_code IS NULL
+        GROUP BY
             s.code, s.name, s.last_name
-    ) AS student_scores;
+        ORDER BY
+            avg_score DESC
+        LIMIT 10
+    )
+    SELECT
+        jsonb_agg(
+            jsonb_build_object(
+                'name', ss.student_name,
+                'averageScore', ss.avg_score
+            )
+            ORDER BY ss.avg_score DESC
+        ) INTO v_student_performance
+    FROM
+        student_scores ss;
 
     -- Return the data
     RETURN QUERY
