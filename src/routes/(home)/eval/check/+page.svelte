@@ -25,7 +25,7 @@
 	import type { FileEntry } from '$lib/types/app';
 	import { showToast } from '$lib/stores/Toast';
 	import { base64ToFile, validateA5Proportion } from '$lib/utils/imageUtils';
-	import type { ApiOmrResponse } from '$lib/types/api';
+	import type { ApiOmrBatchResponse, ApiOmrBatchRequest } from '$lib/types/api';
 	import { goto } from '$app/navigation';
 	import { permissionsStore } from '$lib/stores/permissions';
 
@@ -57,6 +57,7 @@
 	let detailsModalOpen = $state(false);
 	let evalSelectionModalOpen = $state(false);
 	let loadingEvals = $state(false);
+	let batchProgress = $state({ processed: 0, total: 0 });
 
 	// Valores derivados
 	let currentPreviewUrl = $derived.by(() => {
@@ -75,7 +76,6 @@
 	let pendingFilesCount = $derived(fileEntries.filter((e) => e.status === 'pending').length);
 	let successFilesCount = $derived(fileEntries.filter((e) => e.status === 'success').length);
 	let errorFilesCount = $derived(fileEntries.filter((e) => e.status === 'error').length);
-	let processedFilesCount = $derived(successFilesCount + errorFilesCount);
 	let saveableFilesCount = $derived(
 		fileEntries.filter((e) => e.status === 'success' && !!e.result?.register_code && !e.saved)
 			.length
@@ -139,14 +139,6 @@
 	);
 
 	// Funciones auxiliares
-	async function readFileAsDataURL(file: File): Promise<string> {
-		return new Promise((resolve, reject) => {
-			const reader = new FileReader();
-			reader.onload = () => resolve(reader.result as string);
-			reader.onerror = reject;
-			reader.readAsDataURL(file);
-		});
-	}
 
 	async function processFile(
 		id: string,
@@ -174,46 +166,59 @@
 
 		try {
 			const file = fileEntries[entryIndex].file;
-			const imageData = await readFileAsDataURL(file);
-			const response = await fetch('/api/eval/omr', {
+			// Usar la misma función de optimización que en el procesamiento por lotes
+			const imageData = await readAndOptimizeImage(file);
+
+			// Usar el endpoint de batch incluso para un solo archivo
+			// para mantener consistencia y reutilizar código
+			const response = await fetch('/api/eval/omr-batch', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					imageData,
 					evalCode: selectedEval.code,
 					evalGroupName: selectedEval.group_name,
 					evalLevelCode: selectedEval.level_code,
-					rollCode: rollCodeOverride,
+					items: [
+						{
+							id,
+							imageData,
+							rollCode: rollCodeOverride
+						}
+					],
 					sections: selectedEval.eval_sections,
 					questions: evalQuestions
-				})
+				} as ApiOmrBatchRequest)
 			});
 
-			const apiResponse = (await response.json()) as ApiOmrResponse;
+			if (!response.ok) {
+				throw new Error(`Error en la respuesta del servidor: ${response.status}`);
+			}
 
-			if (response.ok && apiResponse.success) {
+			const batchResponse = (await response.json()) as ApiOmrBatchResponse;
+
+			if (!batchResponse.success || batchResponse.results.length === 0) {
+				throw new Error(batchResponse.error?.message || 'Error desconocido en el procesamiento');
+			}
+
+			const result = batchResponse.results[0]; // Solo debería haber un resultado
+
+			if (result.success && result.data) {
 				fileEntries[entryIndex].status = 'success';
-				fileEntries[entryIndex].result = apiResponse.data;
+				fileEntries[entryIndex].result = result.data;
 				fileEntries[entryIndex].saved = false;
 				if (!isProcessingBatch) {
 					showToast(
-						apiResponse.data.student
-							? `Procesado: ${apiResponse.data.student.name} ${apiResponse.data.student.last_name}`
-							: `Procesado: Código ${apiResponse.data.roll_code} (Estudiante no encontrado)`,
+						result.data.student
+							? `Procesado: ${result.data.student.name} ${result.data.student.last_name}`
+							: `Procesado: Código ${result.data.roll_code} (Estudiante no encontrado)`,
 						'success'
 					);
 				}
-			} else if (!apiResponse.success) {
+			} else if (!result.success && result.error) {
 				fileEntries[entryIndex].status = 'error';
-				fileEntries[entryIndex].error = apiResponse.error || {
-					code: 'INTERNAL_ERROR',
-					message: 'Respuesta inesperada de la API.'
-				};
+				fileEntries[entryIndex].error = result.error;
 				if (!isProcessingBatch) {
-					showToast(
-						`Error en ${file.name}: ${apiResponse.error?.message || 'Desconocido'}`,
-						'warning'
-					);
+					showToast(`Error en ${file.name}: ${result.error?.message || 'Desconocido'}`, 'warning');
 				}
 			}
 		} catch (error) {
@@ -233,6 +238,8 @@
 		isProcessingBatch = true;
 
 		const previousSelectedId = selectedFileId;
+		// Optimal chunk size based on server limits (set in the API)
+		const CHUNK_SIZE = 10;
 
 		try {
 			const pendingEntries = fileEntries.filter((e) => e.status === 'pending' && e.formatValid);
@@ -241,15 +248,112 @@
 				return;
 			}
 
+			// Inicializar progreso
+			batchProgress = { processed: 0, total: pendingEntries.length };
+
+			// Marcar todos los archivos pendientes como "processing"
 			for (const entry of pendingEntries) {
-				await processFile(entry.id, null, true);
+				const entryIndex = fileEntries.findIndex((e) => e.id === entry.id);
+				if (entryIndex !== -1) {
+					fileEntries[entryIndex].status = 'processing';
+					fileEntries[entryIndex].result = null;
+					fileEntries[entryIndex].error = null;
+				}
+			}
+
+			// Dividir en chunks para evitar payloads demasiado grandes
+			const chunks = [];
+			for (let i = 0; i < pendingEntries.length; i += CHUNK_SIZE) {
+				chunks.push(pendingEntries.slice(i, i + CHUNK_SIZE));
+			}
+
+			// Procesar cada chunk secuencialmente
+			for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+				const chunk = chunks[chunkIndex];
+
+				// Optimización: Convertir imágenes a base64 en paralelo
+				const batchItems = await Promise.all(
+					chunk.map(async (entry) => {
+						// Optimización: Comprimir imágenes antes de enviar
+						const imageData = await readAndOptimizeImage(entry.file);
+						return {
+							id: entry.id,
+							imageData
+						};
+					})
+				);
+
+				// Enviar solicitud de procesamiento por lotes
+				const response = await fetch('/api/eval/omr-batch', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						evalCode: selectedEval.code,
+						evalGroupName: selectedEval.group_name,
+						evalLevelCode: selectedEval.level_code,
+						items: batchItems,
+						// Solo enviar secciones y preguntas en el primer chunk para reducir payload
+						sections: chunkIndex === 0 ? selectedEval.eval_sections : undefined,
+						questions: chunkIndex === 0 ? evalQuestions : undefined
+					} as ApiOmrBatchRequest)
+				});
+
+				if (!response.ok) {
+					throw new Error(`Error en la respuesta del servidor: ${response.status}`);
+				}
+
+				const batchResponse = (await response.json()) as ApiOmrBatchResponse;
+
+				if (!batchResponse.success) {
+					throw new Error(
+						batchResponse.error?.message || 'Error desconocido en el procesamiento por lotes'
+					);
+				}
+
+				// Procesar resultados
+				for (const result of batchResponse.results) {
+					const entryIndex = fileEntries.findIndex((e) => e.id === result.id);
+					if (entryIndex === -1) continue;
+
+					if (result.success && result.data) {
+						fileEntries[entryIndex].status = 'success';
+						fileEntries[entryIndex].result = result.data;
+						fileEntries[entryIndex].error = null;
+						fileEntries[entryIndex].saved = false;
+					} else if (!result.success && result.error) {
+						fileEntries[entryIndex].status = 'error';
+						fileEntries[entryIndex].error = result.error;
+						fileEntries[entryIndex].result = null;
+					}
+
+					// Actualizar progreso
+					batchProgress.processed++;
+				}
+
+				// Mostrar progreso parcial
+				if (chunks.length > 1) {
+					showToast(
+						`Procesando lote ${chunkIndex + 1}/${chunks.length} (${batchProgress.processed}/${batchProgress.total})`,
+						'info'
+					);
+				}
 			}
 
 			showToast('Procesamiento por lotes completado', 'success');
 		} catch (error) {
+			// Marcar todos los archivos en procesamiento como pendientes nuevamente
+			for (const entry of fileEntries) {
+				if (entry.status === 'processing') {
+					entry.status = 'pending';
+				}
+			}
+
 			showToast('Error durante el procesamiento por lotes', 'danger');
 			console.error('Batch processing error:', error);
 		} finally {
+			// Reiniciar progreso
+			batchProgress = { processed: 0, total: 0 };
+
 			if (previousSelectedId && fileEntries.some((e) => e.id === previousSelectedId)) {
 				selectedFileId = previousSelectedId;
 			} else if (fileEntries.length > 0) {
@@ -257,6 +361,60 @@
 			}
 			isProcessingBatch = false;
 		}
+	}
+
+	// Función para optimizar imágenes antes de enviarlas
+	async function readAndOptimizeImage(file: File): Promise<string> {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				const img = new Image();
+				img.onload = () => {
+					// Crear un canvas para redimensionar/comprimir la imagen
+					const canvas = document.createElement('canvas');
+					// Mantener la proporción A5 pero reducir tamaño si es muy grande
+					const MAX_WIDTH = 1240; // Ancho máximo razonable para OMR
+					const MAX_HEIGHT = 1748; // Alto máximo para mantener proporción A5
+
+					let width = img.width;
+					let height = img.height;
+
+					// Redimensionar solo si la imagen es más grande que los límites
+					if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+						if (width / height > MAX_WIDTH / MAX_HEIGHT) {
+							// Más ancha que alta en proporción
+							width = MAX_WIDTH;
+							height = Math.floor(img.height * (MAX_WIDTH / img.width));
+						} else {
+							// Más alta que ancha en proporción
+							height = MAX_HEIGHT;
+							width = Math.floor(img.width * (MAX_HEIGHT / img.height));
+						}
+					}
+
+					canvas.width = width;
+					canvas.height = height;
+
+					// Dibujar la imagen redimensionada
+					const ctx = canvas.getContext('2d');
+					if (!ctx) {
+						resolve(e.target?.result as string); // Fallback al original si no se puede comprimir
+						return;
+					}
+
+					ctx.drawImage(img, 0, 0, width, height);
+
+					// Convertir a base64 con calidad reducida para JPEG
+					const quality = 0.85; // 85% de calidad, buen balance entre tamaño y calidad
+					const dataUrl = canvas.toDataURL('image/jpeg', quality);
+					resolve(dataUrl);
+				};
+				img.onerror = () => reject(new Error('Error al cargar la imagen para optimización'));
+				img.src = e.target?.result as string;
+			};
+			reader.onerror = reject;
+			reader.readAsDataURL(file);
+		});
 	}
 
 	async function handleFileUpload(event: Event) {
@@ -330,15 +488,13 @@
 	}
 
 	function clearFiles() {
-		fileEntries.forEach((entry) => URL.revokeObjectURL(URL.createObjectURL(entry.file)));
+		// No need to revoke object URLs for File objects
 		fileEntries = [];
 		selectedFileId = null;
 		showToast('Archivos eliminados', 'success');
 	}
 
 	function removeFile(id: string) {
-		const entryToRemove = fileEntries.find((e) => e.id === id);
-		if (entryToRemove) URL.revokeObjectURL(URL.createObjectURL(entryToRemove.file));
 		fileEntries = fileEntries.filter((entry) => entry.id !== id);
 		if (selectedFileId === id)
 			selectedFileId = fileEntries.length ? fileEntries[fileEntries.length - 1].id : null;
@@ -573,12 +729,12 @@
 				<div class="mt-4">
 					<progress
 						class="progress progress-primary w-full"
-						value={processedFilesCount}
-						max={fileEntries.length}
+						value={batchProgress.processed}
+						max={batchProgress.total}
 					></progress>
 					<div class="text-xs text-right opacity-70 mt-1">
-						{processedFilesCount} de {fileEntries.length} ({Math.round(
-							(processedFilesCount / fileEntries.length) * 100
+						{batchProgress.processed} de {batchProgress.total} ({Math.round(
+							(batchProgress.processed / batchProgress.total) * 100 || 0
 						)}%)
 					</div>
 				</div>

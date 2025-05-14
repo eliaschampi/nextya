@@ -34,109 +34,108 @@
 	let editingId = $state<string | null>(null);
 	let editedRollCode = $state('');
 	let tableContainer = $state<HTMLDivElement | null>(null);
+	let rollCodeInput = $state<HTMLInputElement | null>(null);
+
+	// Function to safely reset editing state
+	function resetEditingState() {
+		editingId = null;
+		editedRollCode = '';
+
+		// Focus the table container immediately
+		if (tableContainer) tableContainer.focus();
+	}
 
 	function startEditing(id: string, initialCode: string, event: MouseEvent) {
 		event.stopPropagation();
 		if (editingId !== null) return;
+
+		// Check if the entry still exists
+		if (!entries.some((entry) => entry.id === id)) return;
+
 		editingId = id;
 		editedRollCode = initialCode;
+
+		// Focus the input field on the next tick using $effect
+		$effect(() => {
+			if (editingId === id && rollCodeInput) rollCodeInput.focus();
+		});
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
-		if (editingId !== null) return; // Don't navigate while editing
+		// Handle Escape key to cancel editing
+		if (event.key === 'Escape' && editingId !== null) {
+			resetEditingState();
+			event.preventDefault();
+			return;
+		}
+
+		// Don't navigate while editing
+		if (editingId !== null) return;
+
+		// Only handle arrow keys for navigation
 		if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
 
 		event.preventDefault(); // Prevent page scrolling
 
+		// Find current index
 		const currentIndex = entries.findIndex((entry) => entry.id === selectedId);
 		if (currentIndex === -1) return;
 
-		let newIndex: number;
-		if (event.key === 'ArrowUp') {
-			newIndex = currentIndex > 0 ? currentIndex - 1 : currentIndex;
-		} else {
-			newIndex = currentIndex < entries.length - 1 ? currentIndex + 1 : currentIndex;
-		}
+		// Calculate new index based on arrow key
+		const isArrowUp = event.key === 'ArrowUp';
+		const newIndex = isArrowUp
+			? Math.max(0, currentIndex - 1)
+			: Math.min(entries.length - 1, currentIndex + 1);
 
+		// Only update if index changed
 		if (newIndex !== currentIndex) {
 			onSelect(entries[newIndex].id);
 		}
 	}
-
-	// Focus the table container when entries change from empty to non-empty
-	$effect(() => {
-		if (entries.length > 0 && tableContainer) {
-			tableContainer.focus();
-		}
-	});
 
 	function confirmEdit(id: string, event: Event) {
 		event.stopPropagation();
 		if (editedRollCode && ROLL_CODE_PATTERN.test(editedRollCode)) {
 			onUpdateRollCode(id, editedRollCode);
 		}
-		editingId = null;
-		editedRollCode = '';
+		resetEditingState();
 	}
 
 	function cancelEdit(event: Event) {
 		event.stopPropagation();
-		editingId = null;
-		editedRollCode = '';
+		resetEditingState();
 	}
 
-	function getStatusIcon(entry: FileEntry): typeof AlertCircle {
-		// Simplificado a 3 estados principales: carga, error, éxito
-
-		// Estado de carga
-		if (entry.id === processingId || entry.status === 'processing') {
-			return Loader2;
+	// Combined status function to reduce redundant checks
+	function getStatus(entry: FileEntry): { icon: typeof AlertCircle; color: string } {
+		// Processing state
+		const isProcessing = entry.id === processingId || entry.status === 'processing';
+		if (isProcessing) {
+			return { icon: Loader2, color: 'text-info animate-spin' };
 		}
 
-		// Estados de error
-		if (
-			validationErrorsMap.has(entry.id) ||
-			!entry.formatValid ||
-			entry.status === 'error' ||
-			(entry.status === 'success' && !entry.result?.register_code)
-		) {
-			return AlertCircle;
+		// Error states
+		const hasValidationError = validationErrorsMap.has(entry.id);
+		const hasFormatError = !entry.formatValid;
+		const hasProcessError = entry.status === 'error';
+
+		if (hasValidationError || hasFormatError || hasProcessError) {
+			return { icon: AlertCircle, color: 'text-error' };
 		}
 
-		// Estado de éxito
+		// Warning state (student not found)
+		const isSuccessWithoutRegister = entry.status === 'success' && !entry.result?.register_code;
+		if (isSuccessWithoutRegister) {
+			return { icon: AlertCircle, color: 'text-warning' };
+		}
+
+		// Success state
 		if (entry.status === 'success') {
-			return Check;
+			return { icon: Check, color: 'text-success' };
 		}
 
-		// Estado pendiente (default)
-		return AlertCircle;
-	}
-
-	function getStatusColor(entry: FileEntry): string {
-		// Simplificado a 3 colores principales: carga, error, éxito
-
-		// Estado de carga
-		if (entry.id === processingId || entry.status === 'processing') {
-			return 'text-info animate-spin';
-		}
-
-		// Estados de error
-		if (validationErrorsMap.has(entry.id) || !entry.formatValid || entry.status === 'error') {
-			return 'text-error';
-		}
-
-		// Estado de advertencia (estudiante no encontrado)
-		if (entry.status === 'success' && !entry.result?.register_code) {
-			return 'text-warning';
-		}
-
-		// Estado de éxito
-		if (entry.status === 'success') {
-			return 'text-success';
-		}
-
-		// Estado pendiente (default)
-		return 'text-base-content/50';
+		// Pending state (default)
+		return { icon: AlertCircle, color: 'text-base-content/50' };
 	}
 
 	function getScoreDisplay(entry: FileEntry): { text: string; class: string } {
@@ -148,35 +147,40 @@
 	}
 
 	function getTooltip(entry: FileEntry): string | null {
-		// Prioridad 1: Errores de validación del sistema
-		if (validationErrorsMap.has(entry.id)) return validationErrorsMap.get(entry.id)!;
+		// Use a priority-based approach with early returns
+		const validationError = validationErrorsMap.get(entry.id);
+		if (validationError) return validationError;
 
-		// Prioridad 2: Error de formato A5
-		if (!entry.formatValid) {
-			return `Formato no A5: ${entry.formatName}.`;
+		if (!entry.formatValid) return `Formato no A5: ${entry.formatName}.`;
+
+		const isProcessing = entry.id === processingId || entry.status === 'processing';
+		if (isProcessing) return 'Procesando...';
+
+		// Status-based messages
+		switch (entry.status) {
+			case 'error':
+				return entry.error?.message ?? 'Error desconocido';
+			case 'success':
+				if (!entry.result?.register_code) {
+					return `Estudiante con código ${entry.result?.roll_code} no encontrado en registros.`;
+				}
+				return entry.saved ? 'Resultado guardado en la base de datos.' : 'Procesado correctamente.';
+			case 'pending':
+				return 'Pendiente de procesamiento.';
+			default:
+				return null;
 		}
-
-		// Otros estados
-		if (entry.status === 'error') return entry.error?.message ?? 'Error desconocido';
-		if (entry.status === 'success' && !entry.result?.register_code)
-			return `Estudiante con código ${entry.result?.roll_code} no encontrado en registros.`;
-		if (entry.saved) return 'Resultado guardado en la base de datos.';
-		if (entry.status === 'pending') return 'Pendiente de procesamiento.';
-		if (entry.id === processingId || entry.status === 'processing') return 'Procesando...';
-		if (entry.status === 'success') return 'Procesado correctamente.';
-		return null;
 	}
 </script>
 
 {#snippet statusIcon(entry: FileEntry)}
-	{@const Icon = getStatusIcon(entry)}
-	{@const statusColor = getStatusColor(entry)}
+	{@const status = getStatus(entry)}
 	{@const tooltip = getTooltip(entry)}
 	<div class="tooltip tooltip-right">
 		<div class="tooltip-content">
 			<div class="max-w-[6rem]">{tooltip}</div>
 		</div>
-		<Icon size={16} class={statusColor} />
+		<status.icon size={16} class={status.color} />
 	</div>
 {/snippet}
 {#snippet rollCodeEditor(entry: FileEntry)}
@@ -188,10 +192,17 @@
 				? 'input-error'
 				: 'input-primary'}"
 			bind:value={editedRollCode}
+			bind:this={rollCodeInput}
 			pattern="\d{4}"
 			maxlength="4"
 			placeholder="0000"
 			aria-label="Editar código de matrícula"
+			onkeydown={(e) => {
+				if (e.key === 'Escape') cancelEdit(e);
+				if (e.key === 'Enter' && editedRollCode && ROLL_CODE_PATTERN.test(editedRollCode)) {
+					confirmEdit(entry.id, e);
+				}
+			}}
 		/>
 		<button
 			class="join-item btn btn-primary btn-xs btn-square"
@@ -276,7 +287,13 @@
 						'cursor-pointer hover:bg-primary/10',
 						selectedId === entry.id && 'bg-primary/10 outline outline-primary/30'
 					]}
-					onclick={() => onSelect(entry.id)}
+					onclick={() => {
+						// Check if we're currently editing and need to reset
+						if (editingId !== null && editingId !== entry.id) {
+							resetEditingState();
+						}
+						onSelect(entry.id);
+					}}
 				>
 					<td class="text-center pl-2">
 						{@render statusIcon(entry)}
@@ -344,7 +361,13 @@
 							{/if}
 							<button
 								class="btn btn-ghost btn-error btn-xs btn-square"
-								onclick={() => onRemove(entry.id)}
+								onclick={() => {
+									// Reset editing state if removing the item being edited
+									if (editingId === entry.id) {
+										resetEditingState();
+									}
+									onRemove(entry.id);
+								}}
 								disabled={isBusy}
 								title="Eliminar archivo"
 								aria-label="Eliminar archivo"
