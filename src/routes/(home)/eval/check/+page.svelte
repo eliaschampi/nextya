@@ -139,14 +139,6 @@
 	);
 
 	// Funciones auxiliares
-	async function readFileAsDataURL(file: File): Promise<string> {
-		return new Promise((resolve, reject) => {
-			const reader = new FileReader();
-			reader.onload = () => resolve(reader.result as string);
-			reader.onerror = reject;
-			reader.readAsDataURL(file);
-		});
-	}
 
 	async function processFile(
 		id: string,
@@ -174,7 +166,8 @@
 
 		try {
 			const file = fileEntries[entryIndex].file;
-			const imageData = await readFileAsDataURL(file);
+			// Usar la misma función de optimización que en el procesamiento por lotes
+			const imageData = await readAndOptimizeImage(file);
 
 			// Usar el endpoint de batch incluso para un solo archivo
 			// para mantener consistencia y reutilizar código
@@ -245,7 +238,8 @@
 		isProcessingBatch = true;
 
 		const previousSelectedId = selectedFileId;
-		const CHUNK_SIZE = 10; // Procesar en lotes de 10 archivos para evitar payloads demasiado grandes
+		// Optimal chunk size based on server limits (set in the API)
+		const CHUNK_SIZE = 10;
 
 		try {
 			const pendingEntries = fileEntries.filter((e) => e.status === 'pending' && e.formatValid);
@@ -277,14 +271,14 @@
 			for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
 				const chunk = chunks[chunkIndex];
 
-				// Preparar los items para el procesamiento por lotes
+				// Optimización: Convertir imágenes a base64 en paralelo
 				const batchItems = await Promise.all(
 					chunk.map(async (entry) => {
-						const imageData = await readFileAsDataURL(entry.file);
+						// Optimización: Comprimir imágenes antes de enviar
+						const imageData = await readAndOptimizeImage(entry.file);
 						return {
 							id: entry.id,
 							imageData
-							// No incluimos rollCode para procesamiento por lotes
 						};
 					})
 				);
@@ -298,8 +292,9 @@
 						evalGroupName: selectedEval.group_name,
 						evalLevelCode: selectedEval.level_code,
 						items: batchItems,
-						sections: selectedEval.eval_sections,
-						questions: evalQuestions
+						// Solo enviar secciones y preguntas en el primer chunk para reducir payload
+						sections: chunkIndex === 0 ? selectedEval.eval_sections : undefined,
+						questions: chunkIndex === 0 ? evalQuestions : undefined
 					} as ApiOmrBatchRequest)
 				});
 
@@ -366,6 +361,60 @@
 			}
 			isProcessingBatch = false;
 		}
+	}
+
+	// Función para optimizar imágenes antes de enviarlas
+	async function readAndOptimizeImage(file: File): Promise<string> {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				const img = new Image();
+				img.onload = () => {
+					// Crear un canvas para redimensionar/comprimir la imagen
+					const canvas = document.createElement('canvas');
+					// Mantener la proporción A5 pero reducir tamaño si es muy grande
+					const MAX_WIDTH = 1240; // Ancho máximo razonable para OMR
+					const MAX_HEIGHT = 1748; // Alto máximo para mantener proporción A5
+
+					let width = img.width;
+					let height = img.height;
+
+					// Redimensionar solo si la imagen es más grande que los límites
+					if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+						if (width / height > MAX_WIDTH / MAX_HEIGHT) {
+							// Más ancha que alta en proporción
+							width = MAX_WIDTH;
+							height = Math.floor(img.height * (MAX_WIDTH / img.width));
+						} else {
+							// Más alta que ancha en proporción
+							height = MAX_HEIGHT;
+							width = Math.floor(img.width * (MAX_HEIGHT / img.height));
+						}
+					}
+
+					canvas.width = width;
+					canvas.height = height;
+
+					// Dibujar la imagen redimensionada
+					const ctx = canvas.getContext('2d');
+					if (!ctx) {
+						resolve(e.target?.result as string); // Fallback al original si no se puede comprimir
+						return;
+					}
+
+					ctx.drawImage(img, 0, 0, width, height);
+
+					// Convertir a base64 con calidad reducida para JPEG
+					const quality = 0.85; // 85% de calidad, buen balance entre tamaño y calidad
+					const dataUrl = canvas.toDataURL('image/jpeg', quality);
+					resolve(dataUrl);
+				};
+				img.onerror = () => reject(new Error('Error al cargar la imagen para optimización'));
+				img.src = e.target?.result as string;
+			};
+			reader.onerror = reject;
+			reader.readAsDataURL(file);
+		});
 	}
 
 	async function handleFileUpload(event: Event) {
@@ -439,15 +488,13 @@
 	}
 
 	function clearFiles() {
-		fileEntries.forEach((entry) => URL.revokeObjectURL(URL.createObjectURL(entry.file)));
+		// No need to revoke object URLs for File objects
 		fileEntries = [];
 		selectedFileId = null;
 		showToast('Archivos eliminados', 'success');
 	}
 
 	function removeFile(id: string) {
-		const entryToRemove = fileEntries.find((e) => e.id === id);
-		if (entryToRemove) URL.revokeObjectURL(URL.createObjectURL(entryToRemove.file));
 		fileEntries = fileEntries.filter((entry) => entry.id !== id);
 		if (selectedFileId === id)
 			selectedFileId = fileEntries.length ? fileEntries[fileEntries.length - 1].id : null;

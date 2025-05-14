@@ -98,9 +98,13 @@ export interface ApiOmrBatchRequest {
 	evalLevelCode: string;
 	items: Array<{
 		id: string;
-		imageData: string;
-		rollCode?: string;
+		imageData: string; // Base64 encoded image data
+		rollCode?: string; // Optional manual roll code (must be 4 digits if provided)
 	}>;
-	questions?: unknown[]; // Opcional, para evitar consultas redundantes
-	sections?: unknown[]; // Opcional, para evitar consultas redundantes
+	// Use proper types for optional data to improve type safety
+	questions?: EvalQuestion[];
+	sections?: EvalSection[];
 }
+
+// Import these from the main types file
+import type { EvalQuestion, EvalSection } from '$lib/types';

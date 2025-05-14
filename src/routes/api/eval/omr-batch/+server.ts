@@ -67,6 +67,10 @@ function createItemErrorResponse(
 }
 
 export const POST: RequestHandler = async ({ request, locals }) => {
+	// Define maximum allowed items per request to prevent DoS
+	const MAX_ITEMS_PER_REQUEST = 20;
+	const MAX_IMAGE_SIZE_BYTES = 1024 * 1024 * 2; // 2MB max per image
+
 	let items: { id: string; imageData: string; rollCode?: string }[] = [];
 	let evalCode: string;
 	let evalGroupName: string;
@@ -76,26 +80,116 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	try {
 		const body = await request.json();
-		items = body.items || [];
-		evalCode = body.evalCode;
-		evalGroupName = body.evalGroupName;
-		evalLevelCode = body.evalLevelCode;
-		questions = body.questions || null;
-		sections = body.sections || null;
 
-		if (!items.length || !evalCode || !evalGroupName) {
+		// Validate required fields
+		if (
+			!body.items ||
+			!Array.isArray(body.items) ||
+			!body.evalCode ||
+			!body.evalGroupName ||
+			!body.evalLevelCode
+		) {
 			return json(
 				{
 					success: false,
 					error: {
 						code: 'INVALID_PARAMS',
-						message: 'Missing items, evalCode or evalGroupName'
+						message: 'Missing required fields: items, evalCode, evalGroupName, or evalLevelCode'
 					},
 					results: []
 				},
 				{ status: 400 }
 			);
 		}
+
+		// Validate items array size
+		if (body.items.length > MAX_ITEMS_PER_REQUEST) {
+			return json(
+				{
+					success: false,
+					error: {
+						code: 'INVALID_PARAMS',
+						message: `Too many items. Maximum allowed: ${MAX_ITEMS_PER_REQUEST}`
+					},
+					results: []
+				},
+				{ status: 400 }
+			);
+		}
+
+		// Validate each item
+		for (const item of body.items) {
+			if (!item.id || typeof item.id !== 'string') {
+				return json(
+					{
+						success: false,
+						error: {
+							code: 'INVALID_PARAMS',
+							message: 'Each item must have a valid id'
+						},
+						results: []
+					},
+					{ status: 400 }
+				);
+			}
+
+			if (!item.imageData || typeof item.imageData !== 'string') {
+				return json(
+					{
+						success: false,
+						error: {
+							code: 'INVALID_PARAMS',
+							message: 'Each item must have valid imageData'
+						},
+						results: []
+					},
+					{ status: 400 }
+				);
+			}
+
+			// Check image size (approximate calculation)
+			const base64Data = item.imageData.replace(/^data:image\/\w+;base64,/, '');
+			const sizeInBytes = Math.ceil((base64Data.length * 3) / 4);
+			if (sizeInBytes > MAX_IMAGE_SIZE_BYTES) {
+				return json(
+					{
+						success: false,
+						error: {
+							code: 'INVALID_PARAMS',
+							message: `Image size exceeds maximum allowed (${MAX_IMAGE_SIZE_BYTES / (1024 * 1024)}MB)`
+						},
+						results: []
+					},
+					{ status: 400 }
+				);
+			}
+
+			// Validate rollCode if provided
+			if (
+				item.rollCode !== undefined &&
+				(typeof item.rollCode !== 'string' || !/^\d{4}$/.test(item.rollCode))
+			) {
+				return json(
+					{
+						success: false,
+						error: {
+							code: 'VALIDATION_ERROR',
+							message: 'Roll code must be a 4-digit string'
+						},
+						results: []
+					},
+					{ status: 400 }
+				);
+			}
+		}
+
+		// All validations passed, assign values
+		items = body.items;
+		evalCode = body.evalCode;
+		evalGroupName = body.evalGroupName;
+		evalLevelCode = body.evalLevelCode;
+		questions = body.questions || null;
+		sections = body.sections || null;
 	} catch {
 		return json(
 			{
