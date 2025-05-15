@@ -1,0 +1,452 @@
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { Chart } from 'chart.js/auto';
+	import PageTitle from '$lib/components/PageTitle.svelte';
+	import EvaluationSelectionModal from '$lib/components/EvaluationSelectionModal.svelte';
+	import { showToast } from '$lib/stores/Toast.js';
+	import { School, ChartBar, ChartPie, Activity } from 'lucide-svelte';
+	import type { Level, EvalWithSections } from '$lib/types';
+	import type { EvalDashboardData } from '$lib/types/evalDashboard';
+	import { goto } from '$app/navigation';
+
+	// Props from server
+	const { data } = $props<{
+		data: {
+			levels: Level[];
+			title: string;
+			levelCode: string | null;
+			evalCode: string | null;
+		};
+	}>();
+
+	// State
+	let selectedLevelCode = $state(data.levelCode || '');
+	let availableEvals = $state<EvalWithSections[]>([]);
+	let selectedEval = $state<EvalWithSections | null>(null);
+	let evalSelectionModalOpen = $state(false);
+	let loadingEvals = $state(false);
+	let loadingDashboard = $state(false);
+	let dashboardData = $state<EvalDashboardData | null>(null);
+
+	// Chart references
+	let questionsChart: Chart | null = $state(null);
+	let scoreDistributionChart: Chart | null = $state(null);
+
+	// Colors for charts
+	const chartColors = {
+		primary: 'rgba(100, 220, 150, 0.8)',
+		secondary: 'rgba(54, 162, 235, 0.8)',
+		tertiary: 'rgba(255, 206, 86, 0.8)',
+		quaternary: 'rgba(255, 99, 132, 0.8)',
+		correct: 'rgba(75, 192, 192, 0.8)',
+		incorrect: 'rgba(255, 99, 132, 0.8)',
+		middle: 'rgba(255, 206, 86, 0.8)'
+	};
+
+	// Track chart data changes and render charts when data is available
+	let shouldRenderCharts = $derived(dashboardData !== null && !loadingDashboard);
+
+	$effect(() => {
+		if (shouldRenderCharts) {
+			// Ensure DOM is ready before rendering charts
+			setTimeout(() => {
+				destroyCharts();
+				renderCharts();
+			}, 100); // Small delay to ensure DOM is ready
+		}
+	});
+
+	// Clean up charts on unmount
+	onMount(() => {
+		return () => {
+			destroyCharts();
+		};
+	});
+
+	// Functions
+	function openEvalModal() {
+		evalSelectionModalOpen = true;
+	}
+
+	async function loadEvaluationsByLevel() {
+		if (!selectedLevelCode) {
+			availableEvals = [];
+			return;
+		}
+
+		// Update URL with selected level
+		goto(
+			`/dashboard/eval?level=${selectedLevelCode}${selectedEval?.code ? `&eval=${selectedEval.code}` : ''}`,
+			{
+				keepFocus: true,
+				noScroll: true,
+				replaceState: true
+			}
+		);
+
+		loadingEvals = true;
+		try {
+			const response = await fetch(`/api/eval/${selectedLevelCode}`);
+			if (!response.ok) {
+				throw new Error('Error al cargar evaluaciones');
+			}
+			availableEvals = await response.json();
+		} catch (error) {
+			console.error('Error cargando evaluaciones:', error);
+			showToast('No se pudieron cargar las evaluaciones', 'danger');
+			availableEvals = [];
+		} finally {
+			loadingEvals = false;
+		}
+	}
+
+	async function selectEval(eval_item: EvalWithSections) {
+		selectedEval = eval_item;
+
+		// Update URL with selected evaluation
+		goto(`/dashboard/eval?level=${selectedLevelCode}&eval=${eval_item.code}`, {
+			keepFocus: true,
+			noScroll: true,
+			replaceState: true
+		});
+
+		await loadDashboardData(eval_item.code);
+	}
+
+	async function loadDashboardData(evalCode: string) {
+		loadingDashboard = true;
+		dashboardData = null;
+
+		try {
+			const response = await fetch(`/api/dashboard/eval/${evalCode}`);
+			if (!response.ok) {
+				throw new Error('Error al cargar datos del dashboard');
+			}
+			dashboardData = await response.json();
+		} catch (error) {
+			console.error('Error cargando datos del dashboard:', error);
+			showToast('No se pudieron cargar los datos del dashboard', 'danger');
+			dashboardData = null;
+		} finally {
+			loadingDashboard = false;
+		}
+	}
+
+	function destroyCharts() {
+		if (questionsChart) {
+			questionsChart.destroy();
+			questionsChart = null;
+		}
+		if (scoreDistributionChart) {
+			scoreDistributionChart.destroy();
+			scoreDistributionChart = null;
+		}
+	}
+
+	function renderCharts() {
+		if (!dashboardData) return;
+
+		Promise.all([renderQuestionsChart(), renderScoreDistributionChart()]).catch((error) => {
+			console.error('Error rendering charts:', error);
+		});
+	}
+
+	function renderQuestionsChart() {
+		return new Promise<void>((resolve, reject) => {
+			if (!dashboardData) {
+				resolve();
+				return;
+			}
+
+			const ctx = document.getElementById('questionsChart') as HTMLCanvasElement;
+			if (!ctx) {
+				console.error('Canvas element not found');
+				resolve();
+				return;
+			}
+
+			try {
+				// Combine correct and incorrect questions into one chart
+				const correctLabels = dashboardData.topCorrectQuestions.map(
+					(q) => `P${q.orderInEval} (${q.courseName})`
+				);
+				const correctValues = dashboardData.topCorrectQuestions.map(
+					(q) => q.correctPercentage || 0
+				);
+
+				const incorrectLabels = dashboardData.topIncorrectQuestions.map(
+					(q) => `P${q.orderInEval} (${q.courseName})`
+				);
+				const incorrectValues = dashboardData.topIncorrectQuestions.map(
+					(q) => q.incorrectPercentage || 0
+				);
+
+				questionsChart = new Chart(ctx, {
+					type: 'bar',
+					data: {
+						labels: [...correctLabels, ...incorrectLabels],
+						datasets: [
+							{
+								label: 'Preguntas con más aciertos (%)',
+								data: [...correctValues, Array(incorrectLabels.length).fill(0)],
+								backgroundColor: chartColors.correct,
+								borderColor: chartColors.correct,
+								borderWidth: 1
+							},
+							{
+								label: 'Preguntas con más errores (%)',
+								data: [...Array(correctLabels.length).fill(0), ...incorrectValues],
+								backgroundColor: chartColors.incorrect,
+								borderColor: chartColors.incorrect,
+								borderWidth: 1
+							}
+						]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						scales: {
+							y: {
+								beginAtZero: true,
+								max: 100,
+								title: {
+									display: true,
+									text: 'Porcentaje'
+								}
+							},
+							x: {
+								title: {
+									display: true,
+									text: 'Preguntas'
+								}
+							}
+						},
+						plugins: {
+							title: {
+								display: true,
+								text: 'Preguntas con más aciertos y errores'
+							},
+							tooltip: {
+								callbacks: {
+									label: function (context) {
+										const value = context.raw as number;
+										return `${context.dataset.label}: ${value.toFixed(2)}%`;
+									}
+								}
+							}
+						}
+					}
+				});
+				resolve();
+			} catch (error) {
+				console.error('Error rendering questions chart:', error);
+				reject(error);
+			}
+		});
+	}
+
+	function renderScoreDistributionChart() {
+		return new Promise<void>((resolve, reject) => {
+			if (!dashboardData) {
+				resolve();
+				return;
+			}
+
+			const ctx = document.getElementById('scoreDistributionChart') as HTMLCanvasElement;
+			if (!ctx) {
+				console.error('Canvas element not found');
+				resolve();
+				return;
+			}
+
+			try {
+				const { approved, middle, failed } = dashboardData.scoreDistribution;
+
+				scoreDistributionChart = new Chart(ctx, {
+					type: 'doughnut',
+					data: {
+						labels: ['Aprobados (≥14)', 'Regulares (10-14)', 'Desaprobados (<10)'],
+						datasets: [
+							{
+								data: [approved, middle, failed],
+								backgroundColor: [chartColors.primary, chartColors.middle, chartColors.incorrect],
+								borderWidth: 1
+							}
+						]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						plugins: {
+							title: {
+								display: true,
+								text: 'Distribución de Notas'
+							},
+							tooltip: {
+								callbacks: {
+									label: function (context) {
+										const value = context.raw as number;
+										return `${context.label}: ${value.toFixed(2)}%`;
+									}
+								}
+							}
+						}
+					}
+				});
+				resolve();
+			} catch (error) {
+				console.error('Error rendering score distribution chart:', error);
+				reject(error);
+			}
+		});
+	}
+
+	// Initial load from URL parameters
+	onMount(() => {
+		if (data.levelCode) {
+			loadEvaluationsByLevel();
+		}
+	});
+
+	// Load evaluation from URL parameters if available
+	$effect(() => {
+		if (data.levelCode && data.evalCode && availableEvals.length > 0) {
+			// Find the evaluation in the available evaluations
+			const evalItem = availableEvals.find((e) => e.code === data.evalCode);
+			if (evalItem) {
+				selectEval(evalItem);
+			}
+		}
+	});
+</script>
+
+<PageTitle
+	title="Dashboard de Evaluación"
+	description="Visualiza estadísticas detalladas de una evaluación específica."
+>
+	<button
+		class="btn btn-outline btn-primary"
+		onclick={openEvalModal}
+		aria-label="Seleccionar evaluación"
+	>
+		<School size={20} class="mr-2" />
+		{selectedEval ? `${selectedEval.name}` : 'Seleccionar'}
+	</button>
+</PageTitle>
+
+<main class="container mx-auto p-4">
+	{#if selectedEval && dashboardData}
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+			<!-- Questions Chart -->
+			<div
+				class="card bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg border border-primary/20 rounded-xl overflow-hidden"
+			>
+				<div class="card-body p-5">
+					<div class="flex items-center gap-3 mb-3">
+						<div
+							class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/15 text-primary"
+						>
+							<ChartBar class="h-5 w-5" />
+						</div>
+						<h3 class="text-lg font-medium">Preguntas con más aciertos y errores</h3>
+					</div>
+					<div class="divider my-0"></div>
+					<div class="h-64 relative mt-2">
+						<canvas id="questionsChart"></canvas>
+					</div>
+				</div>
+			</div>
+
+			<!-- Score Distribution Chart -->
+			<div
+				class="card bg-gradient-to-br from-accent/10 to-accent/5 shadow-lg border border-accent/20 rounded-xl overflow-hidden"
+			>
+				<div class="card-body p-5">
+					<div class="flex items-center gap-3 mb-3">
+						<div
+							class="w-8 h-8 flex items-center justify-center rounded-lg bg-accent/15 text-accent"
+						>
+							<ChartPie class="h-5 w-5" />
+						</div>
+						<h3 class="text-lg font-medium">Distribución de Notas</h3>
+					</div>
+					<div class="divider my-0"></div>
+					<div class="h-64 relative mt-2">
+						<canvas id="scoreDistributionChart"></canvas>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Score Distribution Details -->
+		<div class="card bg-base-100 shadow-lg border border-base-300/30 rounded-xl mb-8">
+			<div class="card-body p-5">
+				<div class="flex items-center gap-3 mb-3">
+					<div
+						class="w-8 h-8 flex items-center justify-center rounded-lg bg-secondary/15 text-secondary"
+					>
+						<Activity class="h-5 w-5" />
+					</div>
+					<h3 class="text-lg font-medium">Detalle de Distribución de Notas</h3>
+				</div>
+				<div class="divider my-0"></div>
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+					<div class="stat bg-primary/10 rounded-lg p-4">
+						<div class="stat-title">Aprobados (≥14)</div>
+						<div class="stat-value text-primary">
+							{dashboardData.scoreDistribution.approved.toFixed(2)}%
+						</div>
+						<div class="stat-desc">{dashboardData.scoreDistribution.approvedCount} estudiantes</div>
+					</div>
+					<div class="stat bg-warning/10 rounded-lg p-4">
+						<div class="stat-title">Regulares (10-14)</div>
+						<div class="stat-value text-warning">
+							{dashboardData.scoreDistribution.middle.toFixed(2)}%
+						</div>
+						<div class="stat-desc">{dashboardData.scoreDistribution.middleCount} estudiantes</div>
+					</div>
+					<div class="stat bg-error/10 rounded-lg p-4">
+						<div class="stat-title">Desaprobados (menor a 10)</div>
+						<div class="stat-value text-error">
+							{dashboardData.scoreDistribution.failed.toFixed(2)}%
+						</div>
+						<div class="stat-desc">{dashboardData.scoreDistribution.failedCount} estudiantes</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	{:else if loadingDashboard}
+		<div class="flex justify-center items-center h-64">
+			<span class="loading loading-spinner loading-lg text-primary"></span>
+		</div>
+	{:else}
+		<div
+			class="card bg-gradient-to-br from-base-200 to-base-100 shadow duration-300 border border-base-300/30 rounded-xl"
+		>
+			<div class="card-body flex flex-col items-center justify-center p-8 text-center">
+				<div class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md">
+					<School size={64} class="text-primary/30 mx-auto mb-4" />
+					<h3 class="text-lg font-bold mb-2">Selecciona una evaluación</h3>
+					<p class="text-base-content/70 mb-4">
+						Para ver las estadísticas, primero debes seleccionar una evaluación.
+					</p>
+				</div>
+			</div>
+		</div>
+	{/if}
+</main>
+
+<EvaluationSelectionModal
+	levels={data.levels}
+	{availableEvals}
+	{selectedEval}
+	{selectedLevelCode}
+	open={evalSelectionModalOpen}
+	loading={loadingEvals}
+	onClose={() => (evalSelectionModalOpen = false)}
+	onLevelChange={(levelCode) => {
+		selectedLevelCode = levelCode;
+		loadEvaluationsByLevel();
+	}}
+	onSelectEval={selectEval}
+/>

@@ -132,7 +132,7 @@
 		</main>
 	</div>
 
-	<div class="drawer-side shadow z-20">
+	<div class="drawer-side shadow z-40">
 		<!-- Clicking this label closes the sidebar on mobile -->
 		<label for="drawer-toggle" aria-label="Close sidebar" class="drawer-overlay"></label>
 		<aside class="bg-base-200 text-base-content h-screen w-72 flex flex-col overflow-y-auto">
@@ -160,10 +160,10 @@
 								<li><a href="/dashboard">General</a></li>
 								<li><a href="/dashboard/course">Cursos</a></li>
 								<li><a href="/dashboard/student">Estudiantes</a></li>
+								<li><a href="/dashboard/eval">Evaluaciones</a></li>
 							</ul>
 						</details>
 					</li>
-
 					<li class="menu-title pt-2">
 						<span>Académico</span>
 					</li>

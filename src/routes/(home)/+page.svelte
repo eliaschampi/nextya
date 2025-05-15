@@ -337,7 +337,7 @@
 	</a>
 
 	<a
-		href="/course_dashboard"
+		href="/dashboard/course"
 		class="card bg-gradient-to-br from-secondary/10 to-secondary/5 shadow border border-secondary/20 rounded-xl overflow-hidden cursor-pointer"
 	>
 		<div class="card-body p-6">
