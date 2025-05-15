@@ -75,13 +75,13 @@ export function formatStudentReportsForExport(reports: StudentEvalReport[]): {
 		const row: StudentExportRow = {
 			'Nombre Examen': report.eval_name,
 			Fecha: new Date(report.eval_date).toLocaleDateString('es-ES'),
-			'Nota General': Number(report.general_score.toFixed(1))
+			'Nota General': Number(report.general_score.toFixed(2))
 		};
 
 		// Añadir columnas dinámicas para cada curso
 		allCourses.forEach((courseName) => {
 			const courseScore = report.course_scores[courseName];
-			row[`${courseName}`] = courseScore ? Number(courseScore.toFixed(1)) : '';
+			row[`${courseName}`] = courseScore ? Number(courseScore.toFixed(2)) : '';
 		});
 
 		return row;

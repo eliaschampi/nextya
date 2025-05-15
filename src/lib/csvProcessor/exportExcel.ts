@@ -86,7 +86,7 @@ export function formatResultsForExport(results: ResultItem[]): ExportDataRow[] {
 		Correctas: result.correct_count,
 		Incorrectas: result.incorrect_count,
 		'En blanco': result.blank_count,
-		Nota: result.score.toFixed(1)
+		Nota: result.score.toFixed(2)
 	}));
 }
 

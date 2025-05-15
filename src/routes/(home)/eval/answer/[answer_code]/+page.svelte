@@ -136,7 +136,7 @@
 			class: 'text-center font-bold',
 			cell: (row: SectionScore) => `
 				<span class="${getScoreColorClass(row.score)}">
-					${row.score.toFixed(1)}
+					${row.score.toFixed(2)}
 				</span>
 			`
 		}

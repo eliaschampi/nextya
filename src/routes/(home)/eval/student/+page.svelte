@@ -102,7 +102,7 @@
 			class: 'text-center font-bold',
 			cell: (row: StudentResult) => `
 				<span class="badge badge-lg ${row.score >= 10.5 ? 'badge-success' : 'badge-error'}">
-					${row.score.toFixed(1)}
+					${row.score.toFixed(2)}
 				</span>
 			`
 		},
