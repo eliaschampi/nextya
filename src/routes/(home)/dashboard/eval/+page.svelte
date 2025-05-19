@@ -8,6 +8,7 @@
 	import type { Level, EvalWithSections } from '$lib/types';
 	import type { EvalDashboardData } from '$lib/types/evalDashboard';
 	import { goto } from '$app/navigation';
+	import { evaluationStore } from '$lib/stores/evaluation';
 
 	// Props from server
 	const { data } = $props<{
@@ -19,12 +20,31 @@
 		};
 	}>();
 
+	// Store state
+	let storeState = $state({
+		selectedEval: null as EvalWithSections | null,
+		selectedLevelCode: '',
+		availableEvals: [] as EvalWithSections[],
+		isLoading: false
+	});
+
+	// Subscribe to the store
+	$effect(() => {
+		const unsubscribe = evaluationStore.subscribe((state) => {
+			storeState = state;
+		});
+		return unsubscribe;
+	});
+
+	// Initialize the store from URL parameters
+	onMount(() => {
+		if (data.levelCode) {
+			evaluationStore.initFromUrl(data.levelCode, data.evalCode, 'dashboard-eval-page');
+		}
+	});
+
 	// State
-	let selectedLevelCode = $state(data.levelCode || '');
-	let availableEvals = $state<EvalWithSections[]>([]);
-	let selectedEval = $state<EvalWithSections | null>(null);
 	let evalSelectionModalOpen = $state(false);
-	let loadingEvals = $state(false);
 	let loadingDashboard = $state(false);
 	let dashboardData = $state<EvalDashboardData | null>(null);
 
@@ -68,50 +88,20 @@
 		evalSelectionModalOpen = true;
 	}
 
-	async function loadEvaluationsByLevel() {
-		if (!selectedLevelCode) {
-			availableEvals = [];
-			return;
+	// Update URL when selection changes
+	$effect(() => {
+		if (storeState.selectedLevelCode) {
+			// Update URL with current selection
+			goto(
+				`/dashboard/eval?level=${storeState.selectedLevelCode}${storeState.selectedEval ? `&eval=${storeState.selectedEval.code}` : ''}`,
+				{
+					keepFocus: true,
+					noScroll: true,
+					replaceState: true
+				}
+			);
 		}
-
-		// Update URL with selected level
-		goto(
-			`/dashboard/eval?level=${selectedLevelCode}${selectedEval?.code ? `&eval=${selectedEval.code}` : ''}`,
-			{
-				keepFocus: true,
-				noScroll: true,
-				replaceState: true
-			}
-		);
-
-		loadingEvals = true;
-		try {
-			const response = await fetch(`/api/eval/${selectedLevelCode}`);
-			if (!response.ok) {
-				throw new Error('Error al cargar evaluaciones');
-			}
-			availableEvals = await response.json();
-		} catch (error) {
-			console.error('Error cargando evaluaciones:', error);
-			showToast('No se pudieron cargar las evaluaciones', 'danger');
-			availableEvals = [];
-		} finally {
-			loadingEvals = false;
-		}
-	}
-
-	async function selectEval(eval_item: EvalWithSections) {
-		selectedEval = eval_item;
-
-		// Update URL with selected evaluation
-		goto(`/dashboard/eval?level=${selectedLevelCode}&eval=${eval_item.code}`, {
-			keepFocus: true,
-			noScroll: true,
-			replaceState: true
-		});
-
-		await loadDashboardData(eval_item.code);
-	}
+	});
 
 	async function loadDashboardData(evalCode: string) {
 		loadingDashboard = true;
@@ -301,21 +291,10 @@
 		});
 	}
 
-	// Initial load from URL parameters
-	onMount(() => {
-		if (data.levelCode) {
-			loadEvaluationsByLevel();
-		}
-	});
-
-	// Load evaluation from URL parameters if available
+	// Load dashboard data when evaluation changes
 	$effect(() => {
-		if (data.levelCode && data.evalCode && availableEvals.length > 0) {
-			// Find the evaluation in the available evaluations
-			const evalItem = availableEvals.find((e) => e.code === data.evalCode);
-			if (evalItem) {
-				selectEval(evalItem);
-			}
+		if (storeState.selectedEval) {
+			loadDashboardData(storeState.selectedEval.code);
 		}
 	});
 </script>
@@ -330,12 +309,12 @@
 		aria-label="Seleccionar evaluación"
 	>
 		<School size={20} class="mr-2" />
-		{selectedEval ? `${selectedEval.name}` : 'Seleccionar'}
+		{storeState.selectedEval ? `${storeState.selectedEval.name}` : 'Seleccionar'}
 	</button>
 </PageTitle>
 
 <main class="container mx-auto p-4">
-	{#if selectedEval && dashboardData}
+	{#if storeState.selectedEval && dashboardData}
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
 			<!-- Questions Chart -->
 			<div
@@ -438,15 +417,15 @@
 
 <EvaluationSelectionModal
 	levels={data.levels}
-	{availableEvals}
-	{selectedEval}
-	{selectedLevelCode}
+	availableEvals={storeState.availableEvals}
+	selectedEval={storeState.selectedEval}
+	selectedLevelCode={storeState.selectedLevelCode}
 	open={evalSelectionModalOpen}
-	loading={loadingEvals}
+	loading={storeState.isLoading}
 	onClose={() => (evalSelectionModalOpen = false)}
-	onLevelChange={(levelCode) => {
-		selectedLevelCode = levelCode;
-		loadEvaluationsByLevel();
+	onLevelChange={(levelCode) => evaluationStore.setLevelCode(levelCode, 'dashboard-eval-page')}
+	onSelectEval={(eval_item) => {
+		evaluationStore.setSelectedEval(eval_item);
+		loadDashboardData(eval_item.code);
 	}}
-	onSelectEval={selectEval}
 />

@@ -20,6 +20,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { permissionsStore } from '$lib/stores/permissions';
+	import { evaluationStore } from '$lib/stores/evaluation';
 
 	// Props from server
 	const { data } = $props<{
@@ -30,12 +31,16 @@
 		};
 	}>();
 
+	// Store state
+	let storeState = $state({
+		selectedEval: null as EvalWithSections | null,
+		selectedLevelCode: '',
+		availableEvals: [] as EvalWithSections[],
+		isLoading: false
+	});
+
 	// State variables
-	let selectedLevelCode = $state(data.levelCode || '');
-	let availableEvals = $state<EvalWithSections[]>([]);
-	let selectedEval = $state<EvalWithSections | null>(null);
 	let evalSelectionModalOpen = $state(false);
-	let loadingEvals = $state(false);
 	let loadingResults = $state(false);
 	let results = $state<ResultItem[]>([]);
 	let sortOrder = $state<'asc' | 'desc'>('desc'); // Default sort by highest score
@@ -59,6 +64,35 @@
 	// Estado para paginación
 	let currentPage = $state(1);
 	let pageSize = $state(20); // Resultados por página
+
+	// Subscribe to the store
+	$effect(() => {
+		const unsubscribe = evaluationStore.subscribe((state) => {
+			storeState = state;
+		});
+		return unsubscribe;
+	});
+
+	// Initialize the store from URL parameters
+	onMount(() => {
+		if (data.levelCode) {
+			evaluationStore.initFromUrl(data.levelCode, data.evalCode, 'result-page');
+		}
+	});
+
+	// Load results when evaluation changes
+	$effect(() => {
+		if (storeState.selectedEval) {
+			loadResults(storeState.selectedEval.code);
+		}
+	});
+
+	// Update URL when selection changes
+	$effect(() => {
+		if (storeState.selectedLevelCode) {
+			updateUrlWithParams();
+		}
+	});
 
 	// Computed value for filtered results
 	const filteredResults = $derived(
@@ -93,47 +127,19 @@
 		evalSelectionModalOpen = true;
 	}
 
-	async function loadEvaluationsByLevel() {
-		if (!selectedLevelCode) {
-			availableEvals = [];
-			return;
-		}
-
-		// Use SvelteKit's goto to update the URL
-		goto(`/result?level=${selectedLevelCode}${data.evalCode ? `&eval=${data.evalCode}` : ''}`, {
-			keepFocus: true,
-			noScroll: true,
-			replaceState: true
-		});
-
-		loadingEvals = true;
-		try {
-			const response = await fetch(`/api/eval/${selectedLevelCode}`);
-			if (!response.ok) {
-				throw new Error('Error al cargar evaluaciones');
+	async function updateUrlWithParams() {
+		// Update URL with current selection
+		goto(
+			`/result?level=${storeState.selectedLevelCode}${storeState.selectedEval ? `&eval=${storeState.selectedEval.code}` : ''}`,
+			{
+				keepFocus: true,
+				noScroll: true,
+				replaceState: true
 			}
-			availableEvals = await response.json();
-		} catch (error) {
-			console.error('Error cargando evaluaciones:', error);
-			showToast('No se pudieron cargar las evaluaciones', 'danger');
-			availableEvals = [];
-		} finally {
-			loadingEvals = false;
-		}
+		);
 	}
 
-	async function selectEval(eval_item: EvalWithSections) {
-		selectedEval = eval_item;
-
-		// Use SvelteKit's goto to update the URL
-		goto(`/result?level=${selectedLevelCode}&eval=${eval_item.code}`, {
-			keepFocus: true,
-			noScroll: true,
-			replaceState: true
-		});
-
-		await loadResults(eval_item.code);
-	}
+	// These functions are used in the EvaluationSelectionModal component
 
 	async function loadResults(evalCode: string) {
 		loadingResults = true;
@@ -193,8 +199,8 @@
 			sessionStorage.setItem(
 				'result_page_state',
 				JSON.stringify({
-					levelCode: selectedLevelCode,
-					evalCode: selectedEval?.code,
+					levelCode: storeState.selectedLevelCode,
+					evalCode: storeState.selectedEval?.code,
 					timestamp: Date.now()
 				})
 			);
@@ -204,18 +210,18 @@
 
 		// Redirect to the eval/answer page with fromPage parameter
 		goto(
-			`/eval/answer/${result.result_code}?from=result&level=${selectedLevelCode}&eval=${selectedEval?.code}`
+			`/eval/answer/${result.result_code}?from=result&level=${storeState.selectedLevelCode}&eval=${storeState.selectedEval?.code}`
 		);
 	}
 
 	async function exportToExcel() {
-		if (!selectedEval) return;
+		if (!storeState.selectedEval) return;
 
 		try {
 			showToast('Preparando exportación...', 'info');
 
 			// Use the browser's fetch API to download the file
-			const response = await fetch(`/api/impcsv/export?eval_code=${selectedEval.code}`, {
+			const response = await fetch(`/api/impcsv/export?eval_code=${storeState.selectedEval.code}`, {
 				method: 'GET'
 			});
 
@@ -270,13 +276,13 @@
 	}
 
 	async function confirmDelete() {
-		if (!selectedEval) return;
+		if (!storeState.selectedEval) return;
 
 		isDeleting = true;
 		try {
 			const resultIds = deleteAllMode ? [] : resultToDelete ? [resultToDelete.result_code] : [];
 
-			const response = await fetch(`/api/eval/results/${selectedEval.code}`, {
+			const response = await fetch(`/api/eval/results/${storeState.selectedEval.code}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json'
@@ -294,15 +300,15 @@
 			// Remove deleted items from cache
 			if (deleteAllMode) {
 				// Clear cache for this eval
-				delete resultsCache[selectedEval.code];
+				delete resultsCache[storeState.selectedEval.code];
 				results = [];
 			} else if (resultToDelete) {
 				// Remove single item from results
 				results = results.filter((r) => r.result_code !== resultToDelete?.result_code);
 
 				// Update cache
-				if (resultsCache[selectedEval.code]) {
-					resultsCache[selectedEval.code].data = results;
+				if (resultsCache[storeState.selectedEval.code]) {
+					resultsCache[storeState.selectedEval.code].data = results;
 				}
 			}
 
@@ -315,9 +321,8 @@
 		}
 	}
 
-	// Effects
+	// Check for stored state from previous navigation
 	$effect(() => {
-		// Check if we have stored state from a previous navigation
 		try {
 			const storedState = sessionStorage.getItem('result_page_state');
 			if (storedState) {
@@ -330,36 +335,13 @@
 
 					// If the stored state matches the URL parameters, use it
 					if (state.levelCode === data.levelCode && state.evalCode === data.evalCode) {
-						selectedLevelCode = state.levelCode;
-						loadEvaluationsByLevel();
+						// The store will be initialized in onMount
 						return;
 					}
 				}
 			}
 		} catch (e) {
 			console.error('Error reading from sessionStorage:', e);
-		}
-
-		// Normal flow if no stored state or stored state is invalid
-		if (selectedLevelCode) loadEvaluationsByLevel();
-		else availableEvals = [];
-	});
-
-	// Load evaluation from URL parameters if available
-	$effect(() => {
-		if (data.levelCode && data.evalCode && availableEvals.length > 0) {
-			// Find the evaluation in the available evaluations
-			const evalItem = availableEvals.find((e) => e.code === data.evalCode);
-			if (evalItem) {
-				selectEval(evalItem);
-			}
-		}
-	});
-
-	// Initial load from URL parameters
-	onMount(() => {
-		if (data.levelCode && data.evalCode && selectedLevelCode) {
-			loadEvaluationsByLevel();
 		}
 	});
 
@@ -473,14 +455,14 @@
 		aria-label="Seleccionar evaluación"
 	>
 		<School size={20} class="mr-2" />
-		{selectedEval ? `${selectedEval.name}` : 'Seleccionar'}
+		{storeState.selectedEval ? `${storeState.selectedEval.name}` : 'Seleccionar'}
 	</button>
 </PageTitle>
 
 <main class="container mx-auto p-4">
-	{#if selectedEval}
+	{#if storeState.selectedEval}
 		<div class="mb-6">
-			<EvalHeader evaluation={selectedEval} />
+			<EvalHeader evaluation={storeState.selectedEval} />
 		</div>
 
 		<div
@@ -639,17 +621,14 @@
 
 <EvaluationSelectionModal
 	levels={data.levels}
-	{availableEvals}
-	{selectedEval}
-	{selectedLevelCode}
+	availableEvals={storeState.availableEvals}
+	selectedEval={storeState.selectedEval}
+	selectedLevelCode={storeState.selectedLevelCode}
 	open={evalSelectionModalOpen}
-	loading={loadingEvals}
+	loading={storeState.isLoading}
 	onClose={() => (evalSelectionModalOpen = false)}
-	onLevelChange={(levelCode) => {
-		selectedLevelCode = levelCode;
-		loadEvaluationsByLevel();
-	}}
-	onSelectEval={selectEval}
+	onLevelChange={(levelCode) => evaluationStore.setLevelCode(levelCode, 'result-page')}
+	onSelectEval={(eval_item) => evaluationStore.setSelectedEval(eval_item)}
 />
 
 <!-- Delete Confirmation Modal -->

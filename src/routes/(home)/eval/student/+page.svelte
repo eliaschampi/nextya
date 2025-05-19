@@ -10,6 +10,7 @@
 	import Message from '$lib/components/Message.svelte';
 	import Table from '$lib/components/Table.svelte';
 	import { permissionsStore } from '$lib/stores/permissions';
+	import { studentStore } from '$lib/stores/student';
 
 	// Define EventListener type for custom events
 	type EventListener = (event: Event) => void;
@@ -20,12 +21,24 @@
 	let searchResults = $state<Student[]>([]);
 	let searchLoading = $state(false);
 
-	// Estados para los resultados del estudiante
-	let selectedStudent = $state<Student | null>(null);
-	let registers = $state<StudentRegister[]>([]);
-	let results = $state<StudentResult[]>([]);
-	let resultsLoading = $state(false);
-	let selectedRegister = $state<string | null>(null);
+	// Store state
+	let storeState = $state({
+		selectedStudent: null as Student | null,
+		registers: [] as StudentRegister[],
+		results: [] as StudentResult[],
+		selectedRegister: null as string | null,
+		isLoading: false
+	});
+
+	// Subscribe to the store
+	$effect(() => {
+		const unsubscribe = studentStore.subscribe((state) => {
+			storeState = state;
+		});
+		return unsubscribe;
+	});
+
+	// Local state for pagination and search
 	let sortOrder = $state<SortOrder>('desc');
 	let currentPage = $state(1);
 	const itemsPerPage = 10;
@@ -33,12 +46,15 @@
 
 	// Computed values
 	let filteredByRegister = $derived(
-		results.filter((r) => !selectedRegister || r.register_code === selectedRegister)
+		storeState.results.filter(
+			(r: StudentResult) =>
+				!storeState.selectedRegister || r.register_code === storeState.selectedRegister
+		)
 	);
 
 	// Filter by search query
 	let filteredResults = $derived(
-		filteredByRegister.filter((result) => {
+		filteredByRegister.filter((result: StudentResult) => {
 			if (!resultsSearchQuery.trim()) return true;
 
 			const query = resultsSearchQuery.toLowerCase();
@@ -126,7 +142,7 @@
 		}
 	];
 
-	// Cargar estudiante si hay un código en la URL
+	// Initialize the store from URL parameters or session storage
 	$effect(() => {
 		// Check if we have stored state from a previous navigation
 		try {
@@ -141,7 +157,7 @@
 
 					// If the stored state matches the URL parameters, use it
 					if (state.studentCode === data.studentCode) {
-						loadStudentInfo(state.studentCode);
+						studentStore.initFromStudentCode(state.studentCode, 'eval-student-page');
 						return;
 					}
 				}
@@ -152,7 +168,7 @@
 
 		// Normal flow if no stored state or stored state is invalid
 		if (data.studentCode) {
-			loadStudentInfo(data.studentCode);
+			studentStore.initFromStudentCode(data.studentCode, 'eval-student-page');
 		}
 	});
 
@@ -212,81 +228,35 @@
 			replaceState: true
 		});
 
-		// Cargar información del estudiante
-		await loadStudentInfo(student.code);
-	}
+		// Load student data using the store
+		await studentStore.selectStudent(student, 'eval-student-page');
 
-	// Cargar información del estudiante
-	async function loadStudentInfo(studentCode: string) {
-		try {
-			const response = await fetch(`/api/student/${studentCode}`);
-			if (!response.ok) {
-				throw new Error('Error al cargar información del estudiante');
-			}
-			const data = await response.json();
-			selectedStudent = data;
+		// Reset pagination when selecting a new student
+		currentPage = 1;
 
-			// Cargar resultados del estudiante
-			loadStudentResults(studentCode);
-		} catch (error) {
-			console.error('Error loading student info:', error);
-			showToast('No se pudo cargar la información del estudiante', 'danger');
-			selectedStudent = null;
-		}
-	}
-
-	// Cargar resultados del estudiante
-	async function loadStudentResults(studentCode: string) {
-		resultsLoading = true;
-		try {
-			const response = await fetch(`/api/student/results/${studentCode}`);
-			if (!response.ok) {
-				throw new Error('Error al cargar resultados del estudiante');
-			}
-			const data = await response.json();
-			registers = data.registers || [];
-			results = data.results || [];
-			sortResults();
-			currentPage = 1;
-		} catch (error) {
-			console.error('Error loading student results:', error);
-			showToast('No se pudieron cargar los resultados del estudiante', 'danger');
-			registers = [];
-			results = [];
-		} finally {
-			resultsLoading = false;
-		}
+		// Sort results by date
+		studentStore.sortResults(sortOrder);
 	}
 
 	// Funciones para manejar resultados
 	function toggleSortOrder() {
 		sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
-		sortResults();
-	}
-
-	function sortResults() {
-		results = [...results].sort((a, b) => {
-			if (sortOrder === 'desc') {
-				return new Date(b.eval_date).getTime() - new Date(a.eval_date).getTime();
-			} else {
-				return new Date(a.eval_date).getTime() - new Date(b.eval_date).getTime();
-			}
-		});
+		studentStore.sortResults(sortOrder);
 	}
 
 	function filterByRegister(registerCode: string | null) {
-		selectedRegister = registerCode;
+		studentStore.setSelectedRegister(registerCode);
 		currentPage = 1;
 	}
 
 	function viewResultDetails(result: StudentResult) {
 		// Store current state in sessionStorage for better back navigation
 		try {
-			if (selectedStudent) {
+			if (storeState.selectedStudent) {
 				sessionStorage.setItem(
 					'student_page_state',
 					JSON.stringify({
-						studentCode: selectedStudent.code,
+						studentCode: storeState.selectedStudent.code,
 						timestamp: Date.now()
 					})
 				);
@@ -296,7 +266,9 @@
 		}
 
 		// Redirect to the eval/answer page with fromPage parameter
-		goto(`/eval/answer/${result.result_code}?from=eval/student&student=${selectedStudent?.code}`);
+		goto(
+			`/eval/answer/${result.result_code}?from=eval/student&student=${storeState.selectedStudent?.code}`
+		);
 	}
 
 	function goToPage(pageNum: number) {
@@ -312,15 +284,18 @@
 
 	// Exportar resultados a Excel
 	async function exportToExcel() {
-		if (!selectedStudent) return;
+		if (!storeState.selectedStudent) return;
 
 		try {
 			showToast('Preparando exportación...', 'info');
 
 			// Use the browser's fetch API to download the file
-			const response = await fetch(`/api/impcsv/student?student_code=${selectedStudent.code}`, {
-				method: 'GET'
-			});
+			const response = await fetch(
+				`/api/impcsv/student?student_code=${storeState.selectedStudent.code}`,
+				{
+					method: 'GET'
+				}
+			);
 
 			if (!response.ok) {
 				throw new Error('Error al exportar resultados');
@@ -363,7 +338,7 @@
 	function setupTableEventListeners() {
 		const handleViewResult = (event: CustomEvent) => {
 			const resultCode = event.detail;
-			const result = results.find((r) => r.result_code === resultCode);
+			const result = storeState.results.find((r: StudentResult) => r.result_code === resultCode);
 			if (result) {
 				viewResultDetails(result);
 			}
@@ -392,8 +367,8 @@
 </script>
 
 <PageTitle
-	title={selectedStudent
-		? `Informe de ${selectedStudent.name} ${selectedStudent.last_name}`
+	title={storeState.selectedStudent
+		? `Informe de ${storeState.selectedStudent.name} ${storeState.selectedStudent.last_name}`
 		: 'Informe historico'}
 	description="Visualiza el historial de resultados de un estudiante."
 >
@@ -403,12 +378,12 @@
 		aria-label="Buscar estudiante"
 	>
 		<User size={20} class="mr-2" />
-		{selectedStudent ? 'Cambiar Estudiante' : 'Buscar Estudiante'}
+		{storeState.selectedStudent ? 'Cambiar Estudiante' : 'Buscar Estudiante'}
 	</button>
 </PageTitle>
 
 <main class="container mx-auto p-4">
-	{#if selectedStudent}
+	{#if storeState.selectedStudent}
 		<!-- Vista de resultados del estudiante -->
 		<div
 			class="card bg-gradient-to-br from-base-200 to-base-100 shadow duration-300 border border-base-300/30 rounded-xl mb-6"
@@ -416,20 +391,22 @@
 			<div class="card-body">
 				<h2 class="card-title text-primary flex items-center gap-2">
 					<User size={20} />
-					{selectedStudent.name}
-					{selectedStudent.last_name}
+					{storeState.selectedStudent.name}
+					{storeState.selectedStudent.last_name}
 				</h2>
-				{#if registers.length > 0}
+				{#if storeState.registers.length > 0}
 					<div class="flex flex-wrap gap-2 mt-2">
 						<button
-							class="btn btn-sm btn-primary {selectedRegister === null ? '' : 'btn-outline'}"
+							class="btn btn-sm btn-primary {storeState.selectedRegister === null
+								? ''
+								: 'btn-outline'}"
 							onclick={() => filterByRegister(null)}
 						>
 							Todos
 						</button>
-						{#each registers as register (register.code)}
+						{#each storeState.registers as register (register.code)}
 							<button
-								class="btn btn-sm btn-primary {selectedRegister === register.code
+								class="btn btn-sm btn-primary {storeState.selectedRegister === register.code
 									? ''
 									: 'btn-outline'}"
 								onclick={() => filterByRegister(register.code)}
@@ -442,11 +419,11 @@
 			</div>
 		</div>
 
-		{#if resultsLoading}
+		{#if storeState.isLoading}
 			<div class="flex justify-center py-12">
 				<span class="loading loading-spinner loading-lg text-primary"></span>
 			</div>
-		{:else if results.length > 0}
+		{:else if storeState.results.length > 0}
 			<div
 				class="card bg-gradient-to-br from-base-200 to-base-100 shadow duration-300 border border-base-300/30 rounded-xl"
 			>
@@ -590,7 +567,7 @@
 					<ListChecks size={64} class="text-primary/30 mb-4" />
 					<h3 class="text-lg font-bold mb-2">No hay resultados disponibles</h3>
 					<p class="text-base-content/70 mb-4 text-center">
-						{selectedRegister
+						{storeState.selectedRegister
 							? 'No hay resultados para el registro seleccionado.'
 							: 'Este estudiante no tiene resultados de evaluaciones registrados.'}
 					</p>

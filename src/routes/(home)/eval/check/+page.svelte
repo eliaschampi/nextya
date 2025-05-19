@@ -27,7 +27,9 @@
 	import { base64ToFile, validateA5Proportion } from '$lib/utils/imageUtils';
 	import type { ApiOmrBatchResponse, ApiOmrBatchRequest } from '$lib/types/api';
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import { permissionsStore } from '$lib/stores/permissions';
+	import { evaluationStore } from '$lib/stores/evaluation';
 
 	interface ValidationError {
 		id: string;
@@ -45,18 +47,36 @@
 	// Permissions
 	const canSaveResults = permissionsStore.has({ entity: 'eval_results', action: 'create' });
 
+	// Store state
+	let storeState = $state({
+		selectedEval: null as EvalWithSections | null,
+		selectedLevelCode: '',
+		availableEvals: [] as EvalWithSections[],
+		isLoading: false
+	});
+
+	// Subscribe to the store
+	$effect(() => {
+		const unsubscribe = evaluationStore.subscribe((state) => {
+			storeState = state;
+		});
+		return unsubscribe;
+	});
+
+	// Initialize the store from URL parameters
+	onMount(() => {
+		// Initialize with empty values since this page doesn't have URL parameters
+		evaluationStore.initFromUrl('', null, 'eval-check-page');
+	});
+
 	// Estado
-	let selectedEval = $state<EvalWithSections | null>(null);
 	let evalQuestions = $state<EvalQuestion[]>(data.serverQuestions || []);
-	let availableEvals = $state<EvalWithSections[]>([]);
-	let selectedLevelCode = $state('');
 	let fileEntries = $state<FileEntry[]>([]);
 	let selectedFileId = $state<string | null>(null);
 	let isProcessingBatch = $state(false);
 	let isSavingBatch = $state(false);
 	let detailsModalOpen = $state(false);
 	let evalSelectionModalOpen = $state(false);
-	let loadingEvals = $state(false);
 	let batchProgress = $state({ processed: 0, total: 0 });
 
 	// Valores derivados
@@ -125,7 +145,7 @@
 	let validationErrorsMap = $derived(new Map(validationErrors.map((err) => [err.id, err.message])));
 
 	let canProcess = $derived(
-		!!selectedEval &&
+		!!storeState.selectedEval &&
 			fileEntries.length > 0 &&
 			!fileEntries.some((e) => e.status === 'pending' && !e.formatValid)
 	);
@@ -146,7 +166,7 @@
 		skipSelection: boolean = false
 	): Promise<void> {
 		const entryIndex = fileEntries.findIndex((e) => e.id === id);
-		if (entryIndex === -1 || !selectedEval) return;
+		if (entryIndex === -1 || !storeState.selectedEval) return;
 
 		if (!fileEntries[entryIndex].formatValid) {
 			showToast(
@@ -175,9 +195,9 @@
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					evalCode: selectedEval.code,
-					evalGroupName: selectedEval.group_name,
-					evalLevelCode: selectedEval.level_code,
+					evalCode: storeState.selectedEval.code,
+					evalGroupName: storeState.selectedEval.group_name,
+					evalLevelCode: storeState.selectedEval.level_code,
 					items: [
 						{
 							id,
@@ -185,7 +205,7 @@
 							rollCode: rollCodeOverride
 						}
 					],
-					sections: selectedEval.eval_sections,
+					sections: storeState.selectedEval.eval_sections,
 					questions: evalQuestions
 				} as ApiOmrBatchRequest)
 			});
@@ -234,7 +254,7 @@
 	}
 
 	async function processAllPendingFiles() {
-		if (!selectedEval || isProcessingBatch || pendingFilesCount === 0) return;
+		if (!storeState.selectedEval || isProcessingBatch || pendingFilesCount === 0) return;
 		isProcessingBatch = true;
 
 		const previousSelectedId = selectedFileId;
@@ -288,12 +308,12 @@
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
-						evalCode: selectedEval.code,
-						evalGroupName: selectedEval.group_name,
-						evalLevelCode: selectedEval.level_code,
+						evalCode: storeState.selectedEval.code,
+						evalGroupName: storeState.selectedEval.group_name,
+						evalLevelCode: storeState.selectedEval.level_code,
 						items: batchItems,
 						// Solo enviar secciones y preguntas en el primer chunk para reducir payload
-						sections: chunkIndex === 0 ? selectedEval.eval_sections : undefined,
+						sections: chunkIndex === 0 ? storeState.selectedEval.eval_sections : undefined,
 						questions: chunkIndex === 0 ? evalQuestions : undefined
 					} as ApiOmrBatchRequest)
 				});
@@ -515,26 +535,17 @@
 		detailsModalOpen = false;
 	}
 
-	async function loadEvaluationsByLevel() {
-		if (!selectedLevelCode) {
-			availableEvals = [];
-			return;
-		}
-		loadingEvals = true;
-		try {
-			const response = await fetch(`/api/eval/${selectedLevelCode}`);
-			availableEvals = await response.json();
-		} catch (error) {
-			console.error('Error cargando evaluaciones:', error);
-			showToast('No se pudieron cargar las evaluaciones', 'danger');
-			availableEvals = [];
-		} finally {
-			loadingEvals = false;
-		}
+	function openEvalModal() {
+		evalSelectionModalOpen = true;
+	}
+
+	async function handleLevelChange(levelCode: string) {
+		await evaluationStore.setLevelCode(levelCode, 'eval-check-page');
 	}
 
 	async function selectEvalAndFetchQuestions(evalItem: EvalWithSections) {
-		selectedEval = evalItem;
+		evaluationStore.setSelectedEval(evalItem);
+
 		fileEntries = fileEntries.map((entry) => ({
 			...entry,
 			status: 'pending',
@@ -554,18 +565,14 @@
 			} else {
 				showToast('Error al cargar preguntas de la evaluación', 'warning');
 				evalQuestions = [];
-				selectedEval = null;
+				evaluationStore.setSelectedEval(null);
 			}
 		} catch (error) {
 			console.error('Error fetching questions:', error);
 			showToast('Error al cargar preguntas de la evaluación', 'danger');
 			evalQuestions = [];
-			selectedEval = null;
+			evaluationStore.setSelectedEval(null);
 		}
-	}
-
-	function openEvalModal() {
-		evalSelectionModalOpen = true;
 	}
 
 	async function handleSaveImage(processedImageData: string) {
@@ -607,10 +614,7 @@
 		};
 	});
 
-	$effect(() => {
-		if (selectedLevelCode) loadEvaluationsByLevel();
-		else availableEvals = [];
-	});
+	// No need for this effect anymore as we're using the store
 </script>
 
 <PageTitle
@@ -623,17 +627,17 @@
 		aria-label="Seleccionar evaluación"
 	>
 		<School size={20} class="mr-2" />
-		{selectedEval ? `${selectedEval.name}` : 'Seleccionar'}
+		{storeState.selectedEval ? `${storeState.selectedEval.name}` : 'Seleccionar'}
 	</button>
 </PageTitle>
 
 <main class="flex flex-col h-full gap-6 p-4">
-	{#if selectedEval}
+	{#if storeState.selectedEval}
 		<EvalHeader
-			evaluation={selectedEval}
-			level={data.levels.find((l: Level) => l.code === selectedEval?.level_code)}
+			evaluation={storeState.selectedEval}
+			level={data.levels.find((l: Level) => l.code === storeState.selectedEval?.level_code)}
 		>
-			<EvalDetails evaluation={selectedEval} />
+			<EvalDetails evaluation={storeState.selectedEval} />
 		</EvalHeader>
 	{/if}
 
@@ -642,7 +646,11 @@
 			<div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
 				<div class="flex flex-wrap gap-2 items-center">
 					<div class="join">
-						<label class="btn join-item btn-primary btn-sm {!selectedEval ? 'btn-disabled' : ''}">
+						<label
+							class="btn join-item btn-primary btn-sm {!storeState.selectedEval
+								? 'btn-disabled'
+								: ''}"
+						>
 							<Plus size={16} /> Añadir
 							<input
 								type="file"
@@ -650,7 +658,7 @@
 								multiple
 								class="hidden"
 								onchange={handleFileUpload}
-								disabled={!selectedEval || isProcessingBatch || isSavingBatch}
+								disabled={!storeState.selectedEval || isProcessingBatch || isSavingBatch}
 							/>
 						</label>
 						<button
@@ -699,7 +707,7 @@
 							type="hidden"
 							name="resultsToSave"
 							value={JSON.stringify({
-								eval_code: selectedEval && selectedEval.code,
+								eval_code: storeState.selectedEval && storeState.selectedEval.code,
 								results: fileEntries
 									.filter((e) => e.status === 'success' && !!e.result?.register_code && !e.saved)
 									.map((e) => ({
@@ -784,7 +792,7 @@
 								? null
 								: (fileEntries.find((e) => e.status === 'processing')?.id ?? null)}
 							{validationErrorsMap}
-							evalSelected={!!selectedEval}
+							evalSelected={!!storeState.selectedEval}
 							onSelect={(id: string) => (selectedFileId = id)}
 							onProcess={(id: string, rollCode?: string) => processFile(id, rollCode)}
 							onRemove={removeFile}
@@ -817,7 +825,7 @@
 						<p class="text-sm text-base-content/50 mb-4">
 							Selecciona una evaluación y añade imágenes para procesar.
 						</p>
-						<label class="btn btn-primary btn-sm {!selectedEval ? 'btn-disabled' : ''}">
+						<label class="btn btn-primary btn-sm {!storeState.selectedEval ? 'btn-disabled' : ''}">
 							<Upload size={16} class="mr-2" /> Cargar Imágenes
 							<input
 								type="file"
@@ -825,7 +833,7 @@
 								multiple
 								class="hidden"
 								onchange={handleFileUpload}
-								disabled={!selectedEval}
+								disabled={!storeState.selectedEval}
 							/>
 						</label>
 					</div>
@@ -875,15 +883,12 @@
 
 <EvaluationSelectionModal
 	levels={data.levels}
-	{availableEvals}
-	{selectedEval}
-	{selectedLevelCode}
+	availableEvals={storeState.availableEvals}
+	selectedEval={storeState.selectedEval}
+	selectedLevelCode={storeState.selectedLevelCode}
 	open={evalSelectionModalOpen}
-	loading={loadingEvals}
+	loading={storeState.isLoading}
 	onClose={() => (evalSelectionModalOpen = false)}
-	onLevelChange={(levelCode) => {
-		selectedLevelCode = levelCode;
-		loadEvaluationsByLevel();
-	}}
+	onLevelChange={handleLevelChange}
 	onSelectEval={selectEvalAndFetchQuestions}
 />

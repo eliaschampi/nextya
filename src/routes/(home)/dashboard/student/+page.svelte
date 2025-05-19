@@ -5,15 +5,35 @@
 	import { showToast } from '$lib/stores/Toast.js';
 	import { User, Search, Activity, ChartPie } from 'lucide-svelte';
 	import type { Student, StudentScoreEvolution, StudentCourseScore } from '$lib/types';
+	import { studentStore } from '$lib/stores/student';
 
 	// We don't need to use the props in this component
 	// as we're using a student search instead
 
-	// State
-	let selectedStudent = $state<Student | null>(null);
+	// Import the types we need
+	import type { StudentRegister, StudentResult } from '$lib/types';
+
+	// Store state
+	let storeState = $state({
+		selectedStudent: null as Student | null,
+		registers: [] as StudentRegister[],
+		results: [] as StudentResult[],
+		selectedRegister: null as string | null,
+		isLoading: false
+	});
+
+	// Subscribe to the store
+	$effect(() => {
+		const unsubscribe = studentStore.subscribe((state) => {
+			storeState = state;
+		});
+		return unsubscribe;
+	});
+
+	// Local state
 	let searchQuery = $state('');
 	let searchResults = $state<Student[]>([]);
-	let isLoading = $state(false);
+	let dashboardLoading = $state(false);
 	let scoreEvolutionData = $state<StudentScoreEvolution[] | null>(null);
 	let courseScoresData = $state<StudentCourseScore[] | null>(null);
 	let modal: HTMLDialogElement | null = $state(null);
@@ -36,10 +56,10 @@
 
 	// Track chart data changes and render charts when data is available
 	const shouldRenderScoreEvolutionChart = $derived(
-		scoreEvolutionData !== null && !isLoading && scoreEvolutionData.length > 0
+		scoreEvolutionData !== null && !dashboardLoading && scoreEvolutionData.length > 0
 	);
 	const shouldRenderCourseScoresChart = $derived(
-		courseScoresData !== null && !isLoading && courseScoresData.length > 0
+		courseScoresData !== null && !dashboardLoading && courseScoresData.length > 0
 	);
 
 	// Render charts when data changes
@@ -127,7 +147,8 @@
 	 * @param student Student to select
 	 */
 	function selectStudent(student: Student) {
-		selectedStudent = student;
+		// Use the store to select the student
+		studentStore.selectStudent(student, 'dashboard-student-page');
 		closeStudentSearchModal();
 		loadStudentDashboardData(student.code);
 	}
@@ -137,7 +158,7 @@
 	 * @param studentCode Student code to load data for
 	 */
 	async function loadStudentDashboardData(studentCode: string) {
-		isLoading = true;
+		dashboardLoading = true;
 		destroyCharts();
 
 		try {
@@ -177,7 +198,7 @@
 			scoreEvolutionData = null;
 			courseScoresData = null;
 		} finally {
-			isLoading = false;
+			dashboardLoading = false;
 		}
 	}
 
@@ -360,19 +381,19 @@
 </script>
 
 <PageTitle
-	title={selectedStudent
-		? `Dashboard de ${selectedStudent.name} ${selectedStudent.last_name}`
+	title={storeState.selectedStudent
+		? `Dashboard de ${storeState.selectedStudent.name} ${storeState.selectedStudent.last_name}`
 		: 'Dashboard de Estudiante'}
 	description="Visualiza la evolución de puntajes y promedios por curso de un estudiante."
 >
 	<button class="btn btn-primary" onclick={openStudentSearchModal} aria-label="Buscar estudiante">
 		<User size={18} class="mr-2" />
-		{selectedStudent ? 'Cambiar Estudiante' : 'Buscar Estudiante'}
+		{storeState.selectedStudent ? 'Cambiar Estudiante' : 'Buscar Estudiante'}
 	</button>
 </PageTitle>
 
 <main class="container mx-auto p-4">
-	{#if !selectedStudent}
+	{#if !storeState.selectedStudent}
 		<div
 			class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl overflow-hidden"
 		>
@@ -392,7 +413,7 @@
 				</p>
 			</div>
 		</div>
-	{:else if isLoading}
+	{:else if dashboardLoading}
 		<div
 			class="flex justify-center items-center h-64 bg-base-200 rounded-xl shadow-lg border border-base-300/30 p-6"
 		>
