@@ -319,7 +319,7 @@
 						},
 						y: {
 							beginAtZero: true,
-							max: 100,
+							max: 20,
 							title: {
 								display: true,
 								text: 'Puntaje Promedio'

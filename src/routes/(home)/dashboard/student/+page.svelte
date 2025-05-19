@@ -6,6 +6,7 @@
 	import { User, Search, Activity, ChartPie } from 'lucide-svelte';
 	import type { Student, StudentScoreEvolution, StudentCourseScore } from '$lib/types';
 	import { studentStore } from '$lib/stores/student';
+	import StudentCard from '$lib/components/StudentCard.svelte';
 
 	// We don't need to use the props in this component
 	// as we're using a student search instead
@@ -381,9 +382,7 @@
 </script>
 
 <PageTitle
-	title={storeState.selectedStudent
-		? `Dashboard de ${storeState.selectedStudent.name} ${storeState.selectedStudent.last_name}`
-		: 'Dashboard de Estudiante'}
+	title="Dashboard de Estudiante"
 	description="Visualiza la evolución de puntajes y promedios por curso de un estudiante."
 >
 	<button class="btn btn-primary" onclick={openStudentSearchModal} aria-label="Buscar estudiante">
@@ -421,6 +420,9 @@
 			<span class="ml-4 text-base-content/70 text-lg">Cargando datos del dashboard...</span>
 		</div>
 	{:else}
+		<!-- Student Card -->
+		<StudentCard className="mb-6" />
+
 		<!-- Dashboard Content -->
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 			<!-- Score Evolution Chart -->

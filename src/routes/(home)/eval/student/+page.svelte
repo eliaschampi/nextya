@@ -11,6 +11,7 @@
 	import Table from '$lib/components/Table.svelte';
 	import { permissionsStore } from '$lib/stores/permissions';
 	import { studentStore } from '$lib/stores/student';
+	import StudentCard from '$lib/components/StudentCard.svelte';
 
 	// Define EventListener type for custom events
 	type EventListener = (event: Event) => void;
@@ -244,10 +245,7 @@
 		studentStore.sortResults(sortOrder);
 	}
 
-	function filterByRegister(registerCode: string | null) {
-		studentStore.setSelectedRegister(registerCode);
-		currentPage = 1;
-	}
+	// The filterByRegister function is now handled by the StudentCard component
 
 	function viewResultDetails(result: StudentResult) {
 		// Store current state in sessionStorage for better back navigation
@@ -367,9 +365,7 @@
 </script>
 
 <PageTitle
-	title={storeState.selectedStudent
-		? `Informe de ${storeState.selectedStudent.name} ${storeState.selectedStudent.last_name}`
-		: 'Informe historico'}
+	title="Informe de Estudiante"
 	description="Visualiza el historial de resultados de un estudiante."
 >
 	<button
@@ -385,39 +381,7 @@
 <main class="container mx-auto p-4">
 	{#if storeState.selectedStudent}
 		<!-- Vista de resultados del estudiante -->
-		<div
-			class="card bg-gradient-to-br from-base-200 to-base-100 shadow duration-300 border border-base-300/30 rounded-xl mb-6"
-		>
-			<div class="card-body">
-				<h2 class="card-title text-primary flex items-center gap-2">
-					<User size={20} />
-					{storeState.selectedStudent.name}
-					{storeState.selectedStudent.last_name}
-				</h2>
-				{#if storeState.registers.length > 0}
-					<div class="flex flex-wrap gap-2 mt-2">
-						<button
-							class="btn btn-sm btn-primary {storeState.selectedRegister === null
-								? ''
-								: 'btn-outline'}"
-							onclick={() => filterByRegister(null)}
-						>
-							Todos
-						</button>
-						{#each storeState.registers as register (register.code)}
-							<button
-								class="btn btn-sm btn-primary {storeState.selectedRegister === register.code
-									? ''
-									: 'btn-outline'}"
-								onclick={() => filterByRegister(register.code)}
-							>
-								{register.levels.name} - {register.group_name}
-							</button>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		</div>
+		<StudentCard />
 
 		{#if storeState.isLoading}
 			<div class="flex justify-center py-12">
