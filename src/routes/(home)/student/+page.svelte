@@ -466,6 +466,9 @@
 						bordered={true}
 						emptyMessage="No hay estudiantes en este nivel y grupo."
 					/>
+					<div class="text-center mt-2">
+						<span class="text-sm opacity-70">{paginatedStudents.length} estudiantes</span>
+					</div>
 
 					<!-- Paginación -->
 					{#if totalPages > 1}

@@ -9,6 +9,10 @@
 	function toggleTheme() {
 		theme.toggle();
 	}
+
+	function handleWspClick() {
+		window.open('https://wa.link/376ly9', '_blank');
+	}
 </script>
 
 <div class="container max-w-3xl px-4">
@@ -102,10 +106,10 @@
 				<h2 class="text-xl font-semibold">Ayuda</h2>
 			</div>
 			<div class="text-center">
-				<a href="/" class="btn btn-outline btn-primary gap-2">
+				<button onclick={handleWspClick} class="btn btn-outline btn-primary gap-2">
 					<MessageCircle class="w-5 h-5" />
 					Solicitar soporte
-				</a>
+				</button>
 			</div>
 		</div>
 	</div>
