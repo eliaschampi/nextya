@@ -1,9 +1,6 @@
--- Drop the function if it exists
-DROP FUNCTION IF EXISTS get_student_eval_report(TEXT);
-
 -- Create a function to get student evaluation results with course-specific scores
 -- Using explicit type casting to ensure consistency
-CREATE FUNCTION get_student_eval_report(p_student_code TEXT)
+CREATE OR REPLACE  FUNCTION get_student_eval_report(p_student_code TEXT)
 RETURNS TABLE (
     eval_name VARCHAR,
     eval_code TEXT,
