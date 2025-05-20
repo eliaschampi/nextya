@@ -15,6 +15,13 @@ function calculateVigesimalScore(correctWeightedSum: number, totalWeightedSum: n
 
 /**
  * Procesa las respuestas del OMR y calcula los puntajes general y por sección.
+ *
+ * Comportamiento de preguntas omitibles:
+ * - Si una pregunta está marcada como omitable (question.omitable = true) y el estudiante la deja en blanco,
+ *   su score_percent NO se añade al total posible (no penaliza al estudiante).
+ * - Si una pregunta es omitable pero el estudiante intenta responderla (correcta o incorrectamente),
+ *   se trata como una pregunta normal.
+ * - Si una pregunta NO es omitable, siempre se cuenta para el total posible.
  */
 export function calculateScores(
 	omrAnswers: OmrSuccessResult['answers'],
@@ -70,9 +77,14 @@ export function calculateScores(
 		else if (is_blank) generalBlankCount++;
 		else generalIncorrectCount++; // Incluye is_multiple y respuestas incorrectas
 
-		// Actualizar sumas ponderadas generales (solo si no es omitible o si respondió)
-		// O ajusta la lógica si las omitibles *siempre* se cuentan para el total
-		generalTotalWeightedSum += scorePercent;
+		// Si la pregunta es omitable y está en blanco, no se cuenta para el total
+		// Solo se añade al total si: (1) no es omitable, o (2) es omitable pero el estudiante respondió
+		const isOmitableAndBlank = question.omitable && is_blank;
+
+		if (!isOmitableAndBlank) {
+			generalTotalWeightedSum += scorePercent;
+		}
+
 		if (is_correct) {
 			generalCorrectWeightedSum += scorePercent;
 		}
@@ -82,7 +94,12 @@ export function calculateScores(
 		if (sectionStats[sectionCode]) {
 			const stats = sectionStats[sectionCode];
 			stats.total_questions++;
-			stats.totalWeightedSum += scorePercent;
+
+			// Aplicar la misma lógica de omitable para las secciones
+			if (!isOmitableAndBlank) {
+				stats.totalWeightedSum += scorePercent;
+			}
+
 			if (is_correct) {
 				stats.correct_count++;
 				stats.correctWeightedSum += scorePercent;
