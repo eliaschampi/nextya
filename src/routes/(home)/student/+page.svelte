@@ -475,7 +475,7 @@
 						<div class="flex justify-center mt-6">
 							<div class="join">
 								<button
-									class="join-item btn btn-sm btn-primary btn-outline {currentPage === 1
+									class="join-item btn btn-sm btn-primary btn-soft {currentPage === 1
 										? 'btn-disabled'
 										: ''}"
 									onclick={() => goToPage(currentPage - 1)}
@@ -489,7 +489,7 @@
 									<button
 										class="join-item btn btn-sm {pageNum === currentPage
 											? 'btn-primary'
-											: 'btn-outline'}"
+											: 'btn-soft'}"
 										onclick={() => goToPage(pageNum)}
 									>
 										{pageNum}
@@ -497,7 +497,7 @@
 								{/each}
 
 								<button
-									class="join-item btn btn-sm btn-primary btn-outline {currentPage === totalPages
+									class="join-item btn btn-sm btn-primary btn-soft {currentPage === totalPages
 										? 'btn-disabled'
 										: ''}"
 									onclick={() => goToPage(currentPage + 1)}
