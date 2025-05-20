@@ -394,7 +394,7 @@
 <main class="container mx-auto p-4">
 	{#if !storeState.selectedStudent}
 		<div
-			class="card bg-gradient-to-br from-base-200 to-base-100  border border-base-300/30 rounded-xl overflow-hidden"
+			class="card bg-gradient-to-br from-base-200 to-base-100 border border-base-300/30 rounded-xl overflow-hidden"
 		>
 			<div class="card-body p-8 text-center">
 				<div
@@ -414,7 +414,7 @@
 		</div>
 	{:else if dashboardLoading}
 		<div
-			class="flex justify-center items-center h-64 bg-base-200 rounded-xl  border border-base-300/30 p-6"
+			class="flex justify-center items-center h-64 bg-base-200 rounded-xl border border-base-300/30 p-6"
 		>
 			<div class="loading loading-spinner loading-lg text-primary"></div>
 			<span class="ml-4 text-base-content/70 text-lg">Cargando datos del dashboard...</span>
@@ -427,7 +427,7 @@
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 			<!-- Score Evolution Chart -->
 			<div
-				class="card bg-gradient-to-br from-primary/10 to-primary/5  border border-primary/20 rounded-xl overflow-hidden"
+				class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden"
 			>
 				<div class="card-body p-5">
 					<div class="flex items-center gap-3 mb-3">
@@ -455,7 +455,7 @@
 
 			<!-- Course Scores Chart -->
 			<div
-				class="card bg-gradient-to-br from-secondary/10 to-secondary/5  border border-secondary/20 rounded-xl overflow-hidden"
+				class="card bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-xl overflow-hidden"
 			>
 				<div class="card-body p-5">
 					<div class="flex items-center gap-3 mb-3">

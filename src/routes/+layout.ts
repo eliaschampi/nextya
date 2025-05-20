@@ -11,11 +11,11 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 	let user = null;
 
 	// Crear cliente de Supabase para el navegador o el servidor
-	if (isBrowser()) {
-		supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-			global: { fetch }
-		});
+	supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+		global: { fetch }
+	});
 
+	if (isBrowser()) {
 		// Obtener la sesión en el cliente
 		const { data: sessionData } = await supabase.auth.getSession();
 		session = sessionData.session;
@@ -26,9 +26,7 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 			user = userData.user;
 		}
 	} else {
-		supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-			global: { fetch }
-		});
+		// En el servidor, usar los datos pasados desde hooks.server.ts
 		session = data.session;
 		user = data.user;
 	}

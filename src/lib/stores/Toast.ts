@@ -7,19 +7,36 @@ export const toasts = writable<ToastState[]>([]);
 // Mapa para almacenar los timeouts de cada toast
 const timeouts: Record<number, ReturnType<typeof setTimeout>> = {};
 
+// Constante para el tiempo de vida del toast (en ms)
+const TOAST_LIFETIME = 5000;
+
+// Límite máximo de toasts simultáneos
+const MAX_TOASTS = 5;
+
 /**
- * Muestra un toast nuevo y programa su remoción en 5 segundos.
+ * Muestra un toast nuevo y programa su remoción automática.
+ * Limita el número máximo de toasts visibles simultáneamente.
  */
 export function showToast(title: string, type: ToastType) {
 	const id = ++toastId;
 	const newToast: ToastState = { id, title, type };
-	toasts.update((prev) => [...prev, newToast]);
 
-	// Limpia timeout previo (por si acaso)
-	if (timeouts[id]) clearTimeout(timeouts[id]);
+	// Añadir el nuevo toast y limitar el número máximo
+	toasts.update((prev) => {
+		// Si ya tenemos el máximo de toasts, eliminar el más antiguo
+		const updatedToasts = [...prev, newToast];
+		if (updatedToasts.length > MAX_TOASTS) {
+			const oldestToast = updatedToasts[0];
+			removeToast(oldestToast.id);
+			return updatedToasts.slice(1);
+		}
+		return updatedToasts;
+	});
+
+	// Programar la eliminación automática
 	timeouts[id] = setTimeout(() => {
 		removeToast(id);
-	}, 5000);
+	}, TOAST_LIFETIME);
 }
 
 /**
@@ -31,4 +48,19 @@ export function removeToast(id: number) {
 		delete timeouts[id];
 	}
 	toasts.update((prev) => prev.filter((toast) => toast.id !== id));
+}
+
+/**
+ * Limpia todos los toasts y sus timeouts.
+ * Útil para llamar en onDestroy de componentes críticos.
+ */
+export function clearAllToasts() {
+	// Limpiar todos los timeouts
+	Object.keys(timeouts).forEach((id) => {
+		clearTimeout(timeouts[Number(id)]);
+		delete timeouts[Number(id)];
+	});
+
+	// Limpiar la lista de toasts
+	toasts.set([]);
 }

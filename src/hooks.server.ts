@@ -55,26 +55,33 @@ const authGuard: Handle = async ({ event, resolve }) => {
 	const { session } = await event.locals.getSession();
 	event.locals.session = session;
 
-	// Verificar si la sesión ha expirado (24 horas)
+	// Obtener información del usuario si hay sesión
 	if (session) {
+		const { user } = await event.locals.getUser();
+		event.locals.user = user;
+
+		// Verificar si la sesión ha expirado
 		const now = Math.floor(Date.now() / 1000);
-		// Si la sesión ha expirado, cerrar sesión y redirigir a login
 		if (session.expires_at && session.expires_at < now) {
+			// Limpiar sesión y permisos
 			await event.locals.supabase.auth.signOut();
 			permissionsStore.clearPermissions();
 			throw redirect(303, '/auth');
 		}
-	}
 
-	// Redirigir si no hay sesión y la ruta no es `/auth`
-	if (!session && event.url.pathname !== '/auth') {
+		// Redirigir si hay sesión y la ruta es `/auth`
+		if (event.url.pathname === '/auth') {
+			throw redirect(303, '/');
+		}
+	} else {
+		// No hay sesión activa
+		event.locals.user = null;
 		permissionsStore.clearPermissions();
-		throw redirect(303, '/auth');
-	}
 
-	// Redirigir si hay sesión y la ruta es `/auth`
-	if (session && event.url.pathname === '/auth') {
-		throw redirect(303, '/');
+		// Redirigir si no hay sesión y la ruta no es `/auth`
+		if (event.url.pathname !== '/auth') {
+			throw redirect(303, '/auth');
+		}
 	}
 
 	return resolve(event);

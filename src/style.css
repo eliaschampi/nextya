@@ -185,7 +185,7 @@
 
 	.modal-box {
 		border: 1px solid var(--color-base-300);
-		box-shadow: 0 25px 50px -12px color-mix(in srgb, var(--color-base-content) 15%, transparent);
+		box-shadow: 0 25px 50px -12px color-mix(in srgb, var(--color-base-content) 5%, transparent);
 		transition: transform 0.3s ease;
 		transform: scale(0.95);
 	}
