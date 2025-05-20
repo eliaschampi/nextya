@@ -414,7 +414,7 @@
 
 <div class="container mx-auto px-0 py-6">
 	<!-- Selection Controls -->
-	<div class="card bg-base-200 shadow-lg border border-base-300/30 rounded-xl mb-6 overflow-hidden">
+	<div class="card bg-base-200  border border-base-300/30 rounded-xl mb-6 overflow-hidden">
 		<div class="card-body p-5">
 			<div class="flex items-center gap-3 mb-2">
 				<div class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -489,14 +489,14 @@
 
 	{#if isLoading}
 		<div
-			class="flex justify-center items-center h-64 bg-base-200 rounded-xl shadow-lg border border-base-300/30 p-6"
+			class="flex justify-center items-center h-64 bg-base-200 rounded-xl  border border-base-300/30 p-6"
 		>
 			<div class="loading loading-spinner loading-lg text-primary"></div>
 			<span class="ml-4 text-base-content/70 text-lg">Cargando datos...</span>
 		</div>
 	{:else if !selectedLevelCode}
 		<div
-			class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl overflow-hidden"
+			class="card bg-gradient-to-br from-base-200 to-base-100  border border-base-300/30 rounded-xl overflow-hidden"
 		>
 			<div class="card-body p-8 text-center">
 				<div
@@ -519,7 +519,7 @@
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 			<!-- Course Scores Chart -->
 			<div
-				class="card bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg border border-primary/20 rounded-xl overflow-hidden"
+				class="card bg-gradient-to-br from-primary/10 to-primary/5  border border-primary/20 rounded-xl overflow-hidden"
 			>
 				<div class="card-body p-5">
 					<div class="flex items-center gap-3 mb-3">
@@ -550,7 +550,7 @@
 
 			<!-- Eval Scores Chart -->
 			<div
-				class="card bg-gradient-to-br from-secondary/10 to-secondary/5 shadow-lg border border-secondary/20 rounded-xl overflow-hidden"
+				class="card bg-gradient-to-br from-secondary/10 to-secondary/5  border border-secondary/20 rounded-xl overflow-hidden"
 			>
 				<div class="card-body p-5">
 					<div class="flex items-center gap-3 mb-3">

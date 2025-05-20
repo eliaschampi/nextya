@@ -175,7 +175,7 @@
 
 	&.card-hover:hover {
 		transform: translateY(-2px);
-		box-shadow: 0 10px 25px -5px color-mix(in srgb, var(--color-base-content) 5%, transparent);
+		box-shadow: 0 10px 25px -5px color-mix(in srgb, var(--color-base-content) 2%, transparent);
 	}
 }
 

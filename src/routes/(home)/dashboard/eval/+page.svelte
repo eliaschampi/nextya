@@ -318,7 +318,7 @@
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
 			<!-- Questions Chart -->
 			<div
-				class="card bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg border border-primary/20 rounded-xl overflow-hidden"
+				class="card bg-gradient-to-br from-primary/10 to-primary/5  border border-primary/20 rounded-xl overflow-hidden"
 			>
 				<div class="card-body p-5">
 					<div class="flex items-center gap-3 mb-3">
@@ -338,7 +338,7 @@
 
 			<!-- Score Distribution Chart -->
 			<div
-				class="card bg-gradient-to-br from-accent/10 to-accent/5 shadow-lg border border-accent/20 rounded-xl overflow-hidden"
+				class="card bg-gradient-to-br from-accent/10 to-accent/5  border border-accent/20 rounded-xl overflow-hidden"
 			>
 				<div class="card-body p-5">
 					<div class="flex items-center gap-3 mb-3">
@@ -358,7 +358,7 @@
 		</div>
 
 		<!-- Score Distribution Details -->
-		<div class="card bg-base-100 shadow-lg border border-base-300/30 rounded-xl mb-8">
+		<div class="card bg-base-100  border border-base-300/30 rounded-xl mb-8">
 			<div class="card-body p-5">
 				<div class="flex items-center gap-3 mb-3">
 					<div

@@ -493,7 +493,7 @@
 	{/if}
 </PageTitle>
 
-<div class="card bg-base-200 shadow-lg border border-base-300/30 rounded-xl mb-6 overflow-hidden">
+<div class="card bg-base-200  border border-base-300/30 rounded-xl mb-6 overflow-hidden">
 	<div class="card-body p-5">
 		<div class="flex items-center gap-3 mb-2">
 			<div class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -554,14 +554,14 @@
 
 {#if isLoadingLevel && isLoadingGroup}
 	<div
-		class="flex justify-center items-center h-64 bg-base-200 rounded-xl shadow-lg border border-base-300/30 p-6"
+		class="flex justify-center items-center h-64 bg-base-200 rounded-xl  border border-base-300/30 p-6"
 	>
 		<div class="loading loading-spinner loading-lg text-primary"></div>
 		<span class="ml-4 text-base-content/70 text-lg">Cargando datos del dashboard...</span>
 	</div>
 {:else if !selectedLevelCode}
 	<div
-		class="card bg-gradient-to-br from-base-200 to-base-100 shadow-lg border border-base-300/30 rounded-xl overflow-hidden"
+		class="card bg-gradient-to-br from-base-200 to-base-100  border border-base-300/30 rounded-xl overflow-hidden"
 	>
 		<div class="card-body p-8 text-center">
 			<div
@@ -587,7 +587,7 @@
 			<!-- Scores by Group Chart -->
 			{#if levelData.scoresByGroup && levelData.scoresByGroup.length > 0}
 				<div
-					class="card bg-gradient-to-br from-secondary/10 to-secondary/5 shadow-lg border border-secondary/20 rounded-xl overflow-hidden"
+					class="card bg-gradient-to-br from-secondary/10 to-secondary/5  border border-secondary/20 rounded-xl overflow-hidden"
 				>
 					<div class="card-body p-5">
 						<div class="flex items-center gap-3 mb-3">
@@ -609,7 +609,7 @@
 			<!-- Correct vs Incorrect Chart -->
 			{#if levelData.correctVsIncorrect}
 				<div
-					class="card bg-gradient-to-br from-accent/10 to-accent/5 shadow-lg border border-accent/20 rounded-xl overflow-hidden"
+					class="card bg-gradient-to-br from-accent/10 to-accent/5  border border-accent/20 rounded-xl overflow-hidden"
 				>
 					<div class="card-body p-5">
 						<div class="flex items-center gap-3 mb-3">
@@ -645,7 +645,7 @@
 				<!-- Scores by Evaluation Chart -->
 				{#if groupData.scoresByEval && groupData.scoresByEval.length > 0}
 					<div
-						class="card bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg border border-primary/20 rounded-xl overflow-hidden"
+						class="card bg-gradient-to-br from-primary/10 to-primary/5  border border-primary/20 rounded-xl overflow-hidden"
 					>
 						<div class="card-body p-5">
 							<div class="flex items-center gap-3 mb-3">
@@ -667,7 +667,7 @@
 				<!-- Student Performance Chart -->
 				{#if groupData.studentPerformance && groupData.studentPerformance.length > 0}
 					<div
-						class="card bg-gradient-to-br from-warning/10 to-warning/5 shadow-lg border border-warning/20 rounded-xl overflow-hidden"
+						class="card bg-gradient-to-br from-warning/10 to-warning/5  border border-warning/20 rounded-xl overflow-hidden"
 					>
 						<div class="card-body p-5">
 							<div class="flex items-center gap-3 mb-3">
