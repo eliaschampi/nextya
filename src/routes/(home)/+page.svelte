@@ -192,92 +192,80 @@
 <!-- Stats Cards -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 	<!-- Students Count -->
-	<a
-		href="/student"
-		class="card bg-gradient-to-br from-primary/20 to-primary/5 shadow border border-primary/30 rounded-xl overflow-hidden cursor-pointer"
-	>
+	<a href="/student" class="card card-gradient-primary rounded-xl overflow-hidden cursor-pointer">
 		<div class="card-body p-6">
 			<div class="flex items-center justify-between">
 				<h2 class="card-title text-xl font-semibold">Estudiantes</h2>
-				<div class="p-3 rounded-full bg-primary/20 text-primary">
+				<div class="icon-container icon-container-primary">
 					<Users size={24} />
 				</div>
 			</div>
 			{#if isLoading}
-				<div class="flex justify-center py-2">
+				<div class="flex justify-center items-center py-2">
 					<span class="loading loading-spinner loading-md text-primary"></span>
 				</div>
 			{:else}
-				<p class="text-4xl font-bold mt-2">{counts.students.toLocaleString()}</p>
+				<p class="text-4xl font-bold mt-2 animate-fade-in">{counts.students.toLocaleString()}</p>
 			{/if}
 			<p class="text-sm opacity-70 mt-1">Total de estudiantes registrados</p>
 		</div>
 	</a>
 
 	<!-- Evaluations Count -->
-	<a
-		href="/eval"
-		class="card bg-gradient-to-br from-secondary/20 to-secondary/5 shadow border border-secondary/30 rounded-xl overflow-hidden cursor-pointer"
-	>
+	<a href="/eval" class="card card-gradient-secondary rounded-xl overflow-hidden cursor-pointer">
 		<div class="card-body p-6">
 			<div class="flex items-center justify-between">
 				<h2 class="card-title text-xl font-semibold">Exámenes</h2>
-				<div class="p-3 rounded-full bg-secondary/20 text-secondary">
+				<div class="icon-container icon-container-secondary">
 					<FileText size={24} />
 				</div>
 			</div>
 			{#if isLoading}
-				<div class="flex justify-center py-2">
+				<div class="flex justify-center items-center py-2">
 					<span class="loading loading-spinner loading-md text-secondary"></span>
 				</div>
 			{:else}
-				<p class="text-4xl font-bold mt-2">{counts.evals.toLocaleString()}</p>
+				<p class="text-4xl font-bold mt-2 animate-fade-in">{counts.evals.toLocaleString()}</p>
 			{/if}
 			<p class="text-sm opacity-70 mt-1">Evaluaciones creadas</p>
 		</div>
 	</a>
 
 	<!-- Levels Count -->
-	<a
-		href="/levels"
-		class="card bg-gradient-to-br from-accent/20 to-accent/5 shadow border border-accent/30 rounded-xl overflow-hidden cursor-pointer"
-	>
+	<a href="/levels" class="card card-gradient-accent rounded-xl overflow-hidden cursor-pointer">
 		<div class="card-body p-6">
 			<div class="flex items-center justify-between">
 				<h2 class="card-title text-xl font-semibold">Niveles</h2>
-				<div class="p-3 rounded-full bg-accent/20 text-accent">
+				<div class="icon-container icon-container-accent">
 					<School size={24} />
 				</div>
 			</div>
 			{#if isLoading}
-				<div class="flex justify-center py-2">
+				<div class="flex justify-center items-center py-2">
 					<span class="loading loading-spinner loading-md text-accent"></span>
 				</div>
 			{:else}
-				<p class="text-4xl font-bold mt-2">{counts.levels.toLocaleString()}</p>
+				<p class="text-4xl font-bold mt-2 animate-fade-in">{counts.levels.toLocaleString()}</p>
 			{/if}
 			<p class="text-sm opacity-70 mt-1">Niveles académicos</p>
 		</div>
 	</a>
 
 	<!-- Courses Count -->
-	<a
-		href="/courses"
-		class="card bg-gradient-to-br from-info/20 to-info/5 shadow border border-info/30 rounded-xl overflow-hidden cursor-pointer"
-	>
+	<a href="/courses" class="card card-gradient-info rounded-xl overflow-hidden cursor-pointer">
 		<div class="card-body p-6">
 			<div class="flex items-center justify-between">
 				<h2 class="card-title text-xl font-semibold">Cursos</h2>
-				<div class="p-3 rounded-full bg-info/20 text-info">
+				<div class="icon-container icon-container-info">
 					<BookOpen size={24} />
 				</div>
 			</div>
 			{#if isLoading}
-				<div class="flex justify-center py-2">
+				<div class="flex justify-center items-center py-2">
 					<span class="loading loading-spinner loading-md text-info"></span>
 				</div>
 			{:else}
-				<p class="text-4xl font-bold mt-2">{counts.courses.toLocaleString()}</p>
+				<p class="text-4xl font-bold mt-2 animate-fade-in">{counts.courses.toLocaleString()}</p>
 			{/if}
 			<p class="text-sm opacity-70 mt-1">Materias disponibles</p>
 		</div>
@@ -285,9 +273,7 @@
 </div>
 
 <!-- Chart Section -->
-<div
-	class="card bg-gradient-to-br from-base-200 to-base-100 shadow border border-base-300/30 rounded-xl overflow-hidden mb-8"
->
+<div class="card card-gradient-neutral rounded-xl overflow-hidden mb-8">
 	<div class="card-body p-6">
 		<div class="flex items-center justify-between mb-4">
 			<h2 class="card-title text-xl font-semibold">Estudiantes por Nivel</h2>
@@ -299,18 +285,18 @@
 		{#if isChartLoading}
 			<div class="flex justify-center items-center h-64">
 				<div class="loading loading-spinner loading-lg text-primary"></div>
-				<span class="ml-4 text-base-content/70">Cargando datos del gráfico...</span>
+				<span class="ml-4 opacity-70">Cargando datos del gráfico...</span>
 			</div>
 		{:else if !registersByLevel || registersByLevel.length === 0}
-			<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
-				<div class="text-4xl mb-4">
-					<ChartArea class="w-4 h-4" />
+			<div class="flex flex-col items-center justify-center text-center h-64">
+				<div class="text-base-content/30 mx-auto mb-4">
+					<ChartArea size={48} />
 				</div>
-				<p class="text-lg font-medium">No hay datos disponibles para mostrar</p>
-				<p class="text-sm mt-2">No se encontraron registros de estudiantes por nivel</p>
+				<p class="text-lg font-bold mb-2">No hay datos disponibles para mostrar</p>
+				<p class="opacity-70 mb-4">No se encontraron registros de estudiantes por nivel</p>
 			</div>
 		{:else}
-			<div class="h-80 relative" id="chartContainer">
+			<div class="h-80 relative animate-fade-in" id="chartContainer">
 				<canvas id="registersByLevelChart"></canvas>
 			</div>
 		{/if}
@@ -321,13 +307,10 @@
 <h2 class="text-2xl font-semibold mb-4">Acceso Rápido</h2>
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 	<!-- Dashboard -->
-	<a
-		href="/dashboard"
-		class="card bg-gradient-to-br from-primary/10 to-primary/5 shadow border border-primary/20 rounded-xl overflow-hidden cursor-pointer"
-	>
+	<a href="/dashboard" class="card card-gradient-primary rounded-xl overflow-hidden cursor-pointer">
 		<div class="card-body p-6">
 			<div class="flex flex-col items-center text-center">
-				<div class="p-4 rounded-full bg-primary/15 text-primary mb-4">
+				<div class="icon-container icon-container-primary p-4 mb-4">
 					<Activity size={32} />
 				</div>
 				<h2 class="card-title text-xl font-semibold">Dashboard</h2>
@@ -338,27 +321,24 @@
 
 	<a
 		href="/dashboard/course"
-		class="card bg-gradient-to-br from-secondary/10 to-secondary/5 shadow border border-secondary/20 rounded-xl overflow-hidden cursor-pointer"
+		class="card card-gradient-secondary rounded-xl overflow-hidden cursor-pointer"
 	>
 		<div class="card-body p-6">
 			<div class="flex flex-col items-center text-center">
-				<div class="p-4 rounded-full bg-secondary/15 text-secondary mb-4">
+				<div class="icon-container icon-container-secondary p-4 mb-4">
 					<ChartBar size={32} />
 				</div>
-				<h2 class="card-title text-xl font-semibold">Graficos</h2>
+				<h2 class="card-title text-xl font-semibold">Gráficos</h2>
 				<p class="text-sm opacity-70 mt-2">Estadísticas y análisis de rendimiento</p>
 			</div>
 		</div>
 	</a>
 
 	<!-- Profile -->
-	<a
-		href="/profile"
-		class="card bg-gradient-to-br from-accent/10 to-accent/5 shadow border border-accent/20 rounded-xl overflow-hidden cursor-pointer"
-	>
+	<a href="/profile" class="card card-gradient-accent rounded-xl overflow-hidden cursor-pointer">
 		<div class="card-body p-6">
 			<div class="flex flex-col items-center text-center">
-				<div class="p-4 rounded-full bg-accent/15 text-accent mb-4">
+				<div class="icon-container icon-container-accent p-4 mb-4">
 					<UserRound size={32} />
 				</div>
 				<h2 class="card-title text-xl font-semibold">Mi Perfil</h2>

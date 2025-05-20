@@ -5,55 +5,55 @@
 	exclude: rootscrollgutter;
 }
 
+/* Dark Theme - Refined for better consistency */
 @plugin "daisyui/theme" {
 	name: 'dark';
 	default: true;
 	prefersdark: true;
 	color-scheme: 'dark';
-	--color-base-100: oklch(15% 0.02 270);
-	/* Fondo muy oscuro con azul sutil */
-	--color-base-200: oklch(20% 0.015 270);
-	/* Oscuro intermedio */
-	--color-base-300: oklch(25% 0.01 270);
-	/* Oscuro claro para elementos elevados */
-	--color-base-content: oklch(90% 0.01 270);
-	/* Texto claro con toque azul */
-	--color-base-content-rgb: 232, 232, 232;
-	/* RGB equivalent of oklch(90% 0.01 270) */
-	--color-primary: oklch(60% 0.12 160);
-	/* Verde azulado oscuro para botones */
-	--color-primary-content: oklch(95% 0.01 160);
-	/* Contenido claro */
-	--color-secondary: oklch(55% 0.1 50);
-	/* Amarillo-anaranjado oscuro */
-	--color-secondary-content: oklch(95% 0.01 50);
-	/* Contenido claro */
-	--color-accent: oklch(50% 0.08 10);
-	/* Rojo oscuro para acentos */
-	--color-accent-content: oklch(95% 0.01 10);
-	/* Contenido claro */
-	--color-neutral: oklch(20% 0.02 270);
-	/* Gris oscuro con azul */
-	--color-neutral-content: oklch(90% 0.01 270);
-	/* Contenido claro */
-	--color-info: oklch(50% 0.1 220);
-	/* Azul oscuro para info */
-	--color-info-content: oklch(95% 0.01 220);
-	/* Contenido claro */
-	--color-success: oklch(55% 0.1 140);
-	/* Verde oscuro para éxito */
-	--color-success-content: oklch(95% 0.01 140);
-	/* Contenido claro */
-	--color-warning: oklch(50% 0.1 60);
-	/* Amarillo oscuro para advertencia */
-	--color-warning-content: oklch(95% 0.01 60);
-	/* Contenido claro */
-	--color-error: oklch(45% 0.12 0);
-	/* Rojo oscuro para error */
-	--color-error-content: oklch(95% 0.01 0);
-	/* Contenido claro */
-	--radius-selector: 0rem;
-	--radius-field: 0.25rem;
+	/* Base colors - Refined dark blue palette */
+	--color-base-100: oklch(12% 0.025 265);
+	/* Deep dark blue background */
+	--color-base-200: oklch(16% 0.02 265);
+	/* Slightly lighter for cards and elevated elements */
+	--color-base-300: oklch(20% 0.015 265);
+	/* For borders and dividers */
+	--color-base-content: oklch(92% 0.01 265);
+	/* High contrast text for readability */
+	--color-base-content-rgb: 235, 235, 240;
+
+	/* Primary - Vibrant teal that pops in dark mode */
+	--color-primary: oklch(65% 0.15 180);
+	--color-primary-content: oklch(98% 0.005 180);
+
+	/* Secondary - Warm amber for contrast with primary */
+	--color-secondary: oklch(60% 0.12 60);
+	--color-secondary-content: oklch(98% 0.005 60);
+
+	/* Accent - Soft purple for highlights */
+	--color-accent: oklch(60% 0.14 300);
+	--color-accent-content: oklch(98% 0.005 300);
+
+	/* Neutral - Subtle blue-gray */
+	--color-neutral: oklch(25% 0.02 265);
+	--color-neutral-content: oklch(92% 0.01 265);
+
+	/* Semantic colors - More vibrant for better visibility in dark mode */
+	--color-info: oklch(60% 0.14 220);
+	--color-info-content: oklch(98% 0.005 220);
+
+	--color-success: oklch(65% 0.15 150);
+	--color-success-content: oklch(98% 0.005 150);
+
+	--color-warning: oklch(65% 0.15 80);
+	--color-warning-content: oklch(98% 0.005 80);
+
+	--color-error: oklch(60% 0.18 10);
+	--color-error-content: oklch(98% 0.005 10);
+
+	/* UI Properties */
+	--radius-selector: 0.5rem;
+	--radius-field: 0.375rem;
 	--radius-box: 1rem;
 	--size-selector: 0.25rem;
 	--size-field: 0.25rem;
@@ -62,74 +62,173 @@
 	--noise: 0;
 }
 
+/* Light Theme - Refined for better consistency with dark theme */
 @plugin "daisyui/theme" {
 	name: 'light';
 	default: false;
 	prefersdark: false;
 	color-scheme: 'light';
-	--color-base-100: oklch(90% 0.03 270);
-	/* Fondo claro con un azul muy sutil */
-	--color-base-200: oklch(94% 0.015 270);
-	/* Intermedio, acercándose al blanco */
-	--color-base-300: oklch(98% 0.005 270);
-	/* Casi blanco puro, toque mínimo de azul */
-	--color-base-content: oklch(25% 0.12 270);
-	/* Texto oscuro con buen contraste */
-	--color-base-content-rgb: 64, 64, 64;
-	/* RGB equivalent of oklch(25% 0.12 270) */
-	--color-primary: oklch(65% 0.18 160);
-	/* Verde azulado elegante para botones */
-	--color-primary-content: oklch(98% 0.01 160);
-	/* Contenido claro para primary */
-	--color-secondary: oklch(70% 0.15 50);
-	/* Amarillo-anaranjado suave */
-	--color-secondary-content: oklch(98% 0.01 50);
-	/* Contenido claro */
-	--color-accent: oklch(75% 0.12 10);
-	/* Rojo suave para acentos */
-	--color-accent-content: oklch(20% 0.12 10);
-	/* Contenido oscuro */
-	--color-neutral: oklch(60% 0.03 270);
-	/* Gris con toque azul sutil */
-	--color-neutral-content: oklch(98% 0.005 270);
-	/* Contenido claro */
-	--color-info: oklch(70% 0.12 220);
-	/* Azul claro para info */
-	--color-info-content: oklch(98% 0.01 220);
-	/* Contenido claro */
-	--color-success: oklch(70% 0.14 140);
-	/* Verde para éxito */
-	--color-success-content: oklch(98% 0.01 140);
-	/* Contenido claro */
-	--color-warning: oklch(75% 0.15 60);
-	/* Amarillo para advertencia */
-	--color-warning-content: oklch(98% 0.01 60);
-	/* Contenido claro */
-	--color-error: oklch(70% 0.18 0);
-	/* Rojo para error */
-	--color-error-content: oklch(98% 0.01 0);
-	/* Contenido claro */
-	--radius-selector: 1rem;
-	--radius-field: 1rem;
+	/* Base colors - Soft blue-white palette */
+	--color-base-100: oklch(98% 0.01 265);
+	/* Almost white with hint of blue */
+	--color-base-200: oklch(95% 0.015 265);
+	/* Slightly darker for cards */
+	--color-base-300: oklch(90% 0.02 265);
+	/* For borders and dividers */
+	--color-base-content: oklch(20% 0.03 265);
+	/* Dark text for readability */
+	--color-base-content-rgb: 40, 40, 60;
+
+	/* Primary - Same hue as dark theme but adjusted for light background */
+	--color-primary: oklch(55% 0.18 180);
+	--color-primary-content: oklch(98% 0.005 180);
+
+	/* Secondary - Warm amber matching dark theme */
+	--color-secondary: oklch(55% 0.15 60);
+	--color-secondary-content: oklch(98% 0.005 60);
+
+	/* Accent - Soft purple matching dark theme */
+	--color-accent: oklch(55% 0.16 300);
+	--color-accent-content: oklch(98% 0.005 300);
+
+	/* Neutral - Light blue-gray */
+	--color-neutral: oklch(75% 0.03 265);
+	--color-neutral-content: oklch(20% 0.03 265);
+
+	/* Semantic colors - Adjusted for light mode visibility */
+	--color-info: oklch(55% 0.16 220);
+	--color-info-content: oklch(98% 0.005 220);
+
+	--color-success: oklch(55% 0.17 150);
+	--color-success-content: oklch(98% 0.005 150);
+
+	--color-warning: oklch(60% 0.17 80);
+	--color-warning-content: oklch(20% 0.03 80);
+
+	--color-error: oklch(60% 0.2 10);
+	--color-error-content: oklch(98% 0.005 10);
+
+	/* UI Properties - Matching with dark theme for consistency */
+	--radius-selector: 0.5rem;
+	--radius-field: 0.375rem;
 	--radius-box: 1rem;
 	--size-selector: 0.25rem;
 	--size-field: 0.25rem;
 	--border: 1px;
 	--depth: 0;
 	--noise: 0;
+
+	/* Custom shadow properties for light theme */
+	--shadow-color: 220 3% 15%;
+	--shadow-strength: 1%;
 }
 
+/* Enhanced form elements with consistent styling */
 .input,
 .textarea,
 .select {
 	&:focus,
 	&:focus-within {
-		outline-width: 3px;
-		outline-style: dashed;
-		outline-color: color-mix(in srgb, var(--color-base-content) 20%, transparent);
+		outline-width: 2px;
+		outline-style: solid;
+		outline-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+		box-shadow: 0 0 0 1px var(--color-primary-focus, var(--color-primary));
+		border-color: var(--color-primary);
+		transition: all 0.2s ease;
 	}
 }
 
+/* Button enhancements */
+.btn {
+	font-weight: 500;
+	letter-spacing: 0.01em;
+	transition: all 0.2s ease;
+
+	&:active {
+		transform: translateY(1px);
+	}
+
+	&.btn-primary {
+		&:hover {
+			box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 30%, transparent);
+		}
+	}
+
+	&.btn-secondary {
+		&:hover {
+			box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-secondary) 30%, transparent);
+		}
+	}
+
+	&.btn-accent {
+		&:hover {
+			box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 30%, transparent);
+		}
+	}
+}
+
+/* Card enhancements */
+.card {
+	transition:
+		transform 0.2s ease,
+		box-shadow 0.2s ease;
+
+	&.card-hover:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 10px 25px -5px color-mix(in srgb, var(--color-base-content) 5%, transparent);
+	}
+}
+
+/* Enhanced modals */
 .modal {
-	backdrop-filter: blur(10px);
+	backdrop-filter: blur(12px);
+
+	.modal-box {
+		border: 1px solid var(--color-base-300);
+		box-shadow: 0 25px 50px -12px color-mix(in srgb, var(--color-base-content) 15%, transparent);
+		transition: transform 0.3s ease;
+		transform: scale(0.95);
+	}
+
+	&.modal-open .modal-box {
+		transform: scale(1);
+	}
+}
+
+/* Table enhancements */
+.table {
+	--border-color: color-mix(in srgb, var(--color-base-content) 10%, transparent);
+
+	th {
+		font-weight: 600;
+		letter-spacing: 0.02em;
+		background-color: color-mix(in srgb, var(--color-base-200) 80%, var(--color-primary) 5%);
+	}
+
+	tr.hover:hover {
+		background-color: color-mix(in srgb, var(--color-primary) 5%, var(--color-base-100));
+	}
+
+	&.table-zebra tbody tr:nth-child(even) {
+		background-color: color-mix(in srgb, var(--color-base-200) 70%, transparent);
+	}
+}
+
+/* Badge enhancements */
+.badge {
+	font-weight: 500;
+	letter-spacing: 0.02em;
+}
+
+/* Tabs enhancements */
+.tabs {
+	.tab {
+		font-weight: 500;
+		letter-spacing: 0.01em;
+		transition: all 0.2s ease;
+
+		&.tab-active:not(.tab-disabled) {
+			border-color: var(--color-primary);
+		}
+	}
 }

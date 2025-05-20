@@ -5,6 +5,7 @@
 	import { showToast } from '$lib/stores/Toast';
 	let { data, children } = $props();
 	import '../style.css';
+	import '$lib/styles/utils.css';
 	import Toast from '$lib/components/Toast.svelte';
 
 	let { session, supabase } = $derived(data);

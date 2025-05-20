@@ -395,7 +395,7 @@
 	{/if}
 </PageTitle>
 
-<div class="p-4 bg-base-200 rounded-box mb-4 flex flex-col sm:flex-row items-center gap-4">
+<div class="data-display flex flex-col sm:flex-row items-center gap-4">
 	<select
 		class="select w-full sm:w-auto"
 		bind:value={selectedLevelCode}
@@ -446,12 +446,10 @@
 </div>
 
 {#if selectedLevelCode && students.length > 0}
-	<div
-		class="card bg-gradient-to-br from-base-200 to-base-100 shadow border border-base-300/30 rounded-xl overflow-hidden"
-	>
+	<div class="card card-gradient-neutral rounded-xl overflow-hidden">
 		<div class="card-body">
 			{#if filteredStudents.length > 0}
-				<div class="overflow-x-auto">
+				<div class="overflow-x-auto animate-fade-in">
 					<Table
 						columns={studentColumns as unknown as {
 							key?: string;
@@ -467,7 +465,9 @@
 						emptyMessage="No hay estudiantes en este nivel y grupo."
 					/>
 					<div class="text-center mt-2">
-						<span class="text-sm opacity-70">{paginatedStudents.length} estudiantes</span>
+						<span class="badge badge-primary badge-outline"
+							>{paginatedStudents.length} estudiantes</span
+						>
 					</div>
 
 					<!-- Paginación -->
@@ -475,7 +475,7 @@
 						<div class="flex justify-center mt-6">
 							<div class="join">
 								<button
-									class="join-item btn btn-sm btn-primary btn-soft {currentPage === 1
+									class="join-item btn btn-sm btn-primary btn-outline {currentPage === 1
 										? 'btn-disabled'
 										: ''}"
 									onclick={() => goToPage(currentPage - 1)}
@@ -489,7 +489,7 @@
 									<button
 										class="join-item btn btn-sm {pageNum === currentPage
 											? 'btn-primary'
-											: 'btn-soft'}"
+											: 'btn-outline'}"
 										onclick={() => goToPage(pageNum)}
 									>
 										{pageNum}
@@ -497,7 +497,7 @@
 								{/each}
 
 								<button
-									class="join-item btn btn-sm btn-primary btn-soft {currentPage === totalPages
+									class="join-item btn btn-sm btn-primary btn-outline {currentPage === totalPages
 										? 'btn-disabled'
 										: ''}"
 									onclick={() => goToPage(currentPage + 1)}
@@ -509,12 +509,12 @@
 					{/if}
 				</div>
 			{:else if searchQuery}
-				<div
-					class="bg-base-100/50 rounded-lg border border-base-300/30 p-8 w-full max-w-md mx-auto text-center"
-				>
-					<Search size={48} class="text-primary/30 mx-auto mb-4" />
-					<h3 class="text-lg font-bold mb-2">Sin resultados</h3>
-					<p class="text-base-content/70 mb-4">
+				<div class="empty-state p-8 w-full max-w-md mx-auto">
+					<div class="empty-state-icon">
+						<Search size={48} />
+					</div>
+					<h3 class="empty-state-title">Sin resultados</h3>
+					<p class="empty-state-message">
 						No se encontraron estudiantes que coincidan con la búsqueda "{searchQuery}".
 					</p>
 				</div>
@@ -522,9 +522,13 @@
 		</div>
 	</div>
 {:else if selectedLevelCode}
-	<p class="text-center py-4 opacity-50">No hay estudiantes en este nivel y grupo.</p>
+	<div class="empty-state py-8">
+		<p class="empty-state-message">No hay estudiantes en este nivel y grupo.</p>
+	</div>
 {:else}
-	<p class="text-center py-4 opacity-50">Selecciona un nivel y grupo para ver los estudiantes.</p>
+	<div class="empty-state py-8">
+		<p class="empty-state-message">Selecciona un nivel y grupo para ver los estudiantes.</p>
+	</div>
 {/if}
 
 <dialog bind:this={modal} class="modal">
@@ -570,7 +574,7 @@
 				</button>
 			</div>
 			{#if searchResults.length > 0}
-				<ul class="space-y-2 max-h-48 overflow-y-auto p-4">
+				<ul class="space-y-2 max-h-48 overflow-y-auto p-4 animate-fade-in">
 					{#each searchResults as student (student.code)}
 						<li
 							class="bg-base-200 p-3 rounded-box hover:bg-base-300 transition-colors cursor-pointer"
@@ -583,17 +587,17 @@
 					{/each}
 				</ul>
 			{:else}
-				<div class="bg-base-200 p-3 rounded-box text-base-content/20">Estudiante no encontrado</div>
+				<div class="empty-state p-4">
+					<p class="empty-state-message">Estudiante no encontrado</p>
+				</div>
 			{/if}
 		{/if}
 
 		{#if activeTab === 'new'}
 			<form onsubmit={handleSubmit} autocomplete="off">
-				<fieldset
-					class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-box border border-base-300 bg-base-200"
-				>
-					<div>
-						<label class="label font-medium" for="name">Nombre</label>
+				<fieldset class="fieldset-container">
+					<div class="form-group">
+						<label class="form-group-label" for="name">Nombre</label>
 						<input
 							id="name"
 							name="name"
@@ -605,8 +609,8 @@
 							onblur={() => handleFillEmail()}
 						/>
 					</div>
-					<div>
-						<label class="label font-medium" for="last_name">Apellidos</label>
+					<div class="form-group">
+						<label class="form-group-label" for="last_name">Apellidos</label>
 						<input
 							id="last_name"
 							name="last_name"
@@ -617,8 +621,8 @@
 							bind:this={lastNameInput}
 						/>
 					</div>
-					<div>
-						<label class="label font-medium" for="phone">Teléfono</label>
+					<div class="form-group">
+						<label class="form-group-label" for="phone">Teléfono</label>
 						<input
 							id="phone"
 							name="phone"
@@ -628,8 +632,8 @@
 							bind:this={phoneInput}
 						/>
 					</div>
-					<div>
-						<label class="label font-medium" for="email">Email</label>
+					<div class="form-group">
+						<label class="form-group-label" for="email">Email</label>
 						<input
 							id="email"
 							name="email"
@@ -640,8 +644,8 @@
 							bind:this={emailInput}
 						/>
 					</div>
-					<div>
-						<label class="label font-medium" for="level">Nivel</label>
+					<div class="form-group">
+						<label class="form-group-label" for="level">Nivel</label>
 						<select
 							id="level"
 							name="level"
@@ -655,8 +659,8 @@
 							{/each}
 						</select>
 					</div>
-					<div>
-						<label class="label font-medium" for="group_name">Grupo</label>
+					<div class="form-group">
+						<label class="form-group-label" for="group_name">Grupo</label>
 						<select
 							id="group_name"
 							name="group_name"
@@ -670,8 +674,8 @@
 							{/each}
 						</select>
 					</div>
-					<div>
-						<label class="label font-medium" for="roll_code">Código de Matrícula</label>
+					<div class="form-group">
+						<label class="form-group-label" for="roll_code">Código de Matrícula</label>
 						<input
 							id="roll_code"
 							name="roll_code"
@@ -683,7 +687,7 @@
 							pattern="\d*"
 							bind:this={rollCodeInput}
 						/>
-						<small class="text-xs opacity-70 mt-1 block">Ingrese 4 dígitos (ej: 0001, 1234)</small>
+						<small class="form-group-hint">Ingrese 4 dígitos (ej: 0001, 1234)</small>
 					</div>
 				</fieldset>
 				{#if message}
@@ -705,14 +709,14 @@
 </dialog>
 
 <dialog bind:this={confirmModal} class="modal">
-	<div class="modal-box bg-base-200">
+	<div class="modal-box">
 		<h3 class="text-lg font-bold mb-4">Confirmar eliminación</h3>
 		<Message
 			type="warning"
 			description={`El estudiante "${selectForDelete?.name}" será eliminado`}
 		/>
-		<fieldset class="fieldset p-4 bg-base-100 border border-base-300 rounded-box w-full">
-			<legend class="fieldset-legend">Opciones de eliminación</legend>
+		<fieldset class="fieldset-container mt-4 grid-cols-1">
+			<legend class="text-emphasis px-2">Opciones de eliminación</legend>
 			<div class="flex flex-col gap-2">
 				{#if selectForDelete}
 					<label class="label cursor-pointer justify-start gap-2">
@@ -739,7 +743,7 @@
 			</div>
 		</fieldset>
 		<div class="modal-action flex justify-center gap-4">
-			<button class="btn" onclick={() => confirmModal?.close()}>Cancelar</button>
+			<button class="btn btn-outline" onclick={() => confirmModal?.close()}>Cancelar</button>
 			<button class="btn btn-error" onclick={handleDelete}>Eliminar</button>
 		</div>
 	</div>

@@ -50,10 +50,53 @@
 		mouseY = e.clientY;
 	}
 
+	// Get CSS variable value
+	function getCSSVariable(varName: string, fallback: string = ''): string {
+		if (typeof window === 'undefined') return fallback;
+		return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || fallback;
+	}
+
+	// Convert OKLCH to RGB for canvas
+	function oklchToRgb(oklch: string): { r: number; g: number; b: number } {
+		// Default fallback color (teal)
+		const defaultColor = { r: 80, g: 200, b: 170 };
+
+		try {
+			// Create a temporary element to use the browser's color conversion
+			const tempEl = document.createElement('div');
+			tempEl.style.color = oklch;
+			document.body.appendChild(tempEl);
+
+			// Get computed RGB values
+			const computedColor = getComputedStyle(tempEl).color;
+			document.body.removeChild(tempEl);
+
+			// Parse RGB values from computed style
+			const rgbMatch = computedColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+			if (rgbMatch) {
+				return {
+					r: parseInt(rgbMatch[1], 10),
+					g: parseInt(rgbMatch[2], 10),
+					b: parseInt(rgbMatch[3], 10)
+				};
+			}
+
+			return defaultColor;
+		} catch (e) {
+			console.error('Error converting color:', e);
+			return defaultColor;
+		}
+	}
+
 	function animate() {
 		if (!ctx) return;
 
+		// Get primary color from CSS variables
+		const primaryColor = getCSSVariable('--color-primary', 'oklch(65% 0.15 180)');
+		const rgbColor = oklchToRgb(primaryColor);
+
 		ctx.clearRect(0, 0, width, height);
+
 		// Líneas verticales
 		for (let x = 0; x < width; x += GRID_SPACING) {
 			const d = Math.abs(x - mouseX);
@@ -62,10 +105,11 @@
 			ctx.beginPath();
 			ctx.moveTo(x, 0);
 			ctx.lineTo(x, height);
-			ctx.strokeStyle = `rgba(100, 220, 150, ${opacity})`;
+			ctx.strokeStyle = `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, ${opacity})`;
 			ctx.lineWidth = 1;
 			ctx.stroke();
 		}
+
 		// Líneas horizontales
 		for (let y = 0; y < height; y += GRID_SPACING) {
 			const d = Math.abs(y - mouseY);
@@ -74,7 +118,7 @@
 			ctx.beginPath();
 			ctx.moveTo(0, y);
 			ctx.lineTo(width, y);
-			ctx.strokeStyle = `rgba(100, 220, 150, ${opacity})`;
+			ctx.strokeStyle = `rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, ${opacity})`;
 			ctx.lineWidth = 1;
 			ctx.stroke();
 		}
