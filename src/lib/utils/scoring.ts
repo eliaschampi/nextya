@@ -1,6 +1,6 @@
 import type { StudentAnswer, ApiOmrSuccessData } from '$lib/types/api';
 import type { OmrSuccessResult, AnswerValue } from '$lib/omrProcessor';
-import type { EvalQuestion, EvalSection } from '$lib/types';
+import type { EvalQuestion, EvalSection, EvalSectionWithCourse } from '$lib/types';
 
 const MAX_SCORE = 20;
 
@@ -18,7 +18,7 @@ function calculateVigesimalScore(correctWeightedSum: number, totalWeightedSum: n
  */
 export function calculateScores(
 	omrAnswers: OmrSuccessResult['answers'],
-	sections: EvalSection[],
+	sections: EvalSectionWithCourse[],
 	questions: EvalQuestion[]
 ): { detailedAnswers: StudentAnswer[]; scores: ApiOmrSuccessData['scores'] } {
 	const detailedAnswers: StudentAnswer[] = [];
@@ -44,7 +44,7 @@ export function calculateScores(
 	// Inicializar estadísticas por sección
 	sections.forEach((section) => {
 		sectionStats[section.code] = {
-			section_name: `Sección ${section.order_in_eval}`,
+			section_name: section.course_name || 'Sin nombre',
 			correct_count: 0,
 			incorrect_count: 0,
 			blank_count: 0,

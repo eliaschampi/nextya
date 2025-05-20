@@ -614,7 +614,6 @@
 		};
 	});
 
-	// No need for this effect anymore as we're using the store
 </script>
 
 <PageTitle

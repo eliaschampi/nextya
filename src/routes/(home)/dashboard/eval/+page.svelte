@@ -4,7 +4,7 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import EvaluationSelectionModal from '$lib/components/EvaluationSelectionModal.svelte';
 	import { showToast } from '$lib/stores/Toast.js';
-	import { School, ChartBar, ChartPie, Activity } from 'lucide-svelte';
+	import { School, ChartPie, Activity, CircleDot } from 'lucide-svelte';
 	import type { Level, EvalWithSections } from '$lib/types';
 	import type { EvalDashboardData } from '$lib/types/evalDashboard';
 	import { goto } from '$app/navigation';
@@ -156,36 +156,43 @@
 			}
 
 			try {
-				// Combine correct and incorrect questions into one chart
-				const correctLabels = dashboardData.topCorrectQuestions.map(
-					(q) => `P${q.orderInEval} (${q.courseName})`
-				);
-				const correctValues = dashboardData.topCorrectQuestions.map(
-					(q) => q.correctPercentage || 0
-				);
+				// Prepare data for bubble chart
+				const correctBubbles = dashboardData.topCorrectQuestions.map((q) => ({
+					x: q.orderInEval, // X-axis: question number (1-80)
+					y: q.totalAnswers, // Y-axis: number of students (0-100)
+					r: (q.correctPercentage || 0) / 5, // Radius: percentage / 5 for better visualization
+					questionNumber: q.orderInEval,
+					courseName: q.courseName,
+					percentage: q.correctPercentage || 0,
+					count: q.correctCount || 0,
+					total: q.totalAnswers
+				}));
 
-				const incorrectLabels = dashboardData.topIncorrectQuestions.map(
-					(q) => `P${q.orderInEval} (${q.courseName})`
-				);
-				const incorrectValues = dashboardData.topIncorrectQuestions.map(
-					(q) => q.incorrectPercentage || 0
-				);
+				const incorrectBubbles = dashboardData.topIncorrectQuestions.map((q) => ({
+					x: q.orderInEval, // X-axis: question number (1-80)
+					y: q.totalAnswers, // Y-axis: number of students (0-100)
+					r: (q.incorrectPercentage || 0) / 5, // Radius: percentage / 5 for better visualization
+					questionNumber: q.orderInEval,
+					courseName: q.courseName,
+					percentage: q.incorrectPercentage || 0,
+					count: q.incorrectCount || 0,
+					total: q.totalAnswers
+				}));
 
 				questionsChart = new Chart(ctx, {
-					type: 'bar',
+					type: 'bubble',
 					data: {
-						labels: [...correctLabels, ...incorrectLabels],
 						datasets: [
 							{
-								label: 'Preguntas con más aciertos (%)',
-								data: [...correctValues, Array(incorrectLabels.length).fill(0)],
+								label: 'Preguntas con más aciertos',
+								data: correctBubbles,
 								backgroundColor: chartColors.correct,
 								borderColor: chartColors.correct,
 								borderWidth: 1
 							},
 							{
-								label: 'Preguntas con más errores (%)',
-								data: [...Array(correctLabels.length).fill(0), ...incorrectValues],
+								label: 'Preguntas con más errores',
+								data: incorrectBubbles,
 								backgroundColor: chartColors.incorrect,
 								borderColor: chartColors.incorrect,
 								borderWidth: 1
@@ -198,16 +205,17 @@
 						scales: {
 							y: {
 								beginAtZero: true,
-								max: 100,
 								title: {
 									display: true,
-									text: 'Porcentaje'
+									text: 'Número de estudiantes'
 								}
 							},
 							x: {
+								min: 0,
+								max: 80,
 								title: {
 									display: true,
-									text: 'Preguntas'
+									text: 'Número de pregunta'
 								}
 							}
 						},
@@ -219,8 +227,12 @@
 							tooltip: {
 								callbacks: {
 									label: function (context) {
-										const value = context.raw as number;
-										return `${context.dataset.label}: ${value.toFixed(2)}%`;
+										const item = context.raw as any;
+										return [
+											`Pregunta ${item.questionNumber} (${item.courseName})`,
+											`${context.dataset.label}: ${item.percentage.toFixed(2)}%`,
+											`${item.count} de ${item.total} estudiantes`
+										];
 									}
 								}
 							}
@@ -325,7 +337,7 @@
 						<div
 							class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/15 text-primary"
 						>
-							<ChartBar class="h-5 w-5" />
+							<CircleDot class="h-5 w-5" />
 						</div>
 						<h3 class="text-lg font-medium">Preguntas con más aciertos y errores</h3>
 					</div>
