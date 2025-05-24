@@ -25,6 +25,8 @@
 		onFileSelect
 	}: Props = $props();
 
+	let fileInput: HTMLInputElement;
+
 	function handleFileChange(event: Event) {
 		const input = event.target as HTMLInputElement;
 		if (input.files?.length) {
@@ -33,19 +35,32 @@
 		}
 	}
 
+	function triggerFileInput() {
+		console.log('triggerFileInput called, dis:', dis, 'fileInput:', !!fileInput);
+		if (!dis && fileInput) {
+			fileInput.click();
+		}
+	}
+
 	const IconComponent = icon === 'plus' ? Plus : Upload;
-	const buttonClasses = `btn ${variant === 'primary' ? 'btn-primary' : 'btn-outline btn-primary'} btn-${size} ${dis ? 'btn-disabled' : ''} ${className}`;
+	const buttonClasses = `btn ${variant === 'primary' ? 'btn-primary' : 'btn-outline btn-primary'} btn-${size} ${className}`;
+
+	// Debug log
+	$effect(() => {
+		console.log('FileUploadButton - dis value changed:', dis);
+	});
 </script>
 
-<label class={buttonClasses}>
+<button class={buttonClasses} disabled={dis} onclick={triggerFileInput}>
 	<IconComponent size={16} />
 	{text}
-	<input
-		type="file"
-		{accept}
-		{multiple}
-		class="hidden"
-		onchange={handleFileChange}
-		disabled={dis}
-	/>
-</label>
+</button>
+<input
+	bind:this={fileInput}
+	type="file"
+	{accept}
+	{multiple}
+	class="hidden"
+	onchange={handleFileChange}
+	disabled={dis}
+/>
