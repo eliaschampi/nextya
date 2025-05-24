@@ -78,6 +78,8 @@
 	let detailsModalOpen = $state(false);
 	let evalSelectionModalOpen = $state(false);
 	let batchProgress = $state({ processed: 0, total: 0 });
+	let processingStartTime = $state<number>(0);
+	let abortController = $state<AbortController | null>(null);
 
 	// Valores derivados
 	let currentPreviewUrl = $derived.by(() => {
@@ -141,8 +143,27 @@
 		return errors;
 	}
 
-	let validationErrors = $derived(getValidationErrors(fileEntries));
+	let validationErrors = $derived.by(() => {
+		// Solo validar cuando no esté procesando para mejor performance
+		if (isProcessingBatch) return [];
+		return getValidationErrors(fileEntries);
+	});
 	let validationErrorsMap = $derived(new Map(validationErrors.map((err) => [err.id, err.message])));
+
+	// Estimación de tiempo restante
+	let estimatedTime = $derived.by(() => {
+		if (!isProcessingBatch || batchProgress.processed === 0 || processingStartTime === 0) return '';
+
+		const elapsed = Date.now() - processingStartTime;
+		const avgTimePerFile = elapsed / batchProgress.processed;
+		const remaining = (batchProgress.total - batchProgress.processed) * avgTimePerFile;
+
+		if (remaining < 60000) {
+			return `${Math.ceil(remaining / 1000)}s restantes`;
+		} else {
+			return `${Math.ceil(remaining / 60000)}m restantes`;
+		}
+	});
 
 	let canProcess = $derived(
 		!!storeState.selectedEval &&
@@ -256,10 +277,13 @@
 	async function processAllPendingFiles() {
 		if (!storeState.selectedEval || isProcessingBatch || pendingFilesCount === 0) return;
 		isProcessingBatch = true;
+		processingStartTime = Date.now();
+		abortController = new AbortController();
 
 		const previousSelectedId = selectedFileId;
-		// Optimal chunk size based on server limits (set in the API)
-		const CHUNK_SIZE = 10;
+		// Chunk size dinámico basado en cantidad de archivos
+		const pendingCount = fileEntries.filter((e) => e.status === 'pending' && e.formatValid).length;
+		const CHUNK_SIZE = Math.min(10, Math.max(3, Math.floor(pendingCount / 4)));
 
 		try {
 			const pendingEntries = fileEntries.filter((e) => e.status === 'pending' && e.formatValid);
@@ -307,6 +331,7 @@
 				const response = await fetch('/api/eval/omr-batch', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
+					signal: abortController?.signal,
 					body: JSON.stringify({
 						evalCode: storeState.selectedEval.code,
 						evalGroupName: storeState.selectedEval.group_name,
@@ -361,18 +386,25 @@
 
 			showToast('Procesamiento por lotes completado', 'success');
 		} catch (error) {
+			// Verificar si fue cancelado
+			if (error instanceof Error && error.name === 'AbortError') {
+				showToast('Procesamiento cancelado', 'info');
+			} else {
+				showToast('Error durante el procesamiento por lotes', 'danger');
+				console.error('Batch processing error:', error);
+			}
+
 			// Marcar todos los archivos en procesamiento como pendientes nuevamente
 			for (const entry of fileEntries) {
 				if (entry.status === 'processing') {
 					entry.status = 'pending';
 				}
 			}
-
-			showToast('Error durante el procesamiento por lotes', 'danger');
-			console.error('Batch processing error:', error);
 		} finally {
-			// Reiniciar progreso
+			// Reiniciar estado
 			batchProgress = { processed: 0, total: 0 };
+			processingStartTime = 0;
+			abortController = null;
 
 			if (previousSelectedId && fileEntries.some((e) => e.id === previousSelectedId)) {
 				selectedFileId = previousSelectedId;
@@ -380,6 +412,13 @@
 				selectedFileId = fileEntries[0].id;
 			}
 			isProcessingBatch = false;
+		}
+	}
+
+	// Función para cancelar el procesamiento
+	function cancelProcessing() {
+		if (abortController && isProcessingBatch) {
+			abortController.abort();
 		}
 	}
 
@@ -671,13 +710,13 @@
 
 					{#if pendingFilesCount > 0}
 						<button
-							class="btn btn-info btn-sm"
+							class="btn btn-info btn-sm {isProcessingBatch ? 'btn-disabled' : ''}"
 							onclick={processAllPendingFiles}
 							disabled={!canProcess || isProcessingBatch || isSavingBatch}
 						>
 							{#if isProcessingBatch}
 								<Loader2 class="animate-spin mr-1" size={16} />
-								Procesando...
+								Procesando {batchProgress.processed}/{batchProgress.total}
 							{:else}
 								<Play size={16} class="mr-1" />
 								Procesar ({pendingFilesCount})
@@ -733,15 +772,33 @@
 			<div class="divider"></div>
 			{#if isProcessingBatch}
 				<div class="mt-4">
+					<div class="flex items-center justify-between mb-2">
+						<div class="text-sm font-medium text-base-content/80">Procesando archivos...</div>
+						<button
+							class="btn btn-error btn-outline btn-xs"
+							onclick={cancelProcessing}
+							title="Cancelar procesamiento"
+						>
+							<X size={12} /> Cancelar
+						</button>
+					</div>
 					<progress
-						class="progress progress-primary w-full"
+						class="progress progress-primary w-full h-3"
 						value={batchProgress.processed}
 						max={batchProgress.total}
 					></progress>
-					<div class="text-xs text-right opacity-70 mt-1">
-						{batchProgress.processed} de {batchProgress.total} ({Math.round(
-							(batchProgress.processed / batchProgress.total) * 100 || 0
-						)}%)
+					<div class="flex justify-between items-center text-xs opacity-70 mt-2">
+						<span>
+							{batchProgress.processed} de {batchProgress.total} archivos
+						</span>
+						<div class="flex items-center gap-2">
+							<span class="font-medium">
+								{Math.round((batchProgress.processed / batchProgress.total) * 100 || 0)}%
+							</span>
+							{#if estimatedTime}
+								<span class="text-info">• {estimatedTime}</span>
+							{/if}
+						</div>
 					</div>
 				</div>
 			{:else if fileEntries.length > 0 && pendingFilesCount === 0 && validationErrors.length === 0 && errorFilesCount === 0}

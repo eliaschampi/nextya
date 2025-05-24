@@ -107,11 +107,15 @@
 	}
 
 	// Combined status function to reduce redundant checks
-	function getStatus(entry: FileEntry): { icon: typeof AlertCircle; color: string } {
+	function getStatus(entry: FileEntry): {
+		icon: typeof AlertCircle;
+		color: string;
+		pulse?: boolean;
+	} {
 		// Processing state
 		const isProcessing = entry.id === processingId || entry.status === 'processing';
 		if (isProcessing) {
-			return { icon: Loader2, color: 'text-info animate-spin' };
+			return { icon: Loader2, color: 'text-info animate-spin', pulse: true };
 		}
 
 		// Error states
@@ -180,7 +184,9 @@
 		<div class="tooltip-content">
 			<div class="max-w-[6rem]">{tooltip}</div>
 		</div>
-		<status.icon size={16} class={status.color} />
+		<div class={status.pulse ? 'animate-pulse' : ''}>
+			<status.icon size={16} class={status.color} />
+		</div>
 	</div>
 {/snippet}
 {#snippet rollCodeEditor(entry: FileEntry)}
