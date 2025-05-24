@@ -110,26 +110,32 @@
 
 		// Detectar códigos duplicados usando reduce
 		const rollCodeGroups = entries
-			.filter(e => e.result?.roll_code)
-			.reduce((acc, entry) => {
-				const code = entry.result!.roll_code;
-				(acc[code] ??= []).push(entry.id);
-				return acc;
-			}, {} as Record<string, string[]>);
+			.filter((e) => e.result?.roll_code)
+			.reduce(
+				(acc, entry) => {
+					const code = entry.result!.roll_code;
+					(acc[code] ??= []).push(entry.id);
+					return acc;
+				},
+				{} as Record<string, string[]>
+			);
 
 		// Agregar errores de duplicados
 		Object.entries(rollCodeGroups)
 			.filter(([, ids]) => ids.length > 1)
 			.forEach(([code, ids]) =>
-				ids.forEach(id => errors.push({ id, message: `Código duplicado: ${code}` }))
+				ids.forEach((id) => errors.push({ id, message: `Código duplicado: ${code}` }))
 			);
 
 		// Agregar otros errores usando map y filter
-		entries.forEach(entry => {
+		entries.forEach((entry) => {
 			if (entry.status === 'pending' && !entry.formatValid) {
 				errors.push({ id: entry.id, message: `Formato no A5: ${entry.formatName}` });
 			} else if (entry.status === 'success' && !entry.result?.register_code) {
-				errors.push({ id: entry.id, message: `Estudiante no encontrado (${entry.result?.roll_code})` });
+				errors.push({
+					id: entry.id,
+					message: `Estudiante no encontrado (${entry.result?.roll_code})`
+				});
 			} else if (entry.status === 'error' && entry.error?.code !== 'STUDENT_NOT_FOUND') {
 				errors.push({ id: entry.id, message: `Error: ${entry.error?.message || 'Desconocido'}` });
 			}
@@ -147,7 +153,8 @@
 
 	// Estimación de tiempo restante
 	let estimatedTime = $derived.by(() => {
-		if (!isProcessingBatch || batchState.progress.processed === 0 || batchState.startTime === 0) return '';
+		if (!isProcessingBatch || batchState.progress.processed === 0 || batchState.startTime === 0)
+			return '';
 
 		const elapsed = Date.now() - batchState.startTime;
 		const avgTimePerFile = elapsed / batchState.progress.processed;
@@ -490,12 +497,14 @@
 			try {
 				const url = URL.createObjectURL(file);
 				// Inline image dimensions check
-				const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-					const img = new Image();
-					img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-					img.onerror = () => reject(new Error('Error cargando imagen'));
-					img.src = url;
-				});
+				const dimensions = await new Promise<{ width: number; height: number }>(
+					(resolve, reject) => {
+						const img = new Image();
+						img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+						img.onerror = () => reject(new Error('Error cargando imagen'));
+						img.src = url;
+					}
+				);
 				URL.revokeObjectURL(url);
 
 				const validation = validateA5Proportion(dimensions.width, dimensions.height);
@@ -779,7 +788,9 @@
 						</span>
 						<div class="flex items-center gap-2">
 							<span class="font-medium">
-								{Math.round((batchState.progress.processed / batchState.progress.total) * 100 || 0)}%
+								{Math.round(
+									(batchState.progress.processed / batchState.progress.total) * 100 || 0
+								)}%
 							</span>
 							{#if estimatedTime}
 								<span class="text-info">• {estimatedTime}</span>

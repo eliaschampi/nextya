@@ -40,12 +40,5 @@
 <label class={buttonClasses}>
 	<IconComponent size={16} />
 	{text}
-	<input
-		type="file"
-		{accept}
-		{multiple}
-		class="hidden"
-		onchange={handleFileChange}
-		{disabled}
-	/>
+	<input type="file" {accept} {multiple} class="hidden" onchange={handleFileChange} {disabled} />
 </label>
