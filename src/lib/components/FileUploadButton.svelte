@@ -2,7 +2,7 @@
 	import { Plus, Upload } from 'lucide-svelte';
 
 	interface Props {
-		disabled?: boolean;
+		dis?: boolean;
 		multiple?: boolean;
 		accept?: string;
 		variant?: 'primary' | 'outline';
@@ -14,7 +14,7 @@
 	}
 
 	const {
-		disabled = false,
+		dis = false,
 		multiple = true,
 		accept = 'image/jpeg,image/png,image/webp',
 		variant = 'primary',
@@ -34,11 +34,18 @@
 	}
 
 	const IconComponent = icon === 'plus' ? Plus : Upload;
-	const buttonClasses = `btn ${variant === 'primary' ? 'btn-primary' : 'btn-outline btn-primary'} btn-${size} ${disabled ? 'btn-disabled' : ''} ${className}`;
+	const buttonClasses = `btn ${variant === 'primary' ? 'btn-primary' : 'btn-outline btn-primary'} btn-${size} ${dis ? 'btn-disabled' : ''} ${className}`;
 </script>
 
 <label class={buttonClasses}>
 	<IconComponent size={16} />
 	{text}
-	<input type="file" {accept} {multiple} class="hidden" onchange={handleFileChange} {disabled} />
+	<input
+		type="file"
+		{accept}
+		{multiple}
+		class="hidden"
+		onchange={handleFileChange}
+		disabled={dis}
+	/>
 </label>

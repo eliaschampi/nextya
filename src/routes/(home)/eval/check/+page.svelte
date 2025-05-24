@@ -181,6 +181,9 @@
 			errorFilesCount === fileEntries.filter((e) => e.error?.code === 'STUDENT_NOT_FOUND').length
 	);
 
+	// Derived state for file upload button
+	let canUploadFiles = $derived(!!storeState.selectedEval && !isProcessingBatch && !isSavingBatch);
+
 	// Funciones auxiliares
 
 	async function processFile(
@@ -690,7 +693,7 @@
 					<div class="join">
 						<FileUploadButton
 							class="join-item"
-							disabled={!storeState.selectedEval || isProcessingBatch || isSavingBatch}
+							dis={!canUploadFiles}
 							onFileSelect={handleFileSelection}
 						/>
 						<button
@@ -880,7 +883,7 @@
 						<FileUploadButton
 							icon="upload"
 							text="Cargar Imágenes"
-							disabled={!storeState.selectedEval}
+							dis={!canUploadFiles}
 							onFileSelect={handleFileSelection}
 						/>
 					</div>
