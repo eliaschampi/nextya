@@ -8,6 +8,7 @@
 	import Message from '$lib/components/Message.svelte';
 	import OmrDetailsModal from '$lib/components/OmrDetailsModal.svelte';
 	import EvaluationSelectionModal from '$lib/components/EvaluationSelectionModal.svelte';
+	import FileUploadButton from '$lib/components/FileUploadButton.svelte';
 	import {
 		Upload,
 		Trash2,
@@ -15,7 +16,6 @@
 		School,
 		Play,
 		Loader2,
-		Plus,
 		Save,
 		AlertTriangle,
 		Check,
@@ -77,24 +77,25 @@
 	let isSavingBatch = $state(false);
 	let detailsModalOpen = $state(false);
 	let evalSelectionModalOpen = $state(false);
-	let batchProgress = $state({ processed: 0, total: 0 });
-	let processingStartTime = $state<number>(0);
-	let abortController = $state<AbortController | null>(null);
 
-	// Valores derivados
+	// Estado consolidado para procesamiento por lotes
+	let batchState = $state({
+		progress: { processed: 0, total: 0 },
+		startTime: 0,
+		abortController: null as AbortController | null
+	});
+
+	// Valores derivados optimizados
+	let selectedFileEntry = $derived(
+		selectedFileId ? fileEntries.find((e) => e.id === selectedFileId) : null
+	);
 	let currentPreviewUrl = $derived.by(() => {
-		if (!selectedFileId) return '';
-		const entry = fileEntries.find((e) => e.id === selectedFileId);
-		if (!entry || !entry.file) return '';
-		const url = URL.createObjectURL(entry.file);
+		if (!selectedFileEntry?.file) return '';
+		const url = URL.createObjectURL(selectedFileEntry.file);
 		return url ?? '';
 	});
-	let selectedFileResult = $derived(
-		selectedFileId ? fileEntries.find((e) => e.id === selectedFileId)?.result : null
-	);
-	let selectedFileError = $derived(
-		selectedFileId ? fileEntries.find((e) => e.id === selectedFileId)?.error : null
-	);
+	let selectedFileResult = $derived(selectedFileEntry?.result ?? null);
+	let selectedFileError = $derived(selectedFileEntry?.error ?? null);
 	let pendingFilesCount = $derived(fileEntries.filter((e) => e.status === 'pending').length);
 	let successFilesCount = $derived(fileEntries.filter((e) => e.status === 'success').length);
 	let errorFilesCount = $derived(fileEntries.filter((e) => e.status === 'error').length);
@@ -103,39 +104,33 @@
 			.length
 	);
 
-	// Lógica de validación extraída
+	// Lógica de validación optimizada
 	function getValidationErrors(entries: FileEntry[]): ValidationError[] {
 		const errors: ValidationError[] = [];
-		const rollCodes = new Map<string, string[]>();
 
-		for (const entry of entries) {
-			if (entry.result?.roll_code) {
-				const code = entry.result.roll_code;
-				if (!rollCodes.has(code)) rollCodes.set(code, []);
-				rollCodes.get(code)!.push(entry.id);
-			}
-		}
+		// Detectar códigos duplicados usando reduce
+		const rollCodeGroups = entries
+			.filter(e => e.result?.roll_code)
+			.reduce((acc, entry) => {
+				const code = entry.result!.roll_code;
+				(acc[code] ??= []).push(entry.id);
+				return acc;
+			}, {} as Record<string, string[]>);
 
-		rollCodes.forEach((ids, code) => {
-			if (ids.length > 1) {
-				ids.forEach((id) => errors.push({ id, message: `Código duplicado: ${code}` }));
-			}
-		});
+		// Agregar errores de duplicados
+		Object.entries(rollCodeGroups)
+			.filter(([, ids]) => ids.length > 1)
+			.forEach(([code, ids]) =>
+				ids.forEach(id => errors.push({ id, message: `Código duplicado: ${code}` }))
+			);
 
-		entries.forEach((entry) => {
+		// Agregar otros errores usando map y filter
+		entries.forEach(entry => {
 			if (entry.status === 'pending' && !entry.formatValid) {
-				errors.push({
-					id: entry.id,
-					message: `Formato no A5: ${entry.formatName}`
-				});
-			}
-			if (entry.status === 'success' && !entry.result?.register_code) {
-				errors.push({
-					id: entry.id,
-					message: `Estudiante no encontrado (${entry.result?.roll_code})`
-				});
-			}
-			if (entry.status === 'error' && entry.error?.code !== 'STUDENT_NOT_FOUND') {
+				errors.push({ id: entry.id, message: `Formato no A5: ${entry.formatName}` });
+			} else if (entry.status === 'success' && !entry.result?.register_code) {
+				errors.push({ id: entry.id, message: `Estudiante no encontrado (${entry.result?.roll_code})` });
+			} else if (entry.status === 'error' && entry.error?.code !== 'STUDENT_NOT_FOUND') {
 				errors.push({ id: entry.id, message: `Error: ${entry.error?.message || 'Desconocido'}` });
 			}
 		});
@@ -152,11 +147,11 @@
 
 	// Estimación de tiempo restante
 	let estimatedTime = $derived.by(() => {
-		if (!isProcessingBatch || batchProgress.processed === 0 || processingStartTime === 0) return '';
+		if (!isProcessingBatch || batchState.progress.processed === 0 || batchState.startTime === 0) return '';
 
-		const elapsed = Date.now() - processingStartTime;
-		const avgTimePerFile = elapsed / batchProgress.processed;
-		const remaining = (batchProgress.total - batchProgress.processed) * avgTimePerFile;
+		const elapsed = Date.now() - batchState.startTime;
+		const avgTimePerFile = elapsed / batchState.progress.processed;
+		const remaining = (batchState.progress.total - batchState.progress.processed) * avgTimePerFile;
 
 		if (remaining < 60000) {
 			return `${Math.ceil(remaining / 1000)}s restantes`;
@@ -277,8 +272,10 @@
 	async function processAllPendingFiles() {
 		if (!storeState.selectedEval || isProcessingBatch || pendingFilesCount === 0) return;
 		isProcessingBatch = true;
-		processingStartTime = Date.now();
-		abortController = new AbortController();
+
+		// Inicializar estado consolidado
+		batchState.startTime = Date.now();
+		batchState.abortController = new AbortController();
 
 		const previousSelectedId = selectedFileId;
 		// Chunk size dinámico basado en cantidad de archivos
@@ -293,7 +290,7 @@
 			}
 
 			// Inicializar progreso
-			batchProgress = { processed: 0, total: pendingEntries.length };
+			batchState.progress = { processed: 0, total: pendingEntries.length };
 
 			// Marcar todos los archivos pendientes como "processing"
 			for (const entry of pendingEntries) {
@@ -331,7 +328,7 @@
 				const response = await fetch('/api/eval/omr-batch', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					signal: abortController?.signal,
+					signal: batchState.abortController?.signal,
 					body: JSON.stringify({
 						evalCode: storeState.selectedEval.code,
 						evalGroupName: storeState.selectedEval.group_name,
@@ -372,13 +369,13 @@
 					}
 
 					// Actualizar progreso
-					batchProgress.processed++;
+					batchState.progress.processed++;
 				}
 
 				// Mostrar progreso parcial
 				if (chunks.length > 1) {
 					showToast(
-						`Procesando lote ${chunkIndex + 1}/${chunks.length} (${batchProgress.processed}/${batchProgress.total})`,
+						`Procesando lote ${chunkIndex + 1}/${chunks.length} (${batchState.progress.processed}/${batchState.progress.total})`,
 						'info'
 					);
 				}
@@ -401,10 +398,10 @@
 				}
 			}
 		} finally {
-			// Reiniciar estado
-			batchProgress = { processed: 0, total: 0 };
-			processingStartTime = 0;
-			abortController = null;
+			// Reiniciar estado consolidado
+			batchState.progress = { processed: 0, total: 0 };
+			batchState.startTime = 0;
+			batchState.abortController = null;
 
 			if (previousSelectedId && fileEntries.some((e) => e.id === previousSelectedId)) {
 				selectedFileId = previousSelectedId;
@@ -417,8 +414,8 @@
 
 	// Función para cancelar el procesamiento
 	function cancelProcessing() {
-		if (abortController && isProcessingBatch) {
-			abortController.abort();
+		if (batchState.abortController && isProcessingBatch) {
+			batchState.abortController.abort();
 		}
 	}
 
@@ -476,12 +473,10 @@
 		});
 	}
 
-	async function handleFileUpload(event: Event) {
-		const input = event.target as HTMLInputElement;
-		if (!input.files?.length) return;
-
-		const newFiles = Array.from(input.files).filter((file) => file.type.startsWith('image/'));
-		if (newFiles.length < input.files.length) {
+	// Helper function for file upload handling
+	async function handleFileSelection(files: FileList) {
+		const newFiles = Array.from(files).filter((file) => file.type.startsWith('image/'));
+		if (newFiles.length < files.length) {
 			showToast('Algunos archivos no son imágenes y fueron ignorados', 'warning');
 		}
 
@@ -494,7 +489,13 @@
 
 			try {
 				const url = URL.createObjectURL(file);
-				const dimensions = await getImageDimensions(url);
+				// Inline image dimensions check
+				const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+					const img = new Image();
+					img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+					img.onerror = () => reject(new Error('Error cargando imagen'));
+					img.src = url;
+				});
 				URL.revokeObjectURL(url);
 
 				const validation = validateA5Proportion(dimensions.width, dimensions.height);
@@ -533,17 +534,6 @@
 		} else {
 			showToast(`${newFiles.length} imagen(es) cargada(s)`, 'info');
 		}
-
-		input.value = '';
-	}
-
-	async function getImageDimensions(url: string): Promise<{ width: number; height: number }> {
-		return new Promise((resolve, reject) => {
-			const img = new Image();
-			img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-			img.onerror = () => reject(new Error('Error cargando imagen'));
-			img.src = url;
-		});
 	}
 
 	function clearFiles() {
@@ -624,7 +614,13 @@
 		let formatName = 'A5 Vertical';
 
 		try {
-			const dimensions = await getImageDimensions(processedImageData);
+			// Inline image dimensions check for processed image
+			const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+				const img = new Image();
+				img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+				img.onerror = () => reject(new Error('Error cargando imagen'));
+				img.src = processedImageData;
+			});
 			const validation = validateA5Proportion(dimensions.width, dimensions.height);
 			formatValid = validation.isValid;
 			formatName = validation.format;
@@ -683,21 +679,11 @@
 			<div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
 				<div class="flex flex-wrap gap-2 items-center">
 					<div class="join">
-						<label
-							class="btn join-item btn-primary btn-sm {!storeState.selectedEval
-								? 'btn-disabled'
-								: ''}"
-						>
-							<Plus size={16} /> Añadir
-							<input
-								type="file"
-								accept="image/jpeg,image/png,image/webp"
-								multiple
-								class="hidden"
-								onchange={handleFileUpload}
-								disabled={!storeState.selectedEval || isProcessingBatch || isSavingBatch}
-							/>
-						</label>
+						<FileUploadButton
+							class="join-item"
+							disabled={!storeState.selectedEval || isProcessingBatch || isSavingBatch}
+							onFileSelect={handleFileSelection}
+						/>
 						<button
 							class="btn join-item btn-error btn-outline btn-sm"
 							disabled={fileEntries.length === 0 || isProcessingBatch || isSavingBatch}
@@ -716,7 +702,7 @@
 						>
 							{#if isProcessingBatch}
 								<Loader2 class="animate-spin mr-1" size={16} />
-								Procesando {batchProgress.processed}/{batchProgress.total}
+								Procesando {batchState.progress.processed}/{batchState.progress.total}
 							{:else}
 								<Play size={16} class="mr-1" />
 								Procesar ({pendingFilesCount})
@@ -784,16 +770,16 @@
 					</div>
 					<progress
 						class="progress progress-primary w-full h-3"
-						value={batchProgress.processed}
-						max={batchProgress.total}
+						value={batchState.progress.processed}
+						max={batchState.progress.total}
 					></progress>
 					<div class="flex justify-between items-center text-xs opacity-70 mt-2">
 						<span>
-							{batchProgress.processed} de {batchProgress.total} archivos
+							{batchState.progress.processed} de {batchState.progress.total} archivos
 						</span>
 						<div class="flex items-center gap-2">
 							<span class="font-medium">
-								{Math.round((batchProgress.processed / batchProgress.total) * 100 || 0)}%
+								{Math.round((batchState.progress.processed / batchState.progress.total) * 100 || 0)}%
 							</span>
 							{#if estimatedTime}
 								<span class="text-info">• {estimatedTime}</span>
@@ -880,17 +866,12 @@
 						<p class="text-sm text-base-content/50 mb-4">
 							Selecciona una evaluación y añade imágenes para procesar.
 						</p>
-						<label class="btn btn-primary btn-sm {!storeState.selectedEval ? 'btn-disabled' : ''}">
-							<Upload size={16} class="mr-2" /> Cargar Imágenes
-							<input
-								type="file"
-								accept="image/jpeg,image/png,image/webp"
-								multiple
-								class="hidden"
-								onchange={handleFileUpload}
-								disabled={!storeState.selectedEval}
-							/>
-						</label>
+						<FileUploadButton
+							icon="upload"
+							text="Cargar Imágenes"
+							disabled={!storeState.selectedEval}
+							onFileSelect={handleFileSelection}
+						/>
 					</div>
 				{/if}
 			</div>
