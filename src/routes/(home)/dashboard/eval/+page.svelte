@@ -227,7 +227,13 @@
 							tooltip: {
 								callbacks: {
 									label: function (context) {
-										const item = context.raw as any;
+										const item = context.raw as {
+											questionNumber: number;
+											courseName: string;
+											percentage: number;
+											count: number;
+											total: number;
+										};
 										return [
 											`Pregunta ${item.questionNumber} (${item.courseName})`,
 											`${context.dataset.label}: ${item.percentage.toFixed(2)}%`,
