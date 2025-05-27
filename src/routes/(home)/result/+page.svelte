@@ -3,6 +3,7 @@
 	import EvaluationSelectionModal from '$lib/components/EvaluationSelectionModal.svelte';
 	import EvalHeader from '$lib/components/EvalHeader.svelte';
 	import Table from '$lib/components/Table.svelte';
+	import Pagination from '$lib/components/Pagination.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import {
 		School,
@@ -56,42 +57,54 @@
 	let deleteAllMode = $state(false);
 	let isDeleting = $state(false);
 
-	// Caché de resultados por evaluación
+	// Caché de resultados por evaluación con límite de tamaño
 	const resultsCache = $state<Record<string, { data: ResultItem[]; timestamp: number }>>({});
 	// TTL de caché: 5 minutos
 	const CACHE_TTL = 5 * 60 * 1000;
+	const MAX_CACHE_SIZE = 10; // Máximo 10 evaluaciones en caché
 
 	// Estado para paginación
 	let currentPage = $state(1);
 	let pageSize = $state(20); // Resultados por página
 
-	// Subscribe to the store
-	$effect(() => {
-		const unsubscribe = evaluationStore.subscribe((state) => {
-			storeState = state;
-		});
-		return unsubscribe;
-	});
+	// Store subscription cleanup
+	let unsubscribeStore: (() => void) | null = null;
 
 	// Initialize the store from URL parameters
 	onMount(() => {
+		// Check stored state first
+		checkStoredState();
+
+		// Subscribe to store
+		unsubscribeStore = evaluationStore.subscribe((state) => {
+			const prevEval = storeState.selectedEval;
+			const prevLevel = storeState.selectedLevelCode;
+
+			storeState = state;
+
+			// Load results when evaluation changes
+			if (state.selectedEval && state.selectedEval !== prevEval) {
+				loadResults(state.selectedEval.code);
+			}
+
+			// Update URL when selection changes
+			if (state.selectedLevelCode && state.selectedLevelCode !== prevLevel) {
+				updateUrlWithParams();
+			}
+		});
+
 		if (data.levelCode) {
 			evaluationStore.initFromUrl(data.levelCode, data.evalCode, 'result-page');
 		}
-	});
 
-	// Load results when evaluation changes
-	$effect(() => {
-		if (storeState.selectedEval) {
-			loadResults(storeState.selectedEval.code);
-		}
-	});
+		// Setup table event listeners
+		const cleanup = setupTableEventListeners();
 
-	// Update URL when selection changes
-	$effect(() => {
-		if (storeState.selectedLevelCode) {
-			updateUrlWithParams();
-		}
+		// Cleanup function
+		return () => {
+			unsubscribeStore?.();
+			cleanup();
+		};
 	});
 
 	// Computed value for filtered results
@@ -139,8 +152,30 @@
 		);
 	}
 
-	// These functions are used in the EvaluationSelectionModal component
+	// Cache management function
+	function cleanupCache() {
+		const now = Date.now();
+		const cacheKeys = Object.keys(resultsCache);
 
+		// Remove expired entries
+		cacheKeys.forEach((key) => {
+			if (now - resultsCache[key].timestamp > CACHE_TTL) {
+				delete resultsCache[key];
+			}
+		});
+
+		// If still over limit, remove oldest entries
+		const remainingKeys = Object.keys(resultsCache);
+		if (remainingKeys.length > MAX_CACHE_SIZE) {
+			const sortedKeys = remainingKeys.sort(
+				(a, b) => resultsCache[a].timestamp - resultsCache[b].timestamp
+			);
+			const keysToRemove = sortedKeys.slice(0, remainingKeys.length - MAX_CACHE_SIZE);
+			keysToRemove.forEach((key) => delete resultsCache[key]);
+		}
+	}
+
+	// These functions are used in the EvaluationSelectionModal component
 	async function loadResults(evalCode: string) {
 		loadingResults = true;
 
@@ -159,6 +194,9 @@
 				throw new Error('Error al cargar resultados');
 			}
 			const data = await response.json();
+
+			// Clean up cache before adding new entry
+			cleanupCache();
 
 			// Guardar en caché
 			resultsCache[evalCode] = {
@@ -321,8 +359,8 @@
 		}
 	}
 
-	// Check for stored state from previous navigation
-	$effect(() => {
+	// Check for stored state from previous navigation in onMount
+	function checkStoredState() {
 		try {
 			const storedState = sessionStorage.getItem('result_page_state');
 			if (storedState) {
@@ -336,14 +374,15 @@
 					// If the stored state matches the URL parameters, use it
 					if (state.levelCode === data.levelCode && state.evalCode === data.evalCode) {
 						// The store will be initialized in onMount
-						return;
+						return true;
 					}
 				}
 			}
 		} catch (e) {
 			console.error('Error reading from sessionStorage:', e);
 		}
-	});
+		return false;
+	}
 
 	// Define table columns
 	const resultColumns: TableColumn<ResultItem>[] = [
@@ -439,10 +478,7 @@
 		};
 	}
 
-	onMount(() => {
-		const cleanup = setupTableEventListeners();
-		return () => cleanup();
-	});
+	// Remove duplicate onMount since it's now handled above
 </script>
 
 <PageTitle
@@ -541,42 +577,7 @@
 							/>
 
 							<!-- Paginación -->
-							{#if totalPages > 1}
-								<div class="flex justify-center mt-6">
-									<div class="join">
-										<button
-											class="join-item btn btn-sm btn-primary btn-soft {currentPage === 1
-												? 'btn-disabled'
-												: ''}"
-											onclick={() => goToPage(currentPage - 1)}
-										>
-											«
-										</button>
-
-										{#each Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
-											return index + 1 + Math.max(0, Math.min(totalPages - 5, currentPage - 3));
-										}) as pageNum (pageNum)}
-											<button
-												class="join-item btn btn-sm {pageNum === currentPage
-													? 'btn-primary'
-													: 'btn-soft'}"
-												onclick={() => goToPage(pageNum)}
-											>
-												{pageNum}
-											</button>
-										{/each}
-
-										<button
-											class="join-item btn btn-sm btn-primary btn-soft {currentPage === totalPages
-												? 'btn-disabled'
-												: ''}"
-											onclick={() => goToPage(currentPage + 1)}
-										>
-											»
-										</button>
-									</div>
-								</div>
-							{/if}
+							<Pagination {currentPage} {totalPages} onPageChange={goToPage} />
 						</div>
 					{:else if searchQuery}
 						<div

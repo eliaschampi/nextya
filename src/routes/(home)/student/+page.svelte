@@ -3,8 +3,9 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import Table from '$lib/components/Table.svelte';
 	import RegistersModal from '$lib/components/RegistersModal.svelte';
+	import Pagination from '$lib/components/Pagination.svelte';
 	import { showToast } from '$lib/stores/Toast';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import type { Level, RegisterStudent, SelectForDelete, Student } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
 	// Define EventListener type
@@ -196,9 +197,20 @@
 		registersModalOpen = true;
 	}
 
+	// Event listener cleanup
+	let eventCleanup: (() => void) | null = null;
+
 	onMount(() => {
-		const cleanup = setupTableEventListeners();
-		return () => cleanup();
+		eventCleanup = setupTableEventListeners();
+
+		// Setup modal close listener
+		const handleModalClose = () => resetFormOnClose();
+		modal?.addEventListener('close', handleModalClose);
+
+		return () => {
+			eventCleanup?.();
+			modal?.removeEventListener('close', handleModalClose);
+		};
 	});
 
 	async function fetchStudentsByFilter(group?: string) {
@@ -364,8 +376,7 @@
 		if (groupSelect) groupSelect.value = '';
 		if (rollCodeInput) rollCodeInput.value = '';
 	}
-	onMount(() => modal?.addEventListener('close', resetFormOnClose));
-	onDestroy(() => modal?.removeEventListener('close', resetFormOnClose));
+	// Modal close listener is now handled in the main onMount above
 
 	async function handleDelete() {
 		if (!selectForDelete) return;
@@ -471,42 +482,7 @@
 					</div>
 
 					<!-- Paginación -->
-					{#if totalPages > 1}
-						<div class="flex justify-center mt-6">
-							<div class="join">
-								<button
-									class="join-item btn btn-sm btn-primary btn-soft {currentPage === 1
-										? 'btn-disabled'
-										: ''}"
-									onclick={() => goToPage(currentPage - 1)}
-								>
-									«
-								</button>
-
-								{#each Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
-									return index + 1 + Math.max(0, Math.min(totalPages - 5, currentPage - 3));
-								}) as pageNum (pageNum)}
-									<button
-										class="join-item btn btn-sm {pageNum === currentPage
-											? 'btn-primary'
-											: 'btn-soft'}"
-										onclick={() => goToPage(pageNum)}
-									>
-										{pageNum}
-									</button>
-								{/each}
-
-								<button
-									class="join-item btn btn-sm btn-primary btn-soft {currentPage === totalPages
-										? 'btn-disabled'
-										: ''}"
-									onclick={() => goToPage(currentPage + 1)}
-								>
-									»
-								</button>
-							</div>
-						</div>
-					{/if}
+					<Pagination {currentPage} {totalPages} onPageChange={goToPage} />
 				</div>
 			{:else if searchQuery}
 				<div class="empty-state p-8 w-full max-w-md mx-auto">

@@ -55,18 +55,23 @@
 		isLoading: false
 	});
 
-	// Subscribe to the store
-	$effect(() => {
-		const unsubscribe = evaluationStore.subscribe((state) => {
-			storeState = state;
-		});
-		return unsubscribe;
-	});
+	// Subscribe to the store using onMount for better performance
+	let unsubscribeStore: (() => void) | null = null;
 
 	// Initialize the store from URL parameters
 	onMount(() => {
+		// Subscribe to store
+		unsubscribeStore = evaluationStore.subscribe((state) => {
+			storeState = state;
+		});
+
 		// Initialize with empty values since this page doesn't have URL parameters
 		evaluationStore.initFromUrl('', null, 'eval-check-page');
+
+		// Cleanup function
+		return () => {
+			unsubscribeStore?.();
+		};
 	});
 
 	// Estado
@@ -483,6 +488,38 @@
 		});
 	}
 
+	// Helper function for image validation (extracted to avoid duplication)
+	async function validateImageFormat(
+		file: File
+	): Promise<{ formatValid: boolean; formatName: string }> {
+		let formatValid = true;
+		let formatName = 'A5 Vertical';
+
+		try {
+			const url = URL.createObjectURL(file);
+			try {
+				const dimensions = await new Promise<{ width: number; height: number }>(
+					(resolve, reject) => {
+						const img = new Image();
+						img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+						img.onerror = () => reject(new Error('Error cargando imagen'));
+						img.src = url;
+					}
+				);
+
+				const validation = validateA5Proportion(dimensions.width, dimensions.height);
+				formatValid = validation.isValid;
+				formatName = validation.format;
+			} finally {
+				URL.revokeObjectURL(url);
+			}
+		} catch (error) {
+			console.error('Error validando formato de imagen:', error);
+		}
+
+		return { formatValid, formatName };
+	}
+
 	// Helper function for file upload handling
 	async function handleFileSelection(files: FileList) {
 		const newFiles = Array.from(files).filter((file) => file.type.startsWith('image/'));
@@ -494,31 +531,10 @@
 		let invalidFormatCount = 0;
 
 		for (const file of newFiles) {
-			let formatValid = true;
-			let formatName = 'A5 Vertical';
+			const { formatValid, formatName } = await validateImageFormat(file);
 
-			try {
-				const url = URL.createObjectURL(file);
-				// Inline image dimensions check
-				const dimensions = await new Promise<{ width: number; height: number }>(
-					(resolve, reject) => {
-						const img = new Image();
-						img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-						img.onerror = () => reject(new Error('Error cargando imagen'));
-						img.src = url;
-					}
-				);
-				URL.revokeObjectURL(url);
-
-				const validation = validateA5Proportion(dimensions.width, dimensions.height);
-				formatValid = validation.isValid;
-				formatName = validation.format;
-
-				if (!validation.isValid) {
-					invalidFormatCount++;
-				}
-			} catch (error) {
-				console.error('Error validando formato de imagen:', error);
+			if (!formatValid) {
+				invalidFormatCount++;
 			}
 
 			const entry: FileEntry = {
@@ -622,20 +638,16 @@
 		const originalFile = fileEntries[entryIndex].file;
 		const newFile = base64ToFile(processedImageData, originalFile.name);
 
-		let formatValid = true;
-		let formatName = 'A5 Vertical';
-
 		try {
-			// Inline image dimensions check for processed image
+			// Use the extracted validation function
 			const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
 				const img = new Image();
 				img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
 				img.onerror = () => reject(new Error('Error cargando imagen'));
 				img.src = processedImageData;
 			});
+
 			const validation = validateA5Proportion(dimensions.width, dimensions.height);
-			formatValid = validation.isValid;
-			formatName = validation.format;
 
 			showToast(
 				validation.isValid
@@ -643,21 +655,32 @@
 					: `Guardado con formato Invalido: ${validation.format}`,
 				validation.isValid ? 'success' : 'warning'
 			);
+
+			// Actualizar el archivo y sus propiedades
+			fileEntries[entryIndex].file = newFile;
+			fileEntries[entryIndex].formatValid = validation.isValid;
+			fileEntries[entryIndex].formatName = validation.format;
 		} catch (error) {
 			console.error('Error validando formato de imagen procesada:', error);
 			showToast('Imagen editada guardada localmente', 'success');
-		}
 
-		// Actualizar el archivo y sus propiedades
-		fileEntries[entryIndex].file = newFile;
-		fileEntries[entryIndex].formatValid = formatValid;
-		fileEntries[entryIndex].formatName = formatName;
+			// Fallback: update file without validation
+			fileEntries[entryIndex].file = newFile;
+			fileEntries[entryIndex].formatValid = true;
+			fileEntries[entryIndex].formatName = 'A5 Vertical';
+		}
 	}
 
-	$effect(() => {
-		const url = currentPreviewUrl;
+	// Clean up object URLs when component unmounts
+	onMount(() => {
 		return () => {
-			if (url) URL.revokeObjectURL(url);
+			// Clean up all object URLs when component unmounts
+			fileEntries.forEach((entry) => {
+				if (entry.file) {
+					const url = URL.createObjectURL(entry.file);
+					URL.revokeObjectURL(url);
+				}
+			});
 		};
 	});
 </script>
