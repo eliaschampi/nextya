@@ -573,7 +573,7 @@
 		<StudentCard className="mb-6" />
 
 		<!-- Dashboard Content -->
-		<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+		<div class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
 			<!-- Score Evolution Chart -->
 			<div
 				class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden"
@@ -589,13 +589,13 @@
 					</div>
 					<div class="divider my-0"></div>
 					{#if !scoreEvolutionData || scoreEvolutionData.length === 0}
-						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
 							<div class="text-4xl mb-4">📈</div>
 							<p class="text-lg font-medium">No hay datos disponibles</p>
 							<p class="text-sm mt-2">No se encontraron evaluaciones para este estudiante</p>
 						</div>
 					{:else}
-						<div class="h-64 relative mt-2">
+						<div class="h-80 relative mt-2">
 							<canvas id="scoreEvolutionChart"></canvas>
 						</div>
 					{/if}
@@ -617,13 +617,13 @@
 					</div>
 					<div class="divider my-0"></div>
 					{#if !courseScoresData || courseScoresData.length === 0}
-						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
 							<div class="text-4xl mb-4">📊</div>
 							<p class="text-lg font-medium">No hay datos disponibles</p>
 							<p class="text-sm mt-2">No se encontraron cursos para este estudiante</p>
 						</div>
 					{:else}
-						<div class="h-64 relative mt-2">
+						<div class="h-80 relative mt-2">
 							<canvas id="courseScoresChart"></canvas>
 						</div>
 					{/if}
@@ -645,13 +645,13 @@
 					</div>
 					<div class="divider my-0"></div>
 					{#if !courseEvolutionData || courseEvolutionData.length === 0}
-						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
 							<div class="text-4xl mb-4">📈</div>
 							<p class="text-lg font-medium">No hay datos disponibles</p>
 							<p class="text-sm mt-2">No se encontraron datos de evolución por curso</p>
 						</div>
 					{:else}
-						<div class="h-64 relative mt-2">
+						<div class="h-80 relative mt-2">
 							<canvas id="courseEvolutionChart"></canvas>
 						</div>
 					{/if}
