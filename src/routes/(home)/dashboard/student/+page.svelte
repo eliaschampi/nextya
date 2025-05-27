@@ -4,7 +4,7 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast.js';
 	import { User, Search, Activity, ChartPie } from 'lucide-svelte';
-	import type { Student, StudentScoreEvolution, StudentCourseScore } from '$lib/types';
+	import type { Student, StudentScoreEvolution, StudentCourseScore, StudentCourseEvolution } from '$lib/types';
 	import { studentStore } from '$lib/stores/student';
 	import StudentCard from '$lib/components/StudentCard.svelte';
 
@@ -37,11 +37,13 @@
 	let dashboardLoading = $state(false);
 	let scoreEvolutionData = $state<StudentScoreEvolution[] | null>(null);
 	let courseScoresData = $state<StudentCourseScore[] | null>(null);
+	let courseEvolutionData = $state<StudentCourseEvolution[] | null>(null);
 	let modal: HTMLDialogElement | null = $state(null);
 
 	// Chart references
 	let scoreEvolutionChart: Chart | null = $state(null);
 	let courseScoresChart: Chart | null = $state(null);
+	let courseEvolutionChart: Chart | null = $state(null);
 
 	// Colors for charts
 	const chartColors = {
@@ -54,6 +56,7 @@
 	// Derived values for chart data
 	const scoreEvolutionChartData = $derived(prepareScoreEvolutionData(scoreEvolutionData));
 	const courseScoresChartData = $derived(prepareCourseScoresData(courseScoresData));
+	const courseEvolutionChartData = $derived(prepareCourseEvolutionData(courseEvolutionData));
 
 	// Track chart data changes and render charts when data is available
 	const shouldRenderScoreEvolutionChart = $derived(
@@ -61,6 +64,9 @@
 	);
 	const shouldRenderCourseScoresChart = $derived(
 		courseScoresData !== null && !dashboardLoading && courseScoresData.length > 0
+	);
+	const shouldRenderCourseEvolutionChart = $derived(
+		courseEvolutionData !== null && !dashboardLoading && courseEvolutionData.length > 0
 	);
 
 	// Render charts when data changes
@@ -73,6 +79,12 @@
 	$effect(() => {
 		if (shouldRenderCourseScoresChart) {
 			renderCourseScoresChart();
+		}
+	});
+
+	$effect(() => {
+		if (shouldRenderCourseEvolutionChart) {
+			renderCourseEvolutionChart();
 		}
 	});
 
@@ -163,10 +175,11 @@
 		destroyCharts();
 
 		try {
-			// Load score evolution and course scores in parallel
-			const [scoreEvolutionResponse, courseScoresResponse] = await Promise.all([
+			// Load score evolution, course scores, and course evolution in parallel
+			const [scoreEvolutionResponse, courseScoresResponse, courseEvolutionResponse] = await Promise.all([
 				fetch(`/api/dashboard/student/scores/${studentCode}`),
-				fetch(`/api/dashboard/student/courses/${studentCode}`)
+				fetch(`/api/dashboard/student/courses/${studentCode}`),
+				fetch(`/api/dashboard/student/course-evolution/${studentCode}`)
 			]);
 
 			// Handle score evolution response
@@ -183,13 +196,22 @@
 				throw new Error(errorMessage);
 			}
 
+			// Handle course evolution response
+			if (!courseEvolutionResponse.ok) {
+				const errorData = await courseEvolutionResponse.json().catch(() => ({}));
+				const errorMessage = errorData.error || 'Error al cargar datos de evolución por curso';
+				throw new Error(errorMessage);
+			}
+
 			// Parse response data
 			const scoreEvolution = await scoreEvolutionResponse.json();
 			const courseScores = await courseScoresResponse.json();
+			const courseEvolution = await courseEvolutionResponse.json();
 
 			// Update state with response data
 			scoreEvolutionData = scoreEvolution;
 			courseScoresData = courseScores;
+			courseEvolutionData = courseEvolution;
 		} catch (error) {
 			console.error('Error loading student dashboard data:', error);
 			showToast(
@@ -198,6 +220,7 @@
 			);
 			scoreEvolutionData = null;
 			courseScoresData = null;
+			courseEvolutionData = null;
 		} finally {
 			dashboardLoading = false;
 		}
@@ -247,6 +270,73 @@
 		} catch (error) {
 			console.error('Error processing course scores data:', error);
 			return { labels: [], values: [] };
+		}
+	}
+
+	/**
+	 * Prepare data for course evolution chart
+	 * @param data Course evolution data
+	 * @returns Formatted data for chart
+	 */
+	function prepareCourseEvolutionData(data: StudentCourseEvolution[] | null) {
+		if (!data || !Array.isArray(data) || !data.length) {
+			return { labels: [], datasets: [] };
+		}
+
+		try {
+			// Group data by course
+			const courseGroups = data.reduce((acc, item) => {
+				const courseName = item.course_name || 'Sin nombre';
+				if (!acc[courseName]) {
+					acc[courseName] = [];
+				}
+				acc[courseName].push(item);
+				return acc;
+			}, {} as Record<string, StudentCourseEvolution[]>);
+
+			// Get all unique evaluation names sorted by date
+			const allEvals = [...data].sort(
+				(a, b) => new Date(a.eval_date).getTime() - new Date(b.eval_date).getTime()
+			);
+			const uniqueEvals = Array.from(new Set(allEvals.map(item => item.eval_name)));
+
+			// Create datasets for each course
+			const courseNames = Object.keys(courseGroups);
+			const datasets = courseNames.map((courseName, index) => {
+				const courseData = courseGroups[courseName];
+				const dataPoints = uniqueEvals.map(evalName => {
+					const evalData = courseData.find(item => item.eval_name === evalName);
+					return evalData ? evalData.score : null;
+				});
+
+				const colors = [
+					chartColors.primary,
+					chartColors.secondary,
+					chartColors.tertiary,
+					chartColors.quaternary,
+					'rgba(153, 102, 255, 0.8)',
+					'rgba(255, 159, 64, 0.8)'
+				];
+
+				return {
+					label: courseName,
+					data: dataPoints,
+					borderColor: colors[index % colors.length],
+					backgroundColor: colors[index % colors.length].replace('0.8', '0.1'),
+					borderWidth: 2,
+					fill: false,
+					tension: 0.4,
+					spanGaps: false
+				};
+			});
+
+			return {
+				labels: uniqueEvals,
+				datasets
+			};
+		} catch (error) {
+			console.error('Error processing course evolution data:', error);
+			return { labels: [], datasets: [] };
 		}
 	}
 
@@ -379,6 +469,65 @@
 			});
 		}, 50);
 	}
+
+	/**
+	 * Render course evolution chart
+	 */
+	function renderCourseEvolutionChart() {
+		if (!courseEvolutionChartData.labels.length || !courseEvolutionChartData.datasets.length) return;
+
+		// Ensure DOM is ready before rendering
+		setTimeout(() => {
+			const ctx = document.getElementById('courseEvolutionChart') as HTMLCanvasElement;
+			if (!ctx) return;
+
+			// Destroy existing chart if it exists
+			if (courseEvolutionChart) courseEvolutionChart.destroy();
+
+			courseEvolutionChart = new Chart(ctx, {
+				type: 'line',
+				data: {
+					labels: courseEvolutionChartData.labels,
+					datasets: courseEvolutionChartData.datasets
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					plugins: {
+						legend: {
+							display: true,
+							position: 'top'
+						},
+						tooltip: {
+							callbacks: {
+								label: function (context) {
+									const label = context.dataset.label || '';
+									const value = context.raw as number;
+									return value !== null ? `${label}: ${value.toFixed(2)}` : `${label}: Sin datos`;
+								}
+							}
+						}
+					},
+					scales: {
+						x: {
+							title: {
+								display: true,
+								text: 'Evaluaciones'
+							}
+						},
+						y: {
+							beginAtZero: true,
+							max: 20,
+							title: {
+								display: true,
+								text: 'Puntaje'
+							}
+						}
+					}
+				}
+			});
+		}, 50);
+	}
 </script>
 
 <PageTitle
@@ -424,7 +573,7 @@
 		<StudentCard className="mb-6" />
 
 		<!-- Dashboard Content -->
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+		<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
 			<!-- Score Evolution Chart -->
 			<div
 				class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden"
@@ -476,6 +625,34 @@
 					{:else}
 						<div class="h-64 relative mt-2">
 							<canvas id="courseScoresChart"></canvas>
+						</div>
+					{/if}
+				</div>
+			</div>
+
+			<!-- Course Evolution Chart -->
+			<div
+				class="card bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/20 rounded-xl overflow-hidden"
+			>
+				<div class="card-body p-5">
+					<div class="flex items-center gap-3 mb-3">
+						<div
+							class="w-8 h-8 flex items-center justify-center rounded-lg bg-accent/15 text-accent"
+						>
+							<Activity class="h-5 w-5" />
+						</div>
+						<h3 class="text-lg font-medium">Evolución por Curso</h3>
+					</div>
+					<div class="divider my-0"></div>
+					{#if !courseEvolutionData || courseEvolutionData.length === 0}
+						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+							<div class="text-4xl mb-4">📈</div>
+							<p class="text-lg font-medium">No hay datos disponibles</p>
+							<p class="text-sm mt-2">No se encontraron datos de evolución por curso</p>
+						</div>
+					{:else}
+						<div class="h-64 relative mt-2">
+							<canvas id="courseEvolutionChart"></canvas>
 						</div>
 					{/if}
 				</div>

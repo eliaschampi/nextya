@@ -30,6 +30,18 @@ export interface ScoreEvolutionChartData {
 }
 
 /**
+ * Represents course evolution data for a student
+ */
+export interface StudentCourseEvolution {
+	eval_code: string;
+	eval_name: string;
+	eval_date: string;
+	course_code: string;
+	course_name: string;
+	score: number;
+}
+
+/**
  * Represents chart data for course scores
  */
 export interface CourseScoreChartData {

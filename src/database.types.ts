@@ -613,6 +613,17 @@ export type Database = {
 					average_score: number;
 				}[];
 			};
+			get_student_course_evolution: {
+				Args: { p_student_code: string };
+				Returns: {
+					eval_code: string;
+					eval_name: string;
+					eval_date: string;
+					course_code: string;
+					course_name: string;
+					score: number;
+				}[];
+			};
 		};
 		Enums: {
 			entity_enum:

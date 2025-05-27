@@ -84,6 +84,52 @@ BEGIN
 END;
 $$;
 
+-- Function to get student course evolution data (scores by course over time)
+CREATE OR REPLACE FUNCTION get_student_course_evolution(p_student_code TEXT)
+RETURNS TABLE (
+    eval_code TEXT,
+    eval_name VARCHAR,
+    eval_date DATE,
+    course_code TEXT,
+    course_name VARCHAR,
+    score NUMERIC
+) LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    RETURN QUERY
+    WITH course_evolution AS (
+        -- Get section-specific results for the student over time
+        SELECT
+            e.code AS eval_code,
+            e.name AS eval_name,
+            e.eval_date,
+            es.course_code,
+            c.name AS course_name,
+            er.score
+        FROM
+            eval_results er
+            JOIN eval_sections es ON er.section_code = es.code
+            JOIN courses c ON es.course_code = c.code
+            JOIN evals e ON er.eval_code = e.code
+            JOIN registers r ON er.register_code = r.code
+        WHERE
+            r.student_code = p_student_code::UUID
+            AND er.section_code IS NOT NULL
+        ORDER BY
+            e.eval_date ASC, c.name ASC
+    )
+    SELECT
+        ce.eval_code::TEXT,
+        ce.eval_name,
+        ce.eval_date,
+        ce.course_code::TEXT,
+        ce.course_name,
+        ce.score
+    FROM
+        course_evolution ce;
+END;
+$$;
+
 -- Grant execute permissions to authenticated users
 GRANT EXECUTE ON FUNCTION get_student_score_evolution(TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_student_course_scores(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_student_course_evolution(TEXT) TO authenticated;
