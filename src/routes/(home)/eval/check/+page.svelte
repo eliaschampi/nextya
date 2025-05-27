@@ -71,6 +71,7 @@
 		// Cleanup function
 		return () => {
 			unsubscribeStore?.();
+			urlCleanup?.();
 		};
 	});
 
@@ -90,70 +91,103 @@
 		abortController: null as AbortController | null
 	});
 
+	// Gestión optimizada de Object URLs
+	let currentPreviewUrl = $state('');
+	let urlCleanup: (() => void) | null = null;
+
+	$effect(() => {
+		urlCleanup?.();
+
+		const entry = selectedFileId ? fileEntries.find((e) => e.id === selectedFileId) : null;
+		if (entry?.file) {
+			const url = URL.createObjectURL(entry.file);
+			currentPreviewUrl = url;
+			urlCleanup = () => URL.revokeObjectURL(url);
+		} else {
+			currentPreviewUrl = '';
+			urlCleanup = null;
+		}
+	});
+
+	// Cálculo único de estadísticas
+	let fileStats = $derived.by(() => {
+		const stats = {
+			pending: 0,
+			success: 0,
+			error: 0,
+			saveable: 0,
+			saved: 0
+		};
+
+		for (const entry of fileEntries) {
+			if (entry.status === 'pending') stats.pending++;
+			else if (entry.status === 'success') {
+				stats.success++;
+				if (entry.result?.register_code && !entry.saved) stats.saveable++;
+			} else if (entry.status === 'error') stats.error++;
+			if (entry.saved) stats.saved++;
+		}
+
+		return stats;
+	});
+
 	// Valores derivados optimizados
 	let selectedFileEntry = $derived(
 		selectedFileId ? fileEntries.find((e) => e.id === selectedFileId) : null
 	);
-	let currentPreviewUrl = $derived.by(() => {
-		if (!selectedFileEntry?.file) return '';
-		const url = URL.createObjectURL(selectedFileEntry.file);
-		return url ?? '';
-	});
 	let selectedFileResult = $derived(selectedFileEntry?.result ?? null);
 	let selectedFileError = $derived(selectedFileEntry?.error ?? null);
-	let pendingFilesCount = $derived(fileEntries.filter((e) => e.status === 'pending').length);
-	let successFilesCount = $derived(fileEntries.filter((e) => e.status === 'success').length);
-	let errorFilesCount = $derived(fileEntries.filter((e) => e.status === 'error').length);
-	let saveableFilesCount = $derived(
-		fileEntries.filter((e) => e.status === 'success' && !!e.result?.register_code && !e.saved)
-			.length
-	);
+	let pendingFilesCount = $derived(fileStats.pending);
+	let successFilesCount = $derived(fileStats.success);
+	let errorFilesCount = $derived(fileStats.error);
+	let saveableFilesCount = $derived(fileStats.saveable);
 
-	// Lógica de validación optimizada
-	function getValidationErrors(entries: FileEntry[]): ValidationError[] {
+	// Validación optimizada con early return
+	let validationErrors = $derived.by(() => {
+		if (isProcessingBatch) return [];
+
 		const errors: ValidationError[] = [];
+		const rollCodeMap = new Map<string, string[]>();
 
-		// Detectar códigos duplicados usando reduce
-		const rollCodeGroups = entries
-			.filter((e) => e.result?.roll_code)
-			.reduce(
-				(acc, entry) => {
-					const code = entry.result!.roll_code;
-					(acc[code] ??= []).push(entry.id);
-					return acc;
-				},
-				{} as Record<string, string[]>
-			);
-
-		// Agregar errores de duplicados
-		Object.entries(rollCodeGroups)
-			.filter(([, ids]) => ids.length > 1)
-			.forEach(([code, ids]) =>
-				ids.forEach((id) => errors.push({ id, message: `Código duplicado: ${code}` }))
-			);
-
-		// Agregar otros errores usando map y filter
-		entries.forEach((entry) => {
+		for (const entry of fileEntries) {
 			if (entry.status === 'pending' && !entry.formatValid) {
 				errors.push({ id: entry.id, message: `Formato no A5: ${entry.formatName}` });
-			} else if (entry.status === 'success' && !entry.result?.register_code) {
+			}
+
+			if (entry.status === 'success' && !entry.result?.register_code) {
 				errors.push({
 					id: entry.id,
 					message: `Estudiante no encontrado (${entry.result?.roll_code})`
 				});
-			} else if (entry.status === 'error' && entry.error?.code !== 'STUDENT_NOT_FOUND') {
-				errors.push({ id: entry.id, message: `Error: ${entry.error?.message || 'Desconocido'}` });
 			}
-		});
+
+			if (entry.status === 'error' && entry.error?.code !== 'STUDENT_NOT_FOUND') {
+				errors.push({
+					id: entry.id,
+					message: `Error: ${entry.error?.message || 'Desconocido'}`
+				});
+			}
+
+			if (entry.result?.roll_code) {
+				const code = entry.result.roll_code;
+				if (!rollCodeMap.has(code)) {
+					rollCodeMap.set(code, []);
+				}
+				rollCodeMap.get(code)!.push(entry.id);
+			}
+		}
+
+		for (const [code, ids] of rollCodeMap) {
+			if (ids.length > 1) {
+				for (const id of ids) {
+					errors.push({ id, message: `Código duplicado: ${code}` });
+				}
+			}
+		}
 
 		return errors;
-	}
-
-	let validationErrors = $derived.by(() => {
-		// Solo validar cuando no esté procesando para mejor performance
-		if (isProcessingBatch) return [];
-		return getValidationErrors(fileEntries);
 	});
+
 	let validationErrorsMap = $derived(new Map(validationErrors.map((err) => [err.id, err.message])));
 
 	// Estimación de tiempo restante
@@ -185,11 +219,9 @@
 			pendingFilesCount === 0 &&
 			errorFilesCount === fileEntries.filter((e) => e.error?.code === 'STUDENT_NOT_FOUND').length
 	);
-
-	// Derived state for file upload button
 	let canUploadFiles = $derived(!!storeState.selectedEval && !isProcessingBatch && !isSavingBatch);
 
-	// Funciones auxiliares
+	// Funciones auxiliares optimizadas
 
 	async function processFile(
 		id: string,
@@ -217,11 +249,8 @@
 
 		try {
 			const file = fileEntries[entryIndex].file;
-			// Usar la misma función de optimización que en el procesamiento por lotes
 			const imageData = await readAndOptimizeImage(file);
 
-			// Usar el endpoint de batch incluso para un solo archivo
-			// para mantener consistencia y reutilizar código
 			const response = await fetch('/api/eval/omr-batch', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -251,7 +280,7 @@
 				throw new Error(batchResponse.error?.message || 'Error desconocido en el procesamiento');
 			}
 
-			const result = batchResponse.results[0]; // Solo debería haber un resultado
+			const result = batchResponse.results[0];
 
 			if (result.success && result.data) {
 				fileEntries[entryIndex].status = 'success';
@@ -286,60 +315,47 @@
 
 	async function processAllPendingFiles() {
 		if (!storeState.selectedEval || isProcessingBatch || pendingFilesCount === 0) return;
-		isProcessingBatch = true;
 
-		// Inicializar estado consolidado
+		isProcessingBatch = true;
 		batchState.startTime = Date.now();
 		batchState.abortController = new AbortController();
 
 		const previousSelectedId = selectedFileId;
-		// Chunk size dinámico basado en cantidad de archivos
-		const pendingCount = fileEntries.filter((e) => e.status === 'pending' && e.formatValid).length;
-		const CHUNK_SIZE = Math.min(10, Math.max(3, Math.floor(pendingCount / 4)));
+		const pendingEntries = fileEntries.filter((e) => e.status === 'pending' && e.formatValid);
+
+		if (pendingEntries.length === 0) {
+			showToast('No hay archivos válidos para procesar. Corrige el formato A5.', 'warning');
+			isProcessingBatch = false;
+			return;
+		}
+
+		const CHUNK_SIZE = Math.min(10, Math.max(3, Math.floor(pendingEntries.length / 4)));
+		batchState.progress = { processed: 0, total: pendingEntries.length };
+
+		for (const entry of pendingEntries) {
+			const index = fileEntries.findIndex((e) => e.id === entry.id);
+			if (index !== -1) {
+				fileEntries[index] = {
+					...fileEntries[index],
+					status: 'processing',
+					result: null,
+					error: null
+				};
+			}
+		}
 
 		try {
-			const pendingEntries = fileEntries.filter((e) => e.status === 'pending' && e.formatValid);
-			if (pendingEntries.length === 0) {
-				showToast('No hay archivos válidos para procesar. Corrige el formato A5.', 'warning');
-				return;
-			}
-
-			// Inicializar progreso
-			batchState.progress = { processed: 0, total: pendingEntries.length };
-
-			// Marcar todos los archivos pendientes como "processing"
-			for (const entry of pendingEntries) {
-				const entryIndex = fileEntries.findIndex((e) => e.id === entry.id);
-				if (entryIndex !== -1) {
-					fileEntries[entryIndex].status = 'processing';
-					fileEntries[entryIndex].result = null;
-					fileEntries[entryIndex].error = null;
-				}
-			}
-
-			// Dividir en chunks para evitar payloads demasiado grandes
-			const chunks = [];
 			for (let i = 0; i < pendingEntries.length; i += CHUNK_SIZE) {
-				chunks.push(pendingEntries.slice(i, i + CHUNK_SIZE));
-			}
+				const chunk = pendingEntries.slice(i, i + CHUNK_SIZE);
+				const chunkIndex = Math.floor(i / CHUNK_SIZE);
 
-			// Procesar cada chunk secuencialmente
-			for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
-				const chunk = chunks[chunkIndex];
-
-				// Optimización: Convertir imágenes a base64 en paralelo
 				const batchItems = await Promise.all(
-					chunk.map(async (entry) => {
-						// Optimización: Comprimir imágenes antes de enviar
-						const imageData = await readAndOptimizeImage(entry.file);
-						return {
-							id: entry.id,
-							imageData
-						};
-					})
+					chunk.map(async (entry) => ({
+						id: entry.id,
+						imageData: await readAndOptimizeImage(entry.file)
+					}))
 				);
 
-				// Enviar solicitud de procesamiento por lotes
 				const response = await fetch('/api/eval/omr-batch', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
@@ -349,7 +365,6 @@
 						evalGroupName: storeState.selectedEval.group_name,
 						evalLevelCode: storeState.selectedEval.level_code,
 						items: batchItems,
-						// Solo enviar secciones y preguntas en el primer chunk para reducir payload
 						sections: chunkIndex === 0 ? storeState.selectedEval.eval_sections : undefined,
 						questions: chunkIndex === 0 ? evalQuestions : undefined
 					} as ApiOmrBatchRequest)
@@ -362,43 +377,34 @@
 				const batchResponse = (await response.json()) as ApiOmrBatchResponse;
 
 				if (!batchResponse.success) {
-					throw new Error(
-						batchResponse.error?.message || 'Error desconocido en el procesamiento por lotes'
-					);
+					throw new Error(batchResponse.error?.message || 'Error desconocido');
 				}
 
-				// Procesar resultados
 				for (const result of batchResponse.results) {
-					const entryIndex = fileEntries.findIndex((e) => e.id === result.id);
-					if (entryIndex === -1) continue;
+					const index = fileEntries.findIndex((e) => e.id === result.id);
+					if (index === -1) continue;
 
-					if (result.success && result.data) {
-						fileEntries[entryIndex].status = 'success';
-						fileEntries[entryIndex].result = result.data;
-						fileEntries[entryIndex].error = null;
-						fileEntries[entryIndex].saved = false;
-					} else if (!result.success && result.error) {
-						fileEntries[entryIndex].status = 'error';
-						fileEntries[entryIndex].error = result.error;
-						fileEntries[entryIndex].result = null;
-					}
+					fileEntries[index] = {
+						...fileEntries[index],
+						status: result.success ? 'success' : 'error',
+						result: result.success ? (result.data ?? null) : null,
+						error: result.success ? null : (result.error ?? null),
+						saved: false
+					};
 
-					// Actualizar progreso
 					batchState.progress.processed++;
 				}
 
-				// Mostrar progreso parcial
-				if (chunks.length > 1) {
-					showToast(
-						`Procesando lote ${chunkIndex + 1}/${chunks.length} (${batchState.progress.processed}/${batchState.progress.total})`,
-						'info'
+				if (pendingEntries.length > CHUNK_SIZE) {
+					const progress = Math.round(
+						(batchState.progress.processed / batchState.progress.total) * 100
 					);
+					showToast(`Procesando: ${progress}%`, 'info');
 				}
 			}
 
 			showToast('Procesamiento por lotes completado', 'success');
 		} catch (error) {
-			// Verificar si fue cancelado
 			if (error instanceof Error && error.name === 'AbortError') {
 				showToast('Procesamiento cancelado', 'info');
 			} else {
@@ -406,121 +412,133 @@
 				console.error('Batch processing error:', error);
 			}
 
-			// Marcar todos los archivos en procesamiento como pendientes nuevamente
-			for (const entry of fileEntries) {
-				if (entry.status === 'processing') {
-					entry.status = 'pending';
-				}
-			}
+			fileEntries = fileEntries.map((entry) =>
+				entry.status === 'processing' ? { ...entry, status: 'pending' } : entry
+			);
 		} finally {
-			// Reiniciar estado consolidado
-			batchState.progress = { processed: 0, total: 0 };
-			batchState.startTime = 0;
-			batchState.abortController = null;
+			batchState = {
+				progress: { processed: 0, total: 0 },
+				startTime: 0,
+				abortController: null
+			};
 
-			if (previousSelectedId && fileEntries.some((e) => e.id === previousSelectedId)) {
-				selectedFileId = previousSelectedId;
-			} else if (fileEntries.length > 0) {
-				selectedFileId = fileEntries[0].id;
-			}
+			selectedFileId =
+				previousSelectedId && fileEntries.some((e) => e.id === previousSelectedId)
+					? previousSelectedId
+					: (fileEntries[0]?.id ?? null);
+
 			isProcessingBatch = false;
 		}
 	}
 
-	// Función para cancelar el procesamiento
 	function cancelProcessing() {
 		if (batchState.abortController && isProcessingBatch) {
 			batchState.abortController.abort();
 		}
 	}
 
-	// Función para optimizar imágenes antes de enviarlas
 	async function readAndOptimizeImage(file: File): Promise<string> {
 		return new Promise((resolve, reject) => {
 			const reader = new FileReader();
+
+			const cleanup = () => {
+				reader.onload = null;
+				reader.onerror = null;
+			};
+
 			reader.onload = (e) => {
 				const img = new Image();
+
 				img.onload = () => {
-					// Crear un canvas para redimensionar/comprimir la imagen
 					const canvas = document.createElement('canvas');
-					// Mantener la proporción A5 pero reducir tamaño si es muy grande
-					const MAX_WIDTH = 1240; // Ancho máximo razonable para OMR
-					const MAX_HEIGHT = 1748; // Alto máximo para mantener proporción A5
+					const MAX_WIDTH = 1240;
+					const MAX_HEIGHT = 1748;
 
 					let width = img.width;
 					let height = img.height;
 
-					// Redimensionar solo si la imagen es más grande que los límites
 					if (width > MAX_WIDTH || height > MAX_HEIGHT) {
-						if (width / height > MAX_WIDTH / MAX_HEIGHT) {
-							// Más ancha que alta en proporción
-							width = MAX_WIDTH;
-							height = Math.floor(img.height * (MAX_WIDTH / img.width));
-						} else {
-							// Más alta que ancha en proporción
-							height = MAX_HEIGHT;
-							width = Math.floor(img.width * (MAX_HEIGHT / img.height));
-						}
+						const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
+						width = Math.floor(width * ratio);
+						height = Math.floor(height * ratio);
 					}
 
 					canvas.width = width;
 					canvas.height = height;
 
-					// Dibujar la imagen redimensionada
 					const ctx = canvas.getContext('2d');
 					if (!ctx) {
-						resolve(e.target?.result as string); // Fallback al original si no se puede comprimir
+						cleanup();
+						resolve(e.target?.result as string);
 						return;
 					}
 
 					ctx.drawImage(img, 0, 0, width, height);
+					const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
-					// Convertir a base64 con calidad reducida para JPEG
-					const quality = 0.85; // 85% de calidad, buen balance entre tamaño y calidad
-					const dataUrl = canvas.toDataURL('image/jpeg', quality);
+					img.onload = null;
+					img.onerror = null;
+					cleanup();
+
 					resolve(dataUrl);
 				};
-				img.onerror = () => reject(new Error('Error al cargar la imagen para optimización'));
+
+				img.onerror = () => {
+					img.onload = null;
+					img.onerror = null;
+					cleanup();
+					reject(new Error('Error al cargar la imagen para optimización'));
+				};
+
 				img.src = e.target?.result as string;
 			};
-			reader.onerror = reject;
+
+			reader.onerror = () => {
+				cleanup();
+				reject(new Error('Error al leer el archivo'));
+			};
+
 			reader.readAsDataURL(file);
 		});
 	}
 
-	// Helper function for image validation (extracted to avoid duplication)
 	async function validateImageFormat(
 		file: File
 	): Promise<{ formatValid: boolean; formatName: string }> {
-		let formatValid = true;
-		let formatName = 'A5 Vertical';
+		const url = URL.createObjectURL(file);
 
 		try {
-			const url = URL.createObjectURL(file);
-			try {
-				const dimensions = await new Promise<{ width: number; height: number }>(
-					(resolve, reject) => {
-						const img = new Image();
-						img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-						img.onerror = () => reject(new Error('Error cargando imagen'));
-						img.src = url;
-					}
-				);
+			const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+				const img = new Image();
+				const timeout = setTimeout(() => {
+					img.onload = null;
+					img.onerror = null;
+					reject(new Error('Timeout cargando imagen'));
+				}, 5000);
 
-				const validation = validateA5Proportion(dimensions.width, dimensions.height);
-				formatValid = validation.isValid;
-				formatName = validation.format;
-			} finally {
-				URL.revokeObjectURL(url);
-			}
+				img.onload = () => {
+					clearTimeout(timeout);
+					resolve({ width: img.naturalWidth, height: img.naturalHeight });
+				};
+
+				img.onerror = () => {
+					clearTimeout(timeout);
+					reject(new Error('Error cargando imagen'));
+				};
+
+				img.src = url;
+			});
+
+			const validation = validateA5Proportion(dimensions.width, dimensions.height);
+			return { formatValid: validation.isValid, formatName: validation.format };
 		} catch (error) {
 			console.error('Error validando formato de imagen:', error);
+			return { formatValid: true, formatName: 'A5 Vertical' };
+		} finally {
+			URL.revokeObjectURL(url);
 		}
-
-		return { formatValid, formatName };
 	}
 
-	// Helper function for file upload handling
 	async function handleFileSelection(files: FileList) {
 		const newFiles = Array.from(files).filter((file) => file.type.startsWith('image/'));
 		if (newFiles.length < files.length) {
@@ -565,7 +583,6 @@
 	}
 
 	function clearFiles() {
-		// No need to revoke object URLs for File objects
 		fileEntries = [];
 		selectedFileId = null;
 		showToast('Archivos eliminados', 'success');
@@ -635,54 +652,32 @@
 	async function handleSaveImage(processedImageData: string) {
 		const entryIndex = fileEntries.findIndex((e) => e.id === selectedFileId);
 		if (entryIndex === -1) return;
+
 		const originalFile = fileEntries[entryIndex].file;
 		const newFile = base64ToFile(processedImageData, originalFile.name);
 
 		try {
-			// Use the extracted validation function
-			const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-				const img = new Image();
-				img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-				img.onerror = () => reject(new Error('Error cargando imagen'));
-				img.src = processedImageData;
-			});
-
-			const validation = validateA5Proportion(dimensions.width, dimensions.height);
+			const validation = await validateImageFormat(newFile);
 
 			showToast(
-				validation.isValid
+				validation.formatValid
 					? 'Imagen editada guardada localmente.'
-					: `Guardado con formato Invalido: ${validation.format}`,
-				validation.isValid ? 'success' : 'warning'
+					: `Guardado con formato Invalido: ${validation.formatName}`,
+				validation.formatValid ? 'success' : 'warning'
 			);
 
-			// Actualizar el archivo y sus propiedades
 			fileEntries[entryIndex].file = newFile;
-			fileEntries[entryIndex].formatValid = validation.isValid;
-			fileEntries[entryIndex].formatName = validation.format;
+			fileEntries[entryIndex].formatValid = validation.formatValid;
+			fileEntries[entryIndex].formatName = validation.formatName;
 		} catch (error) {
 			console.error('Error validando formato de imagen procesada:', error);
 			showToast('Imagen editada guardada localmente', 'success');
 
-			// Fallback: update file without validation
 			fileEntries[entryIndex].file = newFile;
 			fileEntries[entryIndex].formatValid = true;
 			fileEntries[entryIndex].formatName = 'A5 Vertical';
 		}
 	}
-
-	// Clean up object URLs when component unmounts
-	onMount(() => {
-		return () => {
-			// Clean up all object URLs when component unmounts
-			fileEntries.forEach((entry) => {
-				if (entry.file) {
-					const url = URL.createObjectURL(entry.file);
-					URL.revokeObjectURL(url);
-				}
-			});
-		};
-	});
 </script>
 
 <PageTitle
