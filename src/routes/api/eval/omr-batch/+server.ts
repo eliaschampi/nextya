@@ -16,6 +16,24 @@ import { fetchQuestions } from '$lib/data/question';
 
 const DEBUG_OMR = false;
 
+// Helper para validar request body
+function createValidationError(message: string, status = 400) {
+	return json(
+		{
+			success: false,
+			error: { code: 'INVALID_PARAMS', message },
+			results: []
+		},
+		{ status }
+	);
+}
+
+// Helper para calcular tamaño de imagen base64
+function getBase64ImageSize(imageData: string): number {
+	const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+	return Math.ceil((base64Data.length * 3) / 4);
+}
+
 // Helper para crear respuestas de error estandarizadas para un item específico
 function createItemErrorResponse(
 	itemId: string,
@@ -82,105 +100,33 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const body = await request.json();
 
 		// Validate required fields
-		if (
-			!body.items ||
-			!Array.isArray(body.items) ||
-			!body.evalCode ||
-			!body.evalGroupName ||
-			!body.evalLevelCode
-		) {
-			return json(
-				{
-					success: false,
-					error: {
-						code: 'INVALID_PARAMS',
-						message: 'Missing required fields: items, evalCode, evalGroupName, or evalLevelCode'
-					},
-					results: []
-				},
-				{ status: 400 }
-			);
+		const requiredFields = ['items', 'evalCode', 'evalGroupName', 'evalLevelCode'];
+		const missingField = requiredFields.find((field) => !body[field]);
+		if (missingField || !Array.isArray(body.items)) {
+			return createValidationError('Faltan campos requeridos');
 		}
 
 		// Validate items array size
 		if (body.items.length > MAX_ITEMS_PER_REQUEST) {
-			return json(
-				{
-					success: false,
-					error: {
-						code: 'INVALID_PARAMS',
-						message: `Too many items. Maximum allowed: ${MAX_ITEMS_PER_REQUEST}`
-					},
-					results: []
-				},
-				{ status: 400 }
-			);
+			return createValidationError(`Máximo ${MAX_ITEMS_PER_REQUEST} elementos permitidos`);
 		}
 
-		// Validate each item
-		for (const item of body.items) {
-			if (!item.id || typeof item.id !== 'string') {
-				return json(
-					{
-						success: false,
-						error: {
-							code: 'INVALID_PARAMS',
-							message: 'Each item must have a valid id'
-						},
-						results: []
-					},
-					{ status: 400 }
-				);
-			}
+		// Validate each item structure and size
+		const invalidItem = body.items.find((item: { id: string; imageData: string }) => {
+			if (!item.id || typeof item.id !== 'string') return 'ID inválido';
+			if (!item.imageData || typeof item.imageData !== 'string') return 'Imagen inválida';
 
-			if (!item.imageData || typeof item.imageData !== 'string') {
-				return json(
-					{
-						success: false,
-						error: {
-							code: 'INVALID_PARAMS',
-							message: 'Each item must have valid imageData'
-						},
-						results: []
-					},
-					{ status: 400 }
-				);
-			}
-
-			// Check image size (approximate calculation)
-			const base64Data = item.imageData.replace(/^data:image\/\w+;base64,/, '');
-			const sizeInBytes = Math.ceil((base64Data.length * 3) / 4);
+			const sizeInBytes = getBase64ImageSize(item.imageData);
 			if (sizeInBytes > MAX_IMAGE_SIZE_BYTES) {
-				return json(
-					{
-						success: false,
-						error: {
-							code: 'INVALID_PARAMS',
-							message: `Image size exceeds maximum allowed (${MAX_IMAGE_SIZE_BYTES / (1024 * 1024)}MB)`
-						},
-						results: []
-					},
-					{ status: 400 }
-				);
+				return `Imagen muy grande (máx ${MAX_IMAGE_SIZE_BYTES / (1024 * 1024)}MB)`;
 			}
+			return null;
+		});
 
-			// Validate rollCode if provided
-			if (
-				item.rollCode !== undefined &&
-				(typeof item.rollCode !== 'string' || !/^\d{4}$/.test(item.rollCode))
-			) {
-				return json(
-					{
-						success: false,
-						error: {
-							code: 'VALIDATION_ERROR',
-							message: 'Roll code must be a 4-digit string'
-						},
-						results: []
-					},
-					{ status: 400 }
-				);
-			}
+		if (invalidItem) {
+			return createValidationError(
+				typeof invalidItem === 'string' ? invalidItem : 'Elemento inválido'
+			);
 		}
 
 		// All validations passed, assign values
@@ -191,53 +137,22 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		questions = body.questions || null;
 		sections = body.sections || null;
 	} catch {
-		return json(
-			{
-				success: false,
-				error: {
-					code: 'INVALID_PARAMS',
-					message: 'Invalid JSON body'
-				},
-				results: []
-			},
-			{ status: 400 }
-		);
+		return createValidationError('JSON inválido');
 	}
 
 	// 1. Obtener preguntas y secciones (una sola vez para todos los items)
-	if (!questions || !questions.length) {
+	if (!questions?.length) {
 		questions = await fetchQuestions(evalCode, locals.supabase);
+		if (!questions?.length) {
+			return createValidationError('Sin preguntas disponibles', 500);
+		}
 	}
-	if (!sections || !sections.length) {
+
+	if (!sections?.length) {
 		sections = await fetchSections(evalCode, locals.supabase);
-	}
-
-	if (!questions || !questions.length) {
-		return json(
-			{
-				success: false,
-				error: {
-					code: 'INTERNAL_ERROR',
-					message: 'No se ha obtenido nro de Respuestas.'
-				},
-				results: []
-			},
-			{ status: 500 }
-		);
-	}
-
-	if (!sections || !sections.length) {
-		return json(
-			{
-				success: false,
-				error: {
-					code: 'INTERNAL_ERROR',
-					message: 'No hay cursos disponibles.'
-				},
-				results: []
-			},
-			{ status: 500 }
-		);
+		if (!sections?.length) {
+			return createValidationError('Sin cursos disponibles', 500);
+		}
 	}
 
 	const numQuestions = questions.length;

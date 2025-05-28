@@ -4,7 +4,12 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast.js';
 	import { User, Search, Activity, ChartPie } from 'lucide-svelte';
-	import type { Student, StudentScoreEvolution, StudentCourseScore, StudentCourseEvolution } from '$lib/types';
+	import type {
+		Student,
+		StudentScoreEvolution,
+		StudentCourseScore,
+		StudentCourseEvolution
+	} from '$lib/types';
 	import { studentStore } from '$lib/stores/student';
 	import StudentCard from '$lib/components/StudentCard.svelte';
 
@@ -176,11 +181,12 @@
 
 		try {
 			// Load score evolution, course scores, and course evolution in parallel
-			const [scoreEvolutionResponse, courseScoresResponse, courseEvolutionResponse] = await Promise.all([
-				fetch(`/api/dashboard/student/scores/${studentCode}`),
-				fetch(`/api/dashboard/student/courses/${studentCode}`),
-				fetch(`/api/dashboard/student/course-evolution/${studentCode}`)
-			]);
+			const [scoreEvolutionResponse, courseScoresResponse, courseEvolutionResponse] =
+				await Promise.all([
+					fetch(`/api/dashboard/student/scores/${studentCode}`),
+					fetch(`/api/dashboard/student/courses/${studentCode}`),
+					fetch(`/api/dashboard/student/course-evolution/${studentCode}`)
+				]);
 
 			// Handle score evolution response
 			if (!scoreEvolutionResponse.ok) {
@@ -285,27 +291,30 @@
 
 		try {
 			// Group data by course
-			const courseGroups = data.reduce((acc, item) => {
-				const courseName = item.course_name || 'Sin nombre';
-				if (!acc[courseName]) {
-					acc[courseName] = [];
-				}
-				acc[courseName].push(item);
-				return acc;
-			}, {} as Record<string, StudentCourseEvolution[]>);
+			const courseGroups = data.reduce(
+				(acc, item) => {
+					const courseName = item.course_name || 'Sin nombre';
+					if (!acc[courseName]) {
+						acc[courseName] = [];
+					}
+					acc[courseName].push(item);
+					return acc;
+				},
+				{} as Record<string, StudentCourseEvolution[]>
+			);
 
 			// Get all unique evaluation names sorted by date
 			const allEvals = [...data].sort(
 				(a, b) => new Date(a.eval_date).getTime() - new Date(b.eval_date).getTime()
 			);
-			const uniqueEvals = Array.from(new Set(allEvals.map(item => item.eval_name)));
+			const uniqueEvals = Array.from(new Set(allEvals.map((item) => item.eval_name)));
 
 			// Create datasets for each course
 			const courseNames = Object.keys(courseGroups);
 			const datasets = courseNames.map((courseName, index) => {
 				const courseData = courseGroups[courseName];
-				const dataPoints = uniqueEvals.map(evalName => {
-					const evalData = courseData.find(item => item.eval_name === evalName);
+				const dataPoints = uniqueEvals.map((evalName) => {
+					const evalData = courseData.find((item) => item.eval_name === evalName);
 					return evalData ? evalData.score : null;
 				});
 
@@ -474,7 +483,8 @@
 	 * Render course evolution chart
 	 */
 	function renderCourseEvolutionChart() {
-		if (!courseEvolutionChartData.labels.length || !courseEvolutionChartData.datasets.length) return;
+		if (!courseEvolutionChartData.labels.length || !courseEvolutionChartData.datasets.length)
+			return;
 
 		// Ensure DOM is ready before rendering
 		setTimeout(() => {
@@ -573,7 +583,7 @@
 		<StudentCard className="mb-6" />
 
 		<!-- Dashboard Content -->
-		<div class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 			<!-- Score Evolution Chart -->
 			<div
 				class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden"

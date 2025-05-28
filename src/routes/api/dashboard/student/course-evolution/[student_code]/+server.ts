@@ -17,7 +17,10 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		const data = await getStudentCourseEvolution(locals.supabase, student_code);
 
 		if (!data) {
-			return json({ error: 'No se pudieron obtener datos de evolución por curso' }, { status: 500 });
+			return json(
+				{ error: 'No se pudieron obtener datos de evolución por curso' },
+				{ status: 500 }
+			);
 		}
 
 		return json(data);
