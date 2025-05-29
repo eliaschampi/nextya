@@ -2,22 +2,16 @@ import { createServerClient } from '@supabase/ssr';
 import { type Handle, redirect } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
-import { permissionsStore } from '$lib/stores/permissions';
 
 // Configuración del cliente de Supabase
 const supabaseHandle: Handle = async ({ event, resolve }) => {
-	// Crear el cliente de Supabase para SSR con opciones de cookie para expiración de 24 horas
+	// Crear el cliente de Supabase para SSR
 	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
 		cookies: {
 			getAll: () => event.cookies.getAll(),
 			setAll: (cookies) =>
 				cookies.forEach(({ name, value, options }) =>
-					event.cookies.set(name, value, {
-						...options,
-						path: '/',
-						// Establecer tiempo de vida de la cookie a 24 horas (en segundos)
-						maxAge: 60 * 60 * 24
-					})
+					event.cookies.set(name, value, { ...options, path: '/' })
 				)
 		}
 	});
@@ -40,6 +34,31 @@ const supabaseHandle: Handle = async ({ event, resolve }) => {
 		return error ? { user: null } : { user };
 	};
 
+	/**
+	 * Unlike `supabase.auth.getSession()`, which returns the session _without_
+	 * validating the JWT, this function also calls `getUser()` to validate the
+	 * JWT before returning the session.
+	 */
+	event.locals.safeGetSession = async () => {
+		const {
+			data: { session }
+		} = await event.locals.supabase.auth.getSession();
+		if (!session) {
+			return { session: null, user: null };
+		}
+
+		const {
+			data: { user },
+			error
+		} = await event.locals.supabase.auth.getUser();
+		if (error) {
+			// JWT validation has failed
+			return { session: null, user: null };
+		}
+
+		return { session, user };
+	};
+
 	// Almacenar las cookies para usarlas en otros lugares
 	event.locals.cookies = event.cookies.getAll();
 
@@ -52,36 +71,16 @@ const supabaseHandle: Handle = async ({ event, resolve }) => {
 
 // Guardia de autenticación
 const authGuard: Handle = async ({ event, resolve }) => {
-	const { session } = await event.locals.getSession();
+	const { session, user } = await event.locals.safeGetSession();
 	event.locals.session = session;
+	event.locals.user = user;
 
-	// Obtener información del usuario si hay sesión
-	if (session) {
-		const { user } = await event.locals.getUser();
-		event.locals.user = user;
+	if (!event.locals.session && event.url.pathname !== '/auth') {
+		throw redirect(303, '/auth');
+	}
 
-		// Verificar si la sesión ha expirado
-		const now = Math.floor(Date.now() / 1000);
-		if (session.expires_at && session.expires_at < now) {
-			// Limpiar sesión y permisos
-			await event.locals.supabase.auth.signOut();
-			permissionsStore.clearPermissions();
-			throw redirect(303, '/auth');
-		}
-
-		// Redirigir si hay sesión y la ruta es `/auth`
-		if (event.url.pathname === '/auth') {
-			throw redirect(303, '/');
-		}
-	} else {
-		// No hay sesión activa
-		event.locals.user = null;
-		permissionsStore.clearPermissions();
-
-		// Redirigir si no hay sesión y la ruta no es `/auth`
-		if (event.url.pathname !== '/auth') {
-			throw redirect(303, '/auth');
-		}
+	if (event.locals.session && event.url.pathname === '/auth') {
+		throw redirect(303, '/');
 	}
 
 	return resolve(event);

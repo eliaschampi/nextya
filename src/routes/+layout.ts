@@ -1,39 +1,51 @@
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
-import { createBrowserClient, isBrowser } from '@supabase/ssr';
+import { createBrowserClient, createServerClient, isBrowser } from '@supabase/ssr';
+import { PUBLIC_SUPABASE_ANON_KEY, PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { permissionsStore } from '$lib/stores/permissions';
 import type { LayoutLoad } from './$types';
 
 export const load: LayoutLoad = async ({ data, depends, fetch }) => {
+	/**
+	 * Declare a dependency so the layout can be invalidated, for example, on
+	 * session refresh.
+	 */
 	depends('supabase:auth');
 
-	let supabase = null;
-	let session = null;
-	let user = null;
+	const supabase = isBrowser()
+		? createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+				global: {
+					fetch
+				}
+			})
+		: createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+				global: {
+					fetch
+				},
+				cookies: {
+					getAll() {
+						return data.cookies;
+					}
+				}
+			});
 
-	// Crear cliente de Supabase para el navegador o el servidor
-	supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-		global: { fetch }
-	});
+	/**
+	 * It's fine to use `getSession` here, because on the client, `getSession` is
+	 * safe, and on the server, it reads `session` from the `LayoutData`, which
+	 * safely checked the session using `safeGetSession`.
+	 */
+	const {
+		data: { session }
+	} = await supabase.auth.getSession();
 
-	if (isBrowser()) {
-		// Obtener la sesión en el cliente
-		const { data: sessionData } = await supabase.auth.getSession();
-		session = sessionData.session;
+	const {
+		data: { user }
+	} = await supabase.auth.getUser();
 
-		// Obtener el usuario autenticado si hay sesión
-		if (session) {
-			const { data: userData } = await supabase.auth.getUser();
-			user = userData.user;
-		}
-	} else {
-		// En el servidor, usar los datos pasados desde hooks.server.ts
-		session = data.session;
-		user = data.user;
-	}
-
-	// Cargar permisos si hay sesión y usuario autenticado
-	if (session && user) {
+	// Cargar permisos si hay sesión y usuario autenticado (solo en el cliente)
+	if (session && user && isBrowser()) {
 		permissionsStore.fetchPermissions(supabase, user.id);
+	} else if (!session && isBrowser()) {
+		// Limpiar permisos si no hay sesión (solo en el cliente)
+		permissionsStore.clearPermissions();
 	}
 
 	return { session, supabase, user, title: data.title };

@@ -104,6 +104,11 @@ const createPermissionsStore = () => {
 			console.error('Error fetching permissions:', error);
 			permissions.set([]);
 			currentUserCode.set(null);
+			// Clear cache on error
+			if (browser) {
+				localStorage.removeItem(PERMISSIONS_CACHE_KEY);
+				localStorage.removeItem(PERMISSIONS_CACHE_EXPIRY_KEY);
+			}
 		} finally {
 			isLoading = false;
 		}

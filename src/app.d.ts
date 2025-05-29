@@ -11,6 +11,7 @@ declare global {
 			getUser: () => Promise<{
 				user: SupabaseUser | null;
 			}>;
+			safeGetSession: () => Promise<{ session: Session | null; user: SupabaseUser | null }>;
 			session: Session | null;
 			user: SupabaseUser | null;
 			cookies: { name: string; value: string }[];

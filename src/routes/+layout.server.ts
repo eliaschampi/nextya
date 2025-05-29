@@ -1,15 +1,12 @@
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async ({ locals }) => {
-	const { session } = await locals.getSession();
-
-	// Solo obtener el usuario autenticado si hay sesión
-	const { user } = session ? await locals.getUser() : { user: null };
+export const load: LayoutServerLoad = async ({ locals, cookies }) => {
+	const { session, user } = await locals.safeGetSession();
 
 	return {
 		session,
 		user,
-		cookies: locals.cookies,
+		cookies: cookies.getAll(),
 		title: locals.title
 	};
 };
