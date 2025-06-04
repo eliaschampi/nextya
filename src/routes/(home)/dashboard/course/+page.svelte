@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { Chart } from 'chart.js/auto';
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast.js';
-	import { Settings, ChartPie, Activity } from 'lucide-svelte';
+	import { Settings, ChartPie, Activity, RefreshCw } from 'lucide-svelte';
 	import type { Level, CourseScore, EvalScore, CourseChartData, EvalChartData } from '$lib/types';
 
 	// Props from server
@@ -18,7 +18,8 @@
 	let selectedLevelCode = $state('');
 	let selectedCourseCode = $state('');
 	let selectedGroupName = $state('A'); // Default to group A
-	let isLoading = $state(false);
+	let isLoadingCourses = $state(false);
+	let isLoadingEvals = $state(false);
 	let courseScores = $state<CourseScore[] | null>(null);
 	let evalScores = $state<EvalScore[] | null>(null);
 	let availableGroups = $state<string[]>(['A', 'B', 'C', 'D']);
@@ -44,21 +45,21 @@
 	const evalChartData = $derived(prepareEvalChartData(evalScores));
 
 	// Track chart data changes and render charts when data is available
-	const shouldRenderCourseChart = $derived(courseScores !== null && !isLoading);
-	const shouldRenderEvalChart = $derived(evalScores !== null && !isLoading);
+	const shouldRenderCourseChart = $derived(courseScores !== null && !isLoadingCourses);
+	const shouldRenderEvalChart = $derived(
+		evalScores !== null && !isLoadingEvals && selectedCourseCode !== ''
+	);
 
-	// Render charts when data changes
-	$effect(() => {
+	// Render charts manually when data is loaded - safer than $effect
+	async function updateChartsIfNeeded() {
+		await tick(); // Wait for DOM updates
 		if (shouldRenderCourseChart) {
 			renderCourseChart();
 		}
-	});
-
-	$effect(() => {
 		if (shouldRenderEvalChart) {
 			renderEvalChart();
 		}
-	});
+	}
 
 	// Clean up charts on unmount
 	onMount(() => {
@@ -82,13 +83,24 @@
 	}
 
 	/**
+	 * Clears dependent data and charts - reduces code duplication
+	 */
+	function clearDependentData() {
+		selectedCourseCode = '';
+		courseScores = null;
+		evalScores = null;
+		destroyCharts();
+	}
+
+	/**
 	 * Load course scores data from API
 	 */
 	async function loadCourseScoresData(levelCode: string, groupName: string) {
-		if (!levelCode || !groupName || isLoading) return;
+		if (!levelCode || !groupName || isLoadingCourses) return;
 
-		isLoading = true;
-		if (courseScoresChart) courseScoresChart.destroy();
+		isLoadingCourses = true;
+		// Clear previous data immediately to prevent accumulation
+		clearDependentData();
 
 		try {
 			// Build URL with required group filter
@@ -98,26 +110,22 @@
 
 			if (!response.ok) {
 				const errorData = await response.json().catch(() => ({}));
-				const errorMessage = errorData.error || 'Error al cargar datos de cursos';
+				const errorMessage =
+					errorData.error || `Error ${response.status}: No se pudieron cargar los datos de cursos`;
 				throw new Error(errorMessage);
 			}
 
 			const data = await response.json();
 
 			// Check if we have valid data
-			if (!data || !Array.isArray(data)) {
-				showToast('Formato de datos inválido', 'danger');
-				courseScores = null;
-				return;
+			if (!Array.isArray(data)) {
+				throw new Error('Formato de datos inválido recibido del servidor');
 			}
 
+			// Set new data - this will only show courses for the selected group
 			courseScores = data;
-
-			// Reset selected course if it's not in the new data
-			if (selectedCourseCode && !data.some((course) => course.course_code === selectedCourseCode)) {
-				selectedCourseCode = '';
-				evalScores = null;
-			}
+			// Trigger chart update after data is set
+			updateChartsIfNeeded();
 		} catch (error) {
 			console.error('Error loading course scores data:', error);
 			showToast(
@@ -126,7 +134,7 @@
 			);
 			courseScores = null;
 		} finally {
-			isLoading = false;
+			isLoadingCourses = false;
 		}
 	}
 
@@ -134,10 +142,15 @@
 	 * Load evaluation scores data from API
 	 */
 	async function loadEvalScoresData(levelCode: string, courseCode: string, groupName: string) {
-		if (!levelCode || !courseCode || !groupName || isLoading) return;
+		if (!levelCode || !courseCode || !groupName || isLoadingEvals) return;
 
-		isLoading = true;
-		if (evalScoresChart) evalScoresChart.destroy();
+		isLoadingEvals = true;
+		evalScores = null;
+
+		if (evalScoresChart) {
+			evalScoresChart.destroy();
+			evalScoresChart = null;
+		}
 
 		try {
 			const url = `/api/dashboard/course/evals/${levelCode}/${courseCode}?group_name=${encodeURIComponent(groupName)}`;
@@ -145,20 +158,22 @@
 
 			if (!response.ok) {
 				const errorData = await response.json().catch(() => ({}));
-				const errorMessage = errorData.error || 'Error al cargar datos de evaluaciones';
+				const errorMessage =
+					errorData.error ||
+					`Error ${response.status}: No se pudieron cargar los datos de evaluaciones`;
 				throw new Error(errorMessage);
 			}
 
 			const data = await response.json();
 
 			// Check if we have valid data
-			if (!data || !Array.isArray(data)) {
-				showToast('Formato de datos inválido', 'danger');
-				evalScores = null;
-				return;
+			if (!Array.isArray(data)) {
+				throw new Error('Formato de datos inválido recibido del servidor');
 			}
 
 			evalScores = data;
+			// Trigger chart update after data is set
+			updateChartsIfNeeded();
 		} catch (error) {
 			console.error('Error loading eval scores data:', error);
 			showToast(
@@ -167,7 +182,7 @@
 			);
 			evalScores = null;
 		} finally {
-			isLoading = false;
+			isLoadingEvals = false;
 		}
 	}
 
@@ -215,14 +230,16 @@
 	function renderCourseChart() {
 		if (!courseChartData.labels.length) return;
 
-		// Ensure DOM is ready before rendering
-		setTimeout(() => {
-			const ctx = document.getElementById('courseScoresChart') as HTMLCanvasElement;
-			if (!ctx) return;
+		const ctx = document.getElementById('courseScoresChart') as HTMLCanvasElement;
+		if (!ctx) return;
 
-			// Destroy existing chart if it exists
-			if (courseScoresChart) courseScoresChart.destroy();
+		// Destroy existing chart if it exists
+		if (courseScoresChart) {
+			courseScoresChart.destroy();
+			courseScoresChart = null;
+		}
 
+		try {
 			courseScoresChart = new Chart(ctx, {
 				type: 'doughnut',
 				data: {
@@ -260,7 +277,9 @@
 					}
 				}
 			});
-		}, 50);
+		} catch (error) {
+			console.error('Error rendering course chart:', error);
+		}
 	}
 
 	/**
@@ -269,14 +288,16 @@
 	function renderEvalChart() {
 		if (!evalChartData.labels.length) return;
 
-		// Ensure DOM is ready before rendering
-		setTimeout(() => {
-			const ctx = document.getElementById('evalScoresChart') as HTMLCanvasElement;
-			if (!ctx) return;
+		const ctx = document.getElementById('evalScoresChart') as HTMLCanvasElement;
+		if (!ctx) return;
 
-			// Destroy existing chart if it exists
-			if (evalScoresChart) evalScoresChart.destroy();
+		// Destroy existing chart if it exists
+		if (evalScoresChart) {
+			evalScoresChart.destroy();
+			evalScoresChart = null;
+		}
 
+		try {
 			evalScoresChart = new Chart(ctx, {
 				type: 'line',
 				data: {
@@ -287,25 +308,30 @@
 							data: evalChartData.values,
 							borderColor: chartColors[0],
 							backgroundColor: 'rgba(100, 220, 150, 0.1)',
-							borderWidth: 2,
+							borderWidth: 3,
 							fill: true,
-							tension: 0.4
+							tension: 0.4,
+							pointBackgroundColor: chartColors[0],
+							pointBorderWidth: 2,
+							pointRadius: 6,
+							pointHoverRadius: 8
 						}
 					]
 				},
 				options: {
 					responsive: true,
 					maintainAspectRatio: false,
+					interaction: {
+						intersect: false,
+						mode: 'index'
+					},
 					plugins: {
-						legend: {
-							display: false
-						},
+						legend: { display: false },
 						tooltip: {
 							callbacks: {
 								label: function (context) {
-									const label = context.dataset.label || '';
 									const value = context.raw as number;
-									return `${label}: ${value.toFixed(2)}`;
+									return `Puntaje: ${value.toFixed(2)}`;
 								}
 							}
 						}
@@ -314,21 +340,27 @@
 						x: {
 							title: {
 								display: true,
-								text: 'Evaluaciones'
-							}
+								text: 'Evaluaciones',
+								font: { weight: 'bold' }
+							},
+							grid: { display: false }
 						},
 						y: {
 							beginAtZero: true,
 							max: 20,
 							title: {
 								display: true,
-								text: 'Puntaje Promedio'
-							}
+								text: 'Puntaje Promedio',
+								font: { weight: 'bold' }
+							},
+							grid: { color: 'rgba(0, 0, 0, 0.1)' }
 						}
 					}
 				}
 			});
-		}, 50);
+		} catch (error) {
+			console.error('Error rendering eval chart:', error);
+		}
 	}
 
 	/**
@@ -337,15 +369,14 @@
 	function handleLevelChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
 		selectedLevelCode = target.value;
-		selectedCourseCode = '';
-		evalScores = null;
 
-		if (evalScoresChart) {
-			evalScoresChart.destroy();
-			evalScoresChart = null;
+		// Clear dependent data
+		clearDependentData();
+
+		// Load new data if level is selected
+		if (selectedLevelCode) {
+			loadCourseScoresData(selectedLevelCode, selectedGroupName);
 		}
-
-		loadCourseScoresData(selectedLevelCode, selectedGroupName);
 	}
 
 	/**
@@ -354,7 +385,18 @@
 	function handleCourseChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
 		selectedCourseCode = target.value;
-		loadEvalScoresData(selectedLevelCode, selectedCourseCode, selectedGroupName);
+
+		// Clear eval data
+		evalScores = null;
+		if (evalScoresChart) {
+			evalScoresChart.destroy();
+			evalScoresChart = null;
+		}
+
+		// Load eval data only if course is selected
+		if (selectedCourseCode) {
+			loadEvalScoresData(selectedLevelCode, selectedCourseCode, selectedGroupName);
+		}
 	}
 
 	/**
@@ -363,15 +405,26 @@
 	function handleGroupChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
 		selectedGroupName = target.value;
-		selectedCourseCode = '';
-		evalScores = null;
 
-		if (evalScoresChart) {
-			evalScoresChart.destroy();
-			evalScoresChart = null;
+		// Clear dependent data
+		clearDependentData();
+
+		// Load new data if level is selected
+		if (selectedLevelCode) {
+			loadCourseScoresData(selectedLevelCode, selectedGroupName);
 		}
+	}
 
-		loadCourseScoresData(selectedLevelCode, selectedGroupName);
+	/**
+	 * Handle refresh button click - improved UX
+	 */
+	function handleRefresh() {
+		if (selectedLevelCode) {
+			loadCourseScoresData(selectedLevelCode, selectedGroupName);
+		}
+		if (selectedCourseCode) {
+			loadEvalScoresData(selectedLevelCode, selectedCourseCode, selectedGroupName);
+		}
 	}
 </script>
 
@@ -380,31 +433,13 @@
 		<div>
 			<button
 				class="btn btn-primary btn-sm"
-				onclick={() => {
-					loadCourseScoresData(selectedLevelCode, selectedGroupName);
-					if (selectedCourseCode)
-						loadEvalScoresData(selectedLevelCode, selectedCourseCode, selectedGroupName);
-				}}
-				disabled={isLoading}
+				onclick={handleRefresh}
+				disabled={isLoadingCourses || isLoadingEvals}
 			>
-				{#if isLoading}
+				{#if isLoadingCourses || isLoadingEvals}
 					<span class="loading loading-spinner loading-xs mr-1"></span>
 				{:else}
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-4 w-4 mr-1"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-						<path d="M3 3v5h5"></path>
-						<path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
-						<path d="M16 21h5v-5"></path>
-					</svg>
+					<RefreshCw class="h-4 w-4 mr-1" />
 				{/if}
 				Actualizar
 			</button>
@@ -487,12 +522,12 @@
 		</div>
 	</div>
 
-	{#if isLoading}
+	{#if isLoadingCourses && selectedLevelCode}
 		<div
 			class="flex justify-center items-center h-64 bg-base-200 rounded-xl border border-base-300/30 p-6"
 		>
 			<div class="loading loading-spinner loading-lg text-primary"></div>
-			<span class="ml-4 text-base-content/70 text-lg">Cargando datos...</span>
+			<span class="ml-4 text-base-content/70 text-lg">Cargando datos de cursos...</span>
 		</div>
 	{:else if !selectedLevelCode}
 		<div
@@ -534,7 +569,13 @@
 					</div>
 					<div class="divider my-0"></div>
 
-					{#if !courseScores || courseScores.length === 0}
+					{#if isLoadingCourses}
+						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+							<div class="loading loading-spinner loading-lg text-primary mb-4"></div>
+							<p class="text-lg font-medium">Cargando cursos...</p>
+							<p class="text-sm mt-2">Obteniendo datos para el grupo {selectedGroupName}</p>
+						</div>
+					{:else if !courseScores || courseScores.length === 0}
 						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
 							<div class="text-4xl mb-4">🔍</div>
 							<p class="text-lg font-medium">No hay datos disponibles</p>
@@ -578,6 +619,12 @@
 							<div class="text-4xl mb-4">📈</div>
 							<p class="text-lg font-medium">Selecciona un curso</p>
 							<p class="text-sm mt-2">Para visualizar la evolución de puntajes</p>
+						</div>
+					{:else if isLoadingEvals}
+						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+							<div class="loading loading-spinner loading-lg text-secondary mb-4"></div>
+							<p class="text-lg font-medium">Cargando evaluaciones...</p>
+							<p class="text-sm mt-2">Obteniendo evolución de puntajes</p>
 						</div>
 					{:else if !evalScores || evalScores.length === 0}
 						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
