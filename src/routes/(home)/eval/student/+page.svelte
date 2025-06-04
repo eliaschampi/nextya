@@ -158,7 +158,10 @@
 
 					// If the stored state matches the URL parameters, use it
 					if (state.studentCode === data.studentCode) {
-						studentStore.initFromStudentCode(state.studentCode, 'eval-student-page');
+						studentStore.initFromStudentCode(
+							state.studentCode,
+							`eval-student-page-${state.studentCode}`
+						);
 						return;
 					}
 				}
@@ -169,7 +172,7 @@
 
 		// Normal flow if no stored state or stored state is invalid
 		if (data.studentCode) {
-			studentStore.initFromStudentCode(data.studentCode, 'eval-student-page');
+			studentStore.initFromStudentCode(data.studentCode, `eval-student-page-${data.studentCode}`);
 		}
 	});
 
@@ -229,8 +232,9 @@
 			replaceState: true
 		});
 
-		// Load student data using the store
-		await studentStore.selectStudent(student, 'eval-student-page');
+		// Load student data using the store with a unique pageId for each student
+		// This ensures that data is always loaded when selecting a different student
+		await studentStore.selectStudent(student, `eval-student-page-${student.code}`);
 
 		// Reset pagination when selecting a new student
 		currentPage = 1;

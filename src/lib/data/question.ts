@@ -16,3 +16,16 @@ export async function fetchQuestions(
 	}
 	return data as EvalQuestion[];
 }
+
+export async function hasEvalQuestions(
+	supabase: SupabaseClient,
+	evalCode: string
+): Promise<boolean> {
+	const { data, error } = await supabase
+		.from('eval_questions')
+		.select('code')
+		.eq('eval_code', evalCode)
+		.limit(1);
+
+	return !error && data && data.length > 0;
+}

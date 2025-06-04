@@ -1,5 +1,6 @@
 import { getLevels } from '$lib/data/levels';
 import { getCourses } from '$lib/data/courses';
+import { hasEvalQuestions } from '$lib/data/question';
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
 import { evalSchema, evalSectionSchema } from '$lib/schemas/eval';
@@ -85,19 +86,23 @@ export const actions: Actions = {
 				return fail(400, { error: evalError.message });
 			}
 
-			// Eliminar secciones existentes
-			const { error: deleteError } = await locals.supabase
-				.from('eval_sections')
-				.delete()
-				.eq('eval_code', code);
-			if (deleteError) {
-				console.error('Error eliminando secciones:', deleteError);
-				return fail(400, { error: deleteError.message });
-			}
+			// Solo modificar secciones si no hay preguntas registradas
+			const hasQuestions = await hasEvalQuestions(locals.supabase, code);
+			if (!hasQuestions) {
+				// Eliminar secciones existentes
+				const { error: deleteError } = await locals.supabase
+					.from('eval_sections')
+					.delete()
+					.eq('eval_code', code);
+				if (deleteError) {
+					console.error('Error eliminando secciones:', deleteError);
+					return fail(400, { error: deleteError.message });
+				}
 
-			// Insertar nuevas secciones
-			const insertError = await insertSections(locals.supabase, code, sections);
-			if (insertError) return insertError;
+				// Insertar nuevas secciones
+				const insertError = await insertSections(locals.supabase, code, sections);
+				if (insertError) return insertError;
+			}
 		} else {
 			// Crear nuevo examen
 			const { error: evalError, data: evalData } = await locals.supabase

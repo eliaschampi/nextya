@@ -94,8 +94,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 				)
 			`
 			)
-			.eq('register_code', mainResult.register_code)
-			.order('question_code');
+			.eq('register_code', mainResult.register_code);
 
 		if (answersError) {
 			console.error('Error fetching answers:', answersError);

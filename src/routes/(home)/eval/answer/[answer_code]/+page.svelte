@@ -76,6 +76,11 @@
 		sectionGroups[sectionCode].answers.push(answer);
 	}
 
+	// Ordenar respuestas dentro de cada sección por order_in_eval
+	for (const sectionCode in sectionGroups) {
+		sectionGroups[sectionCode].answers.sort((a, b) => a.order_in_eval - b.order_in_eval);
+	}
+
 	const sectionAnswers = Object.entries(sectionGroups);
 
 	function switchTab(tab: 'details' | 'answers') {

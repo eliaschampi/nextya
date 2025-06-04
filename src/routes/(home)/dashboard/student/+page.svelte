@@ -93,8 +93,14 @@
 		}
 	});
 
-	// Clean up charts on unmount
+	// Initialize dashboard data if student is already selected
 	onMount(() => {
+		// Check if there's already a selected student and load dashboard data
+		if (storeState.selectedStudent) {
+			loadStudentDashboardData(storeState.selectedStudent.code);
+		}
+
+		// Clean up charts on unmount
 		return () => {
 			destroyCharts();
 		};

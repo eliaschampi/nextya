@@ -110,6 +110,9 @@ export function formatEvaluationResult(
 		};
 	});
 
+	// Sort answers by order_in_eval to ensure correct ordering
+	formattedAnswers.sort((a, b) => a.order_in_eval - b.order_in_eval);
+
 	// Build the response
 	return {
 		code: mainResult.code,
