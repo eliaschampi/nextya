@@ -44,20 +44,10 @@
 	);
 	const scorePercent = $derived(Math.round((result.scores.general.score / 20) * 100) || 0);
 
-	// Group answers by section
+	// Group answers by section with proper typing
 	type SectionGroup = {
 		name: string;
-		answers: Array<{
-			question_code: string;
-			student_answer: string | null;
-			is_correct: boolean;
-			is_blank?: boolean;
-			is_multiple?: boolean;
-			order_in_eval: number;
-			correct_key: string;
-			section_code: string | null;
-			section_name?: string | null;
-		}>;
+		answers: StudentQuestionAnswer[];
 	};
 
 	const sectionGroups: Record<string, SectionGroup> = {};
@@ -81,7 +71,8 @@
 		sectionGroups[sectionCode].answers.sort((a, b) => a.order_in_eval - b.order_in_eval);
 	}
 
-	const sectionAnswers = Object.entries(sectionGroups);
+	// Create properly typed section answers array
+	const sectionAnswers: Array<[string, SectionGroup]> = Object.entries(sectionGroups);
 
 	function switchTab(tab: 'details' | 'answers') {
 		activeTab = tab;
@@ -393,23 +384,19 @@
 			{:else if activeTab === 'answers'}
 				{#if result.answers.length > 0}
 					{#each sectionAnswers as [sectionCode, section] (sectionCode)}
-						{@const typedSection = section as {
-							name: string;
-							answers: import('$lib/types').StudentQuestionAnswer[];
-						}}
 						<div class="card bg-base-200 shadow mb-6">
 							<div class="card-body">
-								<h3 class="card-title text-primary mb-2">{typedSection.name}</h3>
+								<h3 class="card-title text-primary mb-2">{section.name}</h3>
 								<div class="overflow-x-auto">
 									<Table
-										columns={createAnswerColumns() as unknown as {
+										columns={createAnswerColumns() as {
 											key?: string;
 											label: string;
 											headerClass?: string;
 											class?: string;
 											cell?: (row: unknown) => unknown;
 										}[]}
-										rows={typedSection.answers as unknown[]}
+										rows={section.answers as unknown[]}
 										striped={true}
 										hover={true}
 										bordered={true}
