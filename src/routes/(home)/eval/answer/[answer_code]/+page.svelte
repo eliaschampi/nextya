@@ -1,13 +1,12 @@
 <script lang="ts">
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import Table from '$lib/components/Table.svelte';
+	import Message from '$lib/components/Message.svelte';
 	import { Check, ListChecks, User, Calendar, School, Eye } from 'lucide-svelte';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { goto } from '$app/navigation';
-
 	import type { EvaluationResult, SectionScore, StudentQuestionAnswer } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
-	import Message from '$lib/components/Message.svelte';
 
 	// Props from server
 	const { data } = $props<{
@@ -27,55 +26,9 @@
 	// Computed values
 	const result = data.result;
 
-	// Calculate percentages for radial progress
-	const correctPercent = $derived(
-		Math.round(
-			(result.scores.general.correct_count / result.scores.general.total_questions) * 100
-		) || 0
-	);
-	const incorrectPercent = $derived(
-		Math.round(
-			(result.scores.general.incorrect_count / result.scores.general.total_questions) * 100
-		) || 0
-	);
-	const blankPercent = $derived(
-		Math.round((result.scores.general.blank_count / result.scores.general.total_questions) * 100) ||
-			0
-	);
-	const scorePercent = $derived(Math.round((result.scores.general.score / 20) * 100) || 0);
-
-	// Group answers by section with proper typing
-	type SectionGroup = {
-		name: string;
-		answers: StudentQuestionAnswer[];
-	};
-
-	const sectionGroups: Record<string, SectionGroup> = {};
-
-	for (const answer of result.answers) {
-		const sectionCode = answer.section_code || 'general';
-		const sectionName = answer.section_name || 'General';
-
-		if (!sectionGroups[sectionCode]) {
-			sectionGroups[sectionCode] = {
-				name: sectionName,
-				answers: []
-			};
-		}
-
-		sectionGroups[sectionCode].answers.push(answer);
-	}
-
-	// Ordenar respuestas dentro de cada sección por order_in_eval
-	for (const sectionCode in sectionGroups) {
-		sectionGroups[sectionCode].answers.sort((a, b) => a.order_in_eval - b.order_in_eval);
-	}
-
-	// Create properly typed section answers array
-	const sectionAnswers: Array<[string, SectionGroup]> = Object.entries(sectionGroups);
-
-	function switchTab(tab: 'details' | 'answers') {
-		activeTab = tab;
+	// Utility functions
+	function calculatePercentage(value: number, total: number): number {
+		return total > 0 ? Math.round((value / total) * 100) : 0;
 	}
 
 	function getScoreColorClass(score: number): string {
@@ -84,61 +37,147 @@
 		return 'text-error';
 	}
 
-	function goToResults() {
-		// Navigate back to the appropriate page based on fromPage parameter
-		if (data.fromPage === 'eval/student') {
-			// Store state in sessionStorage for better back navigation
-			try {
-				sessionStorage.setItem(
-					'student_page_state',
-					JSON.stringify({
-						studentCode: data.studentCode,
-						timestamp: Date.now()
-					})
-				);
-			} catch (e) {
-				console.error('Error storing state in sessionStorage:', e);
+	function getBorderColor(score: number): string {
+		if (score >= 14) return 'var(--success)';
+		if (score >= 10.5) return 'var(--warning)';
+		return 'var(--error)';
+	}
+
+	function storeNavigationState(key: string, state: Record<string, unknown>): void {
+		try {
+			sessionStorage.setItem(key, JSON.stringify({ ...state, timestamp: Date.now() }));
+		} catch (e) {
+			console.error('Error storing state in sessionStorage:', e);
+		}
+	}
+
+	// Calculate percentages for radial progress
+	const correctPercent = $derived(
+		calculatePercentage(result.scores.general.correct_count, result.scores.general.total_questions)
+	);
+	const incorrectPercent = $derived(
+		calculatePercentage(
+			result.scores.general.incorrect_count,
+			result.scores.general.total_questions
+		)
+	);
+	const blankPercent = $derived(
+		calculatePercentage(result.scores.general.blank_count, result.scores.general.total_questions)
+	);
+	const scorePercent = $derived(calculatePercentage(result.scores.general.score, 20));
+
+	// Group answers by section
+	type SectionGroup = {
+		name: string;
+		answers: StudentQuestionAnswer[];
+	};
+
+	function createSectionGroups(answers: StudentQuestionAnswer[]): Record<string, SectionGroup> {
+		const groups: Record<string, SectionGroup> = {};
+
+		if (!answers?.length) {
+			console.warn('No answers available for this evaluation');
+			return groups;
+		}
+
+		for (const answer of answers) {
+			const sectionCode = answer.section_code || 'general';
+			const sectionName = answer.section_name || 'General';
+
+			if (!groups[sectionCode]) {
+				groups[sectionCode] = { name: sectionName, answers: [] };
 			}
+
+			groups[sectionCode].answers.push(answer);
+		}
+
+		// Sort answers within each section by order_in_eval
+		Object.values(groups).forEach((group) => {
+			group.answers.sort((a, b) => a.order_in_eval - b.order_in_eval);
+		});
+
+		return groups;
+	}
+
+	const sectionGroups = $derived(createSectionGroups(result.answers));
+	const sectionAnswers = $derived(
+		Object.entries(sectionGroups).filter(([, section]) => section.answers.length > 0)
+	);
+
+	// Navigation functions
+	function switchTab(tab: 'details' | 'answers'): void {
+		activeTab = tab;
+	}
+
+	function goToResults(): void {
+		if (data.fromPage === 'eval/student') {
+			storeNavigationState('student_page_state', { studentCode: data.studentCode });
 			goto(`/eval/student?student=${data.studentCode}`);
 		} else {
-			// Default to result page
-			// Store state in sessionStorage for better back navigation
-			try {
-				sessionStorage.setItem(
-					'result_page_state',
-					JSON.stringify({
-						levelCode: data.levelCode,
-						evalCode: data.evalCode,
-						timestamp: Date.now()
-					})
-				);
-			} catch (e) {
-				console.error('Error storing state in sessionStorage:', e);
-			}
+			storeNavigationState('result_page_state', {
+				levelCode: data.levelCode,
+				evalCode: data.evalCode
+			});
 			goto(`/result?level=${data.levelCode}&eval=${data.evalCode}`);
 		}
 	}
 
-	// Define table columns for section scores
-	const sectionScoreColumns: TableColumn<SectionScore>[] = [
-		{ key: 'section_name', label: 'Sección', class: 'font-medium' },
-		{ key: 'correct_count', label: 'Correctas', class: 'text-center text-success' },
-		{ key: 'incorrect_count', label: 'Incorrectas', class: 'text-center text-error' },
-		{ key: 'blank_count', label: 'Blanco', class: 'text-center text-warning' },
-		{ key: 'total_questions', label: 'Total', class: 'text-center' },
-		{
-			key: 'score',
-			label: 'Nota',
-			class: 'text-center font-bold',
-			cell: (row: SectionScore) => `
-				<span class="${getScoreColorClass(row.score)}">
-					${row.score.toFixed(2)}
-				</span>
-			`
-		}
-	];
+	// Table column configurations
+	function createSectionScoreColumns(): TableColumn<SectionScore>[] {
+		return [
+			{ key: 'section_name', label: 'Sección', class: 'font-medium' },
+			{ key: 'correct_count', label: 'Correctas', class: 'text-center text-success' },
+			{ key: 'incorrect_count', label: 'Incorrectas', class: 'text-center text-error' },
+			{ key: 'blank_count', label: 'Blanco', class: 'text-center text-warning' },
+			{ key: 'total_questions', label: 'Total', class: 'text-center' },
+			{
+				key: 'score',
+				label: 'Nota',
+				class: 'text-center font-bold',
+				cell: (row: SectionScore) => `
+					<span class="${getScoreColorClass(row.score)}">
+						${row.score.toFixed(2)}
+					</span>
+				`
+			}
+		];
+	}
 
-	// Define table columns for student answers
+	function getAnswerBadgeText(answer: StudentQuestionAnswer): string {
+		if (answer.is_blank) return '-';
+		if (answer.is_multiple) return 'Multi';
+		return answer.student_answer || '-';
+	}
+
+	function getAnswerStatusBadge(answer: StudentQuestionAnswer): string {
+		const badgeClass = answer.is_blank
+			? 'badge-warning'
+			: answer.is_multiple
+				? 'badge-error'
+				: answer.is_correct
+					? 'badge-success'
+					: 'badge-error';
+
+		const icons = {
+			check:
+				'<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg>',
+			alert:
+				'<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-alert-circle w-3 h-3"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>',
+			x: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x w-3 h-3"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>'
+		};
+
+		const icon = answer.is_correct ? icons.check : answer.is_blank ? icons.alert : icons.x;
+		const text = answer.is_correct
+			? 'Correcta'
+			: answer.is_blank
+				? 'En blanco'
+				: answer.is_multiple
+					? 'Múltiple'
+					: 'Incorrecta';
+
+		return `<span class="badge gap-1 ${badgeClass}">${icon} ${text}</span>`;
+	}
+
 	function createAnswerColumns(): TableColumn<StudentQuestionAnswer>[] {
 		return [
 			{
@@ -151,7 +190,7 @@
 				class: 'w-20 text-center',
 				cell: (row: StudentQuestionAnswer) => `
 					<span class="badge badge-lg font-mono">
-						${row.is_blank ? '-' : row.is_multiple ? 'Multi' : row.student_answer}
+						${getAnswerBadgeText(row)}
 					</span>
 				`
 			},
@@ -167,42 +206,51 @@
 			},
 			{
 				label: 'Estado',
-				cell: (row: StudentQuestionAnswer) => {
-					const badgeClass = row.is_blank
-						? 'badge-warning'
-						: row.is_multiple
-							? 'badge-error'
-							: row.is_correct
-								? 'badge-success'
-								: 'badge-error';
-
-					const checkIcon =
-						'<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg>';
-					const alertIcon =
-						'<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-alert-circle w-3 h-3"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
-					const xIcon =
-						'<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x w-3 h-3"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>';
-
-					const icon = row.is_correct ? checkIcon : row.is_blank ? alertIcon : xIcon;
-
-					const text = row.is_correct
-						? 'Correcta'
-						: row.is_blank
-							? 'En blanco'
-							: row.is_multiple
-								? 'Múltiple'
-								: 'Incorrecta';
-
-					return `
-						<span class="badge gap-1 ${badgeClass}">
-							${icon} ${text}
-						</span>
-					`;
-				}
+				cell: (row: StudentQuestionAnswer) => getAnswerStatusBadge(row)
 			}
 		];
 	}
+
+	const sectionScoreColumns = createSectionScoreColumns();
+
+	// Type for StatCard snippet parameters
+	interface StatCardProps {
+		title: string;
+		value: string | number;
+		percentage: number;
+		colorClass: string;
+		borderClass: string;
+		borderColor?: string;
+		subtitle: string;
+	}
 </script>
+
+{#snippet StatCard({
+	title,
+	value,
+	percentage,
+	colorClass,
+	borderClass,
+	borderColor = '',
+	subtitle
+}: StatCardProps)}
+	<div class="card bg-base-200 shadow">
+		<div class="card-body p-4 items-center text-center">
+			<h3 class="card-title {colorClass} mb-2">{title}</h3>
+			<div class="flex items-center justify-center">
+				<div
+					class="radial-progress bg-base-100 {colorClass} {borderClass}"
+					style="--value:{percentage}; {borderColor ? `border-color: ${borderColor};` : ''}"
+					aria-valuenow={percentage}
+					role="progressbar"
+				>
+					{value}
+				</div>
+			</div>
+			<p class="text-xs mt-2">{subtitle}</p>
+		</div>
+	</div>
+{/snippet}
 
 <PageTitle
 	title={`Detalle de Evaluación: ${result.eval.name}`}
@@ -284,77 +332,42 @@
 			{#if activeTab === 'details'}
 				<!-- Estadísticas Generales -->
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-					<!-- Correctas -->
-					<div class="card bg-base-200 shadow">
-						<div class="card-body p-4 items-center text-center">
-							<h3 class="card-title text-success mb-2">Correctas</h3>
-							<div class="flex items-center justify-center">
-								<div
-									class="radial-progress bg-base-100 text-success border-success border-4"
-									style="--value:{correctPercent};"
-									aria-valuenow={correctPercent}
-									role="progressbar"
-								>
-									{result.scores.general.correct_count}
-								</div>
-							</div>
-							<p class="text-xs mt-2">de {result.scores.general.total_questions} preguntas</p>
-						</div>
-					</div>
+					{@render StatCard({
+						title: 'Correctas',
+						value: result.scores.general.correct_count,
+						percentage: correctPercent,
+						colorClass: 'text-success',
+						borderClass: 'border-success',
+						subtitle: `de ${result.scores.general.total_questions} preguntas`
+					})}
 
-					<!-- Incorrectas -->
-					<div class="card bg-base-200 shadow">
-						<div class="card-body p-4 items-center text-center">
-							<h3 class="card-title text-error mb-2">Incorrectas</h3>
-							<div class="flex items-center justify-center">
-								<div
-									class="radial-progress bg-base-100 text-error border-error border-4"
-									style="--value:{incorrectPercent};"
-									aria-valuenow={incorrectPercent}
-									role="progressbar"
-								>
-									{result.scores.general.incorrect_count}
-								</div>
-							</div>
-							<p class="text-xs mt-2">de {result.scores.general.total_questions} preguntas</p>
-						</div>
-					</div>
+					{@render StatCard({
+						title: 'Incorrectas',
+						value: result.scores.general.incorrect_count,
+						percentage: incorrectPercent,
+						colorClass: 'text-error',
+						borderClass: 'border-error',
+						subtitle: `de ${result.scores.general.total_questions} preguntas`
+					})}
 
-					<!-- En blanco -->
-					<div class="card bg-base-200 shadow">
-						<div class="card-body p-4 items-center text-center">
-							<h3 class="card-title text-warning mb-2">En blanco</h3>
-							<div class="flex items-center justify-center">
-								<div
-									class="radial-progress bg-base-100 text-warning border-warning border-4"
-									style="--value:{blankPercent};"
-									aria-valuenow={blankPercent}
-									role="progressbar"
-								>
-									{result.scores.general.blank_count}
-								</div>
-							</div>
-							<p class="text-xs mt-2">de {result.scores.general.total_questions} preguntas</p>
-						</div>
-					</div>
+					{@render StatCard({
+						title: 'En blanco',
+						value: result.scores.general.blank_count,
+						percentage: blankPercent,
+						colorClass: 'text-warning',
+						borderClass: 'border-warning',
+						subtitle: `de ${result.scores.general.total_questions} preguntas`
+					})}
 
-					<!-- Nota General -->
-					<div class="card bg-base-200 shadow">
-						<div class="card-body p-4 items-center text-center">
-							<h3 class="card-title mb-2">Nota General</h3>
-							<div class="flex items-center justify-center">
-								<div
-									class={`radial-progress bg-base-100 ${getScoreColorClass(result.scores.general.score)} border-4`}
-									style={`--value:${scorePercent}; border-color: ${result.scores.general.score >= 14 ? 'var(--success)' : result.scores.general.score >= 10.5 ? 'var(--warning)' : 'var(--error)'};`}
-									aria-valuenow={scorePercent}
-									role="progressbar"
-								>
-									{result.scores.general.score.toFixed(1)}
-								</div>
-							</div>
-							<p class="text-xs mt-2">de 20.00 puntos</p>
-						</div>
-					</div>
+					{@render StatCard({
+						title: 'Nota General',
+						value: result.scores.general.score.toFixed(1),
+						percentage: scorePercent,
+						colorClass: getScoreColorClass(result.scores.general.score),
+						borderClass: 'border-4',
+						borderColor: getBorderColor(result.scores.general.score),
+						subtitle: 'de 20.00 puntos'
+					})}
 				</div>
 
 				<!-- Puntajes por Sección -->
@@ -364,7 +377,7 @@
 							<h3 class="card-title text-primary mb-2">Puntajes por Sección</h3>
 							<div class="overflow-x-auto">
 								<Table
-									columns={sectionScoreColumns as unknown as {
+									columns={sectionScoreColumns as {
 										key?: string;
 										label: string;
 										headerClass?: string;

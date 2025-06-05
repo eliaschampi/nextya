@@ -72,7 +72,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			throw error(500, 'Error al obtener resultados por sección');
 		}
 
-		// Get student answers
+		// Get student answers - FIXED: Added eval_code filter and proper ordering
 		const { data: answersData, error: answersError } = await locals.supabase
 			.from('eval_answers')
 			.select(
@@ -85,6 +85,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 					order_in_eval,
 					correct_key,
 					section_code,
+					eval_code,
 					eval_sections(
 						course_code,
 						courses(
@@ -94,7 +95,8 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 				)
 			`
 			)
-			.eq('register_code', mainResult.register_code);
+			.eq('register_code', mainResult.register_code)
+			.eq('eval_questions.eval_code', mainResult.eval_code);
 
 		if (answersError) {
 			console.error('Error fetching answers:', answersError);
