@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { X, School, BookOpen } from 'lucide-svelte';
+	import { X, School, BookOpen, Search } from 'lucide-svelte';
 	import type { Level, EvalWithSections } from '$lib/types';
 	import { formatDate } from '$lib/utils/formatDate';
 
@@ -34,6 +34,19 @@
 	}: Props = $props();
 
 	let modal = $state<HTMLDialogElement | null>(null);
+	let searchQuery = $state('');
+
+	// Filtered evaluations based on search query
+	const filteredEvals = $derived(() => {
+		if (!searchQuery.trim()) return availableEvals;
+
+		const query = searchQuery.toLowerCase().trim();
+		return availableEvals.filter(
+			(evalItem) =>
+				evalItem.name.toLowerCase().includes(query) ||
+				evalItem.group_name.toLowerCase().includes(query)
+		);
+	});
 
 	// Modal control
 	$effect(() => {
@@ -60,6 +73,7 @@
 
 	function handleLevelChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
+		searchQuery = ''; // Clear search when level changes
 		onLevelChange(target.value);
 	}
 </script>
@@ -97,6 +111,22 @@
 						<span class="loading loading-spinner loading-md text-primary"></span>
 					</div>
 				{:else}
+					<div class="mb-4">
+						<label class="label font-semibold flex items-center gap-2">
+							<Search class="w-5 h-5 text-secondary" /> Buscar Evaluación
+						</label>
+						<div class="relative">
+							<input
+								type="text"
+								placeholder="Buscar por nombre o grupo..."
+								class="input input-bordered w-full pl-10"
+								bind:value={searchQuery}
+							/>
+							<Search
+								class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-base-content/40"
+							/>
+						</div>
+					</div>
 					<div class="max-h-60 overflow-y-auto rounded-lg bg-base-200">
 						<table class="table table-zebra table-pin-rows table-sm">
 							<thead>
@@ -108,9 +138,9 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each availableEvals as item (item.code)}
+								{#each filteredEvals() as item (item.code)}
 									<tr class="hover">
-										<td class="font-medium">{item.name}</td>
+										<td class="font-medium whitespace-nowrap">{item.name}</td>
 										<td class="text-center">
 											<span class="badge badge-ghost badge-sm">{item.group_name}</span>
 										</td>
@@ -131,7 +161,9 @@
 								{:else}
 									<tr>
 										<td colspan="4" class="text-center py-6 opacity-50">
-											No hay evaluaciones para este nivel.
+											{searchQuery
+												? 'No se encontraron evaluaciones que coincidan con la búsqueda.'
+												: 'No hay evaluaciones para este nivel.'}
 										</td>
 									</tr>
 								{/each}

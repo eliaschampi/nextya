@@ -233,15 +233,14 @@
 		{
 			key: 'name',
 			label: 'Nombre',
-			class: 'py-4 px-6 font-bold opacity-70'
+			class: 'py-4 px-6 font-bold opacity-70 whitespace-nowrap'
 		},
 		{
 			key: 'levels.name',
 			label: 'Nivel',
 			class: 'py-4 px-6',
 			cell: (row: EvalWithSections) => `
-				<span class="badge badge-primary badge-outline flex items-center gap-1">
-					<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-open w-3 h-3"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+				<span class="badge badge-primary badge-outline flex items-center gap-1 whitespace-nowrap">
 					${row.levels?.name || 'N/A'}
 				</span>
 			`
@@ -258,7 +257,6 @@
 			class: 'py-4 px-6',
 			cell: (row: EvalWithSections) => `
 				<div class="flex items-center gap-1 text-sm text-gray-500">
-					<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar w-3 h-3 opacity-70"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
 					${formatDate(row.eval_date)}
 				</div>
 			`
@@ -269,7 +267,7 @@
 			cell: (row: EvalWithSections) => `
 				<a
 					href="/eval/keys/${row.code}"
-					class="badge badge-soft flex items-center gap-1"
+					class="badge badge-soft flex items-center gap-1 whitespace-nowrap"
 					aria-label="Gestionar preguntas"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-key w-3 h-3"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
