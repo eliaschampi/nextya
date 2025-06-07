@@ -2,11 +2,8 @@
 	import { X, School, BookOpen, Search } from 'lucide-svelte';
 	import type { Level, EvalWithSections } from '$lib/types';
 	import { formatDate } from '$lib/utils/formatDate';
+	import { onMount } from 'svelte';
 
-	/**
-	 * Modal para seleccionar una evaluación.
-	 * El modal se cierra automáticamente cuando se selecciona una evaluación.
-	 */
 	type Props = {
 		levels: Level[];
 		availableEvals: EvalWithSections[];
@@ -58,7 +55,7 @@
 	});
 
 	// Close event handling - notifica al componente padre cuando el modal se cierra
-	$effect(() => {
+	onMount(() => {
 		const modalElement = modal;
 		if (!modalElement) return;
 
@@ -115,17 +112,12 @@
 						<label class="label font-semibold flex items-center gap-2">
 							<Search class="w-5 h-5 text-secondary" /> Buscar Evaluación
 						</label>
-						<div class="relative">
-							<input
-								type="text"
-								placeholder="Buscar por nombre o grupo..."
-								class="input input-bordered w-full pl-10"
-								bind:value={searchQuery}
-							/>
-							<Search
-								class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-base-content/40"
-							/>
-						</div>
+						<input
+							type="text"
+							placeholder="Buscar por nombre o grupo..."
+							class="input input-bordered w-full pl-10"
+							bind:value={searchQuery}
+						/>
 					</div>
 					<div class="max-h-60 overflow-y-auto rounded-lg bg-base-200">
 						<table class="table table-zebra table-pin-rows table-sm">
@@ -150,7 +142,7 @@
 												class="btn btn-primary btn-xs"
 												onclick={() => {
 													onSelectEval(item);
-													closeModal(); // Cerrar el modal automáticamente al seleccionar
+													closeModal();
 												}}
 												disabled={selectedEval?.code === item.code || loading}
 											>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import PageTitle from '$lib/components/PageTitle.svelte';
-	import EvaluationSelectionModal from '$lib/components/EvaluationSelectionModal.svelte';
+	import EvalSelector from '$lib/components/EvalSelector.svelte';
 	import EvalHeader from '$lib/components/EvalHeader.svelte';
 	import Table from '$lib/components/Table.svelte';
 	import Pagination from '$lib/components/Pagination.svelte';
@@ -175,7 +175,7 @@
 		}
 	}
 
-	// These functions are used in the EvaluationSelectionModal component
+	// These functions are used in the EvalSelector component
 	async function loadResults(evalCode: string) {
 		loadingResults = true;
 
@@ -620,7 +620,7 @@
 	{/if}
 </main>
 
-<EvaluationSelectionModal
+<EvalSelector
 	levels={data.levels}
 	availableEvals={storeState.availableEvals}
 	selectedEval={storeState.selectedEval}

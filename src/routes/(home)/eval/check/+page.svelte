@@ -7,7 +7,7 @@
 	import ImagePreview from '$lib/components/ImagePreview.svelte';
 	import Message from '$lib/components/Message.svelte';
 	import OmrDetailsModal from '$lib/components/OmrDetailsModal.svelte';
-	import EvaluationSelectionModal from '$lib/components/EvaluationSelectionModal.svelte';
+	import EvalSelector from '$lib/components/EvalSelector.svelte';
 	import FileUploadButton from '$lib/components/FileUploadButton.svelte';
 	import {
 		Upload,
@@ -949,7 +949,7 @@
 	/>
 {/if}
 
-<EvaluationSelectionModal
+<EvalSelector
 	levels={data.levels}
 	availableEvals={storeState.availableEvals}
 	selectedEval={storeState.selectedEval}

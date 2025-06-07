@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { Chart } from 'chart.js/auto';
 	import PageTitle from '$lib/components/PageTitle.svelte';
-	import EvaluationSelectionModal from '$lib/components/EvaluationSelectionModal.svelte';
+	import EvalSelector from '$lib/components/EvalSelector.svelte';
 	import { showToast } from '$lib/stores/Toast.js';
 	import { School, ChartPie, Activity, CircleDot } from 'lucide-svelte';
 	import type { Level, EvalWithSections } from '$lib/types';
@@ -434,7 +434,7 @@
 	{/if}
 </main>
 
-<EvaluationSelectionModal
+<EvalSelector
 	levels={data.levels}
 	availableEvals={storeState.availableEvals}
 	selectedEval={storeState.selectedEval}
