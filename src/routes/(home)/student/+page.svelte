@@ -571,6 +571,12 @@
 		{/if}
 
 		{#if activeTab === 'new'}
+			{#if isEditing}
+				<Message
+					type="warning"
+					description="Importante. Cambiar el nivel o grupo eliminará automáticamente todos los resultados de evaluaciones anteriores."
+				/>
+			{/if}
 			<form onsubmit={handleSubmit} autocomplete="off">
 				<fieldset class="fieldset-container">
 					<div class="form-group">
@@ -650,12 +656,6 @@
 								<option value={group}>{group}</option>
 							{/each}
 						</select>
-						{#if isEditing}
-							<small class="form-group-hint text-warning">
-								⚠️ Cambiar el nivel o grupo eliminará automáticamente todos los resultados de
-								evaluaciones anteriores.
-							</small>
-						{/if}
 					</div>
 					<div class="form-group">
 						<label class="form-group-label" for="roll_code">Código de Matrícula</label>

@@ -44,11 +44,6 @@
 
 	const IconComponent = icon === 'plus' ? Plus : Upload;
 	const buttonClasses = `btn ${variant === 'primary' ? 'btn-primary' : 'btn-outline btn-primary'} btn-${size} ${className}`;
-
-	// Debug log
-	$effect(() => {
-		console.log('FileUploadButton - dis value changed:', dis);
-	});
 </script>
 
 <button class={buttonClasses} disabled={dis} onclick={triggerFileInput}>

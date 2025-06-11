@@ -115,7 +115,7 @@
 						<input
 							type="text"
 							placeholder="Buscar por nombre o grupo..."
-							class="input input-bordered w-full pl-10"
+							class="input input-bordered w-full"
 							bind:value={searchQuery}
 						/>
 					</div>

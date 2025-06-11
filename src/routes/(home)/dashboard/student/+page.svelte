@@ -3,7 +3,7 @@
 	import { Chart } from 'chart.js/auto';
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast.js';
-	import { User, Search, Activity, ChartPie } from 'lucide-svelte';
+	import { User, Activity, ChartPie } from 'lucide-svelte';
 	import type {
 		Student,
 		StudentScoreEvolution,
@@ -12,6 +12,7 @@
 	} from '$lib/types';
 	import { studentStore } from '$lib/stores/student';
 	import StudentCard from '$lib/components/StudentCard.svelte';
+	import StudentSearchModal from '$lib/components/StudentSearchModal.svelte';
 
 	// We don't need to use the props in this component
 	// as we're using a student search instead
@@ -37,13 +38,11 @@
 	});
 
 	// Local state
-	let searchQuery = $state('');
-	let searchResults = $state<Student[]>([]);
+	let studentSearchModalOpen = $state(false);
 	let dashboardLoading = $state(false);
 	let scoreEvolutionData = $state<StudentScoreEvolution[] | null>(null);
 	let courseScoresData = $state<StudentCourseScore[] | null>(null);
 	let courseEvolutionData = $state<StudentCourseEvolution[] | null>(null);
-	let modal: HTMLDialogElement | null = $state(null);
 
 	// Chart references
 	let scoreEvolutionChart: Chart | null = $state(null);
@@ -124,46 +123,14 @@
 	 * Open student search modal
 	 */
 	function openStudentSearchModal() {
-		modal?.showModal();
+		studentSearchModalOpen = true;
 	}
 
 	/**
 	 * Close student search modal
 	 */
 	function closeStudentSearchModal() {
-		modal?.close();
-		searchQuery = '';
-		searchResults = [];
-	}
-
-	/**
-	 * Handle key down event for search input
-	 * @param event Keyboard event
-	 */
-	function handleKeyDown(event: KeyboardEvent) {
-		if (event.key === 'Enter') {
-			event.preventDefault();
-			searchStudents();
-		}
-	}
-
-	/**
-	 * Search for students by name or last name
-	 */
-	async function searchStudents() {
-		if (!searchQuery.trim()) return;
-
-		try {
-			const response = await fetch(`/api/student?search=${encodeURIComponent(searchQuery.trim())}`);
-			if (!response.ok) {
-				throw new Error('Error al buscar estudiantes');
-			}
-			searchResults = await response.json();
-		} catch (error) {
-			console.error('Error searching students:', error);
-			showToast('Error al buscar estudiantes', 'danger');
-			searchResults = [];
-		}
+		studentSearchModalOpen = false;
 	}
 
 	/**
@@ -173,7 +140,6 @@
 	function selectStudent(student: Student) {
 		// Use the store to select the student
 		studentStore.selectStudent(student, 'dashboard-student-page');
-		closeStudentSearchModal();
 		loadStudentDashboardData(student.code);
 	}
 
@@ -677,49 +643,9 @@
 	{/if}
 </main>
 
-<!-- Student Search Modal -->
-<dialog id="studentSearchModal" class="modal" bind:this={modal}>
-	<div class="modal-box">
-		<h3 class="font-bold text-lg mb-4">Buscar Estudiante</h3>
-		<div class="join w-full mb-4">
-			<input
-				type="text"
-				placeholder="Buscar por nombre o apellido"
-				class="input input-bordered join-item flex-1"
-				bind:value={searchQuery}
-				onkeydown={handleKeyDown}
-			/>
-			<button
-				class="btn btn-primary join-item"
-				onclick={searchStudents}
-				disabled={!searchQuery.trim()}
-			>
-				<Search class="w-4 h-4" />
-			</button>
-		</div>
-		{#if searchResults.length > 0}
-			<ul class="space-y-2 max-h-48 overflow-y-auto p-4">
-				{#each searchResults as student (student.code)}
-					<li
-						class="bg-base-200 p-3 rounded-box hover:bg-base-300 transition-colors cursor-pointer"
-					>
-						<button class="w-full text-left" onclick={() => selectStudent(student)}>
-							{student.name}
-							{student.last_name}
-						</button>
-					</li>
-				{/each}
-			</ul>
-		{:else if searchQuery}
-			<div class="text-center p-4 text-base-content/70">
-				<p>No se encontraron estudiantes con ese nombre</p>
-			</div>
-		{/if}
-		<div class="modal-action">
-			<button class="btn" onclick={closeStudentSearchModal}>Cerrar</button>
-		</div>
-	</div>
-	<form method="dialog" class="modal-backdrop">
-		<button>cerrar</button>
-	</form>
-</dialog>
+<!-- Student Search Modal Component -->
+<StudentSearchModal
+	open={studentSearchModalOpen}
+	onClose={closeStudentSearchModal}
+	onSelect={selectStudent}
+/>

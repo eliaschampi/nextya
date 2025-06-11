@@ -7,20 +7,18 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { goto } from '$app/navigation';
-	import Message from '$lib/components/Message.svelte';
+
 	import Table from '$lib/components/Table.svelte';
 	import { permissionsStore } from '$lib/stores/permissions';
 	import { studentStore } from '$lib/stores/student';
 	import StudentCard from '$lib/components/StudentCard.svelte';
+	import StudentSearchModal from '$lib/components/StudentSearchModal.svelte';
 
 	// Define EventListener type for custom events
 	type EventListener = (event: Event) => void;
 
-	// Referencias y estados
-	let modal = $state<HTMLDialogElement | null>(null);
-	let searchQuery = $state('');
-	let searchResults = $state<Student[]>([]);
-	let searchLoading = $state(false);
+	// Modal state
+	let studentSearchModalOpen = $state(false);
 
 	// Store state
 	let storeState = $state({
@@ -177,54 +175,15 @@
 	});
 
 	function openStudentSearchModal() {
-		modal?.showModal();
-		// Enfocar el campo de búsqueda
-		queueMicrotask(() => {
-			const searchInput = modal?.querySelector<HTMLInputElement>('#student-search');
-			searchInput?.focus();
-		});
+		studentSearchModalOpen = true;
 	}
 
-	// Cerrar modal
-	function closeModal() {
-		modal?.close();
+	function closeStudentSearchModal() {
+		studentSearchModalOpen = false;
 	}
 
-	// Manejar tecla Enter
-	function handleKeyDown(event: KeyboardEvent) {
-		if (event.key === 'Enter') {
-			event.preventDefault();
-			searchStudents();
-		}
-	}
-
-	// Buscar estudiantes
-	async function searchStudents() {
-		if (!searchQuery.trim()) {
-			searchResults = [];
-			return;
-		}
-
-		searchLoading = true;
-		try {
-			const response = await fetch(`/api/student?search=${encodeURIComponent(searchQuery)}`);
-			if (response.ok) {
-				searchResults = await response.json();
-			} else {
-				searchResults = [];
-			}
-		} catch (error) {
-			console.error('Error searching students:', error);
-			searchResults = [];
-		} finally {
-			searchLoading = false;
-		}
-	}
-
-	// Seleccionar estudiante
+	// Handle student selection from modal
 	async function handleSelectStudent(student: Student) {
-		closeModal();
-
 		// Use SvelteKit's goto to update the URL
 		goto(`/eval/student?student=${student.code}`, {
 			keepFocus: true,
@@ -277,11 +236,6 @@
 		if (pageNum >= 1 && pageNum <= totalPages) {
 			currentPage = pageNum;
 		}
-	}
-
-	function resetSearch() {
-		searchQuery = '';
-		searchResults = [];
 	}
 
 	// Exportar resultados a Excel
@@ -354,17 +308,12 @@
 	}
 
 	onMount(() => {
-		modal?.addEventListener('close', resetSearch);
 		const cleanup = setupTableEventListeners();
 		return () => cleanup();
 	});
 
 	onDestroy(() => {
-		modal?.removeEventListener('close', resetSearch);
-		// Asegurarse de que el modal esté cerrado al desmontar
-		if (modal?.open) {
-			modal.close();
-		}
+		// Clean up any remaining resources
 	});
 </script>
 
@@ -558,64 +507,9 @@
 	{/if}
 </main>
 
-<!-- Modal de búsqueda de estudiantes -->
-<dialog bind:this={modal} class="modal">
-	<div class="modal-box max-w-md">
-		<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onclick={closeModal}>
-			<X size={20} />
-		</button>
-		<h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-			<User size={20} />
-			Buscar Estudiante
-		</h3>
-
-		<div class="join w-full mb-4">
-			<input
-				id="student-search"
-				type="text"
-				placeholder="Buscar por nombre o apellido"
-				class="input input-bordered join-item flex-1"
-				bind:value={searchQuery}
-				onkeydown={handleKeyDown}
-				autocomplete="off"
-			/>
-			<button
-				class="btn btn-primary join-item"
-				onclick={searchStudents}
-				disabled={!searchQuery.trim() || searchLoading}
-			>
-				{#if searchLoading}
-					<span class="loading loading-spinner loading-xs"></span>
-				{:else}
-					<Search size={16} />
-				{/if}
-			</button>
-		</div>
-
-		{#if searchResults.length > 0}
-			<ul class="space-y-2 max-h-64 overflow-y-auto">
-				{#each searchResults as student (student.code)}
-					<li
-						class="bg-base-200 p-3 rounded-box hover:bg-base-300 transition-colors cursor-pointer"
-					>
-						<button
-							class="w-full text-left"
-							onclick={() => handleSelectStudent(student)}
-							type="button"
-						>
-							<div class="font-medium">{student.name} {student.last_name}</div>
-						</button>
-					</li>
-				{/each}
-			</ul>
-		{:else if searchQuery && !searchLoading}
-			<Message
-				description="No se encontraron estudiantes con ese criterio de búsqueda."
-				type="info"
-			/>
-		{/if}
-	</div>
-	<form method="dialog" class="modal-backdrop">
-		<button>cerrar</button>
-	</form>
-</dialog>
+<!-- Student Search Modal Component -->
+<StudentSearchModal
+	open={studentSearchModalOpen}
+	onClose={closeStudentSearchModal}
+	onSelect={handleSelectStudent}
+/>
