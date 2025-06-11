@@ -347,7 +347,8 @@
 			formData.append('code', selectedCode.toString());
 		}
 
-		const response = await fetch('?/create', { method: 'POST', body: formData });
+		const action = selectedCode ? '?/update' : '?/create';
+		const response = await fetch(action, { method: 'POST', body: formData });
 		const res = await response.json();
 
 		if (res.type === 'success') {
@@ -649,6 +650,12 @@
 								<option value={group}>{group}</option>
 							{/each}
 						</select>
+						{#if isEditing}
+							<small class="form-group-hint text-warning">
+								⚠️ Cambiar el nivel o grupo eliminará automáticamente todos los resultados de
+								evaluaciones anteriores.
+							</small>
+						{/if}
 					</div>
 					<div class="form-group">
 						<label class="form-group-label" for="roll_code">Código de Matrícula</label>

@@ -147,6 +147,30 @@ export const actions: Actions = {
 			});
 		}
 
+		// Get current register to check for group/level change
+		const { data: currentRegister, error: currentRegisterError } = await locals.supabase
+			.from('registers')
+			.select('group_name, level_code, code')
+			.eq('student_code', code)
+			.order('created_at', { ascending: false })
+			.limit(1)
+			.single();
+
+		if (currentRegisterError) return fail(400, { error: currentRegisterError.message });
+
+		// Check if group or level is changing
+		const isGroupChanging = currentRegister.group_name !== group_name;
+		const isLevelChanging = currentRegister.level_code !== level_code;
+
+		// If group/level is changing, automatically delete evaluation data
+		if (isGroupChanging || isLevelChanging) {
+			// Delete eval_answers first (they reference eval_questions)
+			await locals.supabase.from('eval_answers').delete().eq('register_code', currentRegister.code);
+
+			// Delete eval_results (they reference evals and eval_sections)
+			await locals.supabase.from('eval_results').delete().eq('register_code', currentRegister.code);
+		}
+
 		const { error: studentError } = await locals.supabase
 			.from('students')
 			.update({ name, last_name, phone, email })
