@@ -12,12 +12,14 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
-		"test": "bun run format && bun run lint && bun run check",
+		"test": "npm run format && npm run lint && npm run check",
 		"docker:up": "docker-compose up -d",
 		"docker:down": "docker-compose down",
-		"docker:logs": "docker-compose logs -f",
-		"docker:build": "docker-compose build",
-		"db:generate": "kysely-codegen --config kysely.config.ts"
+		"docker:logs": "docker-compose logs -f app",
+		"docker:build": "docker-compose build --no-cache",
+		"docker:clean": "docker-compose down -v && docker system prune -f",
+		"docker:db": "docker exec -it nextya_postgres psql -U postgres -d nextya",
+		"db:generate": "npx kysely-codegen --config kysely.config.ts"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.9",

@@ -1,36 +1,48 @@
-# Docker Setup for NextYa - PostgreSQL Migration
+# Docker Setup for NextYa - Modern SvelteKit + PostgreSQL
 
-Configuración **minimalista y profesional** para SvelteKit con PostgreSQL usando Docker y Bun.
+Configuración **moderna, eficiente y limpia** para SvelteKit con PostgreSQL, OpenCV y npm.
 
-## Comandos útiles
+## 🚀 Comandos útiles
 
 ```bash
 # Levantar los servicios
-bun run docker:up
+npm run docker:up
 
-# Detener y limpiar
-bun run docker:down
+# Ver logs de la app
+npm run docker:logs
 
-# Ver logs en tiempo real
-bun run docker:logs
+# Conectar a PostgreSQL
+npm run docker:db
 
-# Rebuild containers
-bun run docker:build
+# Rebuild sin cache
+npm run docker:build
+
+# Limpiar todo (volumes + containers)
+npm run docker:clean
+
+# Detener servicios
+npm run docker:down
 ```
 
-## Acceso
+## 🌐 Acceso
 
-- **App**: http://localhost:5173 (Vite dev server)
+- **App**: http://localhost:5173 (Vite dev server + hot reload)
 - **PostgreSQL**: localhost:5432
+- **Redis**: localhost:6379
 
-## Estructura
+## 📁 Estructura
 
 ```
-your-project/
-├── src/               # Código fuente de SvelteKit
-├── Dockerfile         # Definición del contenedor de SvelteKit
-├── docker-compose.yml # Orquestación de servicios
-└── .env.docker        # Variables de entorno
+nextya/
+├── src/                    # Código fuente SvelteKit
+├── docker/
+│   ├── app.dockerfile     # Multi-stage Dockerfile con OpenCV
+│   ├── data/              # Volúmenes persistentes
+│   │   ├── postgres/      # Data PostgreSQL
+│   │   └── redis/         # Data Redis
+│   └── init/              # Scripts inicialización DB
+├── docker-compose.yml     # Orquestación profesional
+└── .env.docker           # Variables de entorno
 ```
 
 ## Variables de entorno
@@ -41,21 +53,33 @@ your-project/
 - `DB_NAME=nextya`
 - `NODE_ENV=production`
 
-## Ventajas de esta configuración
+## ✨ Características
 
-- **Minimalista**: Solo incluye lo necesario
-- **Funcional**: SvelteKit + PostgreSQL trabajan juntos
-- **Profesional**: Usa prácticas estándar (volúmenes, variables de entorno)
-- **Escalable**: Fácil de extender con más servicios
+- **🔧 OpenCV Ready**: Usa `urielch/opencv-nodejs:6.2.4` (sin errores de compilación)
+- **⚡ Bun + Node**: Compatibilidad completa con tu stack
+- **🐘 PostgreSQL 14**: Preparado para migración desde Supabase
+- **🔄 Hot Reload**: Desarrollo con volúmenes delegados
+- **🏗️ Multi-stage**: Build optimizado para producción
+- **🌐 Networks**: Comunicación segura entre servicios
+- **💾 Persistencia**: Data PostgreSQL y Redis persistente
+- **🧹 Cleanup**: Scripts de limpieza automática
 
-## Conexión a PostgreSQL
+## 🔧 Solución OpenCV
+
+Usa la imagen especializada `urielch/opencv-nodejs:6.2.4` que resuelve todos los problemas de compilación de `@u4/opencv4nodejs` en Docker.
+
+## 🗄️ Base de Datos
 
 ```bash
 # Conectar a PostgreSQL
-docker exec -it nextya-postgres-1 psql -U postgres -d nextya
+bun run docker:db
 
-# Generar tipos de Kysely
-bun run db:generate
+# La DB se inicializa automáticamente con:
+# - Extensiones UUID y pgcrypto
+# - Tabla users para JWT auth
+# - Índices optimizados
 ```
 
-Esta configuración proporciona una base limpia para la migración de Supabase a Kysely.
+## 🚀 Migración Ready
+
+Esta configuración está **100% preparada** para la migración Supabase → Kysely + PostgreSQL con JWT auth.
