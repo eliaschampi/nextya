@@ -17,7 +17,6 @@ services:
       - NODE_ENV=development
     volumes:
       - .:/app:delegated
-      - /app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
