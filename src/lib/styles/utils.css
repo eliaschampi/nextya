@@ -222,7 +222,7 @@
 
 /* Form groups */
 .form-group {
-	margin-bottom: 1rem;
+	margin-bottom: 0.5rem;
 }
 
 .form-group-label {
@@ -386,45 +386,6 @@
 	}
 }
 
-/* Responsive helpers */
-.mobile-only {
-	display: block;
-}
-
-@media (min-width: 640px) {
-	.mobile-only {
-		display: none;
-	}
-}
-
-.desktop-only {
-	display: none;
-}
-
-@media (min-width: 640px) {
-	.desktop-only {
-		display: block;
-	}
-}
-
-/* Shadows - Subtle and smooth */
-.shadow-soft {
-	box-shadow:
-		0 1px 2px 0 rgba(0, 0, 0, 0.03),
-		0 1px 6px -1px rgba(0, 0, 0, 0.02);
-}
-
-.shadow-medium {
-	box-shadow:
-		0 2px 8px -2px rgba(0, 0, 0, 0.05),
-		0 4px 12px -4px rgba(0, 0, 0, 0.02);
-}
-
-.shadow-hard {
-	box-shadow:
-		0 8px 16px -6px rgba(0, 0, 0, 0.04),
-		0 16px 24px -8px rgba(0, 0, 0, 0.03);
-}
 
 /* Typography helpers */
 .text-emphasis {

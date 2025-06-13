@@ -12,7 +12,12 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
-		"test": "bun run format && bun run lint && bun run check"
+		"test": "bun run format && bun run lint && bun run check",
+		"docker:up": "docker-compose up -d",
+		"docker:down": "docker-compose down",
+		"docker:logs": "docker-compose logs -f",
+		"docker:build": "docker-compose build",
+		"db:generate": "kysely-codegen --config kysely.config.ts"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.9",
@@ -20,10 +25,12 @@
 		"@sveltejs/adapter-node": "^5.2.12",
 		"@sveltejs/kit": "^2.21.2",
 		"@sveltejs/vite-plugin-svelte": "^5.1.0",
+		"@types/pg": "^8.15.4",
 		"eslint": "^9.28.0",
 		"eslint-config-prettier": "^10.1.5",
 		"eslint-plugin-svelte": "^3.9.1",
 		"globals": "^16.2.0",
+		"kysely-codegen": "^0.18.5",
 		"prettier": "^3.5.3",
 		"prettier-plugin-svelte": "^3.4.0",
 		"svelte": "^5.33.19",
@@ -40,7 +47,9 @@
 		"chart.js": "^4.4.9",
 		"daisyui": "^5.0.43",
 		"fast-csv": "^5.0.2",
+		"kysely": "^0.28.2",
 		"lucide-svelte": "^0.513.0",
+		"pg": "^8.16.0",
 		"tailwindcss": "^4.1.10",
 		"zod": "^3.25.51"
 	}
