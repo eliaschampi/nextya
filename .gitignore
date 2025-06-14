@@ -7,11 +7,11 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
-SupabaseToKyselyMigrationGuide
+-SupabaseToKyselyMigrationGuide
 # OS
 .DS_Store
 Thumbs.db
-
+docker/data/
 # Env
 .env
 .env.*
