@@ -1,28 +1,25 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { db } from '$lib/database';
+import { sql } from 'kysely';
 import type { StudentScoreEvolution, StudentCourseScore, StudentCourseEvolution } from '$lib/types';
 
 /**
  * Fetches score evolution data for a specific student
- * @param supabase Supabase client
  * @param studentCode Student code to get score evolution for
  * @returns Array of score evolution data or null if error
  */
 export async function getStudentScoreEvolution(
-	supabase: SupabaseClient,
 	studentCode: string
 ): Promise<StudentScoreEvolution[] | null> {
 	try {
-		const { data, error } = await supabase.rpc('get_student_score_evolution', {
-			p_student_code: studentCode
-		});
+		const result = await sql<StudentScoreEvolution>`
+			SELECT * FROM get_student_score_evolution(${studentCode})
+		`.execute(db);
 
-		if (error) throw error;
-
-		if (!data || !Array.isArray(data)) {
+		if (!result.rows || !Array.isArray(result.rows)) {
 			return null;
 		}
 
-		return data;
+		return result.rows;
 	} catch (error) {
 		console.error('Error fetching student score evolution:', error);
 		return null;
@@ -31,26 +28,22 @@ export async function getStudentScoreEvolution(
 
 /**
  * Fetches course scores for a specific student
- * @param supabase Supabase client
  * @param studentCode Student code to get course scores for
  * @returns Array of course scores or null if error
  */
 export async function getStudentCourseScores(
-	supabase: SupabaseClient,
 	studentCode: string
 ): Promise<StudentCourseScore[] | null> {
 	try {
-		const { data, error } = await supabase.rpc('get_student_course_scores', {
-			p_student_code: studentCode
-		});
+		const result = await sql<StudentCourseScore>`
+			SELECT * FROM get_student_course_scores(${studentCode})
+		`.execute(db);
 
-		if (error) throw error;
-
-		if (!data || !Array.isArray(data)) {
+		if (!result.rows || !Array.isArray(result.rows)) {
 			return null;
 		}
 
-		return data;
+		return result.rows;
 	} catch (error) {
 		console.error('Error fetching student course scores:', error);
 		return null;
@@ -59,26 +52,22 @@ export async function getStudentCourseScores(
 
 /**
  * Fetches course evolution data for a specific student
- * @param supabase Supabase client
  * @param studentCode Student code to get course evolution for
  * @returns Array of course evolution data or null if error
  */
 export async function getStudentCourseEvolution(
-	supabase: SupabaseClient,
 	studentCode: string
 ): Promise<StudentCourseEvolution[] | null> {
 	try {
-		const { data, error } = await supabase.rpc('get_student_course_evolution', {
-			p_student_code: studentCode
-		});
+		const result = await sql<StudentCourseEvolution>`
+			SELECT * FROM get_student_course_evolution(${studentCode})
+		`.execute(db);
 
-		if (error) throw error;
-
-		if (!data || !Array.isArray(data)) {
+		if (!result.rows || !Array.isArray(result.rows)) {
 			return null;
 		}
 
-		return data;
+		return result.rows;
 	} catch (error) {
 		console.error('Error fetching student course evolution:', error);
 		return null;

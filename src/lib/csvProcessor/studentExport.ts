@@ -1,5 +1,6 @@
 // src/lib/csvProcessor/studentExport.ts
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { db } from '$lib/database';
+import { sql } from 'kysely';
 import type { StudentEvalReport, StudentExportRow } from '$lib/types';
 import { generateExcelCsv, createCsvResponse } from './exportExcel';
 

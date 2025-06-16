@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	try {
 		// Get group dashboard data from the dedicated module
-		const dashboardData = await getGroupDashboardData(locals.supabase, level_code, group_name);
+		const dashboardData = await getGroupDashboardData(locals.db, level_code, group_name);
 
 		if (!dashboardData) {
 			return json({ error: 'No se pudieron obtener datos del dashboard' }, { status: 500 });

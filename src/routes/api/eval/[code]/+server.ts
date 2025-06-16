@@ -1,36 +1,70 @@
-import type { Eval, EvalSectionWithCourse } from '$lib/types';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
+
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const { code } = params;
-	if (!code) return new Response(JSON.stringify([]));
-	const { data, error: supabaseError } = await locals.supabase
-		.from('evals')
-		.select(`*, levels (name), eval_sections (*, courses (name))`)
-		.eq('level_code', code)
-		.order('eval_date', { ascending: true });
+	if (!code) return json([]);
 
-	if (supabaseError) return new Response(JSON.stringify([]), { status: 500 });
+	try {
+		const evals = await locals.db
+			.selectFrom('evals')
+			.innerJoin('levels', 'levels.code', 'evals.levelCode')
+			.leftJoin('evalSections', 'evalSections.evalCode', 'evals.code')
+			.leftJoin('courses', 'courses.code', 'evalSections.courseCode')
+			.select([
+				'evals.code',
+				'evals.name',
+				'evals.levelCode',
+				'evals.groupName',
+				'evals.evalDate',
+				'evals.userCode',
+				'evals.createdAt',
+				'evals.updatedAt',
+				'levels.name as levelName',
+				'evalSections.code as sectionCode',
+				'evalSections.courseCode',
+				'evalSections.orderInEval',
+				'evalSections.questionCount',
+				'courses.name as courseName'
+			])
+			.where('evals.levelCode', '=', code)
+			.orderBy('evals.evalDate', 'asc')
+			.execute();
 
-	const evals = data.map(
-		(
-			evalItem: Eval & {
-				eval_sections: Array<EvalSectionWithCourse>;
-				levels: { name: string };
+		// Group sections by eval
+		const evalMap = new Map();
+
+		evals.forEach(row => {
+			if (!evalMap.has(row.code)) {
+				evalMap.set(row.code, {
+					code: row.code,
+					name: row.name,
+					levelCode: row.levelCode,
+					groupName: row.groupName,
+					evalDate: row.evalDate,
+					userCode: row.userCode,
+					createdAt: row.createdAt,
+					updatedAt: row.updatedAt,
+					levels: { name: row.levelName },
+					eval_sections: []
+				});
 			}
-		) => ({
-			...evalItem,
-			eval_sections: evalItem.eval_sections.map((section) => ({
-				code: section.code,
-				eval_code: section.eval_code,
-				course_code: section.course_code,
-				order_in_eval: section.order_in_eval,
-				question_count: section.question_count,
-				course_name: section.courses?.name || 'Sin nombre'
-			}))
-		})
-	);
 
-	return new Response(JSON.stringify(evals), {
-		headers: { 'Content-Type': 'application/json' }
-	});
+			if (row.sectionCode) {
+				evalMap.get(row.code).eval_sections.push({
+					code: row.sectionCode,
+					eval_code: row.code,
+					course_code: row.courseCode,
+					order_in_eval: row.orderInEval,
+					question_count: row.questionCount,
+					course_name: row.courseName || 'Sin nombre'
+				});
+			}
+		});
+
+		return json(Array.from(evalMap.values()));
+	} catch (error) {
+		console.error('Error fetching evals:', error);
+		return json([], { status: 500 });
+	}
 };

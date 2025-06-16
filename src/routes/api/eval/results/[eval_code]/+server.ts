@@ -9,7 +9,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	}
 
 	// Usar la función RPC para obtener los resultados
-	const { data, error } = await locals.supabase.rpc('get_register_eval_results', {
+	const { data, error } = await locals.db.rpc('get_register_eval_results', {
 		p_eval_code: eval_code
 	});
 
@@ -41,7 +41,7 @@ export const DELETE: RequestHandler = async ({ params, request, locals }) => {
 		// If resultIds is empty, it means delete all results for this eval
 		if (resultIds.length === 0) {
 			// Delete all results for this evaluation
-			const { error: deleteAllError } = await locals.supabase
+			const { error: deleteAllError } = await locals.db
 				.from('eval_results')
 				.delete()
 				.eq('eval_code', eval_code);
@@ -54,7 +54,7 @@ export const DELETE: RequestHandler = async ({ params, request, locals }) => {
 			return json({ success: true, message: 'Todos los resultados eliminados correctamente' });
 		} else {
 			// Delete specific results
-			const { error: deleteError } = await locals.supabase
+			const { error: deleteError } = await locals.db
 				.from('eval_results')
 				.delete()
 				.in('code', resultIds)

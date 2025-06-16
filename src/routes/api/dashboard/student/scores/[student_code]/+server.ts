@@ -14,7 +14,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	}
 
 	try {
-		const data = await getStudentScoreEvolution(locals.supabase, student_code);
+		const data = await getStudentScoreEvolution(locals.db, student_code);
 
 		if (!data) {
 			return json(

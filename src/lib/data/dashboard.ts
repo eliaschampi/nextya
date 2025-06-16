@@ -1,4 +1,5 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { db } from '$lib/database';
+import { sql } from 'kysely';
 import type {
 	EvalChartData,
 	GroupChartData,
@@ -10,26 +11,20 @@ import type {
 
 /**
  * Fetches dashboard data for a specific level using the optimized SQL function
- * @param supabase Supabase client
  * @param levelCode Level code to get dashboard data for
  * @returns Level dashboard data for charts and visualizations
  */
 export async function getLevelDashboardData(
-	supabase: SupabaseClient,
 	levelCode: string
 ): Promise<LevelDashboardData | null> {
 	try {
-		// Call the optimized SQL function
-		const { data, error } = await supabase.rpc('get_level_dashboard_data', {
-			p_level_code: levelCode
-		});
+		// Call the optimized SQL function using raw SQL
+		const result = await sql<{
+			data_type: string;
+			json_data: any;
+		}>`SELECT * FROM get_level_dashboard_data(${levelCode})`.execute(db);
 
-		if (error) {
-			console.error('Error fetching level dashboard data:', error);
-			return null;
-		}
-
-		if (!data || !Array.isArray(data) || data.length === 0) {
+		if (!result.rows || result.rows.length === 0) {
 			console.error('No data returned from level dashboard function');
 			return null;
 		}
@@ -41,7 +36,7 @@ export async function getLevelDashboardData(
 		};
 
 		// Extract data from the response
-		data.forEach((item) => {
+		result.rows.forEach((item) => {
 			if (item.data_type === 'correctVsIncorrect' && item.json_data) {
 				dashboardData.correctVsIncorrect = item.json_data as AnswerDistribution;
 			} else if (item.data_type === 'scoresByGroup' && item.json_data) {
@@ -58,29 +53,22 @@ export async function getLevelDashboardData(
 
 /**
  * Fetches dashboard data for a specific level and group using the optimized SQL function
- * @param supabase Supabase client
  * @param levelCode Level code to get dashboard data for
  * @param groupName Group name to filter by
  * @returns Group dashboard data for charts and visualizations
  */
 export async function getGroupDashboardData(
-	supabase: SupabaseClient,
 	levelCode: string,
 	groupName: string
 ): Promise<GroupDashboardData | null> {
 	try {
-		// Call the optimized SQL function
-		const { data, error } = await supabase.rpc('get_group_dashboard_data', {
-			p_level_code: levelCode,
-			p_group_name: groupName
-		});
+		// Call the optimized SQL function using raw SQL
+		const result = await sql<{
+			data_type: string;
+			json_data: any;
+		}>`SELECT * FROM get_group_dashboard_data(${levelCode}, ${groupName})`.execute(db);
 
-		if (error) {
-			console.error('Error fetching group dashboard data:', error);
-			return null;
-		}
-
-		if (!data || !Array.isArray(data) || data.length === 0) {
+		if (!result.rows || result.rows.length === 0) {
 			console.error('No data returned from group dashboard function');
 			return null;
 		}
@@ -92,7 +80,7 @@ export async function getGroupDashboardData(
 		};
 
 		// Extract data from the response
-		data.forEach((item) => {
+		result.rows.forEach((item) => {
 			if (item.data_type === 'scoresByEval' && item.json_data) {
 				dashboardData.scoresByEval = item.json_data as EvalChartData[];
 			} else if (item.data_type === 'studentPerformance' && item.json_data) {

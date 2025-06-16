@@ -20,7 +20,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		}
 
 		// Get questions for this evaluation
-		const { data: questionsData, error: questionsError } = await locals.supabase
+		const { data: questionsData, error: questionsError } = await locals.db
 			.from('eval_questions')
 			.select('*')
 			.eq('eval_code', evalCode)

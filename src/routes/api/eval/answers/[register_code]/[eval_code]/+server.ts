@@ -12,7 +12,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	try {
 		// Obtener las respuestas del estudiante
-		const { data, error } = await locals.supabase
+		const { data, error } = await locals.db
 			.from('eval_answers')
 			.select(
 				`

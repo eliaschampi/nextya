@@ -8,12 +8,12 @@ import type { FormSection } from '$lib/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const userId = locals.session?.user.id;
+	const userId = locals.user?.code;
 	let levels = [];
 	if (userId) {
-		levels = await getLevels(locals.supabase, userId);
+		levels = await getLevels(locals.db, userId);
 	}
-	const courses = await getCourses(locals.supabase);
+	const courses = await getCourses(locals.db);
 	return { levels, courses, title: 'Exámenes' };
 };
 
@@ -41,7 +41,7 @@ export const actions: Actions = {
 		const level_code = formData.get('level_code') as string;
 		const group_name = formData.get('group_name') as string;
 		const eval_date = formData.get('eval_date') as string;
-		const user_code = locals.session?.user.id;
+		const user_code = locals.user?.code;
 		const sections = JSON.parse((formData.get('sections') as string) || '[]');
 
 		if (!user_code) return fail(401, { error: 'No autenticado' });
@@ -77,7 +77,7 @@ export const actions: Actions = {
 
 		if (code) {
 			// Actualizar examen existente
-			const { error: evalError } = await locals.supabase
+			const { error: evalError } = await locals.db
 				.from('evals')
 				.update({ name, level_code, group_name, eval_date })
 				.eq('code', code);
@@ -87,10 +87,10 @@ export const actions: Actions = {
 			}
 
 			// Solo modificar secciones si no hay preguntas registradas
-			const hasQuestions = await hasEvalQuestions(locals.supabase, code);
+			const hasQuestions = await hasEvalQuestions(locals.db, code);
 			if (!hasQuestions) {
 				// Eliminar secciones existentes
-				const { error: deleteError } = await locals.supabase
+				const { error: deleteError } = await locals.db
 					.from('eval_sections')
 					.delete()
 					.eq('eval_code', code);
@@ -100,12 +100,12 @@ export const actions: Actions = {
 				}
 
 				// Insertar nuevas secciones
-				const insertError = await insertSections(locals.supabase, code, sections);
+				const insertError = await insertSections(locals.db, code, sections);
 				if (insertError) return insertError;
 			}
 		} else {
 			// Crear nuevo examen
-			const { error: evalError, data: evalData } = await locals.supabase
+			const { error: evalError, data: evalData } = await locals.db
 				.from('evals')
 				.insert({ name, level_code, group_name, eval_date, user_code })
 				.select('code')
@@ -119,7 +119,7 @@ export const actions: Actions = {
 			if (!evalCode) return fail(500, { error: 'Fallo al crear el examen' });
 
 			// Insertar secciones para el nuevo examen
-			const insertError = await insertSections(locals.supabase, evalCode, sections);
+			const insertError = await insertSections(locals.db, evalCode, sections);
 			if (insertError) return insertError;
 
 			// Incluir el código del examen creado en la respuesta
@@ -132,7 +132,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const evalCode = formData.get('code') as string;
 
-		const { error: sectionsError } = await locals.supabase
+		const { error: sectionsError } = await locals.db
 			.from('eval_sections')
 			.delete()
 			.eq('eval_code', evalCode);
@@ -141,7 +141,7 @@ export const actions: Actions = {
 			return fail(400, { error: sectionsError.message });
 		}
 
-		const { error: evalError } = await locals.supabase.from('evals').delete().eq('code', evalCode);
+		const { error: evalError } = await locals.db.from('evals').delete().eq('code', evalCode);
 		if (evalError) {
 			console.error('Error eliminando examen:', evalError);
 			return fail(400, { error: evalError.message });

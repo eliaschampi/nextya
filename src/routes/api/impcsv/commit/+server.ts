@@ -88,7 +88,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			);
 		}
 
-		const user_code = locals.session?.user.id;
+		const user_code = locals.user?.code;
 		if (!user_code) {
 			return json(
 				{
@@ -115,7 +115,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			const batchPromises = batch.map(async (row) => {
 				try {
 					// At this point levelCode is guaranteed to be defined due to earlier validation
-					const { error: rpcError } = await locals.supabase.rpc('import_student_register', {
+					const { error: rpcError } = await locals.db.rpc('import_student_register', {
 						p_name: row.name,
 						p_last_name: row.last_name,
 						p_phone: row.phone || '',

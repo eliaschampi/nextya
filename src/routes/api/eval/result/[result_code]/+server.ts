@@ -11,7 +11,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	try {
 		// Get main result information (general result without section)
-		const { data: mainResult, error: mainResultError } = await locals.supabase
+		const { data: mainResult, error: mainResultError } = await locals.db
 			.from('eval_results')
 			.select(
 				`
@@ -47,7 +47,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		}
 
 		// Get section results for this evaluation and register
-		const { data: sectionResults, error: sectionResultsError } = await locals.supabase
+		const { data: sectionResults, error: sectionResultsError } = await locals.db
 			.from('eval_results')
 			.select(
 				`
@@ -71,7 +71,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		}
 
 		// Get student answers
-		const { data: answersData, error: answersError } = await locals.supabase
+		const { data: answersData, error: answersError } = await locals.db
 			.from('eval_answers')
 			.select(
 				`

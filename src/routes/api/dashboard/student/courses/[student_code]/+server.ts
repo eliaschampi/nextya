@@ -14,7 +14,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	}
 
 	try {
-		const data = await getStudentCourseScores(locals.supabase, student_code);
+		const data = await getStudentCourseScores(locals.db, student_code);
 
 		if (!data) {
 			return json({ error: 'No se pudieron obtener datos de cursos' }, { status: 500 });

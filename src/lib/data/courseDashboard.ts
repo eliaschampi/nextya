@@ -1,31 +1,27 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { db } from '$lib/database';
+import { sql } from 'kysely';
 import type { CourseScore, EvalScore } from '$lib/types';
 
 /**
  * Fetches course scores for a specific level
- * @param supabase Supabase client
  * @param levelCode Level code to get course scores for
  * @param groupName Group name to filter results
  * @returns Array of course scores or null if error
  */
 export async function getCourseScores(
-	supabase: SupabaseClient,
 	levelCode: string,
 	groupName: string
 ): Promise<CourseScore[] | null> {
 	try {
-		const { data, error } = await supabase.rpc('get_level_course_scores', {
-			p_level_code: levelCode,
-			p_group_name: groupName
-		});
+		const result = await sql<CourseScore>`
+			SELECT * FROM get_level_course_scores(${levelCode}, ${groupName})
+		`.execute(db);
 
-		if (error) throw error;
-
-		if (!data || !Array.isArray(data)) {
+		if (!result.rows || !Array.isArray(result.rows)) {
 			return null;
 		}
 
-		return data;
+		return result.rows;
 	} catch (error) {
 		console.error('Error fetching course scores:', error);
 		return null;
@@ -34,33 +30,27 @@ export async function getCourseScores(
 
 /**
  * Fetches evaluation scores for a specific level, course and group
- * @param supabase Supabase client
  * @param levelCode Level code
  * @param courseCode Course code
  * @param groupName Group name to filter results
  * @returns Array of evaluation scores or null if error
  */
 export async function getEvalScores(
-	supabase: SupabaseClient,
 	levelCode: string,
 	courseCode: string,
 	groupName: string
 ): Promise<EvalScore[] | null> {
 	try {
 		// Use the optimized SQL function
-		const { data, error } = await supabase.rpc('get_course_eval_scores', {
-			p_level_code: levelCode,
-			p_course_code: courseCode,
-			p_group_name: groupName
-		});
+		const result = await sql<EvalScore>`
+			SELECT * FROM get_course_eval_scores(${levelCode}, ${courseCode}, ${groupName})
+		`.execute(db);
 
-		if (error) throw error;
-
-		if (!data || !Array.isArray(data)) {
+		if (!result.rows || !Array.isArray(result.rows)) {
 			return [];
 		}
 
-		return data;
+		return result.rows;
 	} catch (error) {
 		console.error('Error fetching evaluation scores:', error);
 		return null;

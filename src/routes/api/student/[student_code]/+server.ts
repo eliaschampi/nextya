@@ -10,7 +10,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	try {
 		// Get student information
-		const { data: student, error: studentError } = await locals.supabase
+		const { data: student, error: studentError } = await locals.db
 			.from('students')
 			.select('name, last_name, email')
 			.eq('code', student_code)

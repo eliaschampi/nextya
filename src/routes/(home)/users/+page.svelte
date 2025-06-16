@@ -10,7 +10,7 @@
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getInitials } from '$lib/utils/initialName';
 	import { formatDate } from '$lib/utils/formatDate';
-	import type { User } from '@supabase/supabase-js';
+	import type { User } from '$lib/auth/session';
 	import { permissionsStore } from '$lib/stores/permissions';
 	import { page } from '$app/state';
 
@@ -39,7 +39,7 @@
 	// permissions
 	const canRead = permissionsStore.has({ entity: 'users', action: 'read' });
 	const mySelf = (userId: string) => {
-		return userId === page.data.user?.id;
+		return userId === page.data.user?.code;
 	};
 
 	function openCreateModal() {
@@ -341,8 +341,8 @@
 	<div class="modal-box">
 		<h3 class="text-lg font-bold">Confirmar eliminación</h3>
 		<p class="py-4">
-			¿Estás seguro de eliminar a "{selectedUser?.user_metadata?.name}
-			{selectedUser?.user_metadata?.last_name}"?
+			¿Estás seguro de eliminar a "{selectedUser?.name}
+			{selectedUser?.lastName}"?
 		</p>
 		<div class="modal-action flex justify-center gap-2">
 			<button class="btn" onclick={() => confirmModal?.close()}>Cancelar</button>
@@ -357,8 +357,8 @@
 		<form onsubmit={handlePasswordUpdate} autocomplete="off">
 			<h3 class="text-lg font-bold">Cambiar contraseña</h3>
 			<p class="text-sm text-base-content/70 mb-4">
-				Establece una nueva contraseña para {selectedUser?.user_metadata?.name}
-				{selectedUser?.user_metadata?.last_name}
+				Establece una nueva contraseña para {selectedUser?.name}
+				{selectedUser?.lastName}
 			</p>
 			<fieldset class="fieldset bg-base-200 border border-base-300 p-4 rounded-box">
 				<label class="fieldset-legend" for="new_password">Nueva contraseña</label>
@@ -438,7 +438,7 @@
 					>
 						{#if user.user_metadata?.photo_url}
 							<img
-								src={user.user_metadata.photo_url}
+								src={null}
 								alt="User profile"
 								class="object-cover w-full h-full"
 								loading="lazy"

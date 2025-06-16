@@ -1,10 +1,13 @@
-import { redirect, fail } from '@sveltejs/kit';
+import { json, redirect } from '@sveltejs/kit';
+import { logout } from '$lib/auth';
 import type { RequestHandler } from './$types';
 
-export const POST: RequestHandler = async ({ locals }) => {
-	const { error } = await locals.supabase.auth.signOut();
-	if (error) {
-		throw fail(500, { message: 'Ocurrio algo inesperado' });
+export const POST: RequestHandler = async ({ cookies }) => {
+	const result = await logout(cookies);
+
+	if (result.success) {
+		throw redirect(303, '/auth');
 	}
-	throw redirect(303, '/auth');
+
+	return json({ error: result.error }, { status: 500 });
 };

@@ -2,7 +2,7 @@ import { getLevels } from '$lib/data/levels';
 import type { PageServerLoad } from '../$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-	const userId = locals.session?.user.id;
+	const userId = locals.user?.code;
 	let levels = [];
 
 	// Get parameters from URL
@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const evalCode = url.searchParams.get('eval');
 
 	if (userId) {
-		levels = await getLevels(locals.supabase, userId);
+		levels = await getLevels(locals.db, userId);
 	}
 
 	return {

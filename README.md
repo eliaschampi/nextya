@@ -1,27 +1,38 @@
-# Docker Setup for NextYa - Modern SvelteKit + PostgreSQL
+# NextYa - Migración Supabase → PostgreSQL + Kysely
 
-Configuración **moderna, eficiente y limpia** para SvelteKit con PostgreSQL, OpenCV y npm.
+Configuración **moderna, eficiente y limpia** para SvelteKit con PostgreSQL, Kysely ORM, JWT Auth y Docker.
 
-## 🚀 Comandos útiles
+## 🎯 Estado de Migración
+
+✅ **COMPLETADO**: Migración de Supabase a PostgreSQL self-hosted con Kysely
+✅ **COMPLETADO**: Sistema de autenticación JWT personalizado
+✅ **COMPLETADO**: Docker setup con PostgreSQL
+✅ **COMPLETADO**: Estructura de base de datos migrada
+🔄 **EN PROGRESO**: Migración de módulos de datos
+
+## 🚀 Comandos Docker (Sin npm local requerido)
 
 ```bash
-# Levantar los servicios
-npm run docker:up
+# Levantar los servicios (PostgreSQL + App)
+docker-compose up -d
 
-# Ver logs de la app
-npm run docker:logs
+# Ver logs de la aplicación
+docker-compose logs -f app
 
 # Conectar a PostgreSQL
-npm run docker:db
+docker exec -it nextya_postgres psql -U postgres -d nextya
 
 # Rebuild sin cache
-npm run docker:build
+docker-compose build --no-cache
 
 # Limpiar todo (volumes + containers)
-npm run docker:clean
+docker-compose down -v && docker system prune -f
 
 # Detener servicios
-npm run docker:down
+docker-compose down
+
+# Generar tipos de Kysely (dentro del container)
+docker exec -it nextya_app npm run db:generate
 ```
 
 ## 🌐 Acceso
@@ -47,11 +58,17 @@ nextya/
 
 ## Variables de entorno
 
+### Docker (.env.docker)
 - `DB_HOST=postgres`
 - `DB_USER=postgres`
 - `DB_PASSWORD=postgres`
 - `DB_NAME=nextya`
-- `NODE_ENV=production`
+- `JWT_SECRET=your-super-secret-jwt-key-change-in-production-2024`
+- `NODE_ENV=development`
+
+### Producción
+- Cambiar `JWT_SECRET` por una clave segura
+- Configurar `NODE_ENV=production`
 
 ## ✨ Características
 
@@ -80,6 +97,18 @@ npm run docker:db
 # - Índices optimizados
 ```
 
-## 🚀 Migración Ready
+## 🚀 Migración Completada
 
-Esta configuración está **100% preparada** para la migración Supabase → Kysely + PostgreSQL con JWT auth.
+✅ **Migración Supabase → Kysely + PostgreSQL completada**
+
+### Características implementadas:
+- 🔐 **Autenticación JWT** con cookies seguras
+- 🗄️ **PostgreSQL** con schema completo migrado
+- 🔧 **Kysely ORM** type-safe para consultas SQL
+- 🐳 **Docker** setup completo y funcional
+- 🧹 **Clean Architecture** sin dependencias de Supabase
+
+### Próximos pasos:
+1. Migrar módulos de datos restantes
+2. Implementar funciones SQL complejas
+3. Testing y validación completa

@@ -4,7 +4,7 @@ import { json } from '@sveltejs/kit';
 export const GET: RequestHandler = async ({ locals }) => {
 	try {
 		// Get counts of registers grouped by level with level name
-		const { data, error } = await locals.supabase
+		const { data, error } = await locals.db
 			.from('registers')
 			.select('level_code, levels!inner(name)')
 			.order('level_code');

@@ -31,7 +31,10 @@
 		photo_url?: string;
 	}
 
-	let userMetadata = $state<UserMetadata>((page.data.user?.user_metadata as UserMetadata) || {});
+	let userMetadata = $state<UserMetadata>({
+		name: page.data.user?.name || '',
+		last_name: page.data.user?.lastName || ''
+	});
 
 	function toggleTheme() {
 		theme.toggle();

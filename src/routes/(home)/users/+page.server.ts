@@ -72,7 +72,7 @@ export const actions: Actions = {
 	},
 
 	delete: async ({ request, locals }) => {
-		const authUser = await locals.supabase.auth.getUser();
+		const authUser = await locals.db.auth.getUser();
 
 		const formData = await request.formData();
 		const userId = formData.get('user_id') as string;

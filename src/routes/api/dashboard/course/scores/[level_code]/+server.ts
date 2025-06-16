@@ -20,7 +20,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 	}
 
 	try {
-		const data = await getCourseScores(locals.supabase, level_code, groupName);
+		const data = await getCourseScores(locals.db, level_code, groupName);
 
 		if (!data) {
 			return json({ error: 'No se pudieron obtener datos de cursos' }, { status: 500 });

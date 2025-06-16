@@ -69,11 +69,11 @@ async function saveAllResults(
 }
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const userId = locals.session?.user.id;
+	const userId = locals.user?.code;
 	let levels = [];
 
 	if (userId) {
-		levels = await getLevels(locals.supabase, userId);
+		levels = await getLevels(locals.db, userId);
 	}
 
 	return {
@@ -106,7 +106,7 @@ export const actions: Actions = {
 			return fail(400, { message: 'No hay resultados válidos para guardar.' });
 		}
 
-		const { successCount, errors } = await saveAllResults(locals.supabase, payload);
+		const { successCount, errors } = await saveAllResults(locals.db, payload);
 
 		if (errors.length) {
 			return fail(500, {

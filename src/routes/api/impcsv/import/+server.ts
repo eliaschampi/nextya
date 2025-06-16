@@ -3,71 +3,67 @@ import type { RequestHandler } from './$types';
 import { importCsv, createNameKey, CsvProcessorErrorCode } from '$lib/csvProcessor';
 import type { ImportResult, StudentRegisterData } from '$lib/csvProcessor';
 import { ApiErrorCode, createApiError, type ApiResponse } from '$lib/types/apiError';
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Checks for duplicates in the database and moves them from validRows to omittedRows
  * @param result - The import result to modify
  * @param levelCode - The level code to check against
- * @param supabase - The Supabase client
+ * @param db - The database instance
  */
 async function checkDatabaseDuplicates(
 	result: ImportResult,
 	levelCode: string,
-	supabase: SupabaseClient
+	db: any
 ): Promise<void> {
 	if (result.validRows.length === 0) return;
 
-	// 1. Check for duplicate roll_codes in the database
-	const rollCodesToCheck = result.validRows.map((row) => row.roll_code);
+	try {
+		// 1. Check for duplicate roll_codes in the database
+		const rollCodesToCheck = result.validRows.map((row) => row.roll_code);
 
-	const { data: existingRollCodes, error: rollCodeError } = await supabase
-		.from('registers')
-		.select('roll_code')
-		.eq('level_code', levelCode)
-		.in('roll_code', rollCodesToCheck);
+		const existingRollCodes = await db
+			.selectFrom('registers')
+			.select('rollCode')
+			.where('levelCode', '=', levelCode)
+			.where('rollCode', 'in', rollCodesToCheck)
+			.execute();
 
-	if (rollCodeError) {
-		console.error('Error checking roll codes:', rollCodeError);
-		return;
-	}
+		// Create a set of existing roll codes for efficient lookup
+		const existingRollCodeSet = new Set(existingRollCodes?.map((r) => r.rollCode) || []);
 
-	// Create a set of existing roll codes for efficient lookup
-	const existingRollCodeSet = new Set(existingRollCodes?.map((r) => r.roll_code) || []);
+		// 2. Check for duplicate students by name + last_name
+		// Create a map of name keys for efficient lookup
+		const nameKeyMap = new Map<string, number>(); // nameKey -> index in validRows
+		result.validRows.forEach((row, index) => {
+			const nameKey = createNameKey(row.name, row.last_name);
+			nameKeyMap.set(nameKey, index);
+		});
 
-	// 2. Check for duplicate students by name + last_name
-	// Create a map of name keys for efficient lookup
-	const nameKeyMap = new Map<string, number>(); // nameKey -> index in validRows
-	result.validRows.forEach((row, index) => {
-		const nameKey = createNameKey(row.name, row.last_name);
-		nameKeyMap.set(nameKey, index);
-	});
+		// Get all unique name+lastname pairs for the query
+		const nameLastNamePairs = Array.from(nameKeyMap.keys()).map((key) => {
+			const [name, lastName] = key.split('||');
+			return { name, lastName };
+		});
 
-	// Get all unique name+lastname pairs for the query
-	const nameLastNamePairs = Array.from(nameKeyMap.keys()).map((key) => {
-		const [name, lastName] = key.split('||');
-		return { name, last_name: lastName };
-	});
+		// Query for existing students with the same name+last_name
+		const existingStudents = await db
+			.selectFrom('students')
+			.select(['name', 'lastName'])
+			.where((eb) => {
+				const conditions = nameLastNamePairs.map(pair =>
+					eb.and([
+						eb('name', 'ilike', pair.name),
+						eb('lastName', 'ilike', pair.lastName)
+					])
+				);
+				return eb.or(conditions);
+			})
+			.execute();
 
-	// Query for existing students with the same name+last_name
-	const { data: existingStudents, error: studentError } = await supabase
-		.from('students')
-		.select('name, last_name')
-		.or(
-			nameLastNamePairs
-				.map((pair) => `and(name.ilike.${pair.name},last_name.ilike.${pair.last_name})`)
-				.join(',')
+		// Create a set of existing name keys for efficient lookup
+		const existingNameKeySet = new Set(
+			existingStudents?.map((s) => createNameKey(s.name, s.lastName)) || []
 		);
-
-	if (studentError) {
-		console.error('Error checking students:', studentError);
-		return;
-	}
-
-	// Create a set of existing name keys for efficient lookup
-	const existingNameKeySet = new Set(
-		existingStudents?.map((s) => createNameKey(s.name, s.last_name)) || []
-	);
 
 	// 3. Move duplicates from validRows to omittedRows
 	// We need to process in reverse order to avoid index shifting when removing items
@@ -135,7 +131,10 @@ async function checkDatabaseDuplicates(
 				code: item.code
 			});
 		}
+	} catch (error) {
+		console.error('Error checking database duplicates:', error);
 	}
+}
 }
 
 /**
@@ -193,7 +192,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		// Check for duplicates in the database
 		if (result.validRows.length > 0) {
-			await checkDatabaseDuplicates(result, levelCode, locals.supabase);
+			await checkDatabaseDuplicates(result, levelCode, locals.db);
 		}
 
 		// Calculate summary statistics for better UI feedback

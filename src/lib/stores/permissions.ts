@@ -1,15 +1,14 @@
 // src/lib/stores/permission.ts
 import { writable, derived, type Readable, get } from 'svelte/store';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '../../database.types';
 import { browser } from '$app/environment';
+import { db } from '$lib/database';
 
 // Define the permission structure
 type Permission = {
 	code: string;
-	user_code: string;
+	userCode: string;
 	entity: string;
-	user_action: string;
+	action: string;
 };
 
 type PermissionCheck = {
@@ -62,7 +61,7 @@ const createPermissionsStore = () => {
 		}
 	}
 
-	const fetchPermissions = async (supabase: SupabaseClient<Database>, userCode: string) => {
+	const fetchPermissions = async (userCode: string) => {
 		// Skip if already loading
 		if (isLoading) return;
 
@@ -74,12 +73,11 @@ const createPermissionsStore = () => {
 		isLoading = true;
 
 		try {
-			const { data, error } = await supabase
-				.from('permissions')
-				.select('*')
-				.eq('user_code', userCode);
-
-			if (error) throw error;
+			const data = await db
+				.selectFrom('permissions')
+				.selectAll()
+				.where('userCode', '=', userCode)
+				.execute();
 
 			// Update stores
 			currentUserCode.set(userCode);
@@ -128,7 +126,7 @@ const createPermissionsStore = () => {
 	const has = (check: PermissionCheck): Readable<boolean> => {
 		return derived(permissions, ($permissions) => {
 			if (!$permissions.length) return false;
-			return $permissions.some((p) => p.entity === check.entity && p.user_action === check.action);
+			return $permissions.some((p) => p.entity === check.entity && p.action === check.action);
 		});
 	};
 

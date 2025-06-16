@@ -1,8 +1,9 @@
 // src/lib/csvProcessor/exportExcel.ts
 import { writeToString } from 'fast-csv';
+import { db } from '$lib/database';
+import { sql } from 'kysely';
 import type { ExportDataRow } from './types';
 import type { ResultItem } from '$lib/types';
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Genera un string CSV optimizado para Excel con soporte para caracteres especiales
@@ -120,48 +121,53 @@ export interface EvaluationData {
 }
 
 /**
- * Obtiene los datos de evaluación desde Supabase
+ * Obtiene los datos de evaluación desde la base de datos
  *
- * @param supabase - Cliente de Supabase
  * @param evalCode - Código de la evaluación
  * @returns Datos de la evaluación o null si hay error
  */
-export async function fetchEvaluationData(
-	supabase: SupabaseClient,
-	evalCode: string
-): Promise<EvaluationData | null> {
-	const { data, error } = await supabase
-		.from('evals')
-		.select('name, eval_date, levels(name)')
-		.eq('code', evalCode)
-		.single();
+export async function fetchEvaluationData(evalCode: string): Promise<EvaluationData | null> {
+	try {
+		const data = await db
+			.selectFrom('evals')
+			.innerJoin('levels', 'levels.code', 'evals.levelCode')
+			.select(['evals.name', 'evals.evalDate', 'levels.name as levelName'])
+			.where('evals.code', '=', evalCode)
+			.executeTakeFirst();
 
-	if (error) {
+		if (!data) {
+			console.error('Evaluation not found:', evalCode);
+			return null;
+		}
+
+		return {
+			name: data.name,
+			eval_date: data.evalDate.toISOString(),
+			levels: { name: data.levelName }
+		} as EvaluationData;
+	} catch (error) {
 		console.error('Error fetching evaluation:', error);
 		return null;
 	}
-
-	return data as EvaluationData;
 }
 
 /**
- * Obtiene los resultados de una evaluación desde Supabase
+ * Obtiene los resultados de una evaluación desde la base de datos
  *
- * @param supabase - Cliente de Supabase
  * @param evalCode - Código de la evaluación
  * @returns Resultados de la evaluación o null si hay error
  */
-export async function fetchEvaluationResults(supabase: SupabaseClient, evalCode: string) {
-	const { data, error } = await supabase.rpc('get_register_eval_results', {
-		p_eval_code: evalCode
-	});
+export async function fetchEvaluationResults(evalCode: string) {
+	try {
+		const result = await sql`
+			SELECT * FROM get_register_eval_results(${evalCode})
+		`.execute(db);
 
-	if (error) {
+		return result.rows;
+	} catch (error) {
 		console.error('Error fetching results:', error);
 		return null;
 	}
-
-	return data;
 }
 
 /**
@@ -184,20 +190,16 @@ export function createCsvResponse(csvContent: string, filename: string): Respons
 /**
  * Proceso completo de exportación de resultados a CSV
  *
- * @param supabase - Cliente de Supabase
  * @param evalCode - Código de la evaluación
  * @returns Objeto Response con el CSV o null si hay error
  */
-export async function exportEvaluationResultsToCsv(
-	supabase: SupabaseClient,
-	evalCode: string
-): Promise<Response | null> {
+export async function exportEvaluationResultsToCsv(evalCode: string): Promise<Response | null> {
 	// Obtener datos de la evaluación
-	const evalData = await fetchEvaluationData(supabase, evalCode);
+	const evalData = await fetchEvaluationData(evalCode);
 	if (!evalData) return null;
 
 	// Obtener resultados
-	const resultsData = await fetchEvaluationResults(supabase, evalCode);
+	const resultsData = await fetchEvaluationResults(evalCode);
 	if (!resultsData) return null;
 
 	// Formatear datos para exportación

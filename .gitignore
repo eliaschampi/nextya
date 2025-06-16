@@ -12,6 +12,7 @@ node_modules
 .DS_Store
 Thumbs.db
 docker/data/
+/docker/data
 # Env
 .env
 .env.*

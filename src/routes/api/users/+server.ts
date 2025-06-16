@@ -1,22 +1,17 @@
-import { supabaseAdmin } from '$lib/supabaseAdmin';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async () => {
-	const {
-		data: { users },
-		error
-	} = await supabaseAdmin.auth.admin.listUsers();
-	if (error) {
-		return json([]);
+export const GET: RequestHandler = async ({ locals }) => {
+	// Check permissions
+	if (!locals.user) {
+		return json({ error: 'No Autorizado' }, { status: 401 });
 	}
 
-	// map to only id + metadata fields
-	const simple = users.map((u) => ({
-		id: u.id,
-		name: u.user_metadata.name,
-		last_name: u.user_metadata.last_name
-	}));
+	// Get users from database
+	const users = await locals.db
+		.selectFrom('users')
+		.select(['code as id', 'name', 'lastName'])
+		.execute();
 
-	return json(simple);
+	return json(users);
 };

@@ -28,7 +28,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		}
 
 		// Get student information
-		const { data: student, error: studentError } = await locals.supabase
+		const { data: student, error: studentError } = await locals.db
 			.from('students')
 			.select('name, last_name')
 			.eq('code', studentCode)
@@ -49,7 +49,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
 		// Use the modularized function to export the student evaluations
 		const response = await exportStudentEvaluationsToCsv(
-			locals.supabase,
+			locals.db,
 			studentCode,
 			student.name,
 			student.last_name

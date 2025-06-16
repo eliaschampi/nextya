@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 
 	try {
 		// Get main result information
-		const { data: mainResult, error: mainResultError } = await locals.supabase
+		const { data: mainResult, error: mainResultError } = await locals.db
 			.from('eval_results')
 			.select(
 				`
@@ -49,7 +49,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		}
 
 		// Get section results for this evaluation and register
-		const { data: sectionResults, error: sectionResultsError } = await locals.supabase
+		const { data: sectionResults, error: sectionResultsError } = await locals.db
 			.from('eval_results')
 			.select(
 				`
@@ -73,7 +73,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		}
 
 		// Get student answers - FIXED: Added eval_code filter and proper ordering
-		const { data: answersData, error: answersError } = await locals.supabase
+		const { data: answersData, error: answersError } = await locals.db
 			.from('eval_answers')
 			.select(
 				`

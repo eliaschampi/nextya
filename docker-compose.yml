@@ -7,17 +7,26 @@ services:
     build:
       context: .
       dockerfile: docker/app.dockerfile
+      target: development
+      args:
+        - USER_ID=${USER_ID:-1000}
+        - GROUP_ID=${GROUP_ID:-1000}
     ports:
       - "5173:5173"
+    env_file:
+      - .env.docker
     environment:
       - DB_HOST=postgres
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=nextya
+      - DB_PORT=5432
       - NODE_ENV=development
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production-2024
+      - JWT_EXPIRES_IN=8h
     volumes:
-      - .:/app:delegated
-      - node_modules:/app/node_modules
+      # Bind mount source code for hot reload
+      - .:/app:cached
     depends_on:
       postgres:
         condition: service_healthy
@@ -32,9 +41,10 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=nextya
-      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=es_PE.utf8 --lc-ctype=es_PE.utf8
+      # Use C locale for Alpine compatibility
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
     volumes:
-      - ./docker/data/postgres:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./docker/init:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
@@ -46,5 +56,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
 volumes:
-  node_modules:
+  postgres_data:

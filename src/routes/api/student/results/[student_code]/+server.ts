@@ -11,7 +11,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	try {
 		// Get student information first
-		const { data: student, error: studentError } = await locals.supabase
+		const { data: student, error: studentError } = await locals.db
 			.from('students')
 			.select('name, last_name')
 			.eq('code', student_code)
@@ -23,7 +23,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		}
 
 		// Get all registers for this student
-		const { data: registers, error: registersError } = await locals.supabase
+		const { data: registers, error: registersError } = await locals.db
 			.from('registers')
 			.select('code, level_code, group_name, roll_code, levels(name)')
 			.eq('student_code', student_code);
@@ -34,7 +34,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		}
 
 		// Get all results for this student's registers
-		const { data: rawResults, error: resultsError } = await locals.supabase
+		const { data: rawResults, error: resultsError } = await locals.db
 			.from('student_register_results')
 			.select('*')
 			.in(

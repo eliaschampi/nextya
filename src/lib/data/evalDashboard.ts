@@ -1,28 +1,21 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { db } from '$lib/database';
+import { sql } from 'kysely';
 import type { EvalDashboardData, QuestionStat, ScoreDistribution } from '$lib/types/evalDashboard';
 
 /**
  * Fetches dashboard data for a specific evaluation using the optimized SQL function
- * @param supabase Supabase client
  * @param evalCode Evaluation code to get dashboard data for
  * @returns Evaluation dashboard data for charts and visualizations
  */
-export async function getEvalDashboardData(
-	supabase: SupabaseClient,
-	evalCode: string
-): Promise<EvalDashboardData | null> {
+export async function getEvalDashboardData(evalCode: string): Promise<EvalDashboardData | null> {
 	try {
 		// Call the optimized SQL function
-		const { data, error } = await supabase.rpc('get_eval_dashboard_data', {
-			p_eval_code: evalCode
-		});
+		const result = await sql<{
+			data_type: string;
+			json_data: any;
+		}>`SELECT * FROM get_eval_dashboard_data(${evalCode})`.execute(db);
 
-		if (error) {
-			console.error('Error fetching evaluation dashboard data:', error);
-			return null;
-		}
-
-		if (!data || !Array.isArray(data) || data.length === 0) {
+		if (!result.rows || result.rows.length === 0) {
 			console.error('No data returned from evaluation dashboard function');
 			return null;
 		}
@@ -43,7 +36,7 @@ export async function getEvalDashboardData(
 		};
 
 		// Extract data from the response
-		data.forEach((item) => {
+		result.rows.forEach((item) => {
 			if (item.data_type === 'topCorrectQuestions' && item.json_data) {
 				dashboardData.topCorrectQuestions = item.json_data as QuestionStat[];
 			} else if (item.data_type === 'topIncorrectQuestions' && item.json_data) {

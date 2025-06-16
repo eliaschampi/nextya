@@ -5,7 +5,7 @@ import { reorderCourse } from '$lib/data/courses';
 
 export const load: PageServerLoad = async ({ locals, depends }) => {
 	depends('courses:load');
-	const { data: courses, error } = await locals.supabase
+	const { data: courses, error } = await locals.db
 		.from('courses')
 		.select('*')
 		.order('order', { ascending: true });
@@ -21,12 +21,12 @@ export const actions: Actions = {
 	create: async ({ locals, request }) => {
 		const formData = await request.formData();
 		const name = formData.get('name') as string;
-		const userId = locals.session?.user.id;
+		const userId = locals.user?.code;
 		// Make sure userId is available, otherwise return an error
 		if (!userId) return fail(401, { error: 'User not authenticated' });
 
 		// Get the highest order value to place the new course at the end
-		const { data: maxOrderResult } = await locals.supabase
+		const { data: maxOrderResult } = await locals.db
 			.from('courses')
 			.select('order')
 			.order('order', { ascending: false })
@@ -34,7 +34,7 @@ export const actions: Actions = {
 
 		const newOrder = maxOrderResult && maxOrderResult.length > 0 ? maxOrderResult[0].order + 1 : 0;
 
-		const { error } = await locals.supabase
+		const { error } = await locals.db
 			.from('courses')
 			.insert({ name, user_code: userId, order: newOrder });
 		if (error) return fail(400, { error: error.message });
@@ -47,7 +47,7 @@ export const actions: Actions = {
 		const courseCode = formData.get('code') as string;
 		const name = formData.get('name') as string;
 
-		const { error } = await locals.supabase.from('courses').update({ name }).eq('code', courseCode);
+		const { error } = await locals.db.from('courses').update({ name }).eq('code', courseCode);
 		if (error) return fail(400, { error: error.message });
 
 		return { success: true };
@@ -58,7 +58,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const courseCode = formData.get('code') as string;
 
-		const { error } = await locals.supabase.from('courses').delete().eq('code', courseCode);
+		const { error } = await locals.db.from('courses').delete().eq('code', courseCode);
 		if (error) return fail(400, { error: error.message });
 
 		return { success: true };
@@ -75,7 +75,7 @@ export const actions: Actions = {
 		}
 
 		// Get all courses to determine the new order
-		const { data: courses, error: fetchError } = await locals.supabase
+		const { data: courses, error: fetchError } = await locals.db
 			.from('courses')
 			.select('*')
 			.order('order', { ascending: true });
@@ -85,7 +85,7 @@ export const actions: Actions = {
 		}
 
 		// Perform the reordering
-		const success = await reorderCourse(locals.supabase, courses, courseCode, direction);
+		const success = await reorderCourse(locals.db, courses, courseCode, direction);
 
 		if (!success) {
 			return fail(500, { error: 'Error al reordenar cursos' });

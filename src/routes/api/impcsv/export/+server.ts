@@ -35,7 +35,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		}
 
 		// Usar la función modularizada para exportar los resultados
-		const response = await exportEvaluationResultsToCsv(locals.supabase, evalCode);
+		const response = await exportEvaluationResultsToCsv(locals.db, evalCode);
 
 		if (!response) {
 			return json(

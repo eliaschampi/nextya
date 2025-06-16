@@ -142,14 +142,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	// 1. Obtener preguntas y secciones (una sola vez para todos los items)
 	if (!questions?.length) {
-		questions = await fetchQuestions(evalCode, locals.supabase);
+		questions = await fetchQuestions(evalCode, locals.db);
 		if (!questions?.length) {
 			return createValidationError('Sin preguntas disponibles', 500);
 		}
 	}
 
 	if (!sections?.length) {
-		sections = await fetchSections(evalCode, locals.supabase);
+		sections = await fetchSections(evalCode, locals.db);
 		if (!sections?.length) {
 			return createValidationError('Sin cursos disponibles', 500);
 		}
@@ -220,7 +220,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 			// 4. Obtener Información del Registro del Estudiante
 			const registerInfo = await fetchRegisterByRollCode(
-				locals.supabase,
+				locals.db,
 				finalRollCode,
 				evalGroupName,
 				evalLevelCode

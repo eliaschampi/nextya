@@ -5,7 +5,7 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 
 	if (!level || !group) return new Response(JSON.stringify([]));
 
-	const { data: students, error } = await locals.supabase
+	const { data: students, error } = await locals.db
 		.from('student_registers')
 		.select('*')
 		.eq('level_code', level)

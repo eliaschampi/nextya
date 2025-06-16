@@ -1,37 +1,70 @@
-# Usamos la imagen base
-FROM urielch/opencv-nodejs:6.2.4
+# Multi-stage build for better optimization
+FROM node:20-alpine AS base
 
-# Argumentos para recibir el ID de usuario y grupo
-ARG UID=1000
-ARG GID=1000
+# Install system dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    pkgconfig \
+    shadow
 
-# Como root, modificamos el usuario/grupo 'node' para que coincida con nuestro host
-RUN groupmod -o -g $GID node && \
-    usermod -o -u $UID -g $GID node
+# Accept build arguments for user mapping
+ARG USER_ID=1000
+ARG GROUP_ID=1000
 
-# Como root, creamos el directorio de la aplicación y nos aseguramos de que
-# el usuario 'node' sea el propietario. Esto es CRUCIAL para evitar problemas de permisos.
-RUN mkdir -p /app && chown -R node:node /app
+# Create user with matching host UID/GID
+RUN if [ "$USER_ID" != "1000" ] || [ "$GROUP_ID" != "1000" ]; then \
+        deluser node && \
+        addgroup -g $GROUP_ID node && \
+        adduser -D -u $USER_ID -G node node; \
+    fi
 
-# Establecemos el directorio de trabajo
+# Set working directory
 WORKDIR /app
 
-# Ahora sí, cambiamos permanentemente al usuario 'node'
+# Change ownership to node user
+RUN chown node:node /app
+
+# Development stage
+FROM base AS development
+
+# Switch to node user
 USER node
 
-# Copiamos los archivos de manifiesto (serán propiedad de 'node' automáticamente)
-COPY package.json package-lock.json* ./
+# Copy package files with correct ownership
+COPY --chown=node:node package.json package-lock.json* ./
 
-# Instalamos las dependencias como el usuario 'node'
-RUN npm remove @u4/opencv4nodejs || true
-RUN npm install
-RUN npm link @u4/opencv4nodejs
+# Install all dependencies (including dev dependencies)
+# Skip OpenCV for now to avoid compilation issues
+RUN npm ci --ignore-scripts
 
-# Copiamos el resto del código fuente
-COPY . .
+# Copy source code with correct ownership
+COPY --chown=node:node . .
 
-# Exponemos el puerto
+# Expose the development port
 EXPOSE 5173
 
-# Comando para iniciar el servidor de desarrollo
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Start the development server with hot reload
+CMD ["sh", "-c", "if [ ! -d node_modules ] || [ -z \"$(ls -A node_modules 2>/dev/null)\" ]; then echo '📦 Installing dependencies...' && npm ci --ignore-scripts; fi && echo '🚀 Starting development server...' && npm run dev -- --host 0.0.0.0"]
+
+# Production stage
+FROM base AS production
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install only production dependencies
+RUN npm ci --only=production --ignore-scripts && npm cache clean --force
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Expose the production port
+EXPOSE 3000
+
+# Start the production server
+CMD ["node", "build"]

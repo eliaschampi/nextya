@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	}
 
 	// Get the eval data
-	const { data: evalData, error: evalError } = await locals.supabase
+	const { data: evalData, error: evalError } = await locals.db
 		.from('evals')
 		.select('*, levels(name)')
 		.eq('code', evalCode)
@@ -21,7 +21,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	}
 
 	// Get the eval sections with courses
-	const { data: sectionsData, error: sectionsError } = await locals.supabase
+	const { data: sectionsData, error: sectionsError } = await locals.db
 		.from('eval_sections')
 		.select('*, courses:course_code(name)')
 		.eq('eval_code', evalCode)
@@ -39,7 +39,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	}));
 
 	// Get existing questions for this eval
-	const { data: questionsData, error: questionsError } = await locals.supabase
+	const { data: questionsData, error: questionsError } = await locals.db
 		.from('eval_questions')
 		.select('*')
 		.eq('eval_code', evalCode)
@@ -68,7 +68,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 
 		// 1. Get all sections of the exam in order
-		const { data: sections, error: sectionsError } = await locals.supabase
+		const { data: sections, error: sectionsError } = await locals.db
 			.from('eval_sections')
 			.select('code, order_in_eval, question_count')
 			.eq('eval_code', evalCode)
@@ -152,7 +152,7 @@ export const actions: Actions = {
 		}
 
 		// 5. Delete existing questions
-		const { error: deleteError } = await locals.supabase
+		const { error: deleteError } = await locals.db
 			.from('eval_questions')
 			.delete()
 			.eq('eval_code', evalCode);
@@ -164,7 +164,7 @@ export const actions: Actions = {
 
 		// 6. Save new questions
 		if (questionsArray.length > 0) {
-			const { error: insertError } = await locals.supabase
+			const { error: insertError } = await locals.db
 				.from('eval_questions')
 				.insert(questionsArray);
 

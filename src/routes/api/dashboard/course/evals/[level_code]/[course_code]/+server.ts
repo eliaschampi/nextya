@@ -20,7 +20,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 	}
 
 	try {
-		const data = await getEvalScores(locals.supabase, level_code, course_code, groupName);
+		const data = await getEvalScores(locals.db, level_code, course_code, groupName);
 
 		if (data === null) {
 			return json({ error: 'Error al procesar datos de evaluaciones' }, { status: 500 });

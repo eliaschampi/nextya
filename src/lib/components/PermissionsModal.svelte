@@ -6,7 +6,7 @@
 	import { entities } from '$lib/data/entities';
 	import { Shield } from 'lucide-svelte';
 	import PermissionTableRow from '$lib/components/PermissionTableRow.svelte';
-	import type { User } from '@supabase/supabase-js';
+	import type { User } from '$lib/auth/session';
 	import { ACTIONS } from '$lib/types/permissions';
 	import type { Action, EntityPermissions } from '$lib/types/permissions';
 
