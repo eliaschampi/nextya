@@ -90,19 +90,16 @@ export const actions: Actions = {
 							roll_code
 						})
 						.execute();
-
 				}
 				return { type: 'success' };
 			} catch (error) {
 				const message = error instanceof Error ? error.message : 'Error actualizando registro';
 				return fail(400, { error: message });
 			}
-
 		}
 
 		// Create new student
 		try {
-
 			const student = await locals.db
 				.insertInto('students')
 				.values({ name, last_name, phone, email, user_code })
@@ -121,7 +118,8 @@ export const actions: Actions = {
 				})
 				.execute();
 		} catch (error) {
-			const message = error instanceof Error ? error.message : 'Error creando estudiante y registro';
+			const message =
+				error instanceof Error ? error.message : 'Error creando estudiante y registro';
 			return fail(400, { error: message });
 		}
 
@@ -203,12 +201,10 @@ export const actions: Actions = {
 				.execute();
 
 			return { type: 'success' };
-
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'Error actualizando estudiante';
 			return fail(400, { error: message });
 		}
-
 	},
 
 	delete: async ({ request, locals }) => {

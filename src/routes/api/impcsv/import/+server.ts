@@ -50,11 +50,8 @@ async function checkDatabaseDuplicates(
 			.selectFrom('students')
 			.select(['name', 'lastName'])
 			.where((eb: any) => {
-				const conditions = nameLastNamePairs.map(pair =>
-					eb.and([
-						eb('name', 'ilike', pair.name),
-						eb('lastName', 'ilike', pair.lastName)
-					])
+				const conditions = nameLastNamePairs.map((pair) =>
+					eb.and([eb('name', 'ilike', pair.name), eb('lastName', 'ilike', pair.lastName)])
 				);
 				return eb.or(conditions);
 			})
@@ -65,73 +62,73 @@ async function checkDatabaseDuplicates(
 			existingStudents?.map((s: any) => createNameKey(s.name, s.lastName)) || []
 		);
 
-	// 3. Move duplicates from validRows to omittedRows
-	// We need to process in reverse order to avoid index shifting when removing items
-	const rowsToMove: {
-		row: StudentRegisterData;
-		reason: string;
-		code: CsvProcessorErrorCode;
-		rowNumber: number;
-	}[] = [];
+		// 3. Move duplicates from validRows to omittedRows
+		// We need to process in reverse order to avoid index shifting when removing items
+		const rowsToMove: {
+			row: StudentRegisterData;
+			reason: string;
+			code: CsvProcessorErrorCode;
+			rowNumber: number;
+		}[] = [];
 
-	result.validRows.forEach((row, index) => {
-		// Check for duplicate roll_code in database
-		if (existingRollCodeSet.has(row.roll_code)) {
-			rowsToMove.push({
-				row,
-				reason: `Código '${row.roll_code}' ya existe en la base de datos.`,
-				code: CsvProcessorErrorCode.DUPLICATE_ROLL_CODE,
-				rowNumber: index + 1 // Assuming 1-based row numbers
-			});
-			return;
+		result.validRows.forEach((row, index) => {
+			// Check for duplicate roll_code in database
+			if (existingRollCodeSet.has(row.roll_code)) {
+				rowsToMove.push({
+					row,
+					reason: `Código '${row.roll_code}' ya existe en la base de datos.`,
+					code: CsvProcessorErrorCode.DUPLICATE_ROLL_CODE,
+					rowNumber: index + 1 // Assuming 1-based row numbers
+				});
+				return;
+			}
+
+			// Check for duplicate name+last_name in database
+			const nameKey = createNameKey(row.name, row.last_name);
+			if (existingNameKeySet.has(nameKey)) {
+				rowsToMove.push({
+					row,
+					reason: `Estudiante '${row.name} ${row.last_name}' ya existe en la base de datos.`,
+					code: CsvProcessorErrorCode.DUPLICATE_NAME,
+					rowNumber: index + 1
+				});
+				return;
+			}
+		});
+
+		// Remove duplicates from validRows and add to omittedRows
+		// Sort by index in descending order to avoid index shifting
+		rowsToMove.sort((a, b) => b.rowNumber - a.rowNumber);
+
+		for (const item of rowsToMove) {
+			// Find the index in the current validRows array (may have changed due to removals)
+			const currentIndex = result.validRows.findIndex(
+				(row) =>
+					row.roll_code === item.row.roll_code &&
+					row.name === item.row.name &&
+					row.last_name === item.row.last_name
+			);
+
+			if (currentIndex !== -1) {
+				// Remove from validRows
+				result.validRows.splice(currentIndex, 1);
+
+				// Add to omittedRows
+				result.omittedRows.push({
+					row: {
+						name: item.row.name,
+						last_name: item.row.last_name,
+						phone: item.row.phone || undefined,
+						email: item.row.email || undefined,
+						group_name: item.row.group_name,
+						roll_code: item.row.roll_code
+					},
+					rowNumber: item.rowNumber,
+					reason: item.reason,
+					code: item.code
+				});
+			}
 		}
-
-		// Check for duplicate name+last_name in database
-		const nameKey = createNameKey(row.name, row.last_name);
-		if (existingNameKeySet.has(nameKey)) {
-			rowsToMove.push({
-				row,
-				reason: `Estudiante '${row.name} ${row.last_name}' ya existe en la base de datos.`,
-				code: CsvProcessorErrorCode.DUPLICATE_NAME,
-				rowNumber: index + 1
-			});
-			return;
-		}
-	});
-
-	// Remove duplicates from validRows and add to omittedRows
-	// Sort by index in descending order to avoid index shifting
-	rowsToMove.sort((a, b) => b.rowNumber - a.rowNumber);
-
-	for (const item of rowsToMove) {
-		// Find the index in the current validRows array (may have changed due to removals)
-		const currentIndex = result.validRows.findIndex(
-			(row) =>
-				row.roll_code === item.row.roll_code &&
-				row.name === item.row.name &&
-				row.last_name === item.row.last_name
-		);
-
-		if (currentIndex !== -1) {
-			// Remove from validRows
-			result.validRows.splice(currentIndex, 1);
-
-			// Add to omittedRows
-			result.omittedRows.push({
-				row: {
-					name: item.row.name,
-					last_name: item.row.last_name,
-					phone: item.row.phone || undefined,
-					email: item.row.email || undefined,
-					group_name: item.row.group_name,
-					roll_code: item.row.roll_code
-				},
-				rowNumber: item.rowNumber,
-				reason: item.reason,
-				code: item.code
-			});
-		}
-
 	} catch (error) {
 		console.error('Error checking database duplicates:', error);
 	}

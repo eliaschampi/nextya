@@ -33,7 +33,7 @@ export async function getLevels(userID: string, forceRefresh = false): Promise<L
 			.where(sql<boolean>`users @> ${JSON.stringify([userID])}`)
 			.execute();
 
-		const result = levels
+		const result = levels;
 
 		// Actualizar caché
 		if (levels) {

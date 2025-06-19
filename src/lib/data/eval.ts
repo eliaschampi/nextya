@@ -3,7 +3,6 @@ import type { EvalSectionWithCourse } from '$lib/types';
 
 export async function fetchSections(evalCode: string): Promise<EvalSectionWithCourse[]> {
 	try {
-		
 		const sections = await db
 			.selectFrom('eval_sections')
 			.innerJoin('courses', 'courses.code', 'eval_sections.course_code')
@@ -27,7 +26,6 @@ export async function fetchSections(evalCode: string): Promise<EvalSectionWithCo
 			question_count: section.question_count,
 			course: { name: section.course_name }
 		}));
-
 	} catch {
 		return [];
 	}

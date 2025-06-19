@@ -3,134 +3,135 @@
  * Please do not edit it manually.
  */
 
-import type { ColumnType } from "kysely";
+import type { ColumnType } from 'kysely';
 
-export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
-  ? ColumnType<S, I | undefined, U>
-  : ColumnType<T, T | undefined, T>;
+export type Generated<T> =
+	T extends ColumnType<infer S, infer I, infer U>
+		? ColumnType<S, I | undefined, U>
+		: ColumnType<T, T | undefined, T>;
 
 export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface Courses {
-  abr: string;
-  code: Generated<string>;
-  created_at: Generated<Timestamp | null>;
-  name: string;
-  order: Generated<number>;
-  user_code: string;
+	abr: string;
+	code: Generated<string>;
+	created_at: Generated<Timestamp | null>;
+	name: string;
+	order: Generated<number>;
+	user_code: string;
 }
 
 export interface EvalAnswers {
-  code: Generated<string>;
-  question_code: string;
-  register_code: string;
-  student_answer: string | null;
+	code: Generated<string>;
+	question_code: string;
+	register_code: string;
+	student_answer: string | null;
 }
 
 export interface EvalQuestions {
-  code: Generated<string>;
-  correct_key: string;
-  eval_code: string;
-  omitable: Generated<boolean | null>;
-  order_in_eval: number;
-  score_percent: Generated<Numeric>;
-  section_code: string;
+	code: Generated<string>;
+	correct_key: string;
+	eval_code: string;
+	omitable: Generated<boolean | null>;
+	order_in_eval: number;
+	score_percent: Generated<Numeric>;
+	section_code: string;
 }
 
 export interface EvalResults {
-  blank_count: Generated<number>;
-  calculated_at: Generated<Timestamp | null>;
-  code: Generated<string>;
-  correct_count: Generated<number>;
-  eval_code: string;
-  incorrect_count: Generated<number>;
-  register_code: string;
-  score: Generated<Numeric>;
-  section_code: string | null;
+	blank_count: Generated<number>;
+	calculated_at: Generated<Timestamp | null>;
+	code: Generated<string>;
+	correct_count: Generated<number>;
+	eval_code: string;
+	incorrect_count: Generated<number>;
+	register_code: string;
+	score: Generated<Numeric>;
+	section_code: string | null;
 }
 
 export interface Evals {
-  code: Generated<string>;
-  created_at: Generated<Timestamp | null>;
-  eval_date: Timestamp;
-  group_name: string;
-  level_code: string;
-  name: string;
-  updated_at: Generated<Timestamp | null>;
-  user_code: string;
+	code: Generated<string>;
+	created_at: Generated<Timestamp | null>;
+	eval_date: Timestamp;
+	group_name: string;
+	level_code: string;
+	name: string;
+	updated_at: Generated<Timestamp | null>;
+	user_code: string;
 }
 
 export interface EvalSections {
-  code: Generated<string>;
-  course_code: string;
-  eval_code: string;
-  order_in_eval: number;
-  question_count: number;
+	code: Generated<string>;
+	course_code: string;
+	eval_code: string;
+	order_in_eval: number;
+	question_count: number;
 }
 
 export interface Levels {
-  abr: string;
-  code: Generated<string>;
-  created_at: Generated<Timestamp | null>;
-  name: string;
-  users: Generated<string[]>;
+	abr: string;
+	code: Generated<string>;
+	created_at: Generated<Timestamp | null>;
+	name: string;
+	users: Generated<string[]>;
 }
 
 export interface Permissions {
-  action: string;
-  code: Generated<string>;
-  created_at: Generated<Timestamp>;
-  entity: string;
-  user_code: string;
+	action: string;
+	code: Generated<string>;
+	created_at: Generated<Timestamp>;
+	entity: string;
+	user_code: string;
 }
 
 export interface Registers {
-  code: Generated<string>;
-  created_at: Generated<Timestamp | null>;
-  group_name: string;
-  level_code: string;
-  roll_code: string;
-  student_code: string;
-  user_code: string;
+	code: Generated<string>;
+	created_at: Generated<Timestamp | null>;
+	group_name: string;
+	level_code: string;
+	roll_code: string;
+	student_code: string;
+	user_code: string;
 }
 
 export interface Students {
-  code: Generated<string>;
-  created_at: Generated<Timestamp | null>;
-  email: string;
-  last_name: string;
-  name: string;
-  phone: string | null;
-  updated_at: Generated<Timestamp | null>;
-  user_code: string;
+	code: Generated<string>;
+	created_at: Generated<Timestamp | null>;
+	email: string;
+	last_name: string;
+	name: string;
+	phone: string | null;
+	updated_at: Generated<Timestamp | null>;
+	user_code: string;
 }
 
 export interface Users {
-  code: Generated<string>;
-  created_at: Generated<Timestamp>;
-  email: string;
-  is_email_verified: Generated<boolean>;
-  is_super_admin: Generated<boolean>;
-  last_login: Timestamp | null;
-  last_name: string | null;
-  name: string | null;
-  password_hash: string;
-  photo_url: string | null;
-  updated_at: Generated<Timestamp>;
+	code: Generated<string>;
+	created_at: Generated<Timestamp>;
+	email: string;
+	is_email_verified: Generated<boolean>;
+	is_super_admin: Generated<boolean>;
+	last_login: Timestamp | null;
+	last_name: string | null;
+	name: string | null;
+	password_hash: string;
+	photo_url: string | null;
+	updated_at: Generated<Timestamp>;
 }
 
 export interface DB {
-  courses: Courses;
-  eval_answers: EvalAnswers;
-  eval_questions: EvalQuestions;
-  eval_results: EvalResults;
-  eval_sections: EvalSections;
-  evals: Evals;
-  levels: Levels;
-  permissions: Permissions;
-  registers: Registers;
-  students: Students;
-  users: Users;
+	courses: Courses;
+	eval_answers: EvalAnswers;
+	eval_questions: EvalQuestions;
+	eval_results: EvalResults;
+	eval_sections: EvalSections;
+	evals: Evals;
+	levels: Levels;
+	permissions: Permissions;
+	registers: Registers;
+	students: Students;
+	users: Users;
 }
