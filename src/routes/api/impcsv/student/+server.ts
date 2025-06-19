@@ -28,13 +28,13 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		}
 
 		// Get student information
-		const { data: student, error: studentError } = await locals.db
-			.from('students')
-			.select('name, last_name')
-			.eq('code', studentCode)
-			.single();
+		const student = await locals.db
+			.selectFrom('students')
+			.select(['name', 'last_name'])
+			.where('code', '=', studentCode)
+			.executeTakeFirst();
 
-		if (studentError) {
+		if (!student) {
 			return json(
 				{
 					success: false,
@@ -49,7 +49,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
 		// Use the modularized function to export the student evaluations
 		const response = await exportStudentEvaluationsToCsv(
-			locals.db,
 			studentCode,
 			student.name,
 			student.last_name

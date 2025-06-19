@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const evalCode = url.searchParams.get('eval');
 
 	if (userId) {
-		levels = await getLevels(locals.db, userId);
+		levels = await getLevels(userId);
 	}
 
 	return {

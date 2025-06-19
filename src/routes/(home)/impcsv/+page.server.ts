@@ -5,7 +5,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user?.code;
 	let levels = [];
 	if (userId) {
-		levels = await getLevels(locals.db, userId);
+		levels = await getLevels(userId);
 	}
 	return { levels, title: 'Importar Estudiantes' };
 };

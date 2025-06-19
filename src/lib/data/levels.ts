@@ -1,9 +1,8 @@
-import { db } from '$lib/database';
 import { sql } from 'kysely';
-import type { Levels } from '$lib/types';
+import { db } from '$lib/database';
 
 // Cache para almacenar niveles por usuario
-const levelsCache = new Map<string, { data: Levels[]; timestamp: number }>();
+const levelsCache = new Map<string, { data: any[]; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos en milisegundos
 
 /**
@@ -12,7 +11,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutos en milisegundos
  * @param forceRefresh Si es true, ignora la caché y obtiene datos frescos
  * @returns Array de niveles
  */
-export async function getLevels(userID: string, forceRefresh = false): Promise<Levels[]> {
+export async function getLevels(userID: string, forceRefresh = false): Promise<any[]> {
 	try {
 		// Si no hay forzado de actualización y existe caché válida, usarla
 		if (!forceRefresh && levelsCache.has(userID)) {
@@ -27,23 +26,21 @@ export async function getLevels(userID: string, forceRefresh = false): Promise<L
 
 		// Obtener datos frescos usando Kysely
 		// PostgreSQL array contains operator @>
-		const levels: Levels[] = await db
+		const levels = await db
 			.selectFrom('levels')
 			.select(['code', 'name', 'abr', 'created_at', 'users'])
 			.where(sql<boolean>`users @> ${JSON.stringify([userID])}`)
 			.execute();
 
-		const result = levels;
-
 		// Actualizar caché
-		if (levels) {
+		if (levels && levels.length > 0) {
 			levelsCache.set(userID, {
-				data: result,
+				data: levels,
 				timestamp: Date.now()
 			});
 		}
 
-		return result;
+		return levels;
 	} catch (error) {
 		return [];
 	}
