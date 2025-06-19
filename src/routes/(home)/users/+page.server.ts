@@ -1,20 +1,44 @@
 // routes/users/+page.server.ts
 import type { Actions, PageServerLoad } from './$types';
-import { supabaseAdmin } from '$lib/supabaseAdmin';
 import { fail } from '@sveltejs/kit';
+import { hash } from 'bcryptjs';
 
-export const load: PageServerLoad = async ({ depends }) => {
+export const load: PageServerLoad = async ({ depends, locals }) => {
 	depends('users:load');
-	const {
-		data: { users },
-		error
-	} = await supabaseAdmin.auth.admin.listUsers();
-	if (error) return { users: [] };
-	return { users, title: 'Usuarios' };
+
+	try {
+		const users = await locals.db
+			.selectFrom('users')
+			.select([
+				'code as id',
+				'email',
+				'name',
+				'last_name',
+				'photo_url',
+				'is_email_verified as email_confirmed_at',
+				'created_at',
+				'last_login as last_sign_in_at'
+			])
+			.execute();
+
+		// Transform to match expected format for UI compatibility
+		const transformedUsers = users.map((user) => ({
+			...user,
+			user_metadata: {
+				name: user.name,
+				last_name: user.last_name,
+				photo_url: user.photo_url
+			}
+		}));
+
+		return { users: transformedUsers, title: 'Usuarios' };
+	} catch {
+		return { users: [], title: 'Usuarios' };
+	}
 };
 
 export const actions: Actions = {
-	create: async ({ request }) => {
+	create: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const email = formData.get('email') as string;
 		const name = formData.get('name') as string;
@@ -22,22 +46,43 @@ export const actions: Actions = {
 		const password = formData.get('password') as string;
 		const photo_url = (formData.get('photo_url') as string) || 'avatar.svg';
 
-		const { error: authError } = await supabaseAdmin.auth.admin.createUser({
-			email,
-			password,
-			email_confirm: true,
-			user_metadata: {
-				name,
-				last_name,
-				photo_url
-			}
-		});
-		if (authError) return fail(400, { error: authError.message });
+		try {
+			// Check if user already exists
+			const existingUser = await locals.db
+				.selectFrom('users')
+				.select('code')
+				.where('email', '=', email.toLowerCase())
+				.executeTakeFirst();
 
-		return { success: true };
+			if (existingUser) {
+				return fail(400, { error: 'El usuario ya existe' });
+			}
+
+			// Hash password
+			const password_hash = await hash(password, 12);
+
+			// Create user
+			await locals.db
+				.insertInto('users')
+				.values({
+					email: email.toLowerCase(),
+					password_hash,
+					name,
+					last_name,
+					photo_url,
+					is_email_verified: true, // Auto-confirm for admin created users
+					is_super_admin: false
+				})
+				.execute();
+
+			return { success: true };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Error creando usuario';
+			return fail(400, { error: message });
+		}
 	},
 
-	update: async ({ request }) => {
+	update: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const userId = formData.get('user_id') as string;
 		const email = formData.get('email') as string;
@@ -45,44 +90,63 @@ export const actions: Actions = {
 		const last_name = formData.get('last_name') as string;
 		const photo_url = (formData.get('photo_url') as string) || 'avatar.svg';
 
-		const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-			email,
-			user_metadata: {
-				name,
-				last_name,
-				photo_url
-			}
-		});
-		if (updateError) return fail(400, { error: updateError.message });
+		try {
+			await locals.db
+				.updateTable('users')
+				.set({
+					email: email.toLowerCase(),
+					name,
+					last_name,
+					photo_url
+				})
+				.where('code', '=', userId)
+				.execute();
 
-		return { success: true };
+			return { success: true };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Error actualizando usuario';
+			return fail(400, { error: message });
+		}
 	},
 
-	updatePassword: async ({ request }) => {
+	updatePassword: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const userId = formData.get('user_id') as string;
 		const password = formData.get('password') as string;
 
-		const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-			password
-		});
-		if (updateError) return fail(400, { error: updateError.message });
+		try {
+			// Hash new password
+			const password_hash = await hash(password, 12);
 
-		return { success: true };
+			await locals.db
+				.updateTable('users')
+				.set({ password_hash })
+				.where('code', '=', userId)
+				.execute();
+
+			return { success: true };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Error actualizando contraseña';
+			return fail(400, { error: message });
+		}
 	},
 
 	delete: async ({ request, locals }) => {
-		const authUser = await locals.db.auth.getUser();
-
 		const formData = await request.formData();
 		const userId = formData.get('user_id') as string;
-		if (authUser.data.user?.id === userId) {
+
+		// Check if trying to delete self
+		if (locals.user?.code === userId) {
 			return fail(400, { error: 'No puedes eliminar a ti mismo' });
 		}
 
-		const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
-		if (authError) return fail(400, { error: authError.message });
+		try {
+			await locals.db.deleteFrom('users').where('code', '=', userId).execute();
 
-		return { success: true };
+			return { success: true };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Error eliminando usuario';
+			return fail(400, { error: message });
+		}
 	}
 };

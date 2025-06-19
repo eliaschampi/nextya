@@ -3,32 +3,32 @@ import type { EvalSectionWithCourse } from '$lib/types';
 
 export async function fetchSections(evalCode: string): Promise<EvalSectionWithCourse[]> {
 	try {
+		
 		const sections = await db
-			.selectFrom('evalSections')
-			.innerJoin('courses', 'courses.code', 'evalSections.courseCode')
+			.selectFrom('eval_sections')
+			.innerJoin('courses', 'courses.code', 'eval_sections.course_code')
 			.select([
-				'evalSections.code',
-				'evalSections.evalCode',
-				'evalSections.courseCode',
-				'evalSections.orderInEval',
-				'evalSections.questionCount',
-				'courses.name as courseName'
+				'eval_sections.code',
+				'eval_sections.eval_code',
+				'eval_sections.course_code',
+				'eval_sections.order_in_eval',
+				'eval_sections.question_count',
+				'courses.name as course_name'
 			])
-			.where('evalSections.evalCode', '=', evalCode)
-			.orderBy('evalSections.orderInEval', 'asc')
+			.where('eval_sections.eval_code', '=', evalCode)
+			.orderBy('eval_sections.order_in_eval', 'asc')
 			.execute();
 
-		// Transform to match expected EvalSectionWithCourse interface
-		return sections.map(section => ({
+		return sections.map((section) => ({
 			code: section.code,
-			eval_code: section.evalCode,
-			course_code: section.courseCode,
-			order_in_eval: section.orderInEval,
-			question_count: section.questionCount,
-			course: { name: section.courseName }
-		})) as EvalSectionWithCourse[];
-	} catch (error) {
-		console.error('Error fetching sections:', error);
+			eval_code: section.eval_code,
+			course_code: section.course_code,
+			order_in_eval: section.order_in_eval,
+			question_count: section.question_count,
+			course: { name: section.course_name }
+		}));
+
+	} catch {
 		return [];
 	}
 }

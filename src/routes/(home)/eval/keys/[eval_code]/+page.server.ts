@@ -10,9 +10,9 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	// Get the eval data
 	const { data: evalData, error: evalError } = await locals.db
-		.from('evals')
+		.selectFrom('evals')
 		.select('*, levels(name)')
-		.eq('code', evalCode)
+		.where('code', evalCode)
 		.single();
 
 	if (evalError || !evalData) {
@@ -39,11 +39,11 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	}));
 
 	// Get existing questions for this eval
-	const { data: questionsData, error: questionsError } = await locals.db
-		.from('eval_questions')
-		.select('*')
-		.eq('eval_code', evalCode)
-		.order('order_in_eval');
+	const { data: questionsData } = await locals.db
+		.selectFrom('eval_questions')
+		.selectAll()
+		.where('eval_code', '=', evalCode)
+		.orderBy('order_in_eval');
 
 	if (questionsError) {
 		console.error('Error fetching questions:', questionsError);
@@ -164,9 +164,7 @@ export const actions: Actions = {
 
 		// 6. Save new questions
 		if (questionsArray.length > 0) {
-			const { error: insertError } = await locals.db
-				.from('eval_questions')
-				.insert(questionsArray);
+			const { error: insertError } = await locals.db.from('eval_questions').insert(questionsArray);
 
 			if (insertError) {
 				console.error('Error al guardar preguntas:', insertError);

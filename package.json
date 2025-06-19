@@ -16,7 +16,7 @@
 		"migrate": "tsx scripts/migrate.ts",
 		"migrate:up": "tsx scripts/migrate.ts up",
 		"migrate:down": "tsx scripts/migrate.ts down",
-		"db:generate": "kysely-codegen --dialect postgres --url \"postgresql://postgres:postgres@postgres:5432/nextya\" --out-file src/lib/database/types.ts --camel-case"
+		"db:generate": "kysely-codegen --dialect postgres --url \"postgresql://postgres:postgres@postgres:5432/nextya\" --out-file src/lib/database/types.ts"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.9",

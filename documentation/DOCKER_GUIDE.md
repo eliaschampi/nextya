@@ -9,6 +9,7 @@
 NextYa uses Docker for a consistent development environment across all platforms. This guide covers everything you need to know about using Docker with the NextYa project.
 
 ### **Architecture**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    Docker Environment                       │
@@ -30,11 +31,13 @@ NextYa uses Docker for a consistent development environment across all platforms
 ## 🚀 **Quick Start**
 
 ### **Prerequisites**
+
 - Docker Engine 20.10+
 - Docker Compose 2.0+
 - Git
 
 ### **Initial Setup**
+
 ```bash
 # 1. Clone the repository
 git clone <repository-url>
@@ -59,6 +62,7 @@ The project includes a unified `docker.sh` script that handles all Docker operat
 ### **Basic Commands**
 
 #### **🏗️ Build & Setup**
+
 ```bash
 ./docker.sh build              # Build Docker images
 ./docker.sh rebuild            # Clean rebuild (no cache)
@@ -66,6 +70,7 @@ The project includes a unified `docker.sh` script that handles all Docker operat
 ```
 
 #### **🚀 Service Management**
+
 ```bash
 ./docker.sh up                 # Start all services
 ./docker.sh down               # Stop all services
@@ -74,6 +79,7 @@ The project includes a unified `docker.sh` script that handles all Docker operat
 ```
 
 #### **📊 Monitoring & Logs**
+
 ```bash
 ./docker.sh logs               # Show all logs
 ./docker.sh logs app           # Show app logs only
@@ -83,6 +89,7 @@ The project includes a unified `docker.sh` script that handles all Docker operat
 ```
 
 #### **🛠️ Development**
+
 ```bash
 ./docker.sh shell              # Open shell in app container
 ./docker.sh shell:root         # Open root shell in app container
@@ -93,6 +100,7 @@ The project includes a unified `docker.sh` script that handles all Docker operat
 ```
 
 #### **🗄️ Database Operations**
+
 ```bash
 ./docker.sh db:shell           # Open PostgreSQL shell
 ./docker.sh db:migrate         # Run database migrations
@@ -103,12 +111,14 @@ The project includes a unified `docker.sh` script that handles all Docker operat
 ```
 
 #### **📦 Package Management**
+
 ```bash
 ./docker.sh install <package>  # Install npm package
 ./docker.sh uninstall <pkg>    # Uninstall npm package
 ```
 
 #### **🧹 Maintenance**
+
 ```bash
 ./docker.sh clean              # Remove containers and volumes
 ./docker.sh clean:all          # Remove everything
@@ -120,6 +130,7 @@ The project includes a unified `docker.sh` script that handles all Docker operat
 ## 📁 **Project Structure**
 
 ### **Docker Configuration Files**
+
 ```
 nextya/
 ├── docker-compose.yml         # Main Docker Compose configuration
@@ -135,6 +146,7 @@ nextya/
 ### **Key Configuration Details**
 
 #### **docker-compose.yml**
+
 ```yaml
 services:
   app:
@@ -144,7 +156,7 @@ services:
       dockerfile: docker/app.dockerfile
       target: development
     ports:
-      - "5173:5173"
+      - '5173:5173'
     environment:
       - DB_HOST=postgres
       - DB_USER=postgres
@@ -168,15 +180,16 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/init:/docker-entrypoint-initdb.d
     ports:
-      - "5432:5432"
+      - '5432:5432'
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
 ```
 
 #### **Application Dockerfile**
+
 - **Base**: Node.js 20 Alpine
 - **Multi-stage**: Development and Production targets
 - **User Mapping**: Matches host UID/GID for file permissions
@@ -188,6 +201,7 @@ services:
 ## 🔧 **Development Workflow**
 
 ### **Daily Development**
+
 ```bash
 # Start your day
 ./docker.sh up                 # Start all services
@@ -208,6 +222,7 @@ services:
 ### **Common Development Tasks**
 
 #### **Installing New Packages**
+
 ```bash
 # Install a new dependency
 ./docker.sh install express
@@ -220,6 +235,7 @@ services:
 ```
 
 #### **Database Management**
+
 ```bash
 # Create a backup before major changes
 ./docker.sh db:backup
@@ -235,6 +251,7 @@ services:
 ```
 
 #### **Debugging**
+
 ```bash
 # View application logs
 ./docker.sh logs app
@@ -254,6 +271,7 @@ services:
 ## 🗄️ **Database Configuration**
 
 ### **Connection Details**
+
 - **Host**: localhost (from host) / postgres (from container)
 - **Port**: 5432
 - **Database**: nextya
@@ -261,13 +279,16 @@ services:
 - **Password**: postgres
 
 ### **Database Schema**
+
 The database is automatically initialized with:
+
 - **Users & Authentication**: JWT-based auth system
 - **Educational Structure**: Levels, courses, students, registers
 - **Evaluation System**: Exams, questions, answers, results
 - **Permissions**: Role-based access control
 
 ### **Migrations**
+
 - **Location**: `src/lib/database/migrations/`
 - **Tool**: Kysely migrations
 - **Commands**:
@@ -278,6 +299,7 @@ The database is automatically initialized with:
   ```
 
 ### **Type Generation**
+
 - **Tool**: kysely-codegen
 - **Output**: `src/lib/database/types.ts`
 - **Command**: `./docker.sh db:generate`
@@ -288,6 +310,7 @@ The database is automatically initialized with:
 ## 🔐 **Environment Variables**
 
 ### **Docker Environment**
+
 ```bash
 # User mapping (automatically set)
 USER_ID=1000
@@ -307,6 +330,7 @@ JWT_EXPIRES_IN=8h
 ```
 
 ### **Production Considerations**
+
 - Change JWT_SECRET to a secure random string
 - Use environment-specific database credentials
 - Enable SSL for database connections
@@ -319,6 +343,7 @@ JWT_EXPIRES_IN=8h
 ### **Common Issues**
 
 #### **Port Already in Use**
+
 ```bash
 # Check what's using the port
 lsof -i :5173
@@ -328,6 +353,7 @@ lsof -i :5432
 ```
 
 #### **Permission Issues**
+
 ```bash
 # Fix file permissions
 sudo chown -R $USER:$USER .
@@ -337,6 +363,7 @@ sudo chown -R $USER:$USER .
 ```
 
 #### **Database Connection Issues**
+
 ```bash
 # Check database container status
 ./docker.sh status
@@ -349,6 +376,7 @@ sudo chown -R $USER:$USER .
 ```
 
 #### **Container Won't Start**
+
 ```bash
 # Clean rebuild
 ./docker.sh clean
@@ -359,6 +387,7 @@ sudo systemctl status docker
 ```
 
 ### **Reset Everything**
+
 ```bash
 # Nuclear option - removes everything
 ./docker.sh clean:all
@@ -372,6 +401,7 @@ sudo systemctl status docker
 ## 📊 **Performance Optimization**
 
 ### **Development Performance**
+
 ```bash
 # Use cached volumes for better performance
 # Already configured in docker-compose.yml
@@ -383,6 +413,7 @@ volumes:
 ```
 
 ### **Database Performance**
+
 ```bash
 # Monitor database performance
 ./docker.sh db:shell
@@ -393,6 +424,7 @@ volumes:
 ```
 
 ### **Container Resource Usage**
+
 ```bash
 # Monitor container resources
 docker stats nextya_app nextya_postgres
@@ -410,6 +442,7 @@ deploy:
 ## 🔄 **CI/CD Integration**
 
 ### **GitHub Actions Example**
+
 ```yaml
 name: NextYa CI/CD
 on: [push, pull_request]
@@ -432,6 +465,7 @@ jobs:
 ```
 
 ### **Production Deployment**
+
 ```bash
 # Build production image
 docker build --target production -t nextya:latest .
@@ -445,6 +479,7 @@ docker-compose -f docker-compose.prod.yml up -d
 ## 📚 **Additional Resources**
 
 ### **Documentation Links**
+
 - [Docker Documentation](https://docs.docker.com/)
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
 - [SvelteKit Documentation](https://kit.svelte.dev/)
@@ -452,11 +487,13 @@ docker-compose -f docker-compose.prod.yml up -d
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 
 ### **Project-Specific Guides**
+
 - `MigrationGuide.md` - Complete migration documentation
 - `README.md` - Project overview and setup
 - `src/lib/database/` - Database schema and migrations
 
 ### **Useful Commands Reference**
+
 ```bash
 # Quick reference card
 ./docker.sh help                    # Show all commands
@@ -472,6 +509,7 @@ docker-compose -f docker-compose.prod.yml up -d
 ## 🎯 **Best Practices**
 
 ### **Development**
+
 1. **Always use the docker.sh script** for consistency
 2. **Run type checking** before committing: `./docker.sh check`
 3. **Generate types** after schema changes: `./docker.sh db:generate`
@@ -479,12 +517,14 @@ docker-compose -f docker-compose.prod.yml up -d
 5. **Use logs** for debugging: `./docker.sh logs:follow`
 
 ### **Database**
+
 1. **Use migrations** for all schema changes
 2. **Generate types** automatically with kysely-codegen
 3. **Test migrations** with `db:reset` in development
 4. **Backup regularly** in production
 
 ### **Performance**
+
 1. **Monitor container resources** with `docker stats`
 2. **Use cached volumes** for better file sync performance
 3. **Optimize database queries** using EXPLAIN ANALYZE

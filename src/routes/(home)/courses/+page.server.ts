@@ -2,18 +2,22 @@
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
 import { reorderCourse } from '$lib/data/courses';
+import type { Courses } from '$lib/types';
 
 export const load: PageServerLoad = async ({ locals, depends }) => {
 	depends('courses:load');
-	const { data: courses, error } = await locals.db
-		.from('courses')
-		.select('*')
-		.order('order', { ascending: true });
 
-	if (error) {
-		return { courses: [] };
+	try {
+		const courses = await locals.db
+			.selectFrom('courses')
+			.selectAll()
+			.orderBy('order', 'asc')
+			.execute();
+
+		return { courses, title: 'Cursos' };
+	} catch {
+		return { courses: [], title: 'Cursos' };
 	}
-	return { courses, title: 'Cursos' };
 };
 
 export const actions: Actions = {
@@ -21,24 +25,32 @@ export const actions: Actions = {
 	create: async ({ locals, request }) => {
 		const formData = await request.formData();
 		const name = formData.get('name') as string;
+		const abr = (formData.get('abr') as string) || name.substring(0, 3).toUpperCase();
 		const userId = locals.user?.code;
 		// Make sure userId is available, otherwise return an error
 		if (!userId) return fail(401, { error: 'User not authenticated' });
 
-		// Get the highest order value to place the new course at the end
-		const { data: maxOrderResult } = await locals.db
-			.from('courses')
-			.select('order')
-			.order('order', { ascending: false })
-			.limit(1);
+		try {
+			// Get the highest order value to place the new course at the end
+			const maxOrderResult = await locals.db
+				.selectFrom('courses')
+				.select('order')
+				.orderBy('order', 'desc')
+				.limit(1)
+				.executeTakeFirst();
 
-		const newOrder = maxOrderResult && maxOrderResult.length > 0 ? maxOrderResult[0].order + 1 : 0;
+			const newOrder = maxOrderResult ? maxOrderResult.order + 1 : 0;
 
-		const { error } = await locals.db
-			.from('courses')
-			.insert({ name, user_code: userId, order: newOrder });
-		if (error) return fail(400, { error: error.message });
-		return { success: true };
+			await locals.db
+				.insertInto('courses')
+				.values({ name, abr, user_code: userId, order: newOrder })
+				.execute();
+
+			return { success: true };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Error creando curso';
+			return fail(400, { error: message });
+		}
 	},
 
 	// update course
@@ -47,10 +59,14 @@ export const actions: Actions = {
 		const courseCode = formData.get('code') as string;
 		const name = formData.get('name') as string;
 
-		const { error } = await locals.db.from('courses').update({ name }).eq('code', courseCode);
-		if (error) return fail(400, { error: error.message });
+		try {
+			await locals.db.updateTable('courses').set({ name }).where('code', '=', courseCode).execute();
 
-		return { success: true };
+			return { success: true };
+		} catch (error: unknown) {
+			const message = error instanceof Error ? error.message : 'Error actualizando curso';
+			return fail(400, { error: message });
+		}
 	},
 
 	// delete course
@@ -58,10 +74,14 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const courseCode = formData.get('code') as string;
 
-		const { error } = await locals.db.from('courses').delete().eq('code', courseCode);
-		if (error) return fail(400, { error: error.message });
+		try {
+			await locals.db.deleteFrom('courses').where('code', '=', courseCode).execute();
 
-		return { success: true };
+			return { success: true };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Error eliminando curso';
+			return fail(400, { error: message });
+		}
 	},
 
 	// move course up or down
@@ -74,23 +94,25 @@ export const actions: Actions = {
 			return fail(400, { error: 'Parámetros inválidos' });
 		}
 
-		// Get all courses to determine the new order
-		const { data: courses, error: fetchError } = await locals.db
-			.from('courses')
-			.select('*')
-			.order('order', { ascending: true });
+		try {
+			// Get all courses to determine the new order
+			const courses: Courses[] = await locals.db
+				.selectFrom('courses')
+				.selectAll()
+				.orderBy('order', 'asc')
+				.execute();
 
-		if (fetchError || !courses) {
-			return fail(500, { error: 'Error al obtener cursos' });
+			// Perform the reordering
+			const success = await reorderCourse(courses, courseCode, direction);
+
+			if (!success) {
+				return fail(500, { error: 'Error organizando cursos' });
+			}
+
+			return { success: true };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Error organizando cursos';
+			return fail(500, { error: message });
 		}
-
-		// Perform the reordering
-		const success = await reorderCourse(locals.db, courses, courseCode, direction);
-
-		if (!success) {
-			return fail(500, { error: 'Error al reordenar cursos' });
-		}
-
-		return { success: true };
 	}
 };

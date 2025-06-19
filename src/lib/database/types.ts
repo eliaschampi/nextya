@@ -16,64 +16,64 @@ export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 export interface Courses {
   abr: string;
   code: Generated<string>;
-  createdAt: Generated<Timestamp | null>;
+  created_at: Generated<Timestamp | null>;
   name: string;
   order: Generated<number>;
-  userCode: string;
+  user_code: string;
 }
 
 export interface EvalAnswers {
   code: Generated<string>;
-  questionCode: string;
-  registerCode: string;
-  studentAnswer: string | null;
+  question_code: string;
+  register_code: string;
+  student_answer: string | null;
 }
 
 export interface EvalQuestions {
   code: Generated<string>;
-  correctKey: string;
-  evalCode: string;
+  correct_key: string;
+  eval_code: string;
   omitable: Generated<boolean | null>;
-  orderInEval: number;
-  scorePercent: Generated<Numeric>;
-  sectionCode: string;
+  order_in_eval: number;
+  score_percent: Generated<Numeric>;
+  section_code: string;
 }
 
 export interface EvalResults {
-  blankCount: Generated<number>;
-  calculatedAt: Generated<Timestamp | null>;
+  blank_count: Generated<number>;
+  calculated_at: Generated<Timestamp | null>;
   code: Generated<string>;
-  correctCount: Generated<number>;
-  evalCode: string;
-  incorrectCount: Generated<number>;
-  registerCode: string;
+  correct_count: Generated<number>;
+  eval_code: string;
+  incorrect_count: Generated<number>;
+  register_code: string;
   score: Generated<Numeric>;
-  sectionCode: string | null;
+  section_code: string | null;
 }
 
 export interface Evals {
   code: Generated<string>;
-  createdAt: Generated<Timestamp | null>;
-  evalDate: Timestamp;
-  groupName: string;
-  levelCode: string;
+  created_at: Generated<Timestamp | null>;
+  eval_date: Timestamp;
+  group_name: string;
+  level_code: string;
   name: string;
-  updatedAt: Generated<Timestamp | null>;
-  userCode: string;
+  updated_at: Generated<Timestamp | null>;
+  user_code: string;
 }
 
 export interface EvalSections {
   code: Generated<string>;
-  courseCode: string;
-  evalCode: string;
-  orderInEval: number;
-  questionCount: number;
+  course_code: string;
+  eval_code: string;
+  order_in_eval: number;
+  question_count: number;
 }
 
 export interface Levels {
   abr: string;
   code: Generated<string>;
-  createdAt: Generated<Timestamp | null>;
+  created_at: Generated<Timestamp | null>;
   name: string;
   users: Generated<string[]>;
 }
@@ -81,53 +81,53 @@ export interface Levels {
 export interface Permissions {
   action: string;
   code: Generated<string>;
-  createdAt: Generated<Timestamp>;
+  created_at: Generated<Timestamp>;
   entity: string;
-  userCode: string;
+  user_code: string;
 }
 
 export interface Registers {
   code: Generated<string>;
-  createdAt: Generated<Timestamp | null>;
-  groupName: string;
-  levelCode: string;
-  rollCode: string;
-  studentCode: string;
-  userCode: string;
+  created_at: Generated<Timestamp | null>;
+  group_name: string;
+  level_code: string;
+  roll_code: string;
+  student_code: string;
+  user_code: string;
 }
 
 export interface Students {
   code: Generated<string>;
-  createdAt: Generated<Timestamp | null>;
+  created_at: Generated<Timestamp | null>;
   email: string;
-  lastName: string;
+  last_name: string;
   name: string;
   phone: string | null;
-  updatedAt: Generated<Timestamp | null>;
-  userCode: string;
+  updated_at: Generated<Timestamp | null>;
+  user_code: string;
 }
 
 export interface Users {
   code: Generated<string>;
-  createdAt: Generated<Timestamp>;
+  created_at: Generated<Timestamp>;
   email: string;
-  isEmailVerified: Generated<boolean>;
-  isSuperAdmin: Generated<boolean>;
-  lastLogin: Timestamp | null;
-  lastName: string | null;
+  is_email_verified: Generated<boolean>;
+  is_super_admin: Generated<boolean>;
+  last_login: Timestamp | null;
+  last_name: string | null;
   name: string | null;
-  passwordHash: string;
-  photoUrl: string | null;
-  updatedAt: Generated<Timestamp>;
+  password_hash: string;
+  photo_url: string | null;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface DB {
   courses: Courses;
-  evalAnswers: EvalAnswers;
-  evalQuestions: EvalQuestions;
-  evalResults: EvalResults;
+  eval_answers: EvalAnswers;
+  eval_questions: EvalQuestions;
+  eval_results: EvalResults;
+  eval_sections: EvalSections;
   evals: Evals;
-  evalSections: EvalSections;
   levels: Levels;
   permissions: Permissions;
   registers: Registers;

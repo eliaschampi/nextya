@@ -14,7 +14,9 @@ const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '8h';
  * Generate a JWT token for a user
  */
 export function generateToken(payload: { userCode: string; email: string }): string {
-	return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] });
+	return jwt.sign(payload, JWT_SECRET, {
+		expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn']
+	});
 }
 
 /**

@@ -9,14 +9,7 @@ import type {
 	GroupDashboardData
 } from '$lib/types/dashboard';
 
-/**
- * Fetches dashboard data for a specific level using the optimized SQL function
- * @param levelCode Level code to get dashboard data for
- * @returns Level dashboard data for charts and visualizations
- */
-export async function getLevelDashboardData(
-	levelCode: string
-): Promise<LevelDashboardData | null> {
+export async function getLevelDashboardData(levelCode: string): Promise<LevelDashboardData | null> {
 	try {
 		// Call the optimized SQL function using raw SQL
 		const result = await sql<{
@@ -25,7 +18,6 @@ export async function getLevelDashboardData(
 		}>`SELECT * FROM get_level_dashboard_data(${levelCode})`.execute(db);
 
 		if (!result.rows || result.rows.length === 0) {
-			console.error('No data returned from level dashboard function');
 			return null;
 		}
 
@@ -45,18 +37,11 @@ export async function getLevelDashboardData(
 		});
 
 		return dashboardData;
-	} catch (error) {
-		console.error('Error fetching level dashboard data:', error);
+	} catch {
 		return null;
 	}
 }
 
-/**
- * Fetches dashboard data for a specific level and group using the optimized SQL function
- * @param levelCode Level code to get dashboard data for
- * @param groupName Group name to filter by
- * @returns Group dashboard data for charts and visualizations
- */
 export async function getGroupDashboardData(
 	levelCode: string,
 	groupName: string
@@ -69,7 +54,6 @@ export async function getGroupDashboardData(
 		}>`SELECT * FROM get_group_dashboard_data(${levelCode}, ${groupName})`.execute(db);
 
 		if (!result.rows || result.rows.length === 0) {
-			console.error('No data returned from group dashboard function');
 			return null;
 		}
 
@@ -89,8 +73,7 @@ export async function getGroupDashboardData(
 		});
 
 		return dashboardData;
-	} catch (error) {
-		console.error('Error fetching group dashboard data:', error);
+	} catch {
 		return null;
 	}
 }

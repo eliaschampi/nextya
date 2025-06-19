@@ -1,8 +1,8 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import type { OptimizedResultPayload } from '$lib/types/api';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { getLevels } from '$lib/data/levels';
+import { sql } from 'kysely';
 
 /**
  * Empaqueta un resultado individual para el RPC de Supabase
@@ -43,14 +43,22 @@ function buildRpcPayload(evalCode: string, result: OptimizedResultPayload['resul
  * Guarda todos los resultados en paralelo usando Promise.allSettled
  */
 async function saveAllResults(
-	supabase: SupabaseClient,
+	db: any,
 	payload: OptimizedResultPayload
 ): Promise<{ successCount: number; errors: string[] }> {
-	const tasks = payload.results.map((r) => {
+	const tasks = payload.results.map(async (r) => {
 		const rpcPayload = buildRpcPayload(payload.eval_code, r);
-		return supabase.rpc('upsert_eval_results', rpcPayload).then(({ error }) => {
-			if (error) throw new Error(`${r.roll_code}: ${error.message}`);
-		});
+		try {
+			await sql`SELECT upsert_eval_results(
+				${rpcPayload.p_eval_code},
+				${rpcPayload.p_register_code},
+				${JSON.stringify(rpcPayload.p_answers)},
+				${JSON.stringify(rpcPayload.p_general_result)},
+				${JSON.stringify(rpcPayload.p_section_results)}
+			)`.execute(db);
+		} catch (error: any) {
+			throw new Error(`${r.roll_code}: ${error.message}`);
+		}
 	});
 
 	const settled = await Promise.allSettled(tasks);
@@ -70,10 +78,10 @@ async function saveAllResults(
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user?.code;
-	let levels = [];
+	let levels: any[] = [];
 
 	if (userId) {
-		levels = await getLevels(locals.db, userId);
+		levels = await getLevels(userId);
 	}
 
 	return {

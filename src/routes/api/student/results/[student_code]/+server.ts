@@ -11,26 +11,34 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	try {
 		// Get student information first
-		const { data: student, error: studentError } = await locals.db
-			.from('students')
-			.select('name, last_name')
-			.eq('code', student_code)
-			.single();
+		const student = await locals.db
+			.selectFrom('students')
+			.select(['name', 'last_name'])
+			.where('code', '=', student_code)
+			.executeTakeFirst();
 
-		if (studentError) {
-			console.error('Error fetching student:', studentError);
+		if (!student) {
+			console.error('Student not found:', student_code);
 			return json({ error: 'Estudiante no encontrado' }, { status: 404 });
 		}
 
 		// Get all registers for this student
-		const { data: registers, error: registersError } = await locals.db
-			.from('registers')
-			.select('code, level_code, group_name, roll_code, levels(name)')
-			.eq('student_code', student_code);
+		const registers = await locals.db
+			.selectFrom('registers')
+			.innerJoin('levels', 'levels.code', 'registers.level_code')
+			.select([
+				'registers.code',
+				'registers.level_code',
+				'registers.group_name',
+				'registers.roll_code',
+				'levels.name as level_name'
+			])
+			.where('registers.student_code', '=', student_code)
+			.execute();
 
-		if (registersError) {
-			console.error('Error fetching registers:', registersError);
-			return json({ error: 'Error al obtener registros' }, { status: 500 });
+		if (!registers || registers.length === 0) {
+			console.error('No registers found for student:', student_code);
+			return json({ error: 'No se encontraron registros para este estudiante' }, { status: 404 });
 		}
 
 		// Get all results for this student's registers
@@ -105,7 +113,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 		return json(response);
 	} catch (error) {
-		console.error('Unexpected error:', error);
-		return json({ error: 'Error interno del servidor' }, { status: 500 });
+		const message = error instanceof Error ? error.message : 'Error desconocido';
+		return json({ error: message }, { status: 500 });
 	}
 };

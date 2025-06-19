@@ -29,7 +29,7 @@ async function checkDatabaseDuplicates(
 			.execute();
 
 		// Create a set of existing roll codes for efficient lookup
-		const existingRollCodeSet = new Set(existingRollCodes?.map((r) => r.rollCode) || []);
+		const existingRollCodeSet = new Set(existingRollCodes?.map((r: any) => r.rollCode) || []);
 
 		// 2. Check for duplicate students by name + last_name
 		// Create a map of name keys for efficient lookup
@@ -49,7 +49,7 @@ async function checkDatabaseDuplicates(
 		const existingStudents = await db
 			.selectFrom('students')
 			.select(['name', 'lastName'])
-			.where((eb) => {
+			.where((eb: any) => {
 				const conditions = nameLastNamePairs.map(pair =>
 					eb.and([
 						eb('name', 'ilike', pair.name),
@@ -62,7 +62,7 @@ async function checkDatabaseDuplicates(
 
 		// Create a set of existing name keys for efficient lookup
 		const existingNameKeySet = new Set(
-			existingStudents?.map((s) => createNameKey(s.name, s.lastName)) || []
+			existingStudents?.map((s: any) => createNameKey(s.name, s.lastName)) || []
 		);
 
 	// 3. Move duplicates from validRows to omittedRows
@@ -131,10 +131,10 @@ async function checkDatabaseDuplicates(
 				code: item.code
 			});
 		}
+
 	} catch (error) {
 		console.error('Error checking database duplicates:', error);
 	}
-}
 }
 
 /**

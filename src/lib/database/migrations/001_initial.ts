@@ -17,18 +17,26 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.addColumn('last_login', 'timestamptz')
 		.addColumn('is_email_verified', 'boolean', (col) => col.notNull().defaultTo(false))
 		.addColumn('is_super_admin', 'boolean', (col) => col.notNull().defaultTo(false))
-		.addColumn('created_at', 'timestamptz', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
-		.addColumn('updated_at', 'timestamptz', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
+		.addColumn('created_at', 'timestamptz', (col) =>
+			col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+		)
+		.addColumn('updated_at', 'timestamptz', (col) =>
+			col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+		)
 		.execute();
 
 	// Permissions table
 	await db.schema
 		.createTable('permissions')
 		.addColumn('code', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
-		.addColumn('user_code', 'uuid', (col) => col.notNull().references('users.code').onDelete('cascade'))
+		.addColumn('user_code', 'uuid', (col) =>
+			col.notNull().references('users.code').onDelete('cascade')
+		)
 		.addColumn('entity', 'varchar(50)', (col) => col.notNull())
 		.addColumn('action', 'varchar(50)', (col) => col.notNull())
-		.addColumn('created_at', 'timestamptz', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
+		.addColumn('created_at', 'timestamptz', (col) =>
+			col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+		)
 		.execute();
 
 	// Add unique constraint for permissions
@@ -54,7 +62,9 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.createTable('courses')
 		.addColumn('code', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
 		.addColumn('name', 'varchar(100)', (col) => col.notNull())
-		.addColumn('user_code', 'uuid', (col) => col.notNull().references('users.code').onDelete('cascade'))
+		.addColumn('user_code', 'uuid', (col) =>
+			col.notNull().references('users.code').onDelete('cascade')
+		)
 		.addColumn('abr', 'text', (col) => col.notNull())
 		.addColumn('order', 'integer', (col) => col.notNull().defaultTo(0))
 		.addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
@@ -68,7 +78,9 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.addColumn('last_name', 'varchar(150)', (col) => col.notNull())
 		.addColumn('email', 'varchar(100)', (col) => col.notNull())
 		.addColumn('phone', 'varchar(100)')
-		.addColumn('user_code', 'uuid', (col) => col.notNull().references('users.code').onDelete('cascade'))
+		.addColumn('user_code', 'uuid', (col) =>
+			col.notNull().references('users.code').onDelete('cascade')
+		)
 		.addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
 		.addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
 		.execute();
@@ -85,17 +97,25 @@ export async function up(db: Kysely<any>): Promise<void> {
 	await db.schema
 		.createTable('registers')
 		.addColumn('code', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
-		.addColumn('student_code', 'uuid', (col) => col.notNull().references('students.code').onDelete('cascade'))
-		.addColumn('level_code', 'uuid', (col) => col.notNull().references('levels.code').onDelete('cascade'))
+		.addColumn('student_code', 'uuid', (col) =>
+			col.notNull().references('students.code').onDelete('cascade')
+		)
+		.addColumn('level_code', 'uuid', (col) =>
+			col.notNull().references('levels.code').onDelete('cascade')
+		)
 		.addColumn('group_name', 'char(1)', (col) => col.notNull())
-		.addColumn('user_code', 'uuid', (col) => col.notNull().references('users.code').onDelete('cascade'))
+		.addColumn('user_code', 'uuid', (col) =>
+			col.notNull().references('users.code').onDelete('cascade')
+		)
 		.addColumn('roll_code', 'char(4)', (col) => col.notNull())
 		.addColumn('created_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
 		.execute();
 
 	// Add constraints for registers
-	await sql`ALTER TABLE registers ADD CONSTRAINT ck_registers_group CHECK (group_name IN ('A','B','C','D'))`.execute(db);
-	
+	await sql`ALTER TABLE registers ADD CONSTRAINT ck_registers_group CHECK (group_name IN ('A','B','C','D'))`.execute(
+		db
+	);
+
 	await db.schema
 		.createIndex('registers_student_level_group_unique')
 		.on('registers')
@@ -123,13 +143,17 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.addColumn('updated_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
 		.execute();
 
-	await sql`ALTER TABLE evals ADD CONSTRAINT ck_evals_group CHECK (group_name IN ('A','B','C','D'))`.execute(db);
+	await sql`ALTER TABLE evals ADD CONSTRAINT ck_evals_group CHECK (group_name IN ('A','B','C','D'))`.execute(
+		db
+	);
 
 	// Eval sections table
 	await db.schema
 		.createTable('eval_sections')
 		.addColumn('code', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
-		.addColumn('eval_code', 'uuid', (col) => col.notNull().references('evals.code').onDelete('cascade'))
+		.addColumn('eval_code', 'uuid', (col) =>
+			col.notNull().references('evals.code').onDelete('cascade')
+		)
 		.addColumn('course_code', 'uuid', (col) => col.notNull().references('courses.code'))
 		.addColumn('order_in_eval', 'integer', (col) => col.notNull())
 		.addColumn('question_count', 'integer', (col) => col.notNull())
@@ -153,16 +177,24 @@ export async function up(db: Kysely<any>): Promise<void> {
 	await db.schema
 		.createTable('eval_questions')
 		.addColumn('code', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
-		.addColumn('eval_code', 'uuid', (col) => col.notNull().references('evals.code').onDelete('cascade'))
-		.addColumn('section_code', 'uuid', (col) => col.notNull().references('eval_sections.code').onDelete('cascade'))
+		.addColumn('eval_code', 'uuid', (col) =>
+			col.notNull().references('evals.code').onDelete('cascade')
+		)
+		.addColumn('section_code', 'uuid', (col) =>
+			col.notNull().references('eval_sections.code').onDelete('cascade')
+		)
 		.addColumn('order_in_eval', 'integer', (col) => col.notNull())
 		.addColumn('correct_key', 'char(1)', (col) => col.notNull())
 		.addColumn('omitable', 'boolean', (col) => col.defaultTo(false))
-		.addColumn('score_percent', sql`numeric(3,2)`, (col) => col.notNull().defaultTo(1.00))
+		.addColumn('score_percent', sql`numeric(3,2)`, (col) => col.notNull().defaultTo(1.0))
 		.execute();
 
-	await sql`ALTER TABLE eval_questions ADD CONSTRAINT ck_correct_key_questions CHECK (correct_key IN ('A','B','C','D','E'))`.execute(db);
-	await sql`ALTER TABLE eval_questions ADD CONSTRAINT ck_score_questions CHECK (score_percent BETWEEN 0 AND 1)`.execute(db);
+	await sql`ALTER TABLE eval_questions ADD CONSTRAINT ck_correct_key_questions CHECK (correct_key IN ('A','B','C','D','E'))`.execute(
+		db
+	);
+	await sql`ALTER TABLE eval_questions ADD CONSTRAINT ck_score_questions CHECK (score_percent BETWEEN 0 AND 1)`.execute(
+		db
+	);
 
 	await db.schema
 		.createIndex('eval_questions_order_unique')
@@ -175,12 +207,18 @@ export async function up(db: Kysely<any>): Promise<void> {
 	await db.schema
 		.createTable('eval_answers')
 		.addColumn('code', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
-		.addColumn('register_code', 'uuid', (col) => col.notNull().references('registers.code').onDelete('cascade'))
-		.addColumn('question_code', 'uuid', (col) => col.notNull().references('eval_questions.code').onDelete('cascade'))
+		.addColumn('register_code', 'uuid', (col) =>
+			col.notNull().references('registers.code').onDelete('cascade')
+		)
+		.addColumn('question_code', 'uuid', (col) =>
+			col.notNull().references('eval_questions.code').onDelete('cascade')
+		)
 		.addColumn('student_answer', 'text')
 		.execute();
 
-	await sql`ALTER TABLE eval_answers ADD CONSTRAINT ck_eval_answers_answer CHECK (student_answer IN ('A','B','C','D','E', 'error_multiple') OR student_answer IS NULL)`.execute(db);
+	await sql`ALTER TABLE eval_answers ADD CONSTRAINT ck_eval_answers_answer CHECK (student_answer IN ('A','B','C','D','E', 'error_multiple') OR student_answer IS NULL)`.execute(
+		db
+	);
 
 	await db.schema
 		.createIndex('eval_answers_unique')
@@ -193,13 +231,19 @@ export async function up(db: Kysely<any>): Promise<void> {
 	await db.schema
 		.createTable('eval_results')
 		.addColumn('code', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))
-		.addColumn('register_code', 'uuid', (col) => col.notNull().references('registers.code').onDelete('cascade'))
-		.addColumn('eval_code', 'uuid', (col) => col.notNull().references('evals.code').onDelete('cascade'))
-		.addColumn('section_code', 'uuid', (col) => col.references('eval_sections.code').onDelete('cascade'))
+		.addColumn('register_code', 'uuid', (col) =>
+			col.notNull().references('registers.code').onDelete('cascade')
+		)
+		.addColumn('eval_code', 'uuid', (col) =>
+			col.notNull().references('evals.code').onDelete('cascade')
+		)
+		.addColumn('section_code', 'uuid', (col) =>
+			col.references('eval_sections.code').onDelete('cascade')
+		)
 		.addColumn('correct_count', 'integer', (col) => col.notNull().defaultTo(0))
 		.addColumn('blank_count', 'integer', (col) => col.notNull().defaultTo(0))
 		.addColumn('incorrect_count', 'integer', (col) => col.notNull().defaultTo(0))
-		.addColumn('score', sql`numeric(5,2)`, (col) => col.notNull().defaultTo(0.00))
+		.addColumn('score', sql`numeric(5,2)`, (col) => col.notNull().defaultTo(0.0))
 		.addColumn('calculated_at', 'timestamptz', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
 		.execute();
 
@@ -256,12 +300,16 @@ export async function up(db: Kysely<any>): Promise<void> {
 // Helper function to create performance indices
 async function createIndices(db: Kysely<any>): Promise<void> {
 	// 1. Permissions table
-	await sql`CREATE INDEX IF NOT EXISTS idx_permissions_user_code ON permissions(user_code)`.execute(db);
+	await sql`CREATE INDEX IF NOT EXISTS idx_permissions_user_code ON permissions(user_code)`.execute(
+		db
+	);
 	await sql`CREATE INDEX IF NOT EXISTS idx_permissions_entity ON permissions(entity)`.execute(db);
 
 	// 2. Students table
 	await sql`CREATE INDEX IF NOT EXISTS idx_students_user_code ON students(user_code)`.execute(db);
-	await sql`CREATE INDEX IF NOT EXISTS idx_students_name_search ON students USING GIN (to_tsvector('english', name || ' ' || last_name))`.execute(db);
+	await sql`CREATE INDEX IF NOT EXISTS idx_students_name_search ON students USING GIN (to_tsvector('english', name || ' ' || last_name))`.execute(
+		db
+	);
 
 	// 3. Levels table
 	await sql`CREATE INDEX IF NOT EXISTS idx_levels_name ON levels(name)`.execute(db);
@@ -270,35 +318,67 @@ async function createIndices(db: Kysely<any>): Promise<void> {
 	await sql`CREATE INDEX IF NOT EXISTS idx_courses_user_code ON courses(user_code)`.execute(db);
 
 	// 5. Registers table
-	await sql`CREATE INDEX IF NOT EXISTS idx_registers_student_code ON registers(student_code)`.execute(db);
-	await sql`CREATE INDEX IF NOT EXISTS idx_registers_level_code ON registers(level_code)`.execute(db);
+	await sql`CREATE INDEX IF NOT EXISTS idx_registers_student_code ON registers(student_code)`.execute(
+		db
+	);
+	await sql`CREATE INDEX IF NOT EXISTS idx_registers_level_code ON registers(level_code)`.execute(
+		db
+	);
 	await sql`CREATE INDEX IF NOT EXISTS idx_registers_user_code ON registers(user_code)`.execute(db);
-	await sql`CREATE INDEX IF NOT EXISTS idx_registers_group_level ON registers(group_name, level_code)`.execute(db);
+	await sql`CREATE INDEX IF NOT EXISTS idx_registers_group_level ON registers(group_name, level_code)`.execute(
+		db
+	);
 
 	// 6. Evals table
 	await sql`CREATE INDEX IF NOT EXISTS idx_evals_level_code ON evals(level_code)`.execute(db);
 	await sql`CREATE INDEX IF NOT EXISTS idx_evals_user_code ON evals(user_code)`.execute(db);
-	await sql`CREATE INDEX IF NOT EXISTS idx_evals_group_date ON evals(group_name, eval_date)`.execute(db);
+	await sql`CREATE INDEX IF NOT EXISTS idx_evals_group_date ON evals(group_name, eval_date)`.execute(
+		db
+	);
 
 	// 7. Eval sections table
-	await sql`CREATE INDEX IF NOT EXISTS idx_eval_sections_eval_code ON eval_sections(eval_code)`.execute(db);
-	await sql`CREATE INDEX IF NOT EXISTS idx_eval_sections_course_code ON eval_sections(course_code)`.execute(db);
-	await sql`CREATE INDEX IF NOT EXISTS idx_eval_sections_order ON eval_sections(order_in_eval)`.execute(db);
+	await sql`CREATE INDEX IF NOT EXISTS idx_eval_sections_eval_code ON eval_sections(eval_code)`.execute(
+		db
+	);
+	await sql`CREATE INDEX IF NOT EXISTS idx_eval_sections_course_code ON eval_sections(course_code)`.execute(
+		db
+	);
+	await sql`CREATE INDEX IF NOT EXISTS idx_eval_sections_order ON eval_sections(order_in_eval)`.execute(
+		db
+	);
 
 	// 8. Eval questions table
-	await sql`CREATE INDEX IF NOT EXISTS idx_eval_questions_eval_code ON eval_questions(eval_code)`.execute(db);
-	await sql`CREATE INDEX IF NOT EXISTS idx_eval_questions_section_code ON eval_questions(section_code)`.execute(db);
-	await sql`CREATE INDEX IF NOT EXISTS idx_eval_questions_order ON eval_questions(order_in_eval)`.execute(db);
+	await sql`CREATE INDEX IF NOT EXISTS idx_eval_questions_eval_code ON eval_questions(eval_code)`.execute(
+		db
+	);
+	await sql`CREATE INDEX IF NOT EXISTS idx_eval_questions_section_code ON eval_questions(section_code)`.execute(
+		db
+	);
+	await sql`CREATE INDEX IF NOT EXISTS idx_eval_questions_order ON eval_questions(order_in_eval)`.execute(
+		db
+	);
 
 	// 9. Eval answers table
-	await sql`CREATE INDEX IF NOT EXISTS idx_eval_answers_register_code ON eval_answers(register_code)`.execute(db);
-	await sql`CREATE INDEX IF NOT EXISTS idx_eval_answers_question_code ON eval_answers(question_code)`.execute(db);
-	await sql`CREATE INDEX IF NOT EXISTS idx_eval_answers_student_answer ON eval_answers(student_answer) WHERE student_answer IS NOT NULL`.execute(db);
+	await sql`CREATE INDEX IF NOT EXISTS idx_eval_answers_register_code ON eval_answers(register_code)`.execute(
+		db
+	);
+	await sql`CREATE INDEX IF NOT EXISTS idx_eval_answers_question_code ON eval_answers(question_code)`.execute(
+		db
+	);
+	await sql`CREATE INDEX IF NOT EXISTS idx_eval_answers_student_answer ON eval_answers(student_answer) WHERE student_answer IS NOT NULL`.execute(
+		db
+	);
 
 	// 10. Eval results table
-	await sql`CREATE INDEX IF NOT EXISTS idx_eval_results_register_code ON eval_results(register_code)`.execute(db);
-	await sql`CREATE INDEX IF NOT EXISTS idx_eval_results_eval_code ON eval_results(eval_code)`.execute(db);
-	await sql`CREATE INDEX IF NOT EXISTS idx_eval_results_section_code ON eval_results(section_code) WHERE section_code IS NOT NULL`.execute(db);
+	await sql`CREATE INDEX IF NOT EXISTS idx_eval_results_register_code ON eval_results(register_code)`.execute(
+		db
+	);
+	await sql`CREATE INDEX IF NOT EXISTS idx_eval_results_eval_code ON eval_results(eval_code)`.execute(
+		db
+	);
+	await sql`CREATE INDEX IF NOT EXISTS idx_eval_results_section_code ON eval_results(section_code) WHERE section_code IS NOT NULL`.execute(
+		db
+	);
 	await sql`CREATE INDEX IF NOT EXISTS idx_eval_results_score ON eval_results(score)`.execute(db);
 }
 
@@ -844,8 +924,12 @@ export async function down(db: Kysely<any>): Promise<void> {
 	await sql`DROP VIEW IF EXISTS student_register_results`.execute(db);
 
 	// Drop functions
-	await sql`DROP FUNCTION IF EXISTS upsert_eval_results(uuid, uuid, jsonb, jsonb, jsonb)`.execute(db);
-	await sql`DROP FUNCTION IF EXISTS import_student_register(TEXT, TEXT, TEXT, TEXT, UUID, TEXT, TEXT, UUID)`.execute(db);
+	await sql`DROP FUNCTION IF EXISTS upsert_eval_results(uuid, uuid, jsonb, jsonb, jsonb)`.execute(
+		db
+	);
+	await sql`DROP FUNCTION IF EXISTS import_student_register(TEXT, TEXT, TEXT, TEXT, UUID, TEXT, TEXT, UUID)`.execute(
+		db
+	);
 	await sql`DROP FUNCTION IF EXISTS get_register_eval_results(TEXT)`.execute(db);
 	await sql`DROP FUNCTION IF EXISTS get_level_course_scores(TEXT, TEXT)`.execute(db);
 	await sql`DROP FUNCTION IF EXISTS get_course_eval_scores(TEXT, TEXT, TEXT)`.execute(db);

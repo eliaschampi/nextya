@@ -18,24 +18,24 @@ export async function fetchRegisterByRollCode(
 	evalLevelCode: string
 ): Promise<StudentRegisterInfo | null> {
 	if (!rollCode || !/^\d{4}$/.test(rollCode)) {
-		return null; // Código inválido
+		return null;
 	}
 
 	try {
 		const data = await db
 			.selectFrom('registers')
-			.innerJoin('students', 'students.code', 'registers.studentCode')
+			.innerJoin('students', 'students.code', 'registers.student_code')
 			.select([
 				'registers.code',
-				'registers.rollCode',
-				'registers.groupName',
-				'registers.studentCode',
+				'registers.roll_code',
+				'registers.group_name',
+				'registers.student_code',
 				'students.name',
-				'students.lastName'
+				'students.last_name'
 			])
-			.where('registers.rollCode', '=', rollCode)
-			.where('registers.groupName', '=', groupName)
-			.where('registers.levelCode', '=', evalLevelCode)
+			.where('registers.roll_code', '=', rollCode)
+			.where('registers.group_name', '=', groupName)
+			.where('registers.level_code', '=', evalLevelCode)
 			.executeTakeFirst();
 
 		if (!data) {
@@ -44,14 +44,13 @@ export async function fetchRegisterByRollCode(
 
 		return {
 			register_code: data.code,
-			roll_code: data.rollCode,
+			roll_code: data.roll_code,
 			student: {
 				name: data.name,
-				last_name: data.lastName
+				last_name: data.last_name
 			}
 		};
-	} catch (error) {
-		console.error('Error fetching register by roll code:', error);
+	} catch {
 		return null;
 	}
 }

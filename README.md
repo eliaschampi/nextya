@@ -59,6 +59,7 @@ nextya/
 ## Variables de entorno
 
 ### Docker (.env.docker)
+
 - `DB_HOST=postgres`
 - `DB_USER=postgres`
 - `DB_PASSWORD=postgres`
@@ -67,6 +68,7 @@ nextya/
 - `NODE_ENV=development`
 
 ### Producción
+
 - Cambiar `JWT_SECRET` por una clave segura
 - Configurar `NODE_ENV=production`
 
@@ -102,6 +104,7 @@ npm run docker:db
 ✅ **Migración Supabase → Kysely + PostgreSQL completada**
 
 ### Características implementadas:
+
 - 🔐 **Autenticación JWT** con cookies seguras
 - 🗄️ **PostgreSQL** con schema completo migrado
 - 🔧 **Kysely ORM** type-safe para consultas SQL
@@ -109,6 +112,7 @@ npm run docker:db
 - 🧹 **Clean Architecture** sin dependencias de Supabase
 
 ### Próximos pasos:
+
 1. Migrar módulos de datos restantes
 2. Implementar funciones SQL complejas
 3. Testing y validación completa

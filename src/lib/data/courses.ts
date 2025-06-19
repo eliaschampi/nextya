@@ -1,22 +1,18 @@
 import { db } from '$lib/database';
-import type { Course } from '$lib/types';
+import type { Courses } from '$lib/types';
 
-export async function getCourses(): Promise<Course[]> {
+export async function getCourses(): Promise<Courses[]> {
 	try {
-		const courses = await db
-			.selectFrom('courses')
-			.selectAll()
-			.orderBy('order', 'asc')
-			.execute();
+		const courses = await db.selectFrom('courses').selectAll().orderBy('order', 'asc').execute();
 
 		// Transform to match expected Course interface
-		return courses.map(course => ({
+		return courses.map((course) => ({
 			code: course.code,
 			name: course.name,
 			order: course.order,
-			created_at: course.createdAt?.toISOString() || null,
-			user_code: course.userCode
-		})) as Course[];
+			created_at: course.created_at?.toISOString() || null,
+			user_code: course.user_code
+		})) as unknown as Courses[];
 	} catch (error) {
 		console.error('Error fetching courses:', error);
 		return [];
@@ -29,10 +25,7 @@ export async function getCourses(): Promise<Course[]> {
  * @param newOrder New order value
  * @returns True if successful, false otherwise
  */
-export async function updateCourseOrder(
-	courseCode: string,
-	newOrder: number
-): Promise<boolean> {
+export async function updateCourseOrder(courseCode: string, newOrder: number): Promise<boolean> {
 	try {
 		await db
 			.updateTable('courses')
@@ -54,7 +47,7 @@ export async function updateCourseOrder(
  * @returns True if successful, false otherwise
  */
 export async function reorderCourse(
-	courses: Course[],
+	courses: Courses[],
 	courseCode: string,
 	direction: 'up' | 'down'
 ): Promise<boolean> {
@@ -82,19 +75,20 @@ export async function reorderCourse(
 
 		// Update both courses in a transaction-like manner
 		await Promise.all([
-			db.updateTable('courses')
+			db
+				.updateTable('courses')
 				.set({ order: targetOrder })
 				.where('code', '=', currentCourse.code)
 				.execute(),
-			db.updateTable('courses')
+			db
+				.updateTable('courses')
 				.set({ order: currentOrder })
 				.where('code', '=', targetCourse.code)
 				.execute()
 		]);
 
 		return true;
-	} catch (error) {
-		console.error('Error reordering courses:', error);
+	} catch {
 		return false;
 	}
 }

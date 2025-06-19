@@ -8,56 +8,56 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	try {
 		const evals = await locals.db
 			.selectFrom('evals')
-			.innerJoin('levels', 'levels.code', 'evals.levelCode')
-			.leftJoin('evalSections', 'evalSections.evalCode', 'evals.code')
-			.leftJoin('courses', 'courses.code', 'evalSections.courseCode')
+			.innerJoin('levels', 'levels.code', 'evals.level_code')
+			.leftJoin('eval_sections', 'eval_sections.eval_code', 'evals.code')
+			.leftJoin('courses', 'courses.code', 'eval_sections.course_code')
 			.select([
 				'evals.code',
 				'evals.name',
-				'evals.levelCode',
-				'evals.groupName',
-				'evals.evalDate',
-				'evals.userCode',
-				'evals.createdAt',
-				'evals.updatedAt',
-				'levels.name as levelName',
-				'evalSections.code as sectionCode',
-				'evalSections.courseCode',
-				'evalSections.orderInEval',
-				'evalSections.questionCount',
-				'courses.name as courseName'
+				'evals.level_code',
+				'evals.group_name',
+				'evals.eval_date',
+				'evals.user_code',
+				'evals.created_at',
+				'evals.updated_at',
+				'levels.name as level_name',
+				'eval_sections.code as section_code',
+				'eval_sections.course_code',
+				'eval_sections.order_in_eval',
+				'eval_sections.question_count',
+				'courses.name as course_name'
 			])
-			.where('evals.levelCode', '=', code)
-			.orderBy('evals.evalDate', 'asc')
+			.where('evals.level_code', '=', code)
+			.orderBy('evals.eval_date', 'asc')
 			.execute();
 
 		// Group sections by eval
 		const evalMap = new Map();
 
-		evals.forEach(row => {
+		evals.forEach((row) => {
 			if (!evalMap.has(row.code)) {
 				evalMap.set(row.code, {
 					code: row.code,
 					name: row.name,
-					levelCode: row.levelCode,
-					groupName: row.groupName,
-					evalDate: row.evalDate,
-					userCode: row.userCode,
-					createdAt: row.createdAt,
-					updatedAt: row.updatedAt,
-					levels: { name: row.levelName },
+					level_code: row.level_code,
+					groupName: row.group_name,
+					evalDate: row.eval_date,
+					userCode: row.user_code,
+					createdAt: row.created_at,
+					updatedAt: row.updated_at,
+					levels: { name: row.level_name },
 					eval_sections: []
 				});
 			}
 
-			if (row.sectionCode) {
+			if (row.section_code) {
 				evalMap.get(row.code).eval_sections.push({
-					code: row.sectionCode,
+					code: row.section_code,
 					eval_code: row.code,
-					course_code: row.courseCode,
-					order_in_eval: row.orderInEval,
-					question_count: row.questionCount,
-					course_name: row.courseName || 'Sin nombre'
+					course_code: row.course_code,
+					order_in_eval: row.order_in_eval,
+					question_count: row.question_count,
+					course_name: row.course_name || 'Sin nombre'
 				});
 			}
 		});

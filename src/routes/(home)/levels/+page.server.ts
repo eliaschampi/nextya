@@ -4,8 +4,13 @@ import { fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ locals, depends }) => {
 	depends('levels:load');
-	const { data, error } = await locals.db.from('levels').select('*');
-	return { levels: error ? [] : data, title: 'Niveles' };
+
+	try {
+		const levels = await locals.db.selectFrom('levels').selectAll().execute();
+		return { levels, title: 'Niveles' };
+	} catch {
+		return { levels: [], title: 'Niveles' };
+	}
 };
 
 export const actions: Actions = {
@@ -23,9 +28,13 @@ export const actions: Actions = {
 		// Ensure current user is included in the users array
 		const users = [...new Set([userId, ...selectedUsers])];
 
-		const { error } = await locals.db.from('levels').insert({ name, abr, users });
-		if (error) return fail(400, { error: error.message });
-		return { success: true };
+		try {
+			await locals.db.insertInto('levels').values({ name, abr, users }).execute();
+			return { success: true };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Error creando nivel';
+			return fail(400, { error: message });
+		}
 	},
 
 	// update level
@@ -41,13 +50,18 @@ export const actions: Actions = {
 		const userId = locals.user?.code;
 		const users = userId ? [...new Set([userId, ...selectedUsers])] : selectedUsers;
 
-		const { error } = await locals.db
-			.from('levels')
-			.update({ name, abr, users })
-			.eq('code', levelCode);
-		if (error) return fail(400, { error: error.message });
+		try {
+			await locals.db
+				.updateTable('levels')
+				.set({ name, abr, users })
+				.where('code', '=', levelCode)
+				.execute();
 
-		return { success: true };
+			return { success: true };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Error actualizando nivel';
+			return fail(400, { error: message });
+		}
 	},
 
 	// delete level
@@ -55,9 +69,13 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const levelCode = formData.get('code') as string;
 
-		const { error } = await locals.db.from('levels').delete().eq('code', levelCode);
-		if (error) return fail(400, { error: error.message });
+		try {
+			await locals.db.deleteFrom('levels').where('code', '=', levelCode).execute();
 
-		return { success: true };
+			return { success: true };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Error eliminando nivel';
+			return fail(400, { error: message });
+		}
 	}
 };

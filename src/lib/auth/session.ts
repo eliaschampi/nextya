@@ -32,21 +32,21 @@ export async function createSession(userCode: string, cookies: Cookies): Promise
 		// Get user from database
 		const user = await db
 			.selectFrom('users')
-			.select(['code', 'email', 'name', 'lastLogin'])
+			.select(['code', 'email', 'name', 'last_login'])
 			.where('code', '=', userCode)
 			.executeTakeFirst();
 
 		if (!user) {
-			console.error('User not found for session creation:', userCode);
+			console.error('Usuario no encontrado:', userCode);
 			return null;
 		}
 
 		// Generate JWT token
 		const token = generateToken({ userCode: user.code, email: user.email });
 		const payload = verifyToken(token);
-		
+
 		if (!payload) {
-			console.error('Failed to verify generated token');
+			console.error('Fallo al generar token de sesión:', userCode);
 			return null;
 		}
 
@@ -56,7 +56,7 @@ export async function createSession(userCode: string, cookies: Cookies): Promise
 		// Update last login
 		await db
 			.updateTable('users')
-			.set({ lastLogin: new Date() })
+			.set({ last_login: new Date() })
 			.where('code', '=', userCode)
 			.execute();
 
@@ -65,7 +65,7 @@ export async function createSession(userCode: string, cookies: Cookies): Promise
 				code: user.code,
 				email: user.email,
 				name: user.name,
-				lastLogin: user.lastLogin
+				lastLogin: user.last_login
 			},
 			token,
 			expiresAt: payload.exp! * 1000
@@ -96,7 +96,7 @@ export async function getSession(cookies: Cookies): Promise<Session | null> {
 		// Get fresh user data
 		const user = await db
 			.selectFrom('users')
-			.select(['code', 'email', 'name', 'lastLogin'])
+			.select(['code', 'email', 'name', 'last_login'])
 			.where('code', '=', payload.userCode)
 			.executeTakeFirst();
 
@@ -110,7 +110,7 @@ export async function getSession(cookies: Cookies): Promise<Session | null> {
 				code: user.code,
 				email: user.email,
 				name: user.name,
-				lastLogin: user.lastLogin
+				lastLogin: user.last_login
 			},
 			token,
 			expiresAt: payload.exp! * 1000

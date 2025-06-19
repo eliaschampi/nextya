@@ -1,27 +1,25 @@
 import { db } from '$lib/database';
-import type { EvalQuestion } from '$lib/types';
+import type { EvalQuestions } from '$lib/types';
 
-export async function fetchQuestions(evalCode: string): Promise<EvalQuestion[]> {
+export async function fetchQuestions(evalCode: string): Promise<EvalQuestions[]> {
 	try {
 		const data = await db
-			.selectFrom('evalQuestions')
+			.selectFrom('eval_questions')
 			.selectAll()
-			.where('evalCode', '=', evalCode)
-			.orderBy('orderInEval', 'asc')
+			.where('eval_code', '=', evalCode)
+			.orderBy('order_in_eval', 'asc')
 			.execute();
-
 		// Transform to match expected EvalQuestion interface
-		return data.map(question => ({
+		return data.map((question) => ({
 			code: question.code,
-			eval_code: question.evalCode,
-			section_code: question.sectionCode,
-			order_in_eval: question.orderInEval,
-			correct_key: question.correctKey,
-			score_percent: Number(question.scorePercent),
+			eval_code: question.eval_code,
+			section_code: question.section_code,
+			order_in_eval: question.order_in_eval,
+			correct_key: question.correct_key,
+			score_percent: Number(question.score_percent),
 			omitable: question.omitable
-		})) as EvalQuestion[];
-	} catch (error) {
-		console.error('Error fetching questions:', error);
+		}));
+	} catch {
 		return [];
 	}
 }
@@ -29,15 +27,14 @@ export async function fetchQuestions(evalCode: string): Promise<EvalQuestion[]> 
 export async function hasEvalQuestions(evalCode: string): Promise<boolean> {
 	try {
 		const data = await db
-			.selectFrom('evalQuestions')
+			.selectFrom('eval_questions')
 			.select('code')
-			.where('evalCode', '=', evalCode)
+			.where('eval_code', '=', evalCode)
 			.limit(1)
 			.execute();
 
 		return data && data.length > 0;
-	} catch (error) {
-		console.error('Error checking eval questions:', error);
+	} catch {
 		return false;
 	}
 }

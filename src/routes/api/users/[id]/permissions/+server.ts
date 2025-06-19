@@ -1,6 +1,5 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { supabaseAdmin } from '$lib/supabaseAdmin';
 import { error } from '@sveltejs/kit';
 
 // Type definitions for better code safety
@@ -10,7 +9,7 @@ type Permission = {
 };
 
 // GET /api/users/[id]/permissions
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
 	const userId = params.id;
 
 	if (!userId) {
@@ -18,21 +17,21 @@ export const GET: RequestHandler = async ({ params }) => {
 	}
 
 	try {
-		const { data, error: dbError } = await supabaseAdmin
-			.from('permissions')
-			.select('*')
-			.eq('user_code', userId);
+		const permissions = await locals.db
+			.selectFrom('permissions')
+			.selectAll()
+			.where('user_code', '=', userId)
+			.execute();
 
-		if (dbError) throw dbError;
-
-		return json({ permissions: data || [] });
-	} catch (err) {
-		throw error(500, err instanceof Error ? err.message : 'Error al obtener permisos de usuario');
+		return json({ permissions: permissions || [] });
+	} catch (error) {
+		const message = error instanceof Error ? error.message : 'Error al obtener permisos de usuario';
+		throw error(500, message);
 	}
 };
 
 // POST /api/users/[id]/permissions
-export const POST: RequestHandler = async ({ params, request }) => {
+export const POST: RequestHandler = async ({ params, request, locals }) => {
 	const userId = params.id;
 
 	if (!userId) {
@@ -47,29 +46,23 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			throw error(400, 'Formato de permisos inválido');
 		}
 
-		// First delete all existing permissions
-		const { error: deleteError } = await supabaseAdmin
-			.from('permissions')
-			.delete()
-			.eq('user_code', userId)
-			.neq('entity', 'users');
-
-		if (deleteError) throw deleteError;
+		// First delete all existing permissions (except users entity)
+		await locals.db
+			.deleteFrom('permissions')
+			.where('user_code', '=', userId)
+			.where('entity', '!=', 'users')
+			.execute();
 
 		// Map permissions to the new structure
 		const permissionsToInsert = permissions.map((p) => ({
 			user_code: userId,
 			entity: p.entity,
-			user_action: p.user_action
+			action: p.user_action
 		}));
 
 		// If we have permissions to insert, do it
 		if (permissionsToInsert.length > 0) {
-			const { error: insertError } = await supabaseAdmin
-				.from('permissions')
-				.insert(permissionsToInsert);
-
-			if (insertError) throw insertError;
+			await locals.db.insertInto('permissions').values(permissionsToInsert).execute();
 		}
 
 		return json({
@@ -77,7 +70,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			count: permissionsToInsert.length
 		});
 	} catch (err) {
-		console.log(err);
-		throw error(500, err instanceof Error ? err.message : 'Error al guardar permisos');
+		const message = err instanceof Error ? err.message : "Error al guardar permisos";
+		throw error(500, message);
 	}
 };

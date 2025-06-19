@@ -11,7 +11,7 @@ export const kyselyConfig = {
 	dialect: 'postgres' as const,
 	url: `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'postgres'}@${process.env.DB_HOST || 'localhost'}:5432/${process.env.DB_NAME || 'nextya'}`,
 	outFile: 'src/lib/database/types.ts',
-	camelCase: true,
+	camelCase: false,
 	// Exclude system schemas and focus on public schema
 	excludePattern: '^(information_schema|pg_.*|auth\\..*|storage\\..*|realtime\\..*|supabase_.*)$'
 };
