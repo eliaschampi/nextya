@@ -10,16 +10,11 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	try {
 		// Get student information
-		const { data: student, error: studentError } = await locals.db
-			.from('students')
+		const { data: student } = await locals.db
+			.selectFrom('students')
 			.select('name, last_name, email')
-			.eq('code', student_code)
-			.single();
-
-		if (studentError) {
-			console.error('Error fetching student:', studentError);
-			return json({ error: 'Estudiante no encontrado' }, { status: 404 });
-		}
+			.where('code',"=", student_code)
+			.execute();
 
 		return json({
 			code: student_code,
@@ -29,6 +24,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		});
 	} catch (error) {
 		console.error('Error in student API:', error);
-		return json({ error: 'Error interno del servidor' }, { status: 500 });
+		return json({ error: 'Estudiante no encontrado' }, { status: 500 });
 	}
 };

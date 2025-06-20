@@ -10,7 +10,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 	// Get users from database
 	const users = await locals.db
 		.selectFrom('users')
-		.select(['code as id', 'name', 'lastName'])
+		.select(['code as id', 'name', 'last_name'])
 		.execute();
 
 	return json(users);

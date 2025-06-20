@@ -69,8 +69,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			success: true,
 			count: permissionsToInsert.length
 		});
-	} catch (err) {
-		const message = err instanceof Error ? err.message : 'Error al guardar permisos';
+	} catch (error) {
+		const message = error instanceof Error ? error.message : 'Error al guardar permisos';
 		throw error(500, message);
 	}
 };

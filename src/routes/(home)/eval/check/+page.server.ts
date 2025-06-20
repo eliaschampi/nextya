@@ -5,7 +5,7 @@ import { getLevels } from '$lib/data/levels';
 import { sql } from 'kysely';
 
 /**
- * Empaqueta un resultado individual para el RPC de Supabase
+ * Empaqueta un resultado individual para el RPC
  */
 function buildRpcPayload(evalCode: string, result: OptimizedResultPayload['results'][0]) {
 	const answers = result.answers.map((a) => ({

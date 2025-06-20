@@ -130,8 +130,8 @@ export async function fetchEvaluationData(evalCode: string): Promise<EvaluationD
 	try {
 		const data = await db
 			.selectFrom('evals')
-			.innerJoin('levels', 'levels.code', 'evals.levelCode')
-			.select(['evals.name', 'evals.evalDate', 'levels.name as levelName'])
+			.innerJoin('levels', 'levels.code', 'evals.level_code')
+			.select(['evals.name', 'evals.eval_date', 'levels.name as level_name'])
 			.where('evals.code', '=', evalCode)
 			.executeTakeFirst();
 
@@ -142,8 +142,8 @@ export async function fetchEvaluationData(evalCode: string): Promise<EvaluationD
 
 		return {
 			name: data.name,
-			eval_date: data.evalDate.toISOString(),
-			levels: { name: data.levelName }
+			eval_date: data.eval_date.toISOString(),
+			levels: { name: data.level_name }
 		} as EvaluationData;
 	} catch (error) {
 		console.error('Error fetching evaluation:', error);
@@ -163,9 +163,8 @@ export async function fetchEvaluationResults(evalCode: string) {
 			SELECT * FROM get_register_eval_results(${evalCode})
 		`.execute(db);
 
-		return result.rows;
-	} catch (error) {
-		console.error('Error fetching results:', error);
+		return result.rows as ResultItem[];
+	} catch {
 		return null;
 	}
 }
@@ -199,7 +198,7 @@ export async function exportEvaluationResultsToCsv(evalCode: string): Promise<Re
 	if (!evalData) return null;
 
 	// Obtener resultados
-	const resultsData = await fetchEvaluationResults(evalCode);
+	const resultsData: ResultItem[] | null = await fetchEvaluationResults(evalCode);
 	if (!resultsData) return null;
 
 	// Formatear datos para exportación

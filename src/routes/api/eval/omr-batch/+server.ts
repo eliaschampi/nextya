@@ -11,7 +11,7 @@ import type {
 	OmrBatchItem
 } from '$lib/types/api';
 import { createErrorResult as createOmrErrorResultObject } from '$lib/omrProcessor/error';
-import type { EvalQuestion, EvalSection } from '$lib/types';
+import type { EvalQuestions, EvalSections } from '$lib/types';
 import { fetchQuestions } from '$lib/data/question';
 
 const DEBUG_OMR = false;
@@ -93,8 +93,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	let evalCode: string;
 	let evalGroupName: string;
 	let evalLevelCode: string;
-	let questions: EvalQuestion[] | null = null;
-	let sections: EvalSection[] | null = null;
+	let questions: EvalQuestions[] | null = null;
+	let sections: EvalSections[] | null = null;
 
 	try {
 		const body = await request.json();

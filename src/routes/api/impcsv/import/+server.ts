@@ -23,9 +23,9 @@ async function checkDatabaseDuplicates(
 
 		const existingRollCodes = await db
 			.selectFrom('registers')
-			.select('rollCode')
-			.where('levelCode', '=', levelCode)
-			.where('rollCode', 'in', rollCodesToCheck)
+			.select('roll_code')
+			.where('level_code', '=', levelCode)
+			.where('roll_code', 'in', rollCodesToCheck)
 			.execute();
 
 		// Create a set of existing roll codes for efficient lookup
@@ -48,10 +48,10 @@ async function checkDatabaseDuplicates(
 		// Query for existing students with the same name+last_name
 		const existingStudents = await db
 			.selectFrom('students')
-			.select(['name', 'lastName'])
+			.select(['name', 'last_name'])
 			.where((eb: any) => {
 				const conditions = nameLastNamePairs.map((pair) =>
-					eb.and([eb('name', 'ilike', pair.name), eb('lastName', 'ilike', pair.lastName)])
+					eb.and([eb('name', 'ilike', pair.name), eb('last_name', 'ilike', pair.lastName)])
 				);
 				return eb.or(conditions);
 			})
