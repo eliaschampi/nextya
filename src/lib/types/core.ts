@@ -21,6 +21,7 @@ import type {
 	Permissions,
 	DB
 } from '$lib/database/types';
+import type { ApiOmrErrorData, ApiOmrSuccessData } from './api';
 
 export type {
 	Users,
@@ -117,4 +118,21 @@ export interface FormSection {
 	course_name: string;
 	order_in_eval: number;
 	question_count: number;
+}
+
+export interface FileEntry {
+	file: File;
+	id: string; // Identificador único para la clave
+	status: FileStatus;
+	result: ApiOmrSuccessData | null;
+	error: ApiOmrErrorData | null;
+	saved: boolean;
+	formatValid: boolean; // Indica si la imagen tiene proporción A5
+	formatName: string; // Nombre del formato detectado (A5 Vertical, A5 Horizontal, etc.)
+}
+
+export interface ToastState {
+	id: number;
+	title: string;
+	type: ToastType;
 }

@@ -41,7 +41,7 @@ export async function getLevels(userID: string, forceRefresh = false): Promise<a
 		}
 
 		return levels;
-	} catch (error) {
+	} catch {
 		return [];
 	}
 }

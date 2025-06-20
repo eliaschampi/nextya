@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Eval, Level } from '$lib/types';
+	import type { Evals, Levels } from '$lib/types';
 	import { School, BookOpen } from 'lucide-svelte';
 	import { formatDate } from '$lib/utils/formatDate';
 	import Message from './Message.svelte';
@@ -10,11 +10,11 @@
 		showSelectButton = false,
 		onSelectClick
 	} = $props<{
-		evaluation: Eval & {
+		evaluation: Evals & {
 			eval_sections?: Array<{ question_count: number }>;
 			levels?: { name: string };
 		};
-		level?: Level;
+		level?: Levels;
 		showSelectButton?: boolean;
 		onSelectClick?: () => void;
 		children?: () => unknown;

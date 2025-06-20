@@ -1,8 +1,4 @@
 <script lang="ts">
-	/**
-	 * A reusable table component with consistent styling
-	 */
-
 	const {
 		columns,
 		rows,

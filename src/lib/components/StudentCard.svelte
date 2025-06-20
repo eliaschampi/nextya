@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { User } from 'lucide-svelte';
 	import { studentStore } from '$lib/stores/student';
-	import type { Student, StudentRegister } from '$lib/types';
+	import type { Students, StudentRegister } from '$lib/types';
 
 	// Props with defaults
 	const { className = '' } = $props<{
@@ -10,7 +10,7 @@
 
 	// Store state
 	let storeState = $state({
-		selectedStudent: null as Student | null,
+		selectedStudent: null as Students | null,
 		registers: [] as StudentRegister[],
 		selectedRegister: null as string | null
 	});

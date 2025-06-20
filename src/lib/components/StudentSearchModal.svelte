@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { User, X, Search } from 'lucide-svelte';
-	import type { Student } from '$lib/types';
+	import type { Students } from '$lib/types';
 	import Message from './Message.svelte';
 	import { onMount, onDestroy } from 'svelte';
 
 	type Props = {
 		open?: boolean;
 		onClose?: () => void;
-		onSelect?: (student: Student) => void;
+		onSelect?: (student: Students) => void;
 	};
 
 	const { open = false, onClose = () => {}, onSelect = () => {} }: Props = $props();
@@ -15,7 +15,7 @@
 	// Modal state
 	let modal = $state<HTMLDialogElement | null>(null);
 	let searchQuery = $state('');
-	let searchResults = $state<Student[]>([]);
+	let searchResults = $state<Students[]>([]);
 	let searchLoading = $state(false);
 
 	// Modal control
@@ -80,7 +80,7 @@
 	}
 
 	// Select student
-	function handleSelectStudent(student: Student) {
+	function handleSelectStudent(student: Students) {
 		onSelect(student);
 		closeModal();
 	}

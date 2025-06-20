@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { Kysely, Migrator, PostgresDialect, FileMigrationProvider } from 'kysely';
 import { Pool } from 'pg';
+import type { DB } from '../src/lib/database/types';
 
 // Database connection
 const pool = new Pool({
@@ -14,7 +15,7 @@ const pool = new Pool({
 	port: parseInt(process.env.DB_PORT || '5432')
 });
 
-const db = new Kysely<any>({
+const db = new Kysely<DB>({
 	dialect: new PostgresDialect({ pool })
 });
 

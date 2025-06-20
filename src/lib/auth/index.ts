@@ -25,7 +25,7 @@ export async function login(credentials: LoginCredentials, cookies: Cookies) {
 		// Find user by email
 		const user = await db
 			.selectFrom('users')
-			.select(['code', 'email', 'passwordHash', 'name'])
+			.select(['code', 'email', 'password_hash', 'name'])
 			.where('email', '=', email.toLowerCase())
 			.executeTakeFirst();
 
@@ -34,7 +34,7 @@ export async function login(credentials: LoginCredentials, cookies: Cookies) {
 		}
 
 		// Verify password
-		const isValidPassword = await compare(password, user.passwordHash);
+		const isValidPassword = await compare(password, user.password_hash);
 		if (!isValidPassword) {
 			throw new Error('Invalid credentials');
 		}
@@ -73,7 +73,7 @@ export async function signup(data: SignupData, cookies: Cookies) {
 			.executeTakeFirst();
 
 		if (existingUser) {
-			throw new Error('User already exists');
+			throw new Error('Usuario ya existe');
 		}
 
 		// Hash password
@@ -84,11 +84,11 @@ export async function signup(data: SignupData, cookies: Cookies) {
 			.insertInto('users')
 			.values({
 				email: email.toLowerCase(),
-				passwordHash: passwordHash,
+				password_hash: passwordHash,
 				name: name || null,
-				lastName: lastName || null,
-				isEmailVerified: false,
-				isSuperAdmin: false
+				last_name: lastName || null,
+				is_email_verified: false,
+				is_super_admin: false
 			})
 			.returning(['code', 'email', 'name'])
 			.executeTakeFirstOrThrow();
@@ -104,10 +104,9 @@ export async function signup(data: SignupData, cookies: Cookies) {
 			user: session.user
 		};
 	} catch (error) {
-		console.error('Signup error:', error);
 		return {
 			success: false,
-			error: error instanceof Error ? error.message : 'Signup failed'
+			error: error instanceof Error ? error.message : 'Inicio de sesión fallido'
 		};
 	}
 }
@@ -120,10 +119,9 @@ export async function logout(cookies: Cookies) {
 		destroySession(cookies);
 		return { success: true };
 	} catch (error) {
-		console.error('Logout error:', error);
 		return {
 			success: false,
-			error: error instanceof Error ? error.message : 'Logout failed'
+			error: error instanceof Error ? error.message : 'Ocurrió un error'
 		};
 	}
 }
@@ -140,14 +138,13 @@ export async function hasPermission(
 		const permission = await db
 			.selectFrom('permissions')
 			.select('code')
-			.where('userCode', '=', userCode)
+			.where('user_code', '=', userCode)
 			.where('entity', '=', entity)
 			.where('action', '=', action)
 			.executeTakeFirst();
 
 		return !!permission;
-	} catch (error) {
-		console.error('Permission check error:', error);
+	} catch {
 		return false;
 	}
 }
@@ -164,16 +161,15 @@ export async function grantPermission(
 		await db
 			.insertInto('permissions')
 			.values({
-				userCode: userCode,
+				user_code: userCode,
 				entity,
 				action
 			})
-			.onConflict((oc) => oc.columns(['userCode', 'entity', 'action']).doNothing())
+			.onConflict((oc) => oc.columns(['user_code', 'entity', 'action']).doNothing())
 			.execute();
 
 		return true;
-	} catch (error) {
-		console.error('Grant permission error:', error);
+	} catch {
 		return false;
 	}
 }
@@ -189,14 +185,13 @@ export async function revokePermission(
 	try {
 		await db
 			.deleteFrom('permissions')
-			.where('userCode', '=', userCode)
+			.where('user_code', '=', userCode)
 			.where('entity', '=', entity)
 			.where('action', '=', action)
 			.execute();
 
 		return true;
-	} catch (error) {
-		console.error('Revoke permission error:', error);
+	} catch {
 		return false;
 	}
 }

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { Eval, EvalSectionWithCourse } from '$lib/types';
+	import type { Evals, EvalSectionWithCourse } from '$lib/types';
 	import { BookOpen, ListChecks } from 'lucide-svelte';
 
 	const { evaluation } = $props<{
-		evaluation: Eval & {
+		evaluation: Evals & {
 			eval_sections?: EvalSectionWithCourse[];
 			levels?: { name: string };
 		};
