@@ -19,12 +19,6 @@ export async function getCourses(): Promise<Courses[]> {
 	}
 }
 
-/**
- * Updates the order of a course
- * @param courseCode Course code to update
- * @param newOrder New order value
- * @returns True if successful, false otherwise
- */
 export async function updateCourseOrder(courseCode: string, newOrder: number): Promise<boolean> {
 	try {
 		await db
@@ -39,13 +33,6 @@ export async function updateCourseOrder(courseCode: string, newOrder: number): P
 	}
 }
 
-/**
- * Reorders courses when moving a course up or down
- * @param courses List of all courses
- * @param courseCode Course code to move
- * @param direction 'up' or 'down'
- * @returns True if successful, false otherwise
- */
 export async function reorderCourse(
 	courses: Courses[],
 	courseCode: string,
@@ -53,7 +40,7 @@ export async function reorderCourse(
 ): Promise<boolean> {
 	try {
 		// Find the current course and its index
-		const currentIndex = courses.findIndex((c) => c.code === courseCode);
+		const currentIndex = courses.findIndex((c) => String(c.code) === courseCode);
 		if (currentIndex === -1) return false;
 
 		// Calculate target index based on direction

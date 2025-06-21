@@ -2,11 +2,7 @@ import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
 import { getGroupDashboardData } from '$lib/data/dashboard';
 
-/**
- * GET endpoint for group dashboard data
- * Returns processed dashboard data for a specific level and group (scoresByEval and studentPerformance)
- */
-export const GET: RequestHandler = async ({ params, locals }) => {
+export const GET: RequestHandler = async ({ params }) => {
 	const { level_code, group_name } = params;
 
 	if (!level_code || !group_name) {

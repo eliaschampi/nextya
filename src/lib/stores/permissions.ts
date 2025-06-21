@@ -6,7 +6,7 @@ import { db } from '$lib/database';
 // Define the permission structure
 type Permission = {
 	code: string;
-	userCode: string;
+	user_code: string;
 	entity: string;
 	action: string;
 };
@@ -76,7 +76,7 @@ const createPermissionsStore = () => {
 			const data = await db
 				.selectFrom('permissions')
 				.selectAll()
-				.where('userCode', '=', userCode)
+				.where('user_code', '=', userCode)
 				.execute();
 
 			// Update stores

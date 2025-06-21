@@ -30,19 +30,19 @@ export async function login(credentials: LoginCredentials, cookies: Cookies) {
 			.executeTakeFirst();
 
 		if (!user) {
-			throw new Error('Invalid credentials');
+			throw new Error('Usuario no encontrado');
 		}
 
 		// Verify password
 		const isValidPassword = await compare(password, user.password_hash);
 		if (!isValidPassword) {
-			throw new Error('Invalid credentials');
+			throw new Error('Contraseña incorrecta');
 		}
 
 		// Create session
 		const session = await createSession(user.code, cookies);
 		if (!session) {
-			throw new Error('Failed to create session');
+			throw new Error('Falló al crear sesión');
 		}
 
 		return {

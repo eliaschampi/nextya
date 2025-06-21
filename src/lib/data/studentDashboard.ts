@@ -2,11 +2,6 @@ import { db } from '$lib/database';
 import { sql } from 'kysely';
 import type { StudentScoreEvolution, StudentCourseScore, StudentCourseEvolution } from '$lib/types';
 
-/**
- * Fetches score evolution data for a specific student
- * @param studentCode Student code to get score evolution for
- * @returns Array of score evolution data or null if error
- */
 export async function getStudentScoreEvolution(
 	studentCode: string
 ): Promise<StudentScoreEvolution[] | null> {
@@ -26,11 +21,6 @@ export async function getStudentScoreEvolution(
 	}
 }
 
-/**
- * Fetches course scores for a specific student
- * @param studentCode Student code to get course scores for
- * @returns Array of course scores or null if error
- */
 export async function getStudentCourseScores(
 	studentCode: string
 ): Promise<StudentCourseScore[] | null> {
@@ -50,11 +40,6 @@ export async function getStudentCourseScores(
 	}
 }
 
-/**
- * Fetches course evolution data for a specific student
- * @param studentCode Student code to get course evolution for
- * @returns Array of course evolution data or null if error
- */
 export async function getStudentCourseEvolution(
 	studentCode: string
 ): Promise<StudentCourseEvolution[] | null> {

@@ -7,7 +7,7 @@ import { getEvalDashboardData } from '$lib/data/evalDashboard';
  * Returns processed dashboard data for a specific evaluation
  * (topCorrectQuestions, topIncorrectQuestions, and scoreDistribution)
  */
-export const GET: RequestHandler = async ({ params, locals }) => {
+export const GET: RequestHandler = async ({ params }) => {
 	const { eval_code } = params;
 
 	if (!eval_code) {

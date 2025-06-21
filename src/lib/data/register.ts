@@ -9,9 +9,6 @@ export interface StudentRegisterInfo {
 	} | null;
 }
 
-/**
- * Busca un registro de estudiante por su roll_code y verifica que pertenezca al grupo especificado.
- */
 export async function fetchRegisterByRollCode(
 	rollCode: string,
 	groupName: string,

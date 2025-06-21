@@ -2,12 +2,6 @@ import { db } from '$lib/database';
 import { sql } from 'kysely';
 import type { CourseScore, EvalScore } from '$lib/types';
 
-/**
- * Fetches course scores for a specific level
- * @param levelCode Level code to get course scores for
- * @param groupName Group name to filter results
- * @returns Array of course scores or null if error
- */
 export async function getCourseScores(
 	levelCode: string,
 	groupName: string
@@ -28,13 +22,6 @@ export async function getCourseScores(
 	}
 }
 
-/**
- * Fetches evaluation scores for a specific level, course and group
- * @param levelCode Level code
- * @param courseCode Course code
- * @param groupName Group name to filter results
- * @returns Array of evaluation scores or null if error
- */
 export async function getEvalScores(
 	levelCode: string,
 	courseCode: string,
