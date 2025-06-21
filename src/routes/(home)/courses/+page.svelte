@@ -4,7 +4,7 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
-	import type { Course } from '$lib/types';
+	import type { Courses } from '$lib/types';
 	import { EllipsisVertical, ChevronUp, ChevronDown } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { permissionsStore } from '$lib/stores/permissions';
@@ -14,10 +14,10 @@
 	let confirmModal: HTMLDialogElement | null = $state(null);
 	let isEditing = $state(false);
 	let message = $state('');
-	let selectedcourse = $state<Course | null>(null);
+	let selectedcourse = $state<Courses | null>(null);
 	let isReordering = $state(false);
 
-	const { data } = $props<{ data: { courses: Course[] } }>();
+	const { data } = $props<{ data: { courses: Courses[] } }>();
 
 	const canCreate = permissionsStore.has({ entity: 'courses', action: 'create' });
 	const canUpdate = permissionsStore.has({ entity: 'courses', action: 'update' });
@@ -28,7 +28,7 @@
 		modal?.showModal();
 	}
 
-	function openEditModal(course: Course) {
+	function openEditModal(course: Courses) {
 		isEditing = true;
 		selectedcourse = course;
 		modal?.showModal();
@@ -37,7 +37,7 @@
 		if (nameInput) nameInput.value = course.name || '';
 	}
 
-	function openDeleteConfirmModal(course: Course) {
+	function openDeleteConfirmModal(course: Courses) {
 		selectedcourse = course;
 		confirmModal?.showModal();
 	}
@@ -128,7 +128,7 @@
 	}
 
 	// Manejar reordenamiento
-	async function handleReorder(course: Course, direction: 'up' | 'down') {
+	async function handleReorder(course: Courses, direction: 'up' | 'down') {
 		if (isReordering) return;
 
 		isReordering = true;
@@ -211,7 +211,7 @@
 	</div>
 </dialog>
 
-{#snippet courseItem(item: Course)}
+{#snippet courseItem(item: Courses)}
 	<div
 		class="rounded-box bg-base-200 py-3 px-4 hover:bg-base-300 transition-colors text-left relative"
 	>
