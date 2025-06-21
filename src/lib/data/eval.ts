@@ -24,7 +24,8 @@ export async function fetchSections(evalCode: string): Promise<EvalSectionWithCo
 			course_code: section.course_code,
 			order_in_eval: section.order_in_eval,
 			question_count: section.question_count,
-			course: { name: section.course_name }
+			course_name: section.course_name,
+			courses: { name: section.course_name }
 		}));
 	} catch {
 		return [];

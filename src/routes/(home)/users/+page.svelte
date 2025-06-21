@@ -10,7 +10,8 @@
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getInitials } from '$lib/utils/initialName';
 	import { formatDate } from '$lib/utils/formatDate';
-	import type { User } from '$lib/auth/session';
+	import type { User } from '$lib/types';
+	import type { User as SessionUser } from '$lib/auth/session';
 	import { permissionsStore } from '$lib/stores/permissions';
 	import { page } from '$app/state';
 
@@ -341,8 +342,8 @@
 	<div class="modal-box">
 		<h3 class="text-lg font-bold">Confirmar eliminación</h3>
 		<p class="py-4">
-			¿Estás seguro de eliminar a "{selectedUser?.name}
-			{selectedUser?.lastName}"?
+			¿Estás seguro de eliminar a "{selectedUser?.user_metadata?.name}
+			{selectedUser?.user_metadata?.last_name}"?
 		</p>
 		<div class="modal-action flex justify-center gap-2">
 			<button class="btn" onclick={() => confirmModal?.close()}>Cancelar</button>
@@ -357,8 +358,8 @@
 		<form onsubmit={handlePasswordUpdate} autocomplete="off">
 			<h3 class="text-lg font-bold">Cambiar contraseña</h3>
 			<p class="text-sm text-base-content/70 mb-4">
-				Establece una nueva contraseña para {selectedUser?.name}
-				{selectedUser?.lastName}
+				Establece una nueva contraseña para {selectedUser?.user_metadata?.name}
+				{selectedUser?.user_metadata?.last_name}
 			</p>
 			<fieldset class="fieldset bg-base-200 border border-base-300 p-4 rounded-box">
 				<label class="fieldset-legend" for="new_password">Nueva contraseña</label>
@@ -404,7 +405,15 @@
 <!-- Componente modal de permisos -->
 {#if selectedUser}
 	<PermissionsModal
-		user={selectedUser}
+		user={{
+			id: selectedUser.id,
+			code: selectedUser.id,
+			email: selectedUser.email,
+			name: selectedUser.user_metadata?.name || '',
+			lastName: selectedUser.user_metadata?.last_name || '',
+			lastLogin: selectedUser.last_sign_in_at,
+			user_metadata: selectedUser.user_metadata
+		} as SessionUser}
 		open={showPermissionsModal}
 		onClose={() => (showPermissionsModal = false)}
 	/>
@@ -445,7 +454,7 @@
 							/>
 						{:else}
 							<span class="text-xl font-bold text-primary">
-								{getInitials(user.user_metadata?.name, user.user_metadata?.last_name)}
+								{getInitials(user.user_metadata?.name || '', user.user_metadata?.last_name || '')}
 							</span>
 						{/if}
 					</div>

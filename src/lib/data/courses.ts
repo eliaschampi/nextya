@@ -1,18 +1,11 @@
 import { db } from '$lib/database';
 import type { Courses } from '$lib/types';
+import { transformCourses } from '$lib/utils';
 
 export async function getCourses(): Promise<Courses[]> {
 	try {
 		const courses = await db.selectFrom('courses').selectAll().orderBy('order', 'asc').execute();
-
-		// Transform to match expected Course interface
-		return courses.map((course) => ({
-			code: course.code,
-			name: course.name,
-			order: course.order,
-			created_at: course.created_at?.toISOString() || null,
-			user_code: course.user_code
-		})) as unknown as Courses[];
+		return transformCourses(courses);
 	} catch (error) {
 		console.error('Error fetching courses:', error);
 		return [];

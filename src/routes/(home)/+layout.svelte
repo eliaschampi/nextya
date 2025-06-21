@@ -33,7 +33,7 @@
 
 	let userMetadata = $state<UserMetadata>({
 		name: page.data.user?.name || '',
-		last_name: page.data.user?.last_name || ''
+		last_name: page.data.user?.lastName || ''
 	});
 
 	function toggleTheme() {

@@ -6,6 +6,7 @@ export interface User {
 	code: string;
 	email: string;
 	name: string | null;
+	lastName: string | null;
 	lastLogin: Date | null;
 }
 
@@ -32,7 +33,7 @@ export async function createSession(userCode: string, cookies: Cookies): Promise
 		// Get user from database
 		const user = await db
 			.selectFrom('users')
-			.select(['code', 'email', 'name', 'last_login'])
+			.select(['code', 'email', 'name', 'last_name', 'last_login'])
 			.where('code', '=', userCode)
 			.executeTakeFirst();
 
@@ -65,6 +66,7 @@ export async function createSession(userCode: string, cookies: Cookies): Promise
 				code: user.code,
 				email: user.email,
 				name: user.name,
+				lastName: user.last_name,
 				lastLogin: user.last_login
 			},
 			token,
@@ -96,7 +98,7 @@ export async function getSession(cookies: Cookies): Promise<Session | null> {
 		// Get fresh user data
 		const user = await db
 			.selectFrom('users')
-			.select(['code', 'email', 'name', 'last_login'])
+			.select(['code', 'email', 'name', 'last_name', 'last_login'])
 			.where('code', '=', payload.userCode)
 			.executeTakeFirst();
 
@@ -110,6 +112,7 @@ export async function getSession(cookies: Cookies): Promise<Session | null> {
 				code: user.code,
 				email: user.email,
 				name: user.name,
+				lastName: user.last_name,
 				lastLogin: user.last_login
 			},
 			token,

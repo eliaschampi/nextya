@@ -1,5 +1,6 @@
 import { db } from '$lib/database';
 import type { EvalQuestions } from '$lib/types';
+import { transformEvalQuestions } from '$lib/utils';
 
 export async function fetchQuestions(evalCode: string): Promise<EvalQuestions[]> {
 	try {
@@ -9,16 +10,8 @@ export async function fetchQuestions(evalCode: string): Promise<EvalQuestions[]>
 			.where('eval_code', '=', evalCode)
 			.orderBy('order_in_eval', 'asc')
 			.execute();
-		// Transform to match expected EvalQuestion interface
-		return data.map((question) => ({
-			code: question.code,
-			eval_code: question.eval_code,
-			section_code: question.section_code,
-			order_in_eval: question.order_in_eval,
-			correct_key: question.correct_key,
-			score_percent: Number(question.score_percent),
-			omitable: question.omitable
-		}));
+
+		return transformEvalQuestions(data);
 	} catch {
 		return [];
 	}

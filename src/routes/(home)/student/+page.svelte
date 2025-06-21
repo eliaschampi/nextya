@@ -6,7 +6,7 @@
 	import Pagination from '$lib/components/Pagination.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount } from 'svelte';
-	import type { Levels, RegisterStudent, SelectForDelete, Student } from '$lib/types';
+	import type { Levels, RegisterStudent, SelectForDelete, Students } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
 	// Define EventListener type
 	type EventListener = (event: Event) => void;
@@ -22,7 +22,7 @@
 	let selectedCode = $state<string | null>(null);
 	let selectForDelete = $state<SelectForDelete | null>(null);
 	let searchQuery = $state('');
-	let searchResults = $state<Student[]>([]);
+	let searchResults = $state<Students[]>([]);
 	let activeTab = $state<'search' | 'new'>('search');
 	let selectedLevelCode = $state('');
 	let selectedGroup = $state('');
@@ -267,7 +267,7 @@
 		if (response.ok) searchResults = await response.json();
 	}
 
-	function selectStudent(student: Student) {
+	function selectStudent(student: Students) {
 		searchQuery = '';
 		searchResults = [];
 		selectedCode = student.code;

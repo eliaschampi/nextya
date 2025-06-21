@@ -99,7 +99,11 @@
 		formState.selectedCode = item.code;
 		formState.name = item.name || '';
 		formState.level_code = item.level_code || '';
-		formState.eval_date = item.eval_date ? item.eval_date.substring(0, 10) : '';
+		formState.eval_date = item.eval_date
+			? item.eval_date instanceof Date
+				? item.eval_date.toISOString().substring(0, 10)
+				: String(item.eval_date).substring(0, 10)
+			: '';
 		formState.group_name = item.group_name || '';
 		formState.sections = item.eval_sections.map((s) => ({
 			course_code: s.course_code,
