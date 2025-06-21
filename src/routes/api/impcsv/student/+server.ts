@@ -1,7 +1,5 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import type { ApiErrorCode, ApiResponse } from '$lib/types/apiError';
-import { createApiError } from '$lib/types/apiError';
 import { exportStudentEvaluationsToCsv } from '$lib/csvProcessor/studentExport';
 
 /**
@@ -15,16 +13,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
 		// Validate inputs
 		if (!studentCode) {
-			return json(
-				{
-					success: false,
-					error: createApiError(
-						'MISSING_STUDENT_CODE' as ApiErrorCode,
-						'No se ha proporcionado un código de estudiante'
-					)
-				} as ApiResponse<never>,
-				{ status: 400 }
-			);
+			return json({ error: 'No se ha proporcionado un código de estudiante' }, { status: 400 });
 		}
 
 		// Get student information
@@ -35,16 +24,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			.executeTakeFirst();
 
 		if (!student) {
-			return json(
-				{
-					success: false,
-					error: createApiError(
-						'STUDENT_NOT_FOUND' as ApiErrorCode,
-						'No se encontró el estudiante especificado'
-					)
-				} as ApiResponse<never>,
-				{ status: 404 }
-			);
+			return json({ error: 'No se encontró el estudiante especificado' }, { status: 404 });
 		}
 
 		// Use the modularized function to export the student evaluations
@@ -56,13 +36,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
 		if (!response) {
 			return json(
-				{
-					success: false,
-					error: createApiError(
-						'NO_DATA' as ApiErrorCode,
-						'No hay evaluaciones disponibles para este estudiante'
-					)
-				} as ApiResponse<never>,
+				{ error: 'No hay evaluaciones disponibles para este estudiante' },
 				{ status: 404 }
 			);
 		}
@@ -70,17 +44,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		return response;
 	} catch (error) {
 		console.error('Error exporting student evaluations:', error);
-		const message = error instanceof Error ? error.message : 'Error desconocido';
-
-		return json(
-			{
-				success: false,
-				error: createApiError(
-					'UNKNOWN_ERROR' as ApiErrorCode,
-					`Error al exportar evaluaciones: ${message}`
-				)
-			} as ApiResponse<never>,
-			{ status: 500 }
-		);
+		return json({ error: 'Error al exportar evaluaciones' }, { status: 500 });
 	}
 };

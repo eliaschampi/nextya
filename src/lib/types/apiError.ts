@@ -52,3 +52,31 @@ export function createApiError(code: ApiErrorCode, message: string, details?: un
 		details
 	};
 }
+
+/**
+ * Crea una respuesta de error estandarizada para endpoints de API
+ */
+export function createErrorResponse(
+	code: ApiErrorCode,
+	message: string,
+	status: number = 500,
+	details?: unknown
+) {
+	return {
+		body: {
+			success: false,
+			error: createApiError(code, message, details)
+		} as ApiResponse<never>,
+		status
+	};
+}
+
+/**
+ * Crea una respuesta de éxito estandarizada para endpoints de API
+ */
+export function createSuccessResponse<T>(data: T) {
+	return {
+		success: true,
+		data
+	} as ApiResponse<T>;
+}

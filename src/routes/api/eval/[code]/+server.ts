@@ -3,7 +3,9 @@ import type { RequestHandler } from '@sveltejs/kit';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const { code } = params;
-	if (!code) return json([]);
+	if (!code) {
+		return json({ error: 'Código de nivel no proporcionado' }, { status: 400 });
+	}
 
 	try {
 		const evals = await locals.db
@@ -65,6 +67,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		return json(Array.from(evalMap.values()));
 	} catch (error) {
 		console.error('Error fetching evals:', error);
-		return json([], { status: 500 });
+		return json({ error: 'Error interno del servidor al obtener evaluaciones' }, { status: 500 });
 	}
 };

@@ -2,7 +2,6 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { importCsv, createNameKey, CsvProcessorErrorCode } from '$lib/csvProcessor';
 import type { ImportResult, StudentRegisterData } from '$lib/csvProcessor';
-import { ApiErrorCode, createApiError, type ApiResponse } from '$lib/types/apiError';
 
 /**
  * Checks for duplicates in the database and moves them from validRows to omittedRows
@@ -148,37 +147,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		// Validate inputs
 		if (!file) {
-			return json(
-				{
-					success: false,
-					error: createApiError(
-						ApiErrorCode.CSV_MISSING_FILE,
-						'No se ha proporcionado un archivo CSV'
-					)
-				},
-				{ status: 400 }
-			);
+			return json({ error: 'No se ha proporcionado un archivo CSV' }, { status: 400 });
 		}
 
 		if (!levelCode) {
-			return json(
-				{
-					success: false,
-					error: createApiError(ApiErrorCode.CSV_MISSING_LEVEL, 'No se ha proporcionado un nivel')
-				},
-				{ status: 400 }
-			);
+			return json({ error: 'No se ha proporcionado un nivel' }, { status: 400 });
 		}
 
 		// Check if file is empty
 		if (file.size === 0) {
-			return json(
-				{
-					success: false,
-					error: createApiError(ApiErrorCode.CSV_EMPTY_ERROR, 'El archivo CSV está vacío')
-				},
-				{ status: 400 }
-			);
+			return json({ error: 'El archivo CSV está vacío' }, { status: 400 });
 		}
 
 		// Leer el archivo como texto
@@ -209,46 +187,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					successRate
 				}
 			}
-		} as ApiResponse<
-			ImportResult & {
-				level_code: string;
-				summary: {
-					totalProcessed: number;
-					validCount: number;
-					omittedCount: number;
-					successRate: number;
-				};
-			}
-		>);
+		});
 	} catch (error) {
 		console.error('Error processing CSV:', error);
-		const message = error instanceof Error ? error.message : 'Error desconocido';
-
-		// Determine more specific error codes based on error message
-		let errorCode = ApiErrorCode.UNKNOWN_ERROR;
-		let status = 500;
-
-		if (error instanceof Error) {
-			if (error.message.includes('parsear CSV')) {
-				errorCode = ApiErrorCode.CSV_PARSE_ERROR;
-				status = 400; // Bad request for parsing errors
-			} else if (error.message.includes('formato')) {
-				errorCode = ApiErrorCode.CSV_FORMAT_ERROR;
-				status = 400;
-			} else if (error.message.includes('codificación')) {
-				errorCode = ApiErrorCode.CSV_ENCODING_ERROR;
-				status = 400;
-			}
-		}
-
-		return json(
-			{
-				success: false,
-				error: createApiError(errorCode, `Error al procesar el archivo CSV: ${message}`, {
-					originalError: error instanceof Error ? error.name : 'UnknownError'
-				})
-			} as ApiResponse<never>,
-			{ status }
-		);
+		return json({ error: 'Error al procesar el archivo CSV' }, { status: 500 });
 	}
 };

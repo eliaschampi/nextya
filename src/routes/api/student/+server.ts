@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			.where((eb) =>
 				eb.or([
 					eb('name', 'ilike', `%${searchQuery}%`),
-					eb('lastName', 'ilike', `%${searchQuery}%`)
+					eb('last_name', 'ilike', `%${searchQuery}%`)
 				])
 			)
 			.execute();
@@ -23,6 +23,6 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		return json(students);
 	} catch (error) {
 		console.error('Error searching students:', error);
-		return json([], { status: 500 });
+		return json({ error: 'Error interno del servidor al buscar estudiantes' }, { status: 500 });
 	}
 };

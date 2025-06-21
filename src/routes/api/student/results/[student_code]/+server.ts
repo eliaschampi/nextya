@@ -41,20 +41,40 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			return json({ error: 'No se encontraron registros para este estudiante' }, { status: 404 });
 		}
 
-		// Get all results for this student's registers
-		const { data: rawResults, error: resultsError } = await locals.db
-			.from('student_register_results')
-			.select('*')
-			.in(
-				'register_code',
+		// Get all results for this student's registers by joining tables
+		const rawResults = await locals.db
+			.selectFrom('eval_results')
+			.innerJoin('registers', 'registers.code', 'eval_results.register_code')
+			.innerJoin('evals', 'evals.code', 'eval_results.eval_code')
+			.innerJoin('students', 'students.code', 'registers.student_code')
+			.innerJoin('levels', 'levels.code', 'registers.level_code')
+			.select([
+				'eval_results.code as result_code',
+				'eval_results.register_code',
+				'eval_results.eval_code',
+				'eval_results.correct_count',
+				'eval_results.incorrect_count',
+				'eval_results.blank_count',
+				'eval_results.score',
+				'eval_results.calculated_at',
+				'evals.name as eval_name',
+				'evals.eval_date',
+				'registers.roll_code',
+				'registers.group_name',
+				'registers.level_code',
+				'students.code as student_code',
+				'students.name as student_name',
+				'students.last_name as student_last_name',
+				'levels.name as level_name',
+				'eval_results.section_code'
+			])
+			.where(
+				'eval_results.register_code',
+				'in',
 				registers.map((r) => r.code)
 			)
-			.order('eval_date', { ascending: false });
-
-		if (resultsError) {
-			console.error('Error fetching results:', resultsError);
-			return json({ error: 'Error al obtener resultados' }, { status: 500 });
-		}
+			.orderBy('evals.eval_date', 'desc')
+			.execute();
 
 		// Transform results to ensure all required fields are non-null
 		const results = rawResults.map((result) => {
@@ -107,7 +127,15 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 				name: student.name,
 				last_name: student.last_name
 			},
-			registers,
+			registers: registers.map((register) => ({
+				code: register.code,
+				level_code: register.level_code,
+				group_name: register.group_name,
+				roll_code: register.roll_code,
+				levels: {
+					name: register.level_name
+				}
+			})),
 			results
 		};
 

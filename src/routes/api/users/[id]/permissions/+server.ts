@@ -1,6 +1,5 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { error } from '@sveltejs/kit';
 
 // Type definitions for better code safety
 type Permission = {
@@ -13,7 +12,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	const userId = params.id;
 
 	if (!userId) {
-		throw error(400, 'Id de usuario requerido');
+		return json({ error: 'Id de usuario requerido' }, { status: 400 });
 	}
 
 	try {
@@ -25,8 +24,8 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 		return json({ permissions: permissions || [] });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Error al obtener permisos de usuario';
-		throw error(500, message);
+		console.error('Error fetching permissions:', error);
+		return json({ error: 'Error al obtener permisos de usuario' }, { status: 500 });
 	}
 };
 
@@ -35,7 +34,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	const userId = params.id;
 
 	if (!userId) {
-		throw error(400, 'Id de usuario requerido');
+		return json({ error: 'Id de usuario requerido' }, { status: 400 });
 	}
 
 	try {
@@ -43,7 +42,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		const { permissions } = body as { permissions: Permission[] };
 
 		if (!permissions || !Array.isArray(permissions)) {
-			throw error(400, 'Formato de permisos inválido');
+			return json({ error: 'Formato de permisos inválido' }, { status: 400 });
 		}
 
 		// First delete all existing permissions (except users entity)
@@ -70,7 +69,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			count: permissionsToInsert.length
 		});
 	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Error al guardar permisos';
-		throw error(500, message);
+		console.error('Error saving permissions:', error);
+		return json({ error: 'Error al guardar permisos' }, { status: 500 });
 	}
 };

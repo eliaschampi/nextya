@@ -102,9 +102,9 @@ export interface ApiOmrBatchRequest {
 		rollCode?: string; // Optional manual roll code (must be 4 digits if provided)
 	}>;
 	// Use proper types for optional data to improve type safety
-	questions?: EvalQuestion[];
-	sections?: EvalSection[];
+	questions?: EvalQuestions[];
+	sections?: EvalSections[];
 }
 
 // Import these from the main types file
-import type { EvalQuestion, EvalSection } from '$lib/types';
+import type { EvalQuestions, EvalSections } from '$lib/types';

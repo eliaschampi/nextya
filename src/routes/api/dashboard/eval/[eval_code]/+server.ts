@@ -16,7 +16,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	try {
 		// Get evaluation dashboard data from the dedicated module
-		const dashboardData = await getEvalDashboardData(locals.db, eval_code);
+		const dashboardData = await getEvalDashboardData(eval_code);
 
 		if (!dashboardData) {
 			return json({ error: 'No se pudieron obtener datos del dashboard' }, { status: 500 });

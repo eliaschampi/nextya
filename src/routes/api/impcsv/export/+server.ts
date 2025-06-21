@@ -1,7 +1,5 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import type { ApiErrorCode, ApiResponse } from '$lib/types/apiError';
-import { createApiError } from '$lib/types/apiError';
 import {
 	exportEvaluationResultsToCsv,
 	formatResultsForExport,
@@ -15,56 +13,27 @@ import {
  * API endpoint for exporting evaluation results to CSV
  * Supports both GET (with eval_code parameter) and POST (with data in body)
  */
-export const GET: RequestHandler = async ({ url, locals }) => {
+export const GET: RequestHandler = async ({ url }) => {
 	try {
 		// Get the evaluation code from the query parameters
 		const evalCode = url.searchParams.get('eval_code');
 
 		// Validate inputs
 		if (!evalCode) {
-			return json(
-				{
-					success: false,
-					error: createApiError(
-						'MISSING_EVAL_CODE' as ApiErrorCode,
-						'No se ha proporcionado un código de evaluación'
-					)
-				} as ApiResponse<never>,
-				{ status: 400 }
-			);
+			return json({ error: 'No se ha proporcionado un código de evaluación' }, { status: 400 });
 		}
 
 		// Usar la función modularizada para exportar los resultados
-		const response = await exportEvaluationResultsToCsv(locals.db, evalCode);
+		const response = await exportEvaluationResultsToCsv(evalCode);
 
 		if (!response) {
-			return json(
-				{
-					success: false,
-					error: createApiError(
-						'DATABASE_ERROR' as ApiErrorCode,
-						'Error al obtener datos para la exportación'
-					)
-				} as ApiResponse<never>,
-				{ status: 500 }
-			);
+			return json({ error: 'Error al obtener datos para la exportación' }, { status: 500 });
 		}
 
 		return response;
 	} catch (error) {
 		console.error('Error exporting results:', error);
-		const message = error instanceof Error ? error.message : 'Error desconocido';
-
-		return json(
-			{
-				success: false,
-				error: createApiError(
-					'UNKNOWN_ERROR' as ApiErrorCode,
-					`Error al exportar resultados: ${message}`
-				)
-			} as ApiResponse<never>,
-			{ status: 500 }
-		);
+		return json({ error: 'Error al exportar resultados' }, { status: 500 });
 	}
 };
 
@@ -79,13 +48,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		// Validate inputs
 		if (!body.evalCode || !body.results || !Array.isArray(body.results)) {
-			return json(
-				{
-					success: false,
-					error: createApiError('INVALID_REQUEST' as ApiErrorCode, 'Datos de solicitud inválidos')
-				} as ApiResponse<never>,
-				{ status: 400 }
-			);
+			return json({ error: 'Datos de solicitud inválidos' }, { status: 400 });
 		}
 
 		// Format the data for export
@@ -108,17 +71,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		return createCsvResponse(csvContent, filename);
 	} catch (error) {
 		console.error('Error exporting results:', error);
-		const message = error instanceof Error ? error.message : 'Error desconocido';
-
-		return json(
-			{
-				success: false,
-				error: createApiError(
-					'UNKNOWN_ERROR' as ApiErrorCode,
-					`Error al exportar resultados: ${message}`
-				)
-			} as ApiResponse<never>,
-			{ status: 500 }
-		);
+		return json({ error: 'Error al exportar resultados' }, { status: 500 });
 	}
 };
