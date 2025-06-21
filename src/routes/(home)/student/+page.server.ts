@@ -2,10 +2,11 @@ import { getLevels } from '$lib/data/levels';
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
 import { studentSchema } from '$lib/schemas/student';
+import type { Levels } from '$lib/types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user?.code;
-	let levels: any[] = [];
+	let levels: Levels[] = [];
 	if (userId) {
 		levels = await getLevels(userId);
 	}

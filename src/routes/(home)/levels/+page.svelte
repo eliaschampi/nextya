@@ -5,7 +5,7 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
-	import type { Level, SimpleUser } from '$lib/types';
+	import type { Levels, SimpleUser } from '$lib/types';
 	import { EllipsisVertical, Plus, Minus } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getModalityTypes } from '$lib/data/modality';
@@ -16,13 +16,13 @@
 	let confirmModal: HTMLDialogElement | null = $state(null);
 	let isEditing = $state(false);
 	let message = $state('');
-	let selectedLevel = $state<Level | null>(null);
+	let selectedLevel = $state<Levels | null>(null);
 	let users = $state<SimpleUser[]>([]);
 	let selectedUsers = $state<string[]>([]);
 	let selectedUserId = $state('');
 	const modalities = getModalityTypes();
 
-	const { data } = $props<{ data: { levels: Level[] } }>();
+	const { data } = $props<{ data: { levels: Levels[] } }>();
 	const canCreate = permissionsStore.has({ entity: 'levels', action: 'create' });
 	const canUpdate = permissionsStore.has({ entity: 'levels', action: 'update' });
 	const canDelete = permissionsStore.has({ entity: 'levels', action: 'delete' });
@@ -42,7 +42,7 @@
 	}
 
 	// Abrir modal para editar
-	function openEditModal(level: Level) {
+	function openEditModal(level: Levels) {
 		isEditing = true;
 		selectedLevel = level;
 		modal?.showModal();
@@ -59,7 +59,7 @@
 	}
 
 	// Abrir modal para confirmar eliminación
-	function openDeleteConfirmModal(level: Level) {
+	function openDeleteConfirmModal(level: Levels) {
 		selectedLevel = level;
 		confirmModal?.showModal();
 	}
@@ -291,7 +291,7 @@
 	</div>
 </dialog>
 
-{#snippet levelItem(item: Level)}
+{#snippet levelItem(item: Levels)}
 	<div
 		class="rounded-box bg-base-200 py-3 px-4 hover:bg-base-300 transition-colors text-left relative"
 	>

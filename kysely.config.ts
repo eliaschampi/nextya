@@ -13,5 +13,5 @@ export const kyselyConfig = {
 	outFile: 'src/lib/database/types.ts',
 	camelCase: false,
 	// Exclude system schemas and focus on public schema
-	excludePattern: '^(information_schema|pg_.*|auth\\..*|storage\\..*|realtime\\..*|supabase_.*)$'
+	excludePattern: '^(information_schema|pg_.*|auth\\..*|storage\\..*|realtime\\..*)$'
 };

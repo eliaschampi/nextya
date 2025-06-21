@@ -1,6 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import type { EvalQuestion, Eval, EvalSectionWithCourse } from '$lib/types';
+import type { EvalQuestions, Evals, EvalSectionWithCourse } from '$lib/types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const evalCode = params.eval_code;
@@ -51,9 +51,9 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	}
 
 	return {
-		eval: evalData as Eval & { levels: { name: string } },
+		eval: evalData as Evals & { levels: { name: string } },
 		sections: sections as EvalSectionWithCourse[],
-		existingQuestions: questionsData as EvalQuestion[],
+		existingQuestions: questionsData as EvalQuestions[],
 		title: `Claves - ${evalData.name}`
 	};
 };
@@ -93,7 +93,7 @@ export const actions: Actions = {
 		});
 
 		// 3. Collect all questions from the form
-		const questionsMap: Record<string, EvalQuestion> = {};
+		const questionsMap: Record<string, EvalQuestions> = {};
 
 		// First, extract all question keys
 		const questionKeys = Array.from(formData.keys()).filter((key) => key.startsWith('question_'));

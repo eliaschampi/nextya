@@ -21,8 +21,8 @@
 		Check,
 		Image as ImageIcon
 	} from 'lucide-svelte';
-	import type { Level, EvalWithSections, EvalQuestion } from '$lib/types';
-	import type { FileEntry } from '$lib/types/app';
+	import type { Levels, EvalWithSections, EvalQuestions } from '$lib/types';
+	import type { FileEntry } from '$lib/types/core';
 	import { showToast } from '$lib/stores/Toast';
 	import { base64ToFile, validateA5Proportion } from '$lib/utils/imageUtils';
 	import type { ApiOmrBatchResponse, ApiOmrBatchRequest } from '$lib/types/api';
@@ -39,8 +39,8 @@
 	// Props
 	const { data } = $props<{
 		data: {
-			levels: Level[];
-			serverQuestions: EvalQuestion[];
+			levels: Levels[];
+			serverQuestions: EvalQuestions[];
 		};
 	}>();
 
@@ -76,7 +76,7 @@
 	});
 
 	// Estado
-	let evalQuestions = $state<EvalQuestion[]>(data.serverQuestions || []);
+	let evalQuestions = $state<EvalQuestions[]>(data.serverQuestions || []);
 	let fileEntries = $state<FileEntry[]>([]);
 	let selectedFileId = $state<string | null>(null);
 	let isProcessingBatch = $state(false);
@@ -698,7 +698,7 @@
 	{#if storeState.selectedEval}
 		<EvalHeader
 			evaluation={storeState.selectedEval}
-			level={data.levels.find((l: Level) => l.code === storeState.selectedEval?.level_code)}
+			level={data.levels.find((l: Levels) => l.code === storeState.selectedEval?.level_code)}
 		>
 			<EvalDetails evaluation={storeState.selectedEval} />
 		</EvalHeader>

@@ -2,7 +2,7 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { User, X, Search, ListChecks, SortAsc, SortDesc, FileDown } from 'lucide-svelte';
-	import type { Student, StudentRegister, StudentResult, SortOrder } from '$lib/types';
+	import type { Students, StudentRegister, StudentResult, SortOrder } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
 	import { onMount, onDestroy } from 'svelte';
 	import { formatDate } from '$lib/utils/formatDate';
@@ -22,7 +22,7 @@
 
 	// Store state
 	let storeState = $state({
-		selectedStudent: null as Student | null,
+		selectedStudent: null as Students | null,
 		registers: [] as StudentRegister[],
 		results: [] as StudentResult[],
 		selectedRegister: null as string | null,
@@ -183,7 +183,7 @@
 	}
 
 	// Handle student selection from modal
-	async function handleSelectStudent(student: Student) {
+	async function handleSelectStudent(student: Students) {
 		// Use SvelteKit's goto to update the URL
 		goto(`/eval/student?student=${student.code}`, {
 			keepFocus: true,

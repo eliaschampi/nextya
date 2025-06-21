@@ -5,7 +5,7 @@
 	import EvalSelector from '$lib/components/EvalSelector.svelte';
 	import { showToast } from '$lib/stores/Toast.js';
 	import { School, ChartPie, Activity, CircleDot } from 'lucide-svelte';
-	import type { Level, EvalWithSections } from '$lib/types';
+	import type { Levels, EvalWithSections } from '$lib/types';
 	import type { EvalDashboardData } from '$lib/types/evalDashboard';
 	import { goto } from '$app/navigation';
 	import { evaluationStore } from '$lib/stores/evaluation';
@@ -13,7 +13,7 @@
 	// Props from server
 	const { data } = $props<{
 		data: {
-			levels: Level[];
+			levels: Levels[];
 			title: string;
 			levelCode: string | null;
 			evalCode: string | null;

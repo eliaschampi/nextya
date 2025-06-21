@@ -15,7 +15,7 @@
 	import { responseMessage } from '$lib/utils/responseMessage';
 
 	// Type imports
-	import type { EvalQuestion, EvalSection, Eval } from '$lib/types';
+	import type { EvalQuestions, EvalSections, Evals } from '$lib/types';
 
 	// Icon imports
 	import {
@@ -37,9 +37,9 @@
 	// Props from parent
 	const { data } = $props<{
 		data: {
-			eval: Eval & { levels: { name: string } };
-			sections: (EvalSection & { course_name: string })[];
-			existingQuestions: EvalQuestion[];
+			eval: Evals & { levels: { name: string } };
+			sections: (EvalSections & { course_name: string })[];
+			existingQuestions: EvalQuestions[];
 			title: string;
 		};
 	}>();
@@ -56,7 +56,7 @@
 	let isCreateMode = $state(false);
 
 	// Data state
-	let sectionQuestions = $state<Record<string, EvalQuestion[]>>({});
+	let sectionQuestions = $state<Record<string, EvalQuestions[]>>({});
 	let sectionStarts = $state<Record<string, number>>({});
 
 	// Paste modal state
@@ -92,7 +92,7 @@
 		const starts: Record<string, number> = {};
 		let currentStart = 1;
 
-		data.sections.forEach((section: EvalSection) => {
+		data.sections.forEach((section: EvalSections) => {
 			starts[section.code] = currentStart;
 			currentStart += section.question_count;
 		});
@@ -110,7 +110,7 @@
 
 	function initializeExistingQuestions(): void {
 		const grouped = data.existingQuestions.reduce(
-			(acc: Record<string, EvalQuestion[]>, question: EvalQuestion) => {
+			(acc: Record<string, EvalQuestions[]>, question: EvalQuestions) => {
 				if (!acc[question.section_code]) {
 					acc[question.section_code] = [];
 				}
@@ -132,11 +132,11 @@
 	}
 
 	function createNewQuestions(): void {
-		const newSectionQuestions: Record<string, EvalQuestion[]> = {};
+		const newSectionQuestions: Record<string, EvalQuestions[]> = {};
 
-		data.sections.forEach((section: EvalSection) => {
+		data.sections.forEach((section: EvalSections) => {
 			const sectionCode = section.code;
-			const questions: EvalQuestion[] = [];
+			const questions: EvalQuestions[] = [];
 			const startNumber = sectionStarts[sectionCode] || 1;
 
 			for (let i = 0; i < section.question_count; i++) {
@@ -234,11 +234,11 @@
 		}
 	}
 
-	function updateQuestion<K extends keyof EvalQuestion>(
+	function updateQuestion<K extends keyof EvalQuestions>(
 		sectionCode: string,
-		question: EvalQuestion,
+		question: EvalQuestions,
 		field: K,
-		value: EvalQuestion[K]
+		value: EvalQuestions[K]
 	): void {
 		const sectionArr = [...(sectionQuestions[sectionCode] || [])];
 		const index = sectionArr.findIndex((q) => q.order_in_eval === question.order_in_eval);
@@ -249,17 +249,17 @@
 		}
 	}
 
-	function handleRadioChange(section: string, question: EvalQuestion, value: string): void {
+	function handleRadioChange(section: string, question: EvalQuestions, value: string): void {
 		// If the selected value is equal to the current value, clear it (toggle behavior)
 		const newValue = question.correct_key === value ? '' : value;
 		updateQuestion(section, question, 'correct_key', newValue);
 	}
 
-	function handleOmitableChange(section: string, question: EvalQuestion, checked: boolean): void {
+	function handleOmitableChange(section: string, question: EvalQuestions, checked: boolean): void {
 		updateQuestion(section, question, 'omitable', checked);
 	}
 
-	function handleScoreChange(section: string, question: EvalQuestion, value: string): void {
+	function handleScoreChange(section: string, question: EvalQuestions, value: string): void {
 		const score = parseFloat(value);
 		if (isNaN(score) || score < 0 || score > 1) return;
 		updateQuestion(section, question, 'score_percent', score);

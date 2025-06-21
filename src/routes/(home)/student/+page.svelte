@@ -6,7 +6,7 @@
 	import Pagination from '$lib/components/Pagination.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount } from 'svelte';
-	import type { Level, RegisterStudent, SelectForDelete, Student } from '$lib/types';
+	import type { Levels, RegisterStudent, SelectForDelete, Student } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
 	// Define EventListener type
 	type EventListener = (event: Event) => void;
@@ -77,7 +77,7 @@
 	const canUpdate = permissionsStore.has({ entity: 'students', action: 'update' });
 	const canDelete = permissionsStore.has({ entity: 'students', action: 'delete' });
 
-	const { data } = $props<{ data: { levels: Level[] } }>();
+	const { data } = $props<{ data: { levels: Levels[] } }>();
 	const groupOptions = ['A', 'B', 'C', 'D'];
 
 	// Define table columns

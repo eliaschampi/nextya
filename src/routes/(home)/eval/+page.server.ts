@@ -1,5 +1,6 @@
 import { getLevels } from '$lib/data/levels';
 import { getCourses } from '$lib/data/courses';
+import type { Levels } from '$lib/types';
 import { hasEvalQuestions } from '$lib/data/question';
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
@@ -8,7 +9,7 @@ import type { FormSection } from '$lib/types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user?.code;
-	let levels = [];
+	let levels: Levels[] = [];
 	if (userId) {
 		levels = await getLevels(userId);
 	}

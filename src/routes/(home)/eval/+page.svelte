@@ -2,7 +2,7 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import Table from '$lib/components/Table.svelte';
 	import { showToast } from '$lib/stores/Toast';
-	import type { Level, Course, FormSection, EvalWithSections } from '$lib/types';
+	import type { Levels, Courses, FormSection, EvalWithSections } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
 	// Define EventListener type
 	type EventListener = (event: Event) => void;
@@ -61,11 +61,12 @@
 		})
 	);
 
-	const { data } = $props<{ data: { levels: Level[]; courses: Course[] } }>();
+	const { data } = $props<{ data: { levels: Levels[]; courses: Courses[] } }>();
 
 	let availableCoursesForAdd = $derived(
 		data.courses.filter(
-			(course: Course) => !formState.sections.some((section) => section.course_code === course.code)
+			(course: Courses) =>
+				!formState.sections.some((section) => section.course_code === course.code)
 		)
 	);
 
@@ -116,8 +117,8 @@
 		confirmModal?.showModal();
 	}
 
-	function findCourseByCode(code: string): Course | undefined {
-		return data.courses.find((c: Course) => c.code === code);
+	function findCourseByCode(code: string): Courses | undefined {
+		return data.courses.find((c: Courses) => c.code === code);
 	}
 
 	function addSectionTrigger() {

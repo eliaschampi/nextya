@@ -96,7 +96,7 @@ export const actions: Actions = {
 
 		try {
 			// Get all courses to determine the new order
-			const courses: Courses[] = await locals.db
+			const courses = await locals.db
 				.selectFrom('courses')
 				.selectAll()
 				.orderBy('order', 'asc')

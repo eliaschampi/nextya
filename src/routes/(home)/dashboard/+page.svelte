@@ -4,13 +4,13 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast.js';
 	import { Settings, ChartBar, ChartPie, Activity, Trophy } from 'lucide-svelte';
-	import type { Level } from '$lib/types';
+	import type { Levels } from '$lib/types';
 	import type { LevelDashboardData, GroupDashboardData } from '$lib/types/dashboard';
 
 	// Props from server
 	const { data } = $props<{
 		data: {
-			levels: Level[];
+			levels: Levels[];
 			title: string;
 		};
 	}>();
