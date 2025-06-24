@@ -6,21 +6,18 @@ import { getStudentScoreEvolution } from '$lib/data/studentDashboard';
  * GET endpoint for student score evolution data
  * Returns score evolution data for a specific student
  */
-export const GET: RequestHandler = async ({ params, locals }) => {
+export const GET: RequestHandler = async ({ params }) => {
 	const { student_code } = params;
 
 	if (!student_code) {
-		return json({ error: 'Código de estudiante no proporcionado' }, { status: 400 });
+		return json({ error: 'Código no proporcionado' }, { status: 400 });
 	}
 
 	try {
-		const data = await getStudentScoreEvolution(locals.db, student_code);
+		const data = await getStudentScoreEvolution(student_code);
 
 		if (!data) {
-			return json(
-				{ error: 'No se pudieron obtener datos de evolución de puntajes' },
-				{ status: 500 }
-			);
+			return json({ error: 'No se pudieron Obtener Datos' }, { status: 500 });
 		}
 
 		return json(data);

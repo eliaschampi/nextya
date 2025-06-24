@@ -7,7 +7,7 @@ import { getCourseScores } from '$lib/data/courseDashboard';
  * Returns average scores by course for a specific level
  * Requires group_name parameter
  */
-export const GET: RequestHandler = async ({ params, url, locals }) => {
+export const GET: RequestHandler = async ({ params, url }) => {
 	const { level_code } = params;
 	const groupName = url.searchParams.get('group_name');
 
@@ -20,7 +20,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 	}
 
 	try {
-		const data = await getCourseScores(locals.db, level_code, groupName);
+		const data = await getCourseScores(level_code, groupName);
 
 		if (!data) {
 			return json({ error: 'No se pudieron obtener datos de cursos' }, { status: 500 });

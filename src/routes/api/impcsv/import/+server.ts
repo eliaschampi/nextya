@@ -28,7 +28,9 @@ async function checkDatabaseDuplicates(
 			.execute();
 
 		// Create a set of existing roll codes for efficient lookup
-		const existingRollCodeSet = new Set(existingRollCodes?.map((r: any) => r.rollCode) || []);
+		const existingRollCodeSet = new Set(
+			existingRollCodes?.map((r: { roll_code: string }) => r.roll_code) || []
+		);
 
 		// 2. Check for duplicate students by name + last_name
 		// Create a map of name keys for efficient lookup

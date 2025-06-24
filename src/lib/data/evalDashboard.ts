@@ -1,12 +1,7 @@
 import { db } from '$lib/database';
 import { sql } from 'kysely';
-import type { EvalDashboardData, QuestionStat, ScoreDistribution } from '$lib/types/evalDashboard';
+import type { EvalDashboardData, QuestionStat, ScoreDistribution } from '$lib/types/dashboard/eval';
 
-/**
- * Fetches dashboard data for a specific evaluation using the optimized SQL function
- * @param evalCode Evaluation code to get dashboard data for
- * @returns Evaluation dashboard data for charts and visualizations
- */
 export async function getEvalDashboardData(evalCode: string): Promise<EvalDashboardData | null> {
 	try {
 		// Call the optimized SQL function

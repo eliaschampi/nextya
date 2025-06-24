@@ -2,12 +2,7 @@ import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
 import { getEvalScores } from '$lib/data/courseDashboard';
 
-/**
- * GET endpoint for evaluation scores data
- * Returns average scores by evaluation for a specific level, course and group
- * Requires group_name parameter
- */
-export const GET: RequestHandler = async ({ params, url, locals }) => {
+export const GET: RequestHandler = async ({ params, url }) => {
 	const { level_code, course_code } = params;
 	const groupName = url.searchParams.get('group_name');
 
@@ -20,7 +15,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 	}
 
 	try {
-		const data = await getEvalScores(locals.db, level_code, course_code, groupName);
+		const data = await getEvalScores(level_code, course_code, groupName);
 
 		if (data === null) {
 			return json({ error: 'Error al procesar datos de evaluaciones' }, { status: 500 });

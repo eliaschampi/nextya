@@ -2,7 +2,6 @@
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
 import { reorderCourse } from '$lib/data/courses';
-import type { Courses } from '$lib/types';
 
 export const load: PageServerLoad = async ({ locals, depends }) => {
 	depends('courses:load');

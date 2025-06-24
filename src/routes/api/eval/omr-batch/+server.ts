@@ -84,7 +84,7 @@ function createItemErrorResponse(
 	};
 }
 
-export const POST: RequestHandler = async ({ request, locals }) => {
+export const POST: RequestHandler = async ({ request }) => {
 	// Define maximum allowed items per request to prevent DoS
 	const MAX_ITEMS_PER_REQUEST = 20;
 	const MAX_IMAGE_SIZE_BYTES = 1024 * 1024 * 2; // 2MB max per image
@@ -142,14 +142,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	// 1. Obtener preguntas y secciones (una sola vez para todos los items)
 	if (!questions?.length) {
-		questions = await fetchQuestions(evalCode, locals.db);
+		questions = await fetchQuestions(evalCode);
 		if (!questions?.length) {
 			return createValidationError('Sin preguntas disponibles', 500);
 		}
 	}
 
 	if (!sections?.length) {
-		sections = await fetchSections(evalCode, locals.db);
+		sections = await fetchSections(evalCode);
 		if (!sections?.length) {
 			return createValidationError('Sin cursos disponibles', 500);
 		}
@@ -220,7 +220,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 			// 4. Obtener Información del Registro del Estudiante
 			const registerInfo = await fetchRegisterByRollCode(
-				locals.db,
 				finalRollCode,
 				evalGroupName,
 				evalLevelCode

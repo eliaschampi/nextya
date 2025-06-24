@@ -6,7 +6,7 @@
 	import { showToast } from '$lib/stores/Toast.js';
 	import { School, ChartPie, Activity, CircleDot } from 'lucide-svelte';
 	import type { Levels, EvalWithSections } from '$lib/types';
-	import type { EvalDashboardData } from '$lib/types/evalDashboard';
+	import type { EvalDashboardData, QuestionStat } from '$lib/types/dashboard/eval';
 	import { goto } from '$app/navigation';
 	import { evaluationStore } from '$lib/stores/evaluation';
 
@@ -157,7 +157,7 @@
 
 			try {
 				// Prepare data for bubble chart
-				const correctBubbles = dashboardData.topCorrectQuestions.map((q) => ({
+				const correctBubbles = dashboardData.topCorrectQuestions.map((q: QuestionStat) => ({
 					x: q.orderInEval, // X-axis: question number (1-80)
 					y: q.totalAnswers, // Y-axis: number of students (0-100)
 					r: (q.correctPercentage || 0) / 5, // Radius: percentage / 5 for better visualization
@@ -168,7 +168,7 @@
 					total: q.totalAnswers
 				}));
 
-				const incorrectBubbles = dashboardData.topIncorrectQuestions.map((q) => ({
+				const incorrectBubbles = dashboardData.topIncorrectQuestions.map((q: QuestionStat) => ({
 					x: q.orderInEval, // X-axis: question number (1-80)
 					y: q.totalAnswers, // Y-axis: number of students (0-100)
 					r: (q.incorrectPercentage || 0) / 5, // Radius: percentage / 5 for better visualization
