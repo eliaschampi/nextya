@@ -114,6 +114,8 @@ show_help() {
     echo -e "${YELLOW}📦 Package Management:${NC}"
     echo "  install <package>  Install npm package"
     echo "  uninstall <pkg>    Uninstall npm package"
+    echo "  opencv:link        Link OpenCV4NodeJS (fix OpenCV issues)"
+    echo "  opencv:test        Test OpenCV functionality"
     echo ""
     echo -e "${YELLOW}🧹 Maintenance:${NC}"
     echo "  clean              Remove containers and volumes"
@@ -413,6 +415,45 @@ cmd_update() {
     print_success "Dependencies updated!"
 }
 
+# OpenCV specific commands
+cmd_opencv_link() {
+    if ! check_containers; then
+        print_error "App container is not running. Start it with: ./docker.sh up"
+        exit 1
+    fi
+
+    print_step "Linking OpenCV4NodeJS..."
+    docker exec -it $APP_CONTAINER npm link @u4/opencv4nodejs
+    print_success "OpenCV4NodeJS linked successfully!"
+}
+
+cmd_opencv_test() {
+    if ! check_containers; then
+        print_error "App container is not running. Start it with: ./docker.sh up"
+        exit 1
+    fi
+
+    print_step "Testing OpenCV functionality..."
+    docker exec -it $APP_CONTAINER node -e "
+        try {
+            const cv = require('@u4/opencv4nodejs');
+            console.log('✅ OpenCV Version:', cv.version);
+            console.log('✅ OpenCV Build Info:', cv.getBuildInformation().split('\n').slice(0, 5).join('\n'));
+
+            // Test basic functionality
+            const mat = new cv.Mat(100, 100, cv.CV_8UC3, [255, 0, 0]);
+            console.log('✅ Matrix creation test passed');
+            console.log('✅ Matrix size:', mat.rows + 'x' + mat.cols);
+            mat.release();
+            console.log('✅ All OpenCV tests passed!');
+        } catch (error) {
+            console.error('❌ OpenCV test failed:', error.message);
+            process.exit(1);
+        }
+    "
+    print_success "OpenCV test completed!"
+}
+
 # Main command dispatcher
 main() {
     # Check prerequisites
@@ -502,6 +543,12 @@ main() {
             ;;
         "uninstall")
             cmd_uninstall "$2"
+            ;;
+        "opencv:link")
+            cmd_opencv_link
+            ;;
+        "opencv:test")
+            cmd_opencv_test
             ;;
 
         # Maintenance

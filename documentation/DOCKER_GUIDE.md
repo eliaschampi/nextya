@@ -21,10 +21,20 @@ NextYa uses Docker for a consistent development environment across all platforms
 │  │ • Node.js 20    │    │ • Database: nextya              │ │
 │  │ • TypeScript    │    │ • User: postgres                │ │
 │  │ • Kysely ORM    │    │ • Port: 5432                    │ │
-│  │ • Port: 5173    │    │ • Persistent Volume            │ │
+│  │ • OpenCV 4.9.0  │    │ • Persistent Volume            │ │
+│  │ • Port: 5173    │    │ • Health Checks                │ │
 │  └─────────────────┘    └─────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### **🔍 OpenCV Integration**
+
+NextYa includes **OpenCV 4.9.0** for advanced image processing and OMR (Optical Mark Recognition) functionality:
+
+- **Pre-compiled OpenCV**: Uses `urielch/opencv-nodejs:6.2.4` base image
+- **No compilation issues**: OpenCV is pre-built and ready to use
+- **OMR Processing**: Complete system for processing scanned answer sheets
+- **Image Analysis**: Advanced computer vision capabilities
 
 ---
 
@@ -115,6 +125,8 @@ The project includes a unified `docker.sh` script that handles all Docker operat
 ```bash
 ./docker.sh install <package>  # Install npm package
 ./docker.sh uninstall <pkg>    # Uninstall npm package
+./docker.sh opencv:link        # Link OpenCV4NodeJS (fix OpenCV issues)
+./docker.sh opencv:test        # Test OpenCV functionality
 ```
 
 #### **🧹 Maintenance**
@@ -190,11 +202,82 @@ services:
 
 #### **Application Dockerfile**
 
-- **Base**: Node.js 20 Alpine
+- **Base**: `urielch/opencv-nodejs:6.2.4` (Ubuntu-based with pre-compiled OpenCV)
 - **Multi-stage**: Development and Production targets
 - **User Mapping**: Matches host UID/GID for file permissions
-- **Dependencies**: Installs all npm packages
-- **Hot Reload**: Supports live code changes
+- **OpenCV Integration**: Pre-compiled OpenCV 4.9.0 with Node.js bindings
+- **Dependencies**: Smart npm linking for @u4/opencv4nodejs
+- **Hot Reload**: Supports live code changes with OpenCV support
+
+---
+
+## 🔍 **OpenCV Development**
+
+### **OpenCV Setup & Testing**
+
+NextYa includes a complete OpenCV 4.9.0 setup for image processing and OMR functionality.
+
+#### **Verify OpenCV Installation**
+
+```bash
+# Test OpenCV functionality
+./docker.sh opencv:test
+
+# Expected output:
+# ✅ OpenCV Version: 4.9.0
+# ✅ OpenCV Build Info: ...
+# ✅ Matrix creation test passed
+# ✅ Matrix size: 100x100
+# ✅ All OpenCV tests passed!
+```
+
+#### **Fix OpenCV Issues**
+
+```bash
+# If you encounter OpenCV linking issues
+./docker.sh opencv:link
+
+# This will properly link the pre-compiled OpenCV library
+```
+
+### **OMR Processing Features**
+
+The project includes a complete OMR (Optical Mark Recognition) system:
+
+```typescript
+// Example usage in your code
+import * as cv from '@u4/opencv4nodejs';
+
+// Process an OMR sheet
+const result = await omrProcessorInternal(
+  imageBuffer,
+  numberOfQuestions,
+  enableDebug
+);
+```
+
+#### **OMR Processing Pipeline**
+
+1. **Image Preprocessing**: Gaussian blur, adaptive thresholding
+2. **Fiducial Detection**: Find and order corner markers
+3. **Perspective Correction**: Warp image to standard view
+4. **ROI Extraction**: Extract regions of interest
+5. **Bubble Processing**: Analyze filled bubbles for answers
+
+#### **OpenCV Development Tips**
+
+```bash
+# Monitor OpenCV memory usage
+./docker.sh shell
+# Inside container: htop or ps aux
+
+# Debug OpenCV issues
+./docker.sh logs app | grep -i opencv
+
+# Test specific OpenCV functions
+./docker.sh npm run dev
+# Then test your OMR endpoints
+```
 
 ---
 
@@ -384,6 +467,40 @@ sudo chown -R $USER:$USER .
 
 # Check Docker daemon
 sudo systemctl status docker
+```
+
+#### **OpenCV Issues**
+
+```bash
+# OpenCV module not found
+./docker.sh opencv:link
+
+# Test OpenCV functionality
+./docker.sh opencv:test
+
+# Check OpenCV version and build info
+./docker.sh shell
+node -e "console.log(require('@u4/opencv4nodejs').version)"
+
+# Memory issues with large images
+# Reduce image size or increase container memory limits
+```
+
+#### **OMR Processing Issues**
+
+```bash
+# Debug OMR processing
+./docker.sh logs app | grep -i "omr\|opencv"
+
+# Test with sample images
+# Place test images in a mounted volume and process them
+
+# Check image format support
+./docker.sh shell
+node -e "
+  const cv = require('@u4/opencv4nodejs');
+  console.log('Supported formats:', cv.getBuildInformation());
+"
 ```
 
 ### **Reset Everything**

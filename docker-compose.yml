@@ -25,14 +25,19 @@ services:
       - JWT_SECRET=your-super-secret-jwt-key-change-in-production-2024
       - JWT_EXPIRES_IN=8h
     volumes:
-      # Bind mount source code for hot reload
+      # Bind mount source code for hot reload (excluding node_modules)
       - .:/app:cached
+      # Use named volume for node_modules to preserve container's modules
+      - node_modules_cache:/app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - nextya
     restart: unless-stopped
+    # Improve development experience
+    stdin_open: true
+    tty: true
 
   postgres:
     container_name: nextya_postgres
@@ -59,3 +64,4 @@ services:
 
 volumes:
   postgres_data:
+  node_modules_cache:
