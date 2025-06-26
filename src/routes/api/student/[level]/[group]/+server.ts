@@ -1,7 +1,14 @@
+/**
+ * STUDENTS BY LEVEL AND GROUP API - Modern Clean Architecture
+ *
+ * ARCHITECTURE PRINCIPLE: Use repository pattern, consistent error handling
+ */
+
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
+import { studentsRepository } from '$lib/database/repositories';
 
-export const GET: RequestHandler = async ({ locals, params }) => {
+export const GET: RequestHandler = async ({ params }) => {
 	const { level, group } = params;
 
 	if (!level || !group) {
@@ -9,23 +16,7 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 	}
 
 	try {
-		const students = await locals.db
-			.selectFrom('students')
-			.innerJoin('registers', 'registers.student_code', 'students.code')
-			.select([
-				'students.code',
-				'students.name',
-				'students.last_name',
-				'students.email',
-				'students.phone',
-				'registers.roll_code',
-				'registers.group_name',
-				'registers.level_code'
-			])
-			.where('registers.level_code', '=', level)
-			.where('registers.group_name', '=', group)
-			.execute();
-
+		const students = await studentsRepository.getByLevelAndGroup(level, group);
 		return json(students);
 	} catch (error) {
 		console.error('Error fetching students by level and group:', error);

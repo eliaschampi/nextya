@@ -1,7 +1,14 @@
+/**
+ * STUDENT SEARCH API - Modern Clean Architecture
+ *
+ * ARCHITECTURE PRINCIPLE: Use repository pattern, consistent error handling
+ */
+
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
+import { studentsRepository } from '$lib/database/repositories';
 
-export const GET: RequestHandler = async ({ locals, url }) => {
+export const GET: RequestHandler = async ({ url }) => {
 	const searchQuery = url.searchParams.get('search');
 
 	if (!searchQuery) {
@@ -9,17 +16,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	}
 
 	try {
-		const students = await locals.db
-			.selectFrom('students')
-			.selectAll()
-			.where((eb) =>
-				eb.or([
-					eb('name', 'ilike', `%${searchQuery}%`),
-					eb('last_name', 'ilike', `%${searchQuery}%`)
-				])
-			)
-			.execute();
-
+		const students = await studentsRepository.search(searchQuery);
 		return json(students);
 	} catch (error) {
 		console.error('Error searching students:', error);

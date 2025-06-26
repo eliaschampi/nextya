@@ -1,128 +1,42 @@
 /**
  * Core domain types for NextYa application
- * These types represent the core business entities and should be stable
+ * Clean, modern architecture using Kysely types directly
  *
- * Note: Database types are defined in src/lib/database/types.ts
- * This file contains clean frontend types without Kysely ColumnType wrappers
+ * ARCHITECTURE PRINCIPLE: Use Kysely-generated types as single source of truth
+ * This eliminates redundancy and ensures type consistency
  */
 
+import type { Selectable } from 'kysely';
+import type { DB } from '$lib/database/types';
 import type { ApiOmrErrorData, ApiOmrSuccessData } from './api';
 
-// Clean frontend types - these are the types used throughout the application
-// They mirror the database structure but without Kysely's ColumnType wrappers
+// ============================================================================
+// PRIMARY TYPES - Direct from Kysely (Single Source of Truth)
+// ============================================================================
 
-export interface Users {
-	code: string;
-	created_at: Date;
-	email: string;
-	is_email_verified: boolean;
-	is_super_admin: boolean;
-	last_login: Date | null;
-	last_name: string | null;
-	name: string | null;
-	password_hash: string;
-	photo_url: string | null;
-	updated_at: Date;
-}
-
-export interface Students {
-	code: string;
-	created_at: Date | null;
-	email: string;
-	last_name: string;
-	name: string;
-	phone: string | null;
-	updated_at: Date | null;
-	user_code: string;
-}
-
-export interface Courses {
-	abr: string;
-	code: string;
-	created_at: Date | null;
-	name: string;
-	order: number;
-	user_code: string;
-}
-
-export interface Levels {
-	abr: string;
-	code: string;
-	created_at: Date | null;
-	name: string;
-	users: string[];
-}
-
-export interface Evals {
-	code: string;
-	created_at: Date | null;
-	eval_date: Date;
-	group_name: string;
-	level_code: string;
-	name: string;
-	updated_at: Date | null;
-	user_code: string;
-}
-
-export interface EvalSections {
-	code: string;
-	course_code: string;
-	eval_code: string;
-	order_in_eval: number;
-	question_count: number;
-}
-
-export interface EvalQuestions {
-	code: string;
-	correct_key: string;
-	eval_code: string;
-	omitable: boolean | null;
-	order_in_eval: number;
-	score_percent: number;
-	section_code: string;
-}
-
-export interface EvalAnswers {
-	code: string;
-	question_code: string;
-	register_code: string;
-	student_answer: string | null;
-}
-
-export interface EvalResults {
-	blank_count: number;
-	calculated_at: Date | null;
-	code: string;
-	correct_count: number;
-	eval_code: string;
-	incorrect_count: number;
-	register_code: string;
-	score: number;
-	section_code: string | null;
-}
-
-export interface Registers {
-	code: string;
-	created_at: Date | null;
-	group_name: string;
-	level_code: string;
-	roll_code: string;
-	student_code: string;
-	user_code: string;
-}
-
-export interface Permissions {
-	action: string;
-	code: string;
-	created_at: Date;
-	entity: string;
-	user_code: string;
-}
+// Clean frontend types using Kysely's Selectable utility
+// This automatically handles ColumnType unwrapping and provides clean types
+export type Users = Selectable<DB['users']>;
+export type Students = Selectable<DB['students']>;
+export type Courses = Selectable<DB['courses']>;
+export type Levels = Selectable<DB['levels']>;
+export type Evals = Selectable<DB['evals']>;
+export type EvalSections = Selectable<DB['eval_sections']>;
+export type EvalQuestions = Selectable<DB['eval_questions']>;
+export type EvalAnswers = Selectable<DB['eval_answers']>;
+export type EvalResults = Selectable<DB['eval_results']>;
+export type Registers = Selectable<DB['registers']>;
+export type Permissions = Selectable<DB['permissions']>;
 
 // Re-export database types for internal use
 export type { DB } from '$lib/database/types';
 
-// Frontend User type for the users page (different from session User)
+// ============================================================================
+// BUSINESS DOMAIN TYPES - Application-specific extensions
+// ============================================================================
+
+// Legacy User type for compatibility (different from session User)
+// TODO: Migrate to use Users type directly
 export interface User {
 	id: string;
 	email: string;
@@ -139,7 +53,10 @@ export interface User {
 	};
 }
 
-// Common value objects
+// ============================================================================
+// VALUE OBJECTS & ENUMS - Domain-specific types
+// ============================================================================
+
 export type EntityType =
 	| 'levels'
 	| 'courses'
@@ -152,12 +69,13 @@ export type EntityType =
 	| 'eval_results';
 
 export type AnswerValue = 'A' | 'B' | 'C' | 'D' | 'E' | null | 'error_multiple';
-
 export type ToastType = 'success' | 'danger' | 'warning' | 'info';
-
 export type FileStatus = 'pending' | 'processing' | 'success' | 'error';
 
-// Composite types for business operations
+// ============================================================================
+// COMPOSITE TYPES - Business operations with joins
+// ============================================================================
+
 export interface EvalSectionWithCourse extends EvalSections {
 	course_name?: string;
 	courses?: { name: string };

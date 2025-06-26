@@ -94,7 +94,6 @@
 		// Get primary color from CSS variables
 		const primaryColor = getCSSVariable('--color-primary', 'oklch(65% 0.15 180)');
 		const rgbColor = oklchToRgb(primaryColor);
-
 		ctx.clearRect(0, 0, width, height);
 
 		// Líneas verticales

@@ -149,7 +149,7 @@ export const actions: Actions = {
 					order_in_eval: globalOrder,
 					correct_key: correctKey || '',
 					omitable: isOmitable,
-					score_percent: isNaN(scoreValue) ? 1.0 : scoreValue
+					score_percent: (isNaN(scoreValue) ? 1.0 : scoreValue).toString()
 				};
 			}
 

@@ -1,74 +1,34 @@
-import { db } from '$lib/database';
+/**
+ * COURSES DATA LAYER - Modern Clean Architecture
+ *
+ * ARCHITECTURE PRINCIPLE: Use repository pattern for clean separation
+ * Delegates to CoursesRepository for all database operations
+ */
+
+import { coursesRepository } from '$lib/database/repositories';
 import type { Courses } from '$lib/types';
-import { transformCourses } from '$lib/utils';
 
+/**
+ * Get all courses ordered by display order
+ */
 export async function getCourses(): Promise<Courses[]> {
-	try {
-		const courses = await db.selectFrom('courses').selectAll().orderBy('order', 'asc').execute();
-		return transformCourses(courses);
-	} catch (error) {
-		console.error('Error fetching courses:', error);
-		return [];
-	}
+	return coursesRepository.getAllOrdered();
 }
 
+/**
+ * Update course order
+ */
 export async function updateCourseOrder(courseCode: string, newOrder: number): Promise<boolean> {
-	try {
-		await db
-			.updateTable('courses')
-			.set({ order: newOrder })
-			.where('code', '=', courseCode)
-			.execute();
-		return true;
-	} catch (error) {
-		console.error('Error updating course order:', error);
-		return false;
-	}
+	return coursesRepository.updateOrder(courseCode, newOrder);
 }
 
+/**
+ * Reorder course (move up/down)
+ */
 export async function reorderCourse(
 	courses: Courses[],
 	courseCode: string,
 	direction: 'up' | 'down'
 ): Promise<boolean> {
-	try {
-		// Find the current course and its index
-		const currentIndex = courses.findIndex((c) => String(c.code) === courseCode);
-		if (currentIndex === -1) return false;
-
-		// Calculate target index based on direction
-		const targetIndex =
-			direction === 'up'
-				? Math.max(0, currentIndex - 1)
-				: Math.min(courses.length - 1, currentIndex + 1);
-
-		// If already at the top/bottom, do nothing
-		if (targetIndex === currentIndex) return true;
-
-		// Get the course to swap with
-		const targetCourse = courses[targetIndex];
-		const currentCourse = courses[currentIndex];
-
-		// Swap orders
-		const currentOrder = currentCourse.order;
-		const targetOrder = targetCourse.order;
-
-		// Update both courses in a transaction-like manner
-		await Promise.all([
-			db
-				.updateTable('courses')
-				.set({ order: targetOrder })
-				.where('code', '=', currentCourse.code)
-				.execute(),
-			db
-				.updateTable('courses')
-				.set({ order: currentOrder })
-				.where('code', '=', targetCourse.code)
-				.execute()
-		]);
-
-		return true;
-	} catch {
-		return false;
-	}
+	return coursesRepository.reorder(courseCode, direction);
 }

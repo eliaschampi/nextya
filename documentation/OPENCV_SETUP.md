@@ -73,7 +73,7 @@ NextYa uses OpenCV 4.9.0 for advanced image processing and OMR (Optical Mark Rec
    - Node.js 20 with npm/yarn
    - Python 3 for build tools
 
-2. **OpenCV Library**: 
+2. **OpenCV Library**:
    - Version: 4.9.0
    - Features: Core, ImgProc, ImgCodecs, HighGUI
    - Optimizations: SSE, AVX, NEON (ARM)
@@ -109,37 +109,40 @@ import * as cv from '@u4/opencv4nodejs';
 import { omrProcessorInternal } from '$lib/omrProcessor/omrProcessor';
 
 // Process uploaded image
-const result = await omrProcessorInternal(
-  imageBuffer,
-  numberOfQuestions,
-  enableDebug
-);
+const result = await omrProcessorInternal(imageBuffer, numberOfQuestions, enableDebug);
 
 if (result.success) {
-  console.log('Answers:', result.answers);
-  console.log('Code:', result.code);
+	console.log('Answers:', result.answers);
+	console.log('Code:', result.code);
 } else {
-  console.error('Error:', result.error);
+	console.error('Error:', result.error);
 }
 ```
 
 ### **Image Processing Pipeline**
 
 1. **Load Image**:
+
    ```typescript
    const mat = await cv.imdecodeAsync(buffer);
    ```
 
 2. **Preprocess**:
+
    ```typescript
    const gray = await mat.cvtColorAsync(cv.COLOR_BGR2GRAY);
    const blurred = await gray.gaussianBlurAsync(new cv.Size(5, 5), 0);
    ```
 
 3. **Process**:
+
    ```typescript
    const thresh = await blurred.adaptiveThresholdAsync(
-     255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2
+   	255,
+   	cv.ADAPTIVE_THRESH_GAUSSIAN_C,
+   	cv.THRESH_BINARY,
+   	11,
+   	2
    );
    ```
 
@@ -178,9 +181,9 @@ RUN npm remove @u4/opencv4nodejs 2>/dev/null || true && \
 
 ```json
 {
-  "dependencies": {
-    "@u4/opencv4nodejs": "^6.2.4"
-  }
+	"dependencies": {
+		"@u4/opencv4nodejs": "^6.2.4"
+	}
 }
 ```
 
@@ -234,14 +237,14 @@ deploy:
 ```typescript
 // Always check if Mat is valid
 if (!mat || mat.empty) {
-  throw new Error('Invalid image matrix');
+	throw new Error('Invalid image matrix');
 }
 
 // Always release Mat objects
 try {
-  // ... processing
+	// ... processing
 } finally {
-  mat.release();
+	mat.release();
 }
 ```
 
@@ -272,22 +275,22 @@ htop
 ```typescript
 // Good: Proper cleanup
 function processImage(buffer: Buffer) {
-  let mat: cv.Mat | null = null;
-  try {
-    mat = cv.imdecode(buffer);
-    // ... processing
-    return result;
-  } finally {
-    if (mat) mat.release();
-  }
+	let mat: cv.Mat | null = null;
+	try {
+		mat = cv.imdecode(buffer);
+		// ... processing
+		return result;
+	} finally {
+		if (mat) mat.release();
+	}
 }
 
 // Bad: Memory leak
 function processImageBad(buffer: Buffer) {
-  const mat = cv.imdecode(buffer);
-  // ... processing
-  // mat.release() never called!
-  return result;
+	const mat = cv.imdecode(buffer);
+	// ... processing
+	// mat.release() never called!
+	return result;
 }
 ```
 
@@ -296,19 +299,19 @@ function processImageBad(buffer: Buffer) {
 ```typescript
 // Process multiple images efficiently
 async function processBatch(images: Buffer[]) {
-  const results = [];
-  
-  for (const buffer of images) {
-    const result = await processImage(buffer);
-    results.push(result);
-    
-    // Force garbage collection periodically
-    if (results.length % 10 === 0) {
-      global.gc?.();
-    }
-  }
-  
-  return results;
+	const results = [];
+
+	for (const buffer of images) {
+		const result = await processImage(buffer);
+		results.push(result);
+
+		// Force garbage collection periodically
+		if (results.length % 10 === 0) {
+			global.gc?.();
+		}
+	}
+
+	return results;
 }
 ```
 

@@ -147,7 +147,7 @@
 					order_in_eval: startNumber + i,
 					correct_key: '',
 					omitable: DEFAULT_OMITABLE,
-					score_percent: DEFAULT_SCORE
+					score_percent: DEFAULT_SCORE.toString()
 				});
 			}
 
@@ -262,7 +262,7 @@
 	function handleScoreChange(section: string, question: EvalQuestions, value: string): void {
 		const score = parseFloat(value);
 		if (isNaN(score) || score < 0 || score > 1) return;
-		updateQuestion(section, question, 'score_percent', score);
+		updateQuestion(section, question, 'score_percent', score.toString());
 	}
 
 	function navigateTab(direction: 'next' | 'prev'): void {

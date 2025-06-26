@@ -1,6 +1,16 @@
+/**
+ * EVALUATIONS DATA LAYER - Modern Clean Architecture
+ *
+ * ARCHITECTURE PRINCIPLE: Clean queries with proper joins and type safety
+ * Minimal transformation, focus on performance
+ */
+
 import { db } from '$lib/database';
 import type { EvalSectionWithCourse } from '$lib/types';
 
+/**
+ * Fetch evaluation sections with course information
+ */
 export async function fetchSections(evalCode: string): Promise<EvalSectionWithCourse[]> {
 	try {
 		const sections = await db
@@ -18,6 +28,7 @@ export async function fetchSections(evalCode: string): Promise<EvalSectionWithCo
 			.orderBy('eval_sections.order_in_eval', 'asc')
 			.execute();
 
+		// Transform to include both course_name and courses object for compatibility
 		return sections.map((section) => ({
 			code: section.code,
 			eval_code: section.eval_code,
@@ -27,7 +38,8 @@ export async function fetchSections(evalCode: string): Promise<EvalSectionWithCo
 			course_name: section.course_name,
 			courses: { name: section.course_name }
 		}));
-	} catch {
+	} catch (error) {
+		console.error('Error fetching sections:', error);
 		return [];
 	}
 }

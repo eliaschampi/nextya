@@ -249,11 +249,7 @@ The project includes a complete OMR (Optical Mark Recognition) system:
 import * as cv from '@u4/opencv4nodejs';
 
 // Process an OMR sheet
-const result = await omrProcessorInternal(
-  imageBuffer,
-  numberOfQuestions,
-  enableDebug
-);
+const result = await omrProcessorInternal(imageBuffer, numberOfQuestions, enableDebug);
 ```
 
 #### **OMR Processing Pipeline**
