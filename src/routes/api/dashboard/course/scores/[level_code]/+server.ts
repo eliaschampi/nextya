@@ -1,6 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
-import { getCourseScores } from '$lib/data/courseDashboard';
+import { getCourseScores } from '$lib/data/dashboard/course';
 
 /**
  * GET endpoint for course scores data

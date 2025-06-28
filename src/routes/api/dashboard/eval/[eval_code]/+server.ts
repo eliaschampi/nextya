@@ -1,6 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
-import { getEvalDashboardData } from '$lib/data/evalDashboard';
+import { getEvalDashboardData } from '$lib/data/dashboard/eval';
 
 /**
  * GET endpoint for evaluation dashboard data

@@ -1,6 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
-import { getEvalScores } from '$lib/data/courseDashboard';
+import { getEvalScores } from '$lib/data/dashboard/course';
 
 export const GET: RequestHandler = async ({ params, url }) => {
 	const { level_code, course_code } = params;

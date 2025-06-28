@@ -1,6 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
-import { getLevelDashboardData } from '$lib/data/dashboard';
+import { getLevelDashboardData } from '$lib/data/dashboard/general';
 
 /**
  * GET endpoint for level dashboard data
