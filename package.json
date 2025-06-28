@@ -45,7 +45,7 @@
 	},
 	"dependencies": {
 		"@tailwindcss/vite": "^4.1.10",
-		"@u4/opencv4nodejs": "^6.2.4",
+		"@u4/opencv4nodejs": "^7.1.2",
 		"bcryptjs": "^3.0.2",
 		"chart.js": "^4.5.0",
 		"cookie": "^1.0.2",

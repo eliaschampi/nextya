@@ -13,8 +13,6 @@ services:
         - GROUP_ID=${GROUP_ID:-1000}
     ports:
       - '5173:5173'
-    env_file:
-      - .env.docker
     environment:
       - DB_HOST=postgres
       - DB_USER=postgres
@@ -22,40 +20,30 @@ services:
       - DB_NAME=nextya
       - DB_PORT=5432
       - NODE_ENV=development
-      - JWT_SECRET=your-super-secret-jwt-key-change-in-production-2024
-      - JWT_EXPIRES_IN=8h
     volumes:
-      # Bind mount source code for hot reload (excluding node_modules)
       - .:/app:cached
-      # Use named volume for node_modules to preserve container's modules
       - node_modules_cache:/app/node_modules
     depends_on:
-      postgres:
-        condition: service_healthy
+      - nextya_postgres
     networks:
       - nextya
-    restart: unless-stopped
-    # Improve development experience
     stdin_open: true
     tty: true
 
-  postgres:
+  nextya_postgres:
     container_name: nextya_postgres
     image: postgres:14-alpine
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=nextya
-      # Use C locale for Alpine compatibility
-      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
     volumes:
-      - postgres_data:/var/lib/postgresql/data
       - ./docker/init:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - '5432:5432'
     networks:
       - nextya
-    restart: unless-stopped
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
