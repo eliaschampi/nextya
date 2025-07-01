@@ -7,7 +7,7 @@ export async function getEvalDashboardData(evalCode: string): Promise<EvalDashbo
 		// Call the optimized SQL function
 		const result = await sql<{
 			data_type: string;
-			json_data: any;
+			json_data: unknown;
 		}>`SELECT * FROM get_eval_dashboard_data(${evalCode})`.execute(db);
 
 		if (!result.rows || result.rows.length === 0) {

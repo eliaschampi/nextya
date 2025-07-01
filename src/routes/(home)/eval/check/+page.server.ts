@@ -3,6 +3,9 @@ import type { PageServerLoad, Actions } from './$types';
 import type { OptimizedResultPayload } from '$lib/types/api';
 import { getLevels } from '$lib/data/levels';
 import { sql } from 'kysely';
+import type { Kysely } from 'kysely';
+import type { DB } from '$lib/database/types';
+import type { Levels } from '$lib/types';
 
 /**
  * Empaqueta un resultado individual para el RPC
@@ -43,7 +46,7 @@ function buildRpcPayload(evalCode: string, result: OptimizedResultPayload['resul
  * Guarda todos los resultados en paralelo usando Promise.allSettled
  */
 async function saveAllResults(
-	db: any,
+	db: Kysely<DB>,
 	payload: OptimizedResultPayload
 ): Promise<{ successCount: number; errors: string[] }> {
 	const tasks = payload.results.map(async (r) => {
@@ -56,8 +59,9 @@ async function saveAllResults(
 				${JSON.stringify(rpcPayload.p_general_result)},
 				${JSON.stringify(rpcPayload.p_section_results)}
 			)`.execute(db);
-		} catch (error: any) {
-			throw new Error(`${r.roll_code}: ${error.message}`);
+		} catch (error: unknown) {
+			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+			throw new Error(`${r.roll_code}: ${errorMessage}`);
 		}
 	});
 
@@ -78,7 +82,7 @@ async function saveAllResults(
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user?.code;
-	let levels: any[] = [];
+	let levels: Levels[] = [];
 
 	if (userId) {
 		levels = await getLevels(userId);

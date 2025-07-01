@@ -14,7 +14,7 @@ export async function getLevelDashboardData(levelCode: string): Promise<LevelDas
 		// Call the optimized SQL function using raw SQL
 		const result = await sql<{
 			data_type: string;
-			json_data: any;
+			json_data: unknown;
 		}>`SELECT * FROM get_level_dashboard_data(${levelCode})`.execute(db);
 
 		if (!result.rows || result.rows.length === 0) {
@@ -50,7 +50,7 @@ export async function getGroupDashboardData(
 		// Call the optimized SQL function using raw SQL
 		const result = await sql<{
 			data_type: string;
-			json_data: any;
+			json_data: unknown;
 		}>`SELECT * FROM get_group_dashboard_data(${levelCode}, ${groupName})`.execute(db);
 
 		if (!result.rows || result.rows.length === 0) {

@@ -6,7 +6,7 @@
  * This eliminates redundancy and ensures type consistency
  */
 
-import type { Selectable } from 'kysely';
+import type { Selectable, Insertable, Updateable } from 'kysely';
 import type { DB } from '$lib/database/types';
 import type { ApiOmrErrorData, ApiOmrSuccessData } from './api';
 
@@ -28,30 +28,38 @@ export type EvalResults = Selectable<DB['eval_results']>;
 export type Registers = Selectable<DB['registers']>;
 export type Permissions = Selectable<DB['permissions']>;
 
+// Insertable types for creating new records
+export type NewUsers = Insertable<DB['users']>;
+export type NewStudents = Insertable<DB['students']>;
+export type NewCourses = Insertable<DB['courses']>;
+export type NewLevels = Insertable<DB['levels']>;
+export type NewEvals = Insertable<DB['evals']>;
+export type NewEvalSections = Insertable<DB['eval_sections']>;
+export type NewEvalQuestions = Insertable<DB['eval_questions']>;
+export type NewEvalAnswers = Insertable<DB['eval_answers']>;
+export type NewEvalResults = Insertable<DB['eval_results']>;
+export type NewRegisters = Insertable<DB['registers']>;
+export type NewPermissions = Insertable<DB['permissions']>;
+
+// Updateable types for updating existing records
+export type UpdateUsers = Updateable<DB['users']>;
+export type UpdateStudents = Updateable<DB['students']>;
+export type UpdateCourses = Updateable<DB['courses']>;
+export type UpdateLevels = Updateable<DB['levels']>;
+export type UpdateEvals = Updateable<DB['evals']>;
+export type UpdateEvalSections = Updateable<DB['eval_sections']>;
+export type UpdateEvalQuestions = Updateable<DB['eval_questions']>;
+export type UpdateEvalAnswers = Updateable<DB['eval_answers']>;
+export type UpdateEvalResults = Updateable<DB['eval_results']>;
+export type UpdateRegisters = Updateable<DB['registers']>;
+export type UpdatePermissions = Updateable<DB['permissions']>;
+
 // Re-export database types for internal use
 export type { DB } from '$lib/database/types';
 
 // ============================================================================
 // BUSINESS DOMAIN TYPES - Application-specific extensions
 // ============================================================================
-
-// Legacy User type for compatibility (different from session User)
-// TODO: Migrate to use Users type directly
-export interface User {
-	id: string;
-	email: string;
-	name: string | null;
-	last_name: string | null;
-	photo_url: string | null;
-	email_confirmed_at: boolean;
-	created_at: Date;
-	last_sign_in_at: Date | null;
-	user_metadata: {
-		name: string | null;
-		last_name: string | null;
-		photo_url: string | null;
-	};
-}
 
 // ============================================================================
 // VALUE OBJECTS & ENUMS - Domain-specific types

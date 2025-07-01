@@ -2,6 +2,8 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { importCsv, createNameKey, CsvProcessorErrorCode } from '$lib/csvProcessor';
 import type { ImportResult, StudentRegisterData } from '$lib/csvProcessor';
+import type { Kysely, ExpressionBuilder } from 'kysely';
+import type { DB } from '$lib/database/types';
 
 /**
  * Checks for duplicates in the database and moves them from validRows to omittedRows
@@ -12,7 +14,7 @@ import type { ImportResult, StudentRegisterData } from '$lib/csvProcessor';
 async function checkDatabaseDuplicates(
 	result: ImportResult,
 	levelCode: string,
-	db: any
+	db: Kysely<DB>
 ): Promise<void> {
 	if (result.validRows.length === 0) return;
 
@@ -50,7 +52,7 @@ async function checkDatabaseDuplicates(
 		const existingStudents = await db
 			.selectFrom('students')
 			.select(['name', 'last_name'])
-			.where((eb: any) => {
+			.where((eb: ExpressionBuilder<DB, 'students'>) => {
 				const conditions = nameLastNamePairs.map((pair) =>
 					eb.and([eb('name', 'ilike', pair.name), eb('last_name', 'ilike', pair.lastName)])
 				);
@@ -60,7 +62,7 @@ async function checkDatabaseDuplicates(
 
 		// Create a set of existing name keys for efficient lookup
 		const existingNameKeySet = new Set(
-			existingStudents?.map((s: any) => createNameKey(s.name, s.lastName)) || []
+			existingStudents?.map((s) => createNameKey(s.name, s.last_name)) || []
 		);
 
 		// 3. Move duplicates from validRows to omittedRows

@@ -6,6 +6,8 @@ import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
 import { evalSchema, evalSectionSchema } from '$lib/schemas/eval';
 import type { FormSection } from '$lib/types';
+import type { Kysely } from 'kysely';
+import type { DB } from '$lib/database/types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user?.code;
@@ -17,7 +19,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return { levels, courses, title: 'Exámenes' };
 };
 
-async function insertSections(db: any, evalCode: string, sections: FormSection[]) {
+async function insertSections(db: Kysely<DB>, evalCode: string, sections: FormSection[]) {
 	if (sections.length > 0) {
 		const sectionsToInsert = sections.map((section: FormSection) => ({
 			eval_code: evalCode,

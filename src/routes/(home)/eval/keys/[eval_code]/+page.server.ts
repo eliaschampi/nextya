@@ -67,11 +67,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			.execute();
 
 		// Handle numeric conversion for score_percent inline
-		const existingQuestions = questionsData.map(question => ({
+		const existingQuestions = questionsData.map((question) => ({
 			...question,
-			score_percent: typeof question.score_percent === 'string'
-				? parseFloat(question.score_percent)
-				: Number(question.score_percent)
+			score_percent:
+				typeof question.score_percent === 'string'
+					? parseFloat(question.score_percent)
+					: Number(question.score_percent)
 		}));
 
 		return {

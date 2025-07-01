@@ -1,6 +1,6 @@
 import { Kysely, sql } from 'kysely';
 
-export async function up(db: Kysely<any>): Promise<void> {
+export async function up(db: Kysely<unknown>): Promise<void> {
 	// Evaluation dashboard function
 	await sql`
 		CREATE OR REPLACE FUNCTION get_eval_dashboard_data(p_eval_code TEXT)
@@ -228,7 +228,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 	`.execute(db);
 }
 
-export async function down(db: Kysely<any>): Promise<void> {
+export async function down(db: Kysely<unknown>): Promise<void> {
 	await sql`DROP FUNCTION IF EXISTS get_eval_dashboard_data(TEXT)`.execute(db);
 	await sql`DROP FUNCTION IF EXISTS get_student_eval_report(TEXT)`.execute(db);
 }

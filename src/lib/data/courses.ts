@@ -12,11 +12,7 @@ import type { Courses } from '$lib/types';
  */
 export async function getCourses(): Promise<Courses[]> {
 	try {
-		return await db
-			.selectFrom('courses')
-			.selectAll()
-			.orderBy('order', 'asc')
-			.execute();
+		return await db.selectFrom('courses').selectAll().orderBy('order', 'asc').execute();
 	} catch (error) {
 		console.error('Error fetching courses:', error);
 		return [];
@@ -51,11 +47,11 @@ export async function reorderCourse(
 ): Promise<boolean> {
 	try {
 		// Find the current course
-		const currentCourse = courses.find(c => c.code === courseCode);
+		const currentCourse = courses.find((c) => c.code === courseCode);
 		if (!currentCourse) return false;
 
 		// Find the target course to swap with
-		const currentIndex = courses.findIndex(c => c.code === courseCode);
+		const currentIndex = courses.findIndex((c) => c.code === courseCode);
 		const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
 
 		if (targetIndex < 0 || targetIndex >= courses.length) return false;
@@ -64,11 +60,13 @@ export async function reorderCourse(
 
 		// Swap the order values
 		await Promise.all([
-			db.updateTable('courses')
+			db
+				.updateTable('courses')
 				.set({ order: targetCourse.order })
 				.where('code', '=', courseCode)
 				.execute(),
-			db.updateTable('courses')
+			db
+				.updateTable('courses')
 				.set({ order: currentCourse.order })
 				.where('code', '=', targetCourse.code)
 				.execute()

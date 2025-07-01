@@ -26,11 +26,12 @@ export async function fetchQuestions(evalCode: string): Promise<TransformedEvalQ
 			.execute();
 
 		// Handle numeric conversion for score_percent inline
-		return data.map(question => ({
+		return data.map((question) => ({
 			...question,
-			score_percent: typeof question.score_percent === 'string'
-				? parseFloat(question.score_percent)
-				: Number(question.score_percent)
+			score_percent:
+				typeof question.score_percent === 'string'
+					? parseFloat(question.score_percent)
+					: Number(question.score_percent)
 		}));
 	} catch (error) {
 		console.error('Error fetching questions:', error);

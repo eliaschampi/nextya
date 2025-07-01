@@ -1,6 +1,6 @@
 import { Kysely, sql } from 'kysely';
 
-export async function up(db: Kysely<any>): Promise<void> {
+export async function up(db: Kysely<unknown>): Promise<void> {
 	// Enable required extensions
 	await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`.execute(db);
 	await sql`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`.execute(db);
@@ -298,7 +298,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 }
 
 // Helper function to create performance indices
-async function createIndices(db: Kysely<any>): Promise<void> {
+async function createIndices(db: Kysely<unknown>): Promise<void> {
 	// 1. Permissions table
 	await sql`CREATE INDEX IF NOT EXISTS idx_permissions_user_code ON permissions(user_code)`.execute(
 		db
@@ -383,7 +383,7 @@ async function createIndices(db: Kysely<any>): Promise<void> {
 }
 
 // Helper function to create database functions
-async function createDatabaseFunctions(db: Kysely<any>): Promise<void> {
+async function createDatabaseFunctions(db: Kysely<unknown>): Promise<void> {
 	// 1. Upsert eval results function
 	await sql`
 		CREATE OR REPLACE FUNCTION upsert_eval_results(
@@ -660,7 +660,7 @@ async function createDatabaseFunctions(db: Kysely<any>): Promise<void> {
 }
 
 // Helper function to create views
-async function createViews(db: Kysely<any>): Promise<void> {
+async function createViews(db: Kysely<unknown>): Promise<void> {
 	// Student register results view
 	await sql`
 		CREATE OR REPLACE VIEW student_register_results AS
@@ -694,7 +694,7 @@ async function createViews(db: Kysely<any>): Promise<void> {
 }
 
 // Helper function to create policies (Note: These are Supabase-style policies, may need adaptation for self-hosted PostgreSQL)
-async function createPolicies(db: Kysely<any>): Promise<void> {
+async function createPolicies(db: Kysely<unknown>): Promise<void> {
 	// Enable RLS on all tables
 	await sql`ALTER TABLE users ENABLE ROW LEVEL SECURITY`.execute(db);
 	await sql`ALTER TABLE permissions ENABLE ROW LEVEL SECURITY`.execute(db);
@@ -919,7 +919,7 @@ async function createPolicies(db: Kysely<any>): Promise<void> {
 	`.execute(db);
 }
 
-export async function down(db: Kysely<any>): Promise<void> {
+export async function down(db: Kysely<unknown>): Promise<void> {
 	// Drop views
 	await sql`DROP VIEW IF EXISTS student_register_results`.execute(db);
 
