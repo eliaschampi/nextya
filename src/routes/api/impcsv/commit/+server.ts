@@ -182,7 +182,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			success: true,
 			data: results
 		});
-	} catch (error: unknown) {
+	} catch (error) {
 		console.error(`Error committing CSV data:`, error);
 		return json({ error: 'Error interno del servidor durante la importación' }, { status: 500 });
 	}

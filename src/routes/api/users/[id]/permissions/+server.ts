@@ -1,11 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-// Type definitions for better code safety
-type Permission = {
-	entity: string;
-	user_action: string;
-};
+/**
+ * USER PERMISSIONS API - Modern Clean Architecture
+ *
+ * ARCHITECTURE PRINCIPLE: Direct Kysely database access for simplicity and consistency
+ */
 
 // GET /api/users/[id]/permissions
 export const GET: RequestHandler = async ({ params, locals }) => {
@@ -39,7 +39,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	try {
 		const body = await request.json();
-		const { permissions } = body as { permissions: Permission[] };
+		const { permissions } = body as { permissions: { entity: string; user_action: string }[] };
 
 		if (!permissions || !Array.isArray(permissions)) {
 			return json({ error: 'Formato de permisos inválido' }, { status: 400 });

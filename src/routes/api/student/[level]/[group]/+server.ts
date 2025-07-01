@@ -1,14 +1,13 @@
 /**
  * STUDENTS BY LEVEL AND GROUP API - Modern Clean Architecture
  *
- * ARCHITECTURE PRINCIPLE: Use repository pattern, consistent error handling
+ * ARCHITECTURE PRINCIPLE: Direct Kysely database access for simplicity and consistency
  */
 
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
-import { studentsRepository } from '$lib/database/repositories';
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
 	const { level, group } = params;
 
 	if (!level || !group) {
@@ -16,7 +15,16 @@ export const GET: RequestHandler = async ({ params }) => {
 	}
 
 	try {
-		const students = await studentsRepository.getByLevelAndGroup(level, group);
+		const students = await locals.db
+			.selectFrom('students')
+			.innerJoin('registers', 'registers.student_code', 'students.code')
+			.selectAll('students')
+			.select(['registers.roll_code', 'registers.group_name'])
+			.where('registers.level_code', '=', level)
+			.where('registers.group_name', '=', group)
+			.orderBy('registers.roll_code', 'asc')
+			.execute();
+
 		return json(students);
 	} catch (error) {
 		console.error('Error fetching students by level and group:', error);

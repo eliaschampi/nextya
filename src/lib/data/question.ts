@@ -7,12 +7,16 @@
 
 import { db } from '$lib/database';
 import type { EvalQuestions } from '$lib/types';
-import { transformEvalQuestions } from '$lib/utils';
+
+// Type for questions with numeric score_percent
+export type TransformedEvalQuestion = Omit<EvalQuestions, 'score_percent'> & {
+	score_percent: number;
+};
 
 /**
  * Fetch questions for an evaluation
  */
-export async function fetchQuestions(evalCode: string): Promise<EvalQuestions[]> {
+export async function fetchQuestions(evalCode: string): Promise<TransformedEvalQuestion[]> {
 	try {
 		const data = await db
 			.selectFrom('eval_questions')
@@ -21,8 +25,13 @@ export async function fetchQuestions(evalCode: string): Promise<EvalQuestions[]>
 			.orderBy('order_in_eval', 'asc')
 			.execute();
 
-		// Only transform for numeric conversion of score_percent
-		return transformEvalQuestions(data);
+		// Handle numeric conversion for score_percent inline
+		return data.map(question => ({
+			...question,
+			score_percent: typeof question.score_percent === 'string'
+				? parseFloat(question.score_percent)
+				: Number(question.score_percent)
+		}));
 	} catch (error) {
 		console.error('Error fetching questions:', error);
 		return [];

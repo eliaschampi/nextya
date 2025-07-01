@@ -1,7 +1,6 @@
 import { sql } from 'kysely';
 import { db } from '$lib/database';
 import type { Levels } from '$lib/types';
-import { transformLevels } from '$lib/utils';
 
 const levelsCache = new Map<string, { data: Levels[]; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos en milisegundos
@@ -27,7 +26,7 @@ export async function getLevels(userID: string, forceRefresh = false): Promise<L
 			.where(sql<boolean>`users @> ${JSON.stringify([userID])}`)
 			.execute();
 
-		const levels = transformLevels(dbLevels);
+		const levels = dbLevels;
 
 		// Actualizar caché
 		if (levels && levels.length > 0) {

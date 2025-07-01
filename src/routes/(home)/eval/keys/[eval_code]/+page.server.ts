@@ -1,7 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import type { EvalQuestions, Evals, EvalSectionWithCourse } from '$lib/types';
-import { transformEval, transformEvalQuestions } from '$lib/utils';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const evalCode = params.eval_code;
@@ -67,11 +66,17 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			.orderBy('order_in_eval', 'asc')
 			.execute();
 
-		const existingQuestions = transformEvalQuestions(questionsData);
+		// Handle numeric conversion for score_percent inline
+		const existingQuestions = questionsData.map(question => ({
+			...question,
+			score_percent: typeof question.score_percent === 'string'
+				? parseFloat(question.score_percent)
+				: Number(question.score_percent)
+		}));
 
 		return {
 			eval: {
-				...transformEval(evalData),
+				...evalData,
 				levels: { name: evalData.level_name }
 			} as Evals & { levels: { name: string } },
 			sections,
