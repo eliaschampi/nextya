@@ -1,12 +1,11 @@
 /**
  * QUESTIONS DATA LAYER - Modern Clean Architecture
  *
- * ARCHITECTURE PRINCIPLE: Direct Kysely usage with minimal transformation
- * Only transform when necessary (numeric conversions)
+ * ARCHITECTURE PRINCIPLE: Use locals.db to avoid duplicate instances
  */
 
-import { db } from '$lib/database';
 import type { EvalQuestions } from '$lib/types';
+import type { Database } from '$lib/database';
 
 // Type for questions with numeric score_percent
 export type TransformedEvalQuestion = Omit<EvalQuestions, 'score_percent'> & {
@@ -16,7 +15,7 @@ export type TransformedEvalQuestion = Omit<EvalQuestions, 'score_percent'> & {
 /**
  * Fetch questions for an evaluation
  */
-export async function fetchQuestions(evalCode: string): Promise<TransformedEvalQuestion[]> {
+export async function fetchQuestions(db: Database, evalCode: string): Promise<TransformedEvalQuestion[]> {
 	try {
 		const data = await db
 			.selectFrom('eval_questions')
@@ -42,7 +41,7 @@ export async function fetchQuestions(evalCode: string): Promise<TransformedEvalQ
 /**
  * Check if evaluation has questions
  */
-export async function hasEvalQuestions(evalCode: string): Promise<boolean> {
+export async function hasEvalQuestions(db: Database, evalCode: string): Promise<boolean> {
 	try {
 		const data = await db
 			.selectFrom('eval_questions')

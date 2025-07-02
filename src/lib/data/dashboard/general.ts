@@ -1,5 +1,5 @@
-import { db } from '$lib/database';
 import { sql } from 'kysely';
+import type { Database } from '$lib/database';
 import type {
 	EvalChartData,
 	GroupChartData,
@@ -9,7 +9,7 @@ import type {
 	GroupDashboardData
 } from '$lib/types/dashboard';
 
-export async function getLevelDashboardData(levelCode: string): Promise<LevelDashboardData | null> {
+export async function getLevelDashboardData(db: Database, levelCode: string): Promise<LevelDashboardData | null> {
 	try {
 		// Call the optimized SQL function using raw SQL
 		const result = await sql<{
@@ -43,6 +43,7 @@ export async function getLevelDashboardData(levelCode: string): Promise<LevelDas
 }
 
 export async function getGroupDashboardData(
+	db: Database,
 	levelCode: string,
 	groupName: string
 ): Promise<GroupDashboardData | null> {

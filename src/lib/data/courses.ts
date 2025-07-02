@@ -1,16 +1,16 @@
 /**
  * COURSES DATA LAYER - Modern Clean Architecture
  *
- * ARCHITECTURE PRINCIPLE: Direct database access for simplicity and consistency
+ * ARCHITECTURE PRINCIPLE: Use locals.db to avoid duplicate instances
  */
 
-import { db } from '$lib/database';
 import type { Courses } from '$lib/types';
+import type { Database } from '$lib/database';
 
 /**
  * Get all courses ordered by display order
  */
-export async function getCourses(): Promise<Courses[]> {
+export async function getCourses(db: Database): Promise<Courses[]> {
 	try {
 		return await db.selectFrom('courses').selectAll().orderBy('order', 'asc').execute();
 	} catch (error) {
@@ -22,7 +22,7 @@ export async function getCourses(): Promise<Courses[]> {
 /**
  * Update course order
  */
-export async function updateCourseOrder(courseCode: string, newOrder: number): Promise<boolean> {
+export async function updateCourseOrder(db: Database, courseCode: string, newOrder: number): Promise<boolean> {
 	try {
 		const result = await db
 			.updateTable('courses')
@@ -41,6 +41,7 @@ export async function updateCourseOrder(courseCode: string, newOrder: number): P
  * Reorder course (move up/down)
  */
 export async function reorderCourse(
+	db: Database,
 	courses: Courses[],
 	courseCode: string,
 	direction: 'up' | 'down'

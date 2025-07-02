@@ -1,4 +1,4 @@
-import { db } from '$lib/database';
+import type { Database } from '$lib/database';
 
 export interface StudentRegisterInfo {
 	register_code: string;
@@ -10,6 +10,7 @@ export interface StudentRegisterInfo {
 }
 
 export async function fetchRegisterByRollCode(
+	db: Database,
 	rollCode: string,
 	groupName: string,
 	evalLevelCode: string

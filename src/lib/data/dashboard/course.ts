@@ -1,8 +1,9 @@
-import { db } from '$lib/database';
 import { sql } from 'kysely';
+import type { Database } from '$lib/database';
 import type { CourseScore, EvalScore } from '$lib/types';
 
 export async function getCourseScores(
+	db: Database,
 	levelCode: string,
 	groupName: string
 ): Promise<CourseScore[] | null> {
@@ -23,6 +24,7 @@ export async function getCourseScores(
 }
 
 export async function getEvalScores(
+	db: Database,
 	levelCode: string,
 	courseCode: string,
 	groupName: string

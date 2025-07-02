@@ -1,11 +1,11 @@
 import { sql } from 'kysely';
-import { db } from '$lib/database';
 import type { Levels } from '$lib/types';
+import type { Database } from '$lib/database';
 
 const levelsCache = new Map<string, { data: Levels[]; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos en milisegundos
 
-export async function getLevels(userID: string, forceRefresh = false): Promise<Levels[]> {
+export async function getLevels(db: Database, userID: string, forceRefresh = false): Promise<Levels[]> {
 	try {
 		// Si no hay forzado de actualización y existe caché válida, usarla
 		if (!forceRefresh && levelsCache.has(userID)) {

@@ -20,6 +20,8 @@ services:
       - DB_NAME=nextya
       - DB_PORT=5432
       - NODE_ENV=development
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production-2024
+      - JWT_EXPIRES_IN=8h
     volumes:
       - .:/app:cached
       - node_modules_cache:/app/node_modules

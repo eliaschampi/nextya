@@ -15,7 +15,7 @@ const pool = new Pool({
 	connectionTimeoutMillis: 2000
 });
 
-// Create Kysely instance
+// Single database instance - used only in hooks.server.ts
 export const db = new Kysely<DB>({
 	dialect: new PostgresDialect({ pool }),
 	log: (event) => {

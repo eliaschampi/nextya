@@ -1,8 +1,9 @@
-import { db } from '$lib/database';
 import { sql } from 'kysely';
+import type { Database } from '$lib/database';
 import type { StudentScoreEvolution, StudentCourseScore, StudentCourseEvolution } from '$lib/types';
 
 export async function getStudentScoreEvolution(
+	db: Database,
 	studentCode: string
 ): Promise<StudentScoreEvolution[] | null> {
 	try {
@@ -22,6 +23,7 @@ export async function getStudentScoreEvolution(
 }
 
 export async function getStudentCourseScores(
+	db: Database,
 	studentCode: string
 ): Promise<StudentCourseScore[] | null> {
 	try {
@@ -41,6 +43,7 @@ export async function getStudentCourseScores(
 }
 
 export async function getStudentCourseEvolution(
+	db: Database,
 	studentCode: string
 ): Promise<StudentCourseEvolution[] | null> {
 	try {
