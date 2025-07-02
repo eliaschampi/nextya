@@ -45,7 +45,9 @@ services:
     ports:
       - '5432:5432'
     networks:
-      - nextya
+      nextya:
+        aliases:
+          - postgres  # Added alias to match DB_HOST
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
