@@ -6,7 +6,7 @@ import { getStudentCourseEvolution } from '$lib/data/dashboard/student';
  * GET endpoint for student course evolution data
  * Returns course evolution data for a specific student
  */
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
 	const { student_code } = params;
 
 	if (!student_code) {
@@ -14,7 +14,7 @@ export const GET: RequestHandler = async ({ params }) => {
 	}
 
 	try {
-		const data = await getStudentCourseEvolution(student_code);
+		const data = await getStudentCourseEvolution(locals.db, student_code);
 
 		if (!data) {
 			return json(

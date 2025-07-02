@@ -22,7 +22,11 @@ export async function getCourses(db: Database): Promise<Courses[]> {
 /**
  * Update course order
  */
-export async function updateCourseOrder(db: Database, courseCode: string, newOrder: number): Promise<boolean> {
+export async function updateCourseOrder(
+	db: Database,
+	courseCode: string,
+	newOrder: number
+): Promise<boolean> {
 	try {
 		const result = await db
 			.updateTable('courses')

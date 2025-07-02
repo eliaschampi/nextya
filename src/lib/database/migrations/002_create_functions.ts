@@ -6,7 +6,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 	// Read and execute the functions SQL file
 	const sqlPath = path.join(process.cwd(), 'src/lib/database/sql/02_functions.sql');
 	const sqlContent = await fs.readFile(sqlPath, 'utf-8');
-	
+
 	// Execute the entire content as it contains function definitions
 	await sql.raw(sqlContent).execute(db);
 }

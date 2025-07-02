@@ -5,13 +5,16 @@
  * Minimal transformation, focus on performance
  */
 
-import { db } from '$lib/database';
+import type { Database } from '$lib/database';
 import type { EvalSectionWithCourse } from '$lib/types';
 
 /**
  * Fetch evaluation sections with course information
  */
-export async function fetchSections(evalCode: string): Promise<EvalSectionWithCourse[]> {
+export async function fetchSections(
+	db: Database,
+	evalCode: string
+): Promise<EvalSectionWithCourse[]> {
 	try {
 		const sections = await db
 			.selectFrom('eval_sections')

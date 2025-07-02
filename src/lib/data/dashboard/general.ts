@@ -9,7 +9,10 @@ import type {
 	GroupDashboardData
 } from '$lib/types/dashboard';
 
-export async function getLevelDashboardData(db: Database, levelCode: string): Promise<LevelDashboardData | null> {
+export async function getLevelDashboardData(
+	db: Database,
+	levelCode: string
+): Promise<LevelDashboardData | null> {
 	try {
 		// Call the optimized SQL function using raw SQL
 		const result = await sql<{

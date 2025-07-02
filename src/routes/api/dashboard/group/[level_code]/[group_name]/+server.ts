@@ -2,7 +2,7 @@ import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
 import { getGroupDashboardData } from '$lib/data/dashboard/general';
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
 	const { level_code, group_name } = params;
 
 	if (!level_code || !group_name) {
@@ -11,7 +11,7 @@ export const GET: RequestHandler = async ({ params }) => {
 
 	try {
 		// Get group dashboard data from the dedicated module
-		const dashboardData = await getGroupDashboardData(level_code, group_name);
+		const dashboardData = await getGroupDashboardData(locals.db, level_code, group_name);
 
 		if (!dashboardData) {
 			return json({ error: 'No se pudieron obtener datos del dashboard' }, { status: 500 });

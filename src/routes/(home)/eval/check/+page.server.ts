@@ -85,7 +85,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	let levels: Levels[] = [];
 
 	if (userId) {
-		levels = await getLevels(userId);
+		levels = await getLevels(locals.db, userId);
 	}
 
 	return {

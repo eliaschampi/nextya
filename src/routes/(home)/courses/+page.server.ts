@@ -102,7 +102,7 @@ export const actions: Actions = {
 				.execute();
 
 			// Perform the reordering
-			const success = await reorderCourse(courses, courseCode, direction);
+			const success = await reorderCourse(locals.db, courses, courseCode, direction);
 
 			if (!success) {
 				return fail(500, { error: 'Error organizando cursos' });

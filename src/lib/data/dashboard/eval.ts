@@ -1,8 +1,11 @@
-import { db } from '$lib/database';
 import { sql } from 'kysely';
+import type { Database } from '$lib/database';
 import type { EvalDashboardData, QuestionStat, ScoreDistribution } from '$lib/types/dashboard/eval';
 
-export async function getEvalDashboardData(evalCode: string): Promise<EvalDashboardData | null> {
+export async function getEvalDashboardData(
+	db: Database,
+	evalCode: string
+): Promise<EvalDashboardData | null> {
 	try {
 		// Call the optimized SQL function
 		const result = await sql<{

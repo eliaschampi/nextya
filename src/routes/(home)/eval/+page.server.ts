@@ -13,9 +13,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user?.code;
 	let levels: Levels[] = [];
 	if (userId) {
-		levels = await getLevels(userId);
+		levels = await getLevels(locals.db, userId);
 	}
-	const courses = await getCourses();
+	const courses = await getCourses(locals.db);
 	return { levels, courses, title: 'Exámenes' };
 };
 
@@ -94,7 +94,7 @@ export const actions: Actions = {
 			}
 
 			// Solo modificar secciones si no hay preguntas registradas
-			const hasQuestions = await hasEvalQuestions(code);
+			const hasQuestions = await hasEvalQuestions(locals.db, code);
 			if (!hasQuestions) {
 				// Eliminar secciones existentes
 				try {

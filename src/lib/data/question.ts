@@ -15,7 +15,10 @@ export type TransformedEvalQuestion = Omit<EvalQuestions, 'score_percent'> & {
 /**
  * Fetch questions for an evaluation
  */
-export async function fetchQuestions(db: Database, evalCode: string): Promise<TransformedEvalQuestion[]> {
+export async function fetchQuestions(
+	db: Database,
+	evalCode: string
+): Promise<TransformedEvalQuestion[]> {
 	try {
 		const data = await db
 			.selectFrom('eval_questions')

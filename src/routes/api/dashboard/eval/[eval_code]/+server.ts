@@ -7,7 +7,7 @@ import { getEvalDashboardData } from '$lib/data/dashboard/eval';
  * Returns processed dashboard data for a specific evaluation
  * (topCorrectQuestions, topIncorrectQuestions, and scoreDistribution)
  */
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
 	const { eval_code } = params;
 
 	if (!eval_code) {
@@ -16,7 +16,7 @@ export const GET: RequestHandler = async ({ params }) => {
 
 	try {
 		// Get evaluation dashboard data from the dedicated module
-		const dashboardData = await getEvalDashboardData(eval_code);
+		const dashboardData = await getEvalDashboardData(locals.db, eval_code);
 
 		if (!dashboardData) {
 			return json({ error: 'No se pudieron obtener datos del dashboard' }, { status: 500 });

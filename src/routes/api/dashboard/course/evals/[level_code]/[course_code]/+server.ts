@@ -2,7 +2,7 @@ import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
 import { getEvalScores } from '$lib/data/dashboard/course';
 
-export const GET: RequestHandler = async ({ params, url }) => {
+export const GET: RequestHandler = async ({ params, url, locals }) => {
 	const { level_code, course_code } = params;
 	const groupName = url.searchParams.get('group_name');
 
@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	}
 
 	try {
-		const data = await getEvalScores(level_code, course_code, groupName);
+		const data = await getEvalScores(locals.db, level_code, course_code, groupName);
 
 		if (data === null) {
 			return json({ error: 'Error al procesar datos de evaluaciones' }, { status: 500 });

@@ -6,13 +6,13 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 	// Read and execute the tables SQL file
 	const sqlPath = path.join(process.cwd(), 'src/lib/database/sql/01_tables.sql');
 	const sqlContent = await fs.readFile(sqlPath, 'utf-8');
-	
+
 	// Split by semicolon and execute each statement
 	const statements = sqlContent
 		.split(';')
-		.map(stmt => stmt.trim())
-		.filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
-	
+		.map((stmt) => stmt.trim())
+		.filter((stmt) => stmt.length > 0 && !stmt.startsWith('--'));
+
 	for (const statement of statements) {
 		if (statement.trim()) {
 			await sql.raw(statement).execute(db);
@@ -33,7 +33,7 @@ export async function down(db: Kysely<unknown>): Promise<void> {
 	await db.schema.dropTable('levels').ifExists().execute();
 	await db.schema.dropTable('permissions').ifExists().execute();
 	await db.schema.dropTable('users').ifExists().execute();
-	
+
 	// Drop extensions
 	await sql`DROP EXTENSION IF EXISTS "pgcrypto"`.execute(db);
 	await sql`DROP EXTENSION IF EXISTS "uuid-ossp"`.execute(db);

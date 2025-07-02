@@ -6,13 +6,13 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 	// Read and execute the indexes SQL file
 	const sqlPath = path.join(process.cwd(), 'src/lib/database/sql/03_indexes.sql');
 	const sqlContent = await fs.readFile(sqlPath, 'utf-8');
-	
+
 	// Split by semicolon and execute each statement
 	const statements = sqlContent
 		.split(';')
-		.map(stmt => stmt.trim())
-		.filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
-	
+		.map((stmt) => stmt.trim())
+		.filter((stmt) => stmt.length > 0 && !stmt.startsWith('--'));
+
 	for (const statement of statements) {
 		if (statement.trim()) {
 			await sql.raw(statement).execute(db);
@@ -72,7 +72,7 @@ export async function down(db: Kysely<unknown>): Promise<void> {
 		'idx_evals_created_at',
 		'idx_eval_results_created_at'
 	];
-	
+
 	for (const indexName of indexesToDrop) {
 		await sql.raw(`DROP INDEX IF EXISTS ${indexName}`).execute(db);
 	}
