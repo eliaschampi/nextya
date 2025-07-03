@@ -2,14 +2,11 @@ import { Kysely, PostgresDialect } from 'kysely';
 import { Pool } from 'pg';
 import type { DB } from './types';
 import { dev } from '$app/environment';
+import { dbConfig } from '$lib/config/server';
 
 // Create connection pool
 const pool = new Pool({
-	host: process.env.DB_HOST || 'localhost',
-	user: process.env.DB_USER || 'postgres',
-	password: process.env.DB_PASSWORD || 'postgres',
-	database: process.env.DB_NAME || 'nextya',
-	port: parseInt(process.env.DB_PORT || '5432'),
+	...dbConfig,
 	max: dev ? 10 : 20,
 	idleTimeoutMillis: 30000,
 	connectionTimeoutMillis: 10000 // Increased from 2000 to 10000

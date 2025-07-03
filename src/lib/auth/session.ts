@@ -1,6 +1,7 @@
 import type { Cookies } from '@sveltejs/kit';
 import { generateToken, verifyToken } from './jwt';
 import { db } from '$lib/database';
+import { serverCookieConfig } from '$lib/config/server';
 
 export interface User {
 	code: string;
@@ -17,13 +18,6 @@ export interface Session {
 }
 
 const SESSION_COOKIE_NAME = 'nextya_session';
-const COOKIE_OPTIONS = {
-	httpOnly: true,
-	secure: process.env.NODE_ENV === 'production',
-	sameSite: 'strict' as const,
-	maxAge: 60 * 60 * 8, // 8 hours
-	path: '/'
-};
 
 /**
  * Create a new session for a user
@@ -52,7 +46,7 @@ export async function createSession(userCode: string, cookies: Cookies): Promise
 		}
 
 		// Set session cookie
-		cookies.set(SESSION_COOKIE_NAME, token, COOKIE_OPTIONS);
+		cookies.set(SESSION_COOKIE_NAME, token, serverCookieConfig);
 
 		// Update last login
 		await db

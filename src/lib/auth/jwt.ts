@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { jwtConfig } from '$lib/config/server';
 
 export interface JWTPayload {
 	userCode: string;
@@ -7,15 +8,12 @@ export interface JWTPayload {
 	exp?: number;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
-const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '8h';
-
 /**
  * Generate a JWT token for a user
  */
 export function generateToken(payload: { userCode: string; email: string }): string {
-	return jwt.sign(payload, JWT_SECRET, {
-		expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn']
+	return jwt.sign(payload, jwtConfig.secret, {
+		expiresIn: jwtConfig.expiresIn as jwt.SignOptions['expiresIn']
 	});
 }
 
@@ -24,7 +22,7 @@ export function generateToken(payload: { userCode: string; email: string }): str
  */
 export function verifyToken(token: string): JWTPayload | null {
 	try {
-		return jwt.verify(token, JWT_SECRET) as JWTPayload;
+		return jwt.verify(token, jwtConfig.secret) as JWTPayload;
 	} catch (error) {
 		console.error('Fallo verificacion JWT:', error);
 		return null;
