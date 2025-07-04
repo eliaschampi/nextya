@@ -1,7 +1,7 @@
 import type { Cookies } from '@sveltejs/kit';
 import { generateToken, verifyToken } from './jwt';
 import { db } from '$lib/database';
-import { serverCookieConfig } from '$lib/config/server';
+import { cookieConfig } from '$lib/config/env';
 
 export interface User {
 	code: string;
@@ -46,7 +46,7 @@ export async function createSession(userCode: string, cookies: Cookies): Promise
 		}
 
 		// Set session cookie
-		cookies.set(SESSION_COOKIE_NAME, token, serverCookieConfig);
+		cookies.set(SESSION_COOKIE_NAME, token, cookieConfig);
 
 		// Update last login
 		await db
