@@ -1,6 +1,6 @@
 // src/lib/csvProcessor/exportExcel.ts
 import { writeToString } from 'fast-csv';
-import { db } from '$lib/database';
+import type { Database } from '$lib/database';
 import { sql } from 'kysely';
 import type { ExportDataRow } from './types';
 import type { ResultItem } from '$lib/types';
@@ -126,7 +126,10 @@ export interface EvaluationData {
  * @param evalCode - Código de la evaluación
  * @returns Datos de la evaluación o null si hay error
  */
-export async function fetchEvaluationData(evalCode: string): Promise<EvaluationData | null> {
+export async function fetchEvaluationData(
+	db: Database,
+	evalCode: string
+): Promise<EvaluationData | null> {
 	try {
 		const data = await db
 			.selectFrom('evals')
@@ -157,7 +160,7 @@ export async function fetchEvaluationData(evalCode: string): Promise<EvaluationD
  * @param evalCode - Código de la evaluación
  * @returns Resultados de la evaluación o null si hay error
  */
-export async function fetchEvaluationResults(evalCode: string) {
+export async function fetchEvaluationResults(db: Database, evalCode: string) {
 	try {
 		const result = await sql`
 			SELECT * FROM get_register_eval_results(${evalCode})
@@ -192,13 +195,16 @@ export function createCsvResponse(csvContent: string, filename: string): Respons
  * @param evalCode - Código de la evaluación
  * @returns Objeto Response con el CSV o null si hay error
  */
-export async function exportEvaluationResultsToCsv(evalCode: string): Promise<Response | null> {
+export async function exportEvaluationResultsToCsv(
+	db: Database,
+	evalCode: string
+): Promise<Response | null> {
 	// Obtener datos de la evaluación
-	const evalData = await fetchEvaluationData(evalCode);
+	const evalData = await fetchEvaluationData(db, evalCode);
 	if (!evalData) return null;
 
 	// Obtener resultados
-	const resultsData: ResultItem[] | null = await fetchEvaluationResults(evalCode);
+	const resultsData: ResultItem[] | null = await fetchEvaluationResults(db, evalCode);
 	if (!resultsData) return null;
 
 	// Formatear datos para exportación

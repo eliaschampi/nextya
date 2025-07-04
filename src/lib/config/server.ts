@@ -11,15 +11,15 @@ import {
 	JWT_EXPIRES_IN
 } from '$env/static/private';
 
-// Database configuration - only available on server
-export const dbConfig = {
+import { createDatabase } from '$lib/database';
+
+export const dbInstance = createDatabase({
 	host: DB_HOST || 'localhost',
 	user: DB_USER || 'postgres',
 	password: DB_PASSWORD || 'postgres',
 	database: DB_NAME || 'nextya',
 	port: parseInt(DB_PORT || '5432')
-};
-
+});
 // JWT configuration - only available on server
 export const jwtConfig = {
 	secret: JWT_SECRET || 'your-super-secret-jwt-key-change-in-production',

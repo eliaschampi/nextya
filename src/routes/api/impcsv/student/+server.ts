@@ -29,6 +29,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
 		// Use the modularized function to export the student evaluations
 		const response = await exportStudentEvaluationsToCsv(
+			locals.db,
 			studentCode,
 			student.name,
 			student.last_name

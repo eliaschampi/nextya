@@ -13,7 +13,7 @@ import {
  * API endpoint for exporting evaluation results to CSV
  * Supports both GET (with eval_code parameter) and POST (with data in body)
  */
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, locals }) => {
 	try {
 		// Get the evaluation code from the query parameters
 		const evalCode = url.searchParams.get('eval_code');
@@ -24,7 +24,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		}
 
 		// Usar la función modularizada para exportar los resultados
-		const response = await exportEvaluationResultsToCsv(evalCode);
+		const response = await exportEvaluationResultsToCsv(locals.db, evalCode);
 
 		if (!response) {
 			return json({ error: 'Error al obtener datos para la exportación' }, { status: 500 });

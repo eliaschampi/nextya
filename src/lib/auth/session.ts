@@ -1,6 +1,6 @@
 import type { Cookies } from '@sveltejs/kit';
 import { generateToken, verifyToken } from './jwt';
-import { db } from '$lib/database';
+import type { Database } from '$lib/database';
 import { cookieConfig } from '$lib/config/env';
 
 export interface User {
@@ -22,7 +22,11 @@ const SESSION_COOKIE_NAME = 'nextya_session';
 /**
  * Create a new session for a user
  */
-export async function createSession(userCode: string, cookies: Cookies): Promise<Session | null> {
+export async function createSession(
+	db: Database,
+	userCode: string,
+	cookies: Cookies
+): Promise<Session | null> {
 	try {
 		// Get user from database
 		const user = await db
@@ -75,7 +79,7 @@ export async function createSession(userCode: string, cookies: Cookies): Promise
 /**
  * Get current session from cookies
  */
-export async function getSession(cookies: Cookies): Promise<Session | null> {
+export async function getSession(db: Database, cookies: Cookies): Promise<Session | null> {
 	try {
 		const token = cookies.get(SESSION_COOKIE_NAME);
 		if (!token) {
@@ -129,12 +133,12 @@ export function destroySession(cookies: Cookies): void {
 /**
  * Refresh session with new token
  */
-export async function refreshSession(cookies: Cookies): Promise<Session | null> {
-	const currentSession = await getSession(cookies);
+export async function refreshSession(db: Database, cookies: Cookies): Promise<Session | null> {
+	const currentSession = await getSession(db, cookies);
 	if (!currentSession) {
 		return null;
 	}
 
 	// Create new session with same user
-	return createSession(currentSession.user.code, cookies);
+	return createSession(db, currentSession.user.code, cookies);
 }

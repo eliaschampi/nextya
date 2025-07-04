@@ -1,29 +1,32 @@
 import { type Handle, redirect } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
-import { db } from '$lib/database';
 import { getSession } from '$lib/auth/session';
 import { hasPermission } from '$lib/auth';
+import { dbInstance } from '$lib/config/server';
+
+// Create database instance with environment variables (server-only)
 
 // Database handle - attach database instance to locals
 const databaseHandle: Handle = async ({ event, resolve }) => {
-	event.locals.db = db;
+	event.locals.db = dbInstance;
 	return resolve(event);
 };
 
 // Authentication handle - get session and user from cookies
 const authHandle: Handle = async ({ event, resolve }) => {
-	const session = await getSession(event.cookies);
+	const session = await getSession(dbInstance, event.cookies);
 	event.locals.session = session;
 	event.locals.user = session?.user ?? null;
 
 	// Add permission checker to locals
 	if (session?.user) {
 		event.locals.can = {
-			check: (entity: string, action: string) => hasPermission(session.user.code, entity, action),
-			read: (entity: string) => hasPermission(session.user.code, entity, 'read'),
-			create: (entity: string) => hasPermission(session.user.code, entity, 'create'),
-			update: (entity: string) => hasPermission(session.user.code, entity, 'update'),
-			delete: (entity: string) => hasPermission(session.user.code, entity, 'delete')
+			check: (entity: string, action: string) =>
+				hasPermission(dbInstance, session.user.code, entity, action),
+			read: (entity: string) => hasPermission(dbInstance, session.user.code, entity, 'read'),
+			create: (entity: string) => hasPermission(dbInstance, session.user.code, entity, 'create'),
+			update: (entity: string) => hasPermission(dbInstance, session.user.code, entity, 'update'),
+			delete: (entity: string) => hasPermission(dbInstance, session.user.code, entity, 'delete')
 		};
 	} else {
 		event.locals.can = {

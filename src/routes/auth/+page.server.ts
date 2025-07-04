@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-	login: async ({ request, cookies }) => {
+	login: async ({ request, cookies, locals }) => {
 		const formData = await request.formData();
 		const email = formData.get('email') as string;
 		const password = formData.get('password') as string;
@@ -24,7 +24,7 @@ export const actions: Actions = {
 			});
 		}
 
-		const result = await login({ email, password }, cookies);
+		const result = await login(locals.db, { email, password }, cookies);
 
 		if (!result.success) {
 			return fail(400, {
@@ -36,7 +36,7 @@ export const actions: Actions = {
 		throw redirect(303, '/dashboard');
 	},
 
-	signup: async ({ request, cookies }) => {
+	signup: async ({ request, cookies, locals }) => {
 		const formData = await request.formData();
 		const email = formData.get('email') as string;
 		const password = formData.get('password') as string;
@@ -61,7 +61,7 @@ export const actions: Actions = {
 			});
 		}
 
-		const result = await signup({ email, password, name, lastName }, cookies);
+		const result = await signup(locals.db, { email, password, name, lastName }, cookies);
 
 		if (!result.success) {
 			return fail(400, {

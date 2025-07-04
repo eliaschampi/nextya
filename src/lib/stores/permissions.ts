@@ -1,7 +1,6 @@
 // src/lib/stores/permission.ts
 import { writable, derived, type Readable, get } from 'svelte/store';
 import { browser } from '$app/environment';
-import { db } from '$lib/database';
 
 // Define the permission structure
 type Permission = {
@@ -53,9 +52,7 @@ const createPermissionsStore = () => {
 					localStorage.removeItem(PERMISSIONS_CACHE_EXPIRY_KEY);
 				}
 			}
-		} catch (error) {
-			console.error('Error loading cached permissions:', error);
-			// Clear potentially corrupted cache
+		} catch {
 			localStorage.removeItem(PERMISSIONS_CACHE_KEY);
 			localStorage.removeItem(PERMISSIONS_CACHE_EXPIRY_KEY);
 		}
@@ -73,11 +70,12 @@ const createPermissionsStore = () => {
 		isLoading = true;
 
 		try {
-			const data = await db
-				.selectFrom('permissions')
-				.selectAll()
-				.where('user_code', '=', userCode)
-				.execute();
+			const response = await fetch(`/api/users/${userCode}/permissions`);
+			if (!response.ok) {
+				throw new Error(`Failed to fetch permissions: ${response.statusText}`);
+			}
+
+			const { permissions: data } = await response.json();
 
 			// Update stores
 			currentUserCode.set(userCode);

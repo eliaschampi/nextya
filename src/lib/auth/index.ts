@@ -1,4 +1,4 @@
-import { db } from '$lib/database';
+import type { Database } from '$lib/database';
 import { hash, compare } from 'bcryptjs';
 import { createSession, destroySession } from './session';
 import type { Cookies } from '@sveltejs/kit';
@@ -18,7 +18,7 @@ export interface SignupData {
 /**
  * Authenticate user with email and password
  */
-export async function login(credentials: LoginCredentials, cookies: Cookies) {
+export async function login(db: Database, credentials: LoginCredentials, cookies: Cookies) {
 	try {
 		const { email, password } = credentials;
 
@@ -40,7 +40,7 @@ export async function login(credentials: LoginCredentials, cookies: Cookies) {
 		}
 
 		// Create session
-		const session = await createSession(user.code, cookies);
+		const session = await createSession(db, user.code, cookies);
 		if (!session) {
 			throw new Error('Falló al crear sesión');
 		}
@@ -61,7 +61,7 @@ export async function login(credentials: LoginCredentials, cookies: Cookies) {
 /**
  * Register a new user
  */
-export async function signup(data: SignupData, cookies: Cookies) {
+export async function signup(db: Database, data: SignupData, cookies: Cookies) {
 	try {
 		const { email, password, name, lastName } = data;
 
@@ -94,7 +94,7 @@ export async function signup(data: SignupData, cookies: Cookies) {
 			.executeTakeFirstOrThrow();
 
 		// Create session
-		const session = await createSession(newUser.code, cookies);
+		const session = await createSession(db, newUser.code, cookies);
 		if (!session) {
 			throw new Error('Failed to create session');
 		}
@@ -130,6 +130,7 @@ export async function logout(cookies: Cookies) {
  * Check if user has permission for an action
  */
 export async function hasPermission(
+	db: Database,
 	userCode: string,
 	entity: string,
 	action: string
@@ -153,6 +154,7 @@ export async function hasPermission(
  * Grant permission to user
  */
 export async function grantPermission(
+	db: Database,
 	userCode: string,
 	entity: string,
 	action: string
@@ -178,6 +180,7 @@ export async function grantPermission(
  * Revoke permission from user
  */
 export async function revokePermission(
+	db: Database,
 	userCode: string,
 	entity: string,
 	action: string

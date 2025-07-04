@@ -1,5 +1,5 @@
 // src/lib/csvProcessor/studentExport.ts
-import { db } from '$lib/database';
+import type { Database } from '$lib/database';
 import { sql } from 'kysely';
 import type { StudentEvalReport, StudentExportRow } from '$lib/types';
 import { generateExcelCsv, createCsvResponse } from './exportExcel';
@@ -11,6 +11,7 @@ import { generateExcelCsv, createCsvResponse } from './exportExcel';
  * @returns Datos de evaluaciones del estudiante o null si hay error
  */
 export async function fetchStudentEvalReports(
+	db: Database,
 	studentCode: string
 ): Promise<StudentEvalReport[] | null> {
 	try {
@@ -145,12 +146,13 @@ export function createStudentExportFilename(studentName: string, studentLastName
  * @returns Objeto Response con el CSV o null si hay error
  */
 export async function exportStudentEvaluationsToCsv(
+	db: Database,
 	studentCode: string,
 	studentName: string,
 	studentLastName: string
 ): Promise<Response | null> {
 	// Obtener datos de evaluaciones del estudiante
-	const reportsData = await fetchStudentEvalReports(studentCode);
+	const reportsData = await fetchStudentEvalReports(db, studentCode);
 	if (!reportsData || reportsData.length === 0) return null;
 
 	// Formatear datos para exportación
