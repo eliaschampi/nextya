@@ -5,7 +5,7 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals }) => {
 	// If user is already authenticated, redirect to dashboard
 	if (locals.user) {
-		throw redirect(303, '/dashboard');
+		throw redirect(303, '/');
 	}
 
 	return {};
@@ -33,6 +33,6 @@ export const actions: Actions = {
 			});
 		}
 
-		throw redirect(303, '/dashboard');
+		throw redirect(303, '/');
 	}
 };
