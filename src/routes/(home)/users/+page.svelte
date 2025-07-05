@@ -438,7 +438,7 @@
 					>
 						{#if user.photo_url}
 							<img
-								src={null}
+								src={user.photo_url}
 								alt="User profile"
 								class="object-cover w-full h-full"
 								loading="lazy"
