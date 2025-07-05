@@ -2,17 +2,10 @@ import type { Cookies } from '@sveltejs/kit';
 import { generateToken, verifyToken } from './jwt';
 import type { Database } from '$lib/database';
 import { cookieConfig } from '$lib/config/env';
-
-export interface User {
-	code: string;
-	email: string;
-	name: string | null;
-	last_name: string | null;
-	last_login: Date | null;
-}
+import type { Users } from '$lib/types';
 
 export interface Session {
-	user: User;
+	user: Users;
 	token: string;
 	expiresAt: number;
 }
@@ -31,7 +24,7 @@ export async function createSession(
 		// Get user from database
 		const user = await db
 			.selectFrom('users')
-			.select(['code', 'email', 'name', 'last_name', 'last_login'])
+			.selectAll()
 			.where('code', '=', userCode)
 			.executeTakeFirst();
 
@@ -90,7 +83,7 @@ export async function getSession(db: Database, cookies: Cookies): Promise<Sessio
 		// Get fresh user data
 		const user = await db
 			.selectFrom('users')
-			.select(['code', 'email', 'name', 'last_name', 'last_login'])
+			.selectAll()
 			.where('code', '=', payload.userCode)
 			.executeTakeFirst();
 

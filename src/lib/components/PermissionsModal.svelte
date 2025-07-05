@@ -6,9 +6,9 @@
 	import { entities } from '$lib/data/entities';
 	import { Shield } from 'lucide-svelte';
 	import PermissionTableRow from '$lib/components/PermissionTableRow.svelte';
-	import type { User } from '$lib/auth/session';
 	import { ACTIONS } from '$lib/types/permissions';
 	import type { Action, EntityPermissions } from '$lib/types/permissions';
+	import type { Users } from '$lib/types';
 
 	type PermissionRecord = Record<string, EntityPermissions>;
 
@@ -20,7 +20,7 @@
 	};
 
 	type PermissionProps = {
-		user: User;
+		user: Users;
 		open?: boolean;
 		onClose?: () => void;
 	};
