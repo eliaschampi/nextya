@@ -7,13 +7,6 @@ declare global {
 			db: Database;
 			user: User | null;
 			session: Session | null;
-			can: {
-				check: (entity: string, action: string) => Promise<boolean>;
-				read: (entity: string) => Promise<boolean>;
-				create: (entity: string) => Promise<boolean>;
-				update: (entity: string) => Promise<boolean>;
-				delete: (entity: string) => Promise<boolean>;
-			};
 		}
 		interface PageData {
 			user: User | null;
