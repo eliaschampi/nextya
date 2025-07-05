@@ -21,17 +21,7 @@ export const load: PageServerLoad = async ({ depends, locals }) => {
 			])
 			.execute();
 
-		// Transform to match expected format for UI compatibility
-		const transformedUsers = users.map((user) => ({
-			...user,
-			user_metadata: {
-				name: user.name,
-				last_name: user.last_name,
-				photo_url: user.photo_url
-			}
-		}));
-
-		return { users: transformedUsers, title: 'Usuarios' };
+		return { users, title: 'Usuarios' };
 	} catch {
 		return { users: [], title: 'Usuarios' };
 	}

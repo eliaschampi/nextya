@@ -7,8 +7,8 @@ export interface User {
 	code: string;
 	email: string;
 	name: string | null;
-	lastName: string | null;
-	lastLogin: Date | null;
+	last_name: string | null;
+	last_login: Date | null;
 }
 
 export interface Session {
@@ -60,13 +60,7 @@ export async function createSession(
 			.execute();
 
 		return {
-			user: {
-				code: user.code,
-				email: user.email,
-				name: user.name,
-				lastName: user.last_name,
-				lastLogin: user.last_login
-			},
+			user,
 			token,
 			expiresAt: payload.exp! * 1000
 		};
@@ -106,13 +100,7 @@ export async function getSession(db: Database, cookies: Cookies): Promise<Sessio
 		}
 
 		return {
-			user: {
-				code: user.code,
-				email: user.email,
-				name: user.name,
-				lastName: user.last_name,
-				lastLogin: user.last_login
-			},
+			user,
 			token,
 			expiresAt: payload.exp! * 1000
 		};

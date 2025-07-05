@@ -177,8 +177,8 @@
 		<div class="flex justify-between items-center mb-4">
 			<h3 class="text-lg font-bold flex items-center gap-2">
 				<Shield class="w-5 h-5 text-primary" />
-				Permisos de Usuario: {user.user_metadata?.name}
-				{user.user_metadata?.last_name}
+				Permisos de Usuario: {user.name}
+				{user.last_name}
 			</h3>
 		</div>
 

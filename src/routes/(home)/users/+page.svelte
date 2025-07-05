@@ -11,7 +11,6 @@
 	import { getInitials } from '$lib/utils/initialName';
 	import { formatDate } from '$lib/utils/formatDate';
 	import type { Users } from '$lib/types';
-	import type { User as SessionUser } from '$lib/auth/session';
 	import { permissionsStore } from '$lib/stores/permissions';
 	import { page } from '$app/state';
 
@@ -405,19 +404,7 @@
 <!-- Componente modal de permisos -->
 {#if selectedUser}
 	<PermissionsModal
-		user={{
-			id: selectedUser.code,
-			code: selectedUser.code,
-			email: selectedUser.email,
-			name: selectedUser.name || '',
-			lastName: selectedUser.last_name || '',
-			lastLogin: selectedUser.last_login,
-			user_metadata: {
-				name: selectedUser.name,
-				last_name: selectedUser.last_name,
-				photo_url: selectedUser.photo_url
-			}
-		} as SessionUser}
+		user={selectedUser}
 		open={showPermissionsModal}
 		onClose={() => (showPermissionsModal = false)}
 	/>

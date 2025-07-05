@@ -25,15 +25,15 @@
 
 	let isDarkTheme = $derived($theme === 'dark');
 
-	interface UserMetadata {
+	interface userData {
 		name?: string;
 		last_name?: string;
 		photo_url?: string;
 	}
 
-	let userMetadata = $state<UserMetadata>({
+	let userData = $state<userData>({
 		name: page.data.user?.name || '',
-		last_name: page.data.user?.lastName || ''
+		last_name: page.data.user?.last_name || ''
 	});
 
 	function toggleTheme() {
@@ -86,10 +86,10 @@
 						>
 							<div class="avatar">
 								<div class="w-6 rounded-full ring ring-primary ring-offset-base-100 ring-offset-1">
-									{#if userMetadata.photo_url}
+									{#if userData.photo_url}
 										<img
-											src={`/${userMetadata.photo_url}`}
-											alt={`Avatar de ${userMetadata.name} ${userMetadata.last_name}`}
+											src={`/${userData.photo_url}`}
+											alt={`Avatar de ${userData.name} ${userData.last_name}`}
 											class="mask mask-squircle"
 										/>
 									{:else}
@@ -97,7 +97,7 @@
 											class="flex items-center justify-center h-full bg-primary text-primary-content mask mask-squircle"
 										>
 											<span class="text-xs font-semibold">
-												{getInitials(userMetadata.name || '', userMetadata.last_name || '')}
+												{getInitials(userData.name || '', userData.last_name || '')}
 											</span>
 										</div>
 									{/if}
@@ -111,7 +111,7 @@
 							class="dropdown-content menu bg-base-200 rounded-box shadow w-52 mt-2 p-2 z-50"
 						>
 							<li class="menu-title pt-0 pb-2">
-								<span class="font-medium">{userMetadata.name} {userMetadata.last_name}</span>
+								<span class="font-medium">{userData.name} {userData.last_name}</span>
 							</li>
 							<li>
 								<a href="/profile" class="flex gap-2"><UserCog class="h-4 w-4" />Mi perfil</a>
@@ -244,10 +244,10 @@
 					<div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-base-100">
 						<div class="avatar">
 							<div class="w-9 rounded-full ring ring-primary ring-offset-base-100 ring-offset-1">
-								{#if userMetadata.photo_url}
+								{#if userData.photo_url}
 									<img
-										src={`/${userMetadata.photo_url}`}
-										alt={`Avatar de ${userMetadata.name} ${userMetadata.last_name}`}
+										src={`/${userData.photo_url}`}
+										alt={`Avatar de ${userData.name} ${userData.last_name}`}
 										class="mask mask-squircle"
 									/>
 								{:else}
@@ -255,7 +255,7 @@
 										class="flex items-center justify-center h-full bg-primary text-primary-content mask mask-squircle"
 									>
 										<span class="font-semibold">
-											{getInitials(userMetadata.name || '', userMetadata.last_name || '')}
+											{getInitials(userData.name || '', userData.last_name || '')}
 										</span>
 									</div>
 								{/if}
@@ -264,8 +264,8 @@
 						<div class="flex-1 min-w-0">
 							<a href="/profile">
 								<p class="text-sm font-medium truncate">
-									{userMetadata.name}
-									{userMetadata.last_name}
+									{userData.name}
+									{userData.last_name}
 								</p>
 								<p class="text-xs flex items-center">
 									<span class="w-1.5 h-1.5 bg-success rounded-full mr-1"></span>

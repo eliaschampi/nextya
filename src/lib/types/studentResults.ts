@@ -71,7 +71,7 @@ export interface StudentQuestionAnswer {
 	section_code: string | null;
 	section_name?: string | null;
 
-	// Question metadata
+	// Question data
 	order_in_eval: number; // Make required for consistency
 	correct_key: string; // Make required for consistency
 	score_percent?: number;

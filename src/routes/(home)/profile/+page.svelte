@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { User } from '$lib/auth/session';
 	import { getInitials } from '$lib/utils/initialName';
 	import {
 		UserRound,
@@ -9,14 +10,6 @@
 		BadgeCheck,
 		AlertCircle
 	} from 'lucide-svelte';
-
-	// Types
-	interface UserMetadata {
-		name?: string;
-		last_name?: string;
-		role?: string;
-		photo_url?: string;
-	}
 
 	interface LoginHistoryItem {
 		date: string;
@@ -36,17 +29,12 @@
 	const { data } = $props<{
 		data: {
 			levels: LevelWithUsers[];
-			user: {
-				user_metadata: UserMetadata;
-				email: string;
-				created_at: string;
-				last_sign_in_at: string;
-			};
+			user: User | null;
 		};
 	}>();
 
 	// User data
-	let userMetadata = $derived(data.user?.user_metadata || {});
+	let userData = $derived(data.user || {});
 	let userEmail = $derived(data.user?.email || '');
 	let createdAt = $derived(
 		data.user?.created_at
@@ -98,11 +86,11 @@
 						<div
 							class="w-32 h-32 rounded-full ring-4 ring-base-100 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center shadow-md"
 						>
-							{#if userMetadata.photo_url}
-								<img src={userMetadata.photo_url} alt="Foto de perfil" class="mask mask-circle" />
+							{#if userData.photo_url}
+								<img src={userData.photo_url} alt="Foto de perfil" class="mask mask-circle" />
 							{:else}
 								<span class="text-4xl font-bold text-primary">
-									{getInitials(userMetadata.name || '', userMetadata.last_name || '')}
+									{getInitials(userData.name || '', userData.last_name || '')}
 								</span>
 							{/if}
 						</div>
@@ -114,8 +102,8 @@
 			<div class="text-center mt-20 px-6 pb-6 space-y-4">
 				<div>
 					<h2 class="text-2xl font-bold">
-						{userMetadata.name || ''}
-						{userMetadata.last_name || ''}
+						{userData.name || ''}
+						{userData.last_name || ''}
 					</h2>
 					<div class="flex items-center justify-center gap-1.5 text-success mt-1.5">
 						<span class="w-2 h-2 bg-success rounded-full animate-pulse"></span>
@@ -135,7 +123,7 @@
 						</div>
 						<div class="stat-title text-xs opacity-70">Rol</div>
 						<div class="stat-value text-base font-medium">
-							{formatRole(userMetadata.role)}
+							{formatRole(userData.role)}
 						</div>
 					</div>
 
