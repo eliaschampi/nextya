@@ -1,5 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { login, signup } from '$lib/auth';
+import { login } from '$lib/auth';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -30,45 +30,6 @@ export const actions: Actions = {
 			return fail(400, {
 				error: result.error || 'Credenciales incorrectas',
 				email
-			});
-		}
-
-		throw redirect(303, '/dashboard');
-	},
-
-	signup: async ({ request, cookies, locals }) => {
-		const formData = await request.formData();
-		const email = formData.get('email') as string;
-		const password = formData.get('password') as string;
-		const name = formData.get('name') as string;
-		const lastName = formData.get('lastName') as string;
-
-		if (!email || !password) {
-			return fail(400, {
-				error: 'Email y contraseña son requeridos',
-				email,
-				name,
-				lastName
-			});
-		}
-
-		if (password.length < 6) {
-			return fail(400, {
-				error: 'La contraseña debe tener al menos 6 caracteres',
-				email,
-				name,
-				lastName
-			});
-		}
-
-		const result = await signup(locals.db, { email, password, name, lastName }, cookies);
-
-		if (!result.success) {
-			return fail(400, {
-				error: result.error || 'Error al crear la cuenta',
-				email,
-				name,
-				lastName
 			});
 		}
 
