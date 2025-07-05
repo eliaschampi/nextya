@@ -58,7 +58,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
 
 	// Redirect to dashboard if authenticated and on auth page
 	if (event.locals.user && isAuthPage) {
-		throw redirect(303, '/dashboard');
+		throw redirect(303, '/');
 	}
 
 	return resolve(event);

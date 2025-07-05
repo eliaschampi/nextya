@@ -82,8 +82,7 @@
 			}
 
 			return defaultColor;
-		} catch (e) {
-			console.error('Error converting color:', e);
+		} catch {
 			return defaultColor;
 		}
 	}
