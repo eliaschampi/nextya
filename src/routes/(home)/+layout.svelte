@@ -20,6 +20,8 @@
 	import { getInitials } from '$lib/utils/initialName';
 	import { theme } from '$lib/stores/theme';
 	import Background from '$lib/components/background.svelte';
+	import { permissionsStore } from '$lib/stores/permissions';
+	import { onMount, onDestroy } from 'svelte';
 
 	let { children } = $props();
 
@@ -39,6 +41,18 @@
 	function toggleTheme() {
 		theme.toggle();
 	}
+
+	// Initialize permissions when user is available
+	onMount(() => {
+		if (page.data.user?.code) {
+			permissionsStore.fetchPermissions(page.data.user.code);
+		}
+	});
+
+	// Clear permissions when leaving
+	onDestroy(() => {
+		permissionsStore.clearPermissions();
+	});
 </script>
 
 <svelte:head>

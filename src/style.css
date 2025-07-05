@@ -2,31 +2,27 @@
 
 @plugin "daisyui" {
 	themes: false;
-	exclude: rootscrollgutter;
+	exclude: scrollbar;
 }
 
-/* Dark Theme - Refined for better consistency */
+/* Dark Theme - Modern DaisyUI 5 Structure */
 @plugin "daisyui/theme" {
 	name: 'dark';
 	default: true;
 	prefersdark: true;
 	color-scheme: 'dark';
-	/* Base colors - Refined dark blue palette */
-	--color-base-100: oklch(12% 0.025 265);
-	/* Deep dark blue background */
-	--color-base-200: oklch(16% 0.02 265);
-	/* Slightly lighter for cards and elevated elements */
-	--color-base-300: oklch(20% 0.015 265);
-	/* For borders and dividers */
-	--color-base-content: oklch(92% 0.01 265);
-	/* High contrast text for readability */
-	--color-base-content-rgb: 235, 235, 240;
 
-	/* Primary - Vibrant teal that pops in dark mode */
+	/* Base colors - Professional dark palette with subtle blue undertones */
+	--color-base-100: oklch(12% 0.025 265);
+	--color-base-200: oklch(16% 0.02 265);
+	--color-base-300: oklch(20% 0.015 265);
+	--color-base-content: oklch(92% 0.01 265);
+
+	/* Primary - Vibrant teal for modern appeal */
 	--color-primary: oklch(65% 0.15 180);
 	--color-primary-content: oklch(98% 0.005 180);
 
-	/* Secondary - Warm amber for contrast with primary */
+	/* Secondary - Warm amber for excellent contrast */
 	--color-secondary: oklch(60% 0.12 60);
 	--color-secondary-content: oklch(98% 0.005 60);
 
@@ -34,56 +30,51 @@
 	--color-accent: oklch(60% 0.14 300);
 	--color-accent-content: oklch(98% 0.005 300);
 
-	/* Neutral - Subtle blue-gray */
+	/* Neutral - Balanced blue-gray */
 	--color-neutral: oklch(25% 0.02 265);
 	--color-neutral-content: oklch(92% 0.01 265);
 
-	/* Semantic colors - More vibrant for better visibility in dark mode */
+	/* Semantic colors - Optimized for dark mode visibility */
 	--color-info: oklch(60% 0.14 220);
 	--color-info-content: oklch(98% 0.005 220);
-
 	--color-success: oklch(65% 0.15 150);
 	--color-success-content: oklch(98% 0.005 150);
-
 	--color-warning: oklch(65% 0.15 80);
 	--color-warning-content: oklch(98% 0.005 80);
-
 	--color-error: oklch(60% 0.18 10);
 	--color-error-content: oklch(98% 0.005 10);
 
-	/* UI Properties */
+	/* DaisyUI 5 Design System Variables */
 	--radius-selector: 0.5rem;
 	--radius-field: 0.375rem;
 	--radius-box: 1rem;
-	--size-selector: 0.25rem;
-	--size-field: 0.25rem;
+	--size-selector: 1rem;
+	--size-field: 1rem;
 	--border: 1px;
+
+	/* DaisyUI 5 Effects */
 	--depth: 1;
 	--noise: 0;
 }
 
-/* Light Theme - Refined for better consistency with dark theme */
+/* Light Theme - Modern DaisyUI 5 Structure */
 @plugin "daisyui/theme" {
 	name: 'light';
 	default: false;
 	prefersdark: false;
 	color-scheme: 'light';
-	/* Base colors - Soft blue-white palette */
-	--color-base-100: oklch(98% 0.01 265);
-	/* Almost white with hint of blue */
-	--color-base-200: oklch(95% 0.015 265);
-	/* Slightly darker for cards */
-	--color-base-300: oklch(90% 0.02 265);
-	/* For borders and dividers */
-	--color-base-content: oklch(20% 0.03 265);
-	/* Dark text for readability */
-	--color-base-content-rgb: 40, 40, 60;
 
-	/* Primary - Same hue as dark theme but adjusted for light background */
+	/* Base colors - Clean, professional light palette */
+	--color-base-100: oklch(98% 0.01 265);
+	--color-base-200: oklch(95% 0.015 265);
+	--color-base-300: oklch(90% 0.02 265);
+	--color-base-content: oklch(20% 0.03 265);
+
+	/* Primary - Consistent with dark theme but optimized for light */
 	--color-primary: oklch(55% 0.18 180);
 	--color-primary-content: oklch(98% 0.005 180);
 
-	/* Secondary - Warm amber matching dark theme */
+	/* Secondary - Warm amber for excellent contrast */
 	--color-secondary: oklch(55% 0.15 60);
 	--color-secondary-content: oklch(98% 0.005 60);
 
@@ -95,35 +86,34 @@
 	--color-neutral: oklch(75% 0.03 265);
 	--color-neutral-content: oklch(20% 0.03 265);
 
-	/* Semantic colors - Adjusted for light mode visibility */
+	/* Semantic colors - Optimized for light mode */
 	--color-info: oklch(55% 0.16 220);
 	--color-info-content: oklch(98% 0.005 220);
-
 	--color-success: oklch(55% 0.17 150);
 	--color-success-content: oklch(98% 0.005 150);
-
 	--color-warning: oklch(60% 0.17 80);
 	--color-warning-content: oklch(20% 0.03 80);
-
 	--color-error: oklch(60% 0.2 10);
 	--color-error-content: oklch(98% 0.005 10);
 
-	/* UI Properties - Matching with dark theme for consistency */
+	/* DaisyUI 5 Design System Variables */
 	--radius-selector: 0.5rem;
 	--radius-field: 0.375rem;
 	--radius-box: 1rem;
-	--size-selector: 0.25rem;
-	--size-field: 0.25rem;
+	--size-selector: 1rem;
+	--size-field: 1rem;
 	--border: 1px;
+
+	/* DaisyUI 5 Effects */
 	--depth: 0;
 	--noise: 0;
-
-	/* Custom shadow properties for light theme */
-	--shadow-color: 220 3% 15%;
-	--shadow-strength: 1%;
 }
 
-/* Enhanced form elements with consistent styling */
+/* =============================================================================
+   MODERN DAISYUI 5 COMPONENT ENHANCEMENTS
+   ============================================================================= */
+
+/* Form Elements - Enhanced with DaisyUI 5 patterns */
 .input,
 .textarea,
 .select {
@@ -132,61 +122,66 @@
 		outline-width: 2px;
 		outline-style: solid;
 		outline-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
-		box-shadow: 0 0 0 1px var(--color-primary-focus, var(--color-primary));
+		box-shadow: 0 0 0 1px var(--color-primary);
 		border-color: var(--color-primary);
-		transition: all 0.2s ease;
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 }
 
-/* Button enhancements */
+/* Buttons - Modern DaisyUI 5 styling with soft variants */
 .btn {
 	font-weight: 500;
 	letter-spacing: 0.01em;
-	transition: all 0.2s ease;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
 	&:active {
 		transform: translateY(1px);
 	}
 
+	/* Primary button enhancements */
 	&.btn-primary {
-		&:hover {
+		&:hover:not(:disabled) {
 			box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 30%, transparent);
 		}
 	}
 
+	/* Secondary button enhancements */
 	&.btn-secondary {
-		&:hover {
+		&:hover:not(:disabled) {
 			box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-secondary) 30%, transparent);
 		}
 	}
 
+	/* Accent button enhancements */
 	&.btn-accent {
-		&:hover {
+		&:hover:not(:disabled) {
 			box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 30%, transparent);
 		}
 	}
 }
 
-/* Card enhancements */
+/* Cards - Modern elevation and interaction */
 .card {
 	transition:
-		transform 0.2s ease,
-		box-shadow 0.2s ease;
+		transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+		box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
 	&.card-hover:hover {
 		transform: translateY(-2px);
-		box-shadow: 0 10px 25px -5px color-mix(in srgb, var(--color-base-content) 2%, transparent);
+		box-shadow: 0 10px 25px -5px color-mix(in srgb, var(--color-base-content) 8%, transparent);
 	}
 }
 
-/* Enhanced modals */
+/* Modals - Enhanced with modern backdrop and animations */
 .modal {
 	backdrop-filter: blur(12px);
 
 	.modal-box {
 		border: 1px solid var(--color-base-300);
-		box-shadow: 0 25px 50px -12px color-mix(in srgb, var(--color-base-content) 5%, transparent);
-		transition: transform 0.3s ease;
+		box-shadow:
+			0 25px 50px -12px color-mix(in srgb, var(--color-base-content) 8%, transparent),
+			0 0 0 1px color-mix(in srgb, var(--color-base-content) 5%, transparent);
+		transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 		transform: scale(0.95);
 	}
 
@@ -195,7 +190,7 @@
 	}
 }
 
-/* Table enhancements */
+/* Tables - Professional styling with modern patterns */
 .table {
 	--border-color: color-mix(in srgb, var(--color-base-content) 10%, transparent);
 
@@ -203,10 +198,12 @@
 		font-weight: 600;
 		letter-spacing: 0.02em;
 		background-color: color-mix(in srgb, var(--color-base-200) 80%, var(--color-primary) 5%);
+		border-bottom: 2px solid var(--color-primary);
 	}
 
 	tr.hover:hover {
 		background-color: color-mix(in srgb, var(--color-primary) 5%, var(--color-base-100));
+		transition: background-color 0.15s ease;
 	}
 
 	&.table-zebra tbody tr:nth-child(even) {
@@ -214,21 +211,69 @@
 	}
 }
 
-/* Badge enhancements */
+/* Badges - Modern typography and spacing */
 .badge {
 	font-weight: 500;
 	letter-spacing: 0.02em;
+
+	/* DaisyUI 5 soft variant support */
+	&.badge-soft {
+		background-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
+		color: var(--color-primary);
+		border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+	}
 }
 
-/* Tabs enhancements */
+/* Tabs - Enhanced with modern interactions */
 .tabs {
 	.tab {
 		font-weight: 500;
 		letter-spacing: 0.01em;
-		transition: all 0.2s ease;
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
 		&.tab-active:not(.tab-disabled) {
 			border-color: var(--color-primary);
+			color: var(--color-primary);
+		}
+
+		&:hover:not(.tab-disabled):not(.tab-active) {
+			background-color: color-mix(in srgb, var(--color-primary) 5%, transparent);
 		}
 	}
+}
+
+/* =============================================================================
+   DAISYUI 5 MODERN UTILITIES
+   ============================================================================= */
+
+/* Glass effect - Enhanced for DaisyUI 5 */
+.glass {
+	backdrop-filter: blur(16px) saturate(180%);
+	background-color: color-mix(in srgb, var(--color-base-100) 70%, transparent);
+	border: 1px solid color-mix(in srgb, var(--color-base-content) 10%, transparent);
+}
+
+/* Loading states - Modern skeleton patterns */
+.loading-skeleton {
+	background: linear-gradient(
+		90deg,
+		color-mix(in srgb, var(--color-base-200) 80%, transparent) 25%,
+		color-mix(in srgb, var(--color-base-300) 60%, transparent) 50%,
+		color-mix(in srgb, var(--color-base-200) 80%, transparent) 75%
+	);
+	background-size: 200% 100%;
+	animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+	0% { background-position: 200% 0; }
+	100% { background-position: -200% 0; }
+}
+
+/* Focus states - Consistent across all interactive elements */
+.focus-visible,
+*:focus-visible {
+	outline: 2px solid var(--color-primary);
+	outline-offset: 2px;
+	border-radius: var(--radius-field);
 }

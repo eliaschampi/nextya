@@ -31,11 +31,10 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS permissions (
     code UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_code UUID NOT NULL REFERENCES users(code) ON DELETE CASCADE,
-    permission_type VARCHAR(50) NOT NULL,
-    resource_type VARCHAR(50),
-    resource_code UUID,
-    granted_by UUID REFERENCES users(code),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    entity VARCHAR(50) NOT NULL,
+    action VARCHAR(20) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_code, entity, action)
 );
 
 -- Levels table

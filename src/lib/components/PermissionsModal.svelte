@@ -16,7 +16,7 @@
 		code: string;
 		user_code: string;
 		entity: string;
-		user_action: string;
+		action: string;
 	};
 
 	type PermissionProps = {
@@ -79,7 +79,7 @@
 				if (!permissionsByEntity[p.entity]) {
 					permissionsByEntity[p.entity] = [];
 				}
-				permissionsByEntity[p.entity].push(p.user_action);
+				permissionsByEntity[p.entity].push(p.action);
 			});
 
 			// Convert to our permission record format
