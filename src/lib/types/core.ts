@@ -109,7 +109,7 @@ export interface RegisterStudent {
 }
 
 export interface SimpleUser {
-	id: string;
+	code: string;
 	name: string;
 	last_name: string;
 }

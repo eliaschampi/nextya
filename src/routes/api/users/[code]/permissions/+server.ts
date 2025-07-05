@@ -7,19 +7,19 @@ import type { RequestHandler } from './$types';
  * ARCHITECTURE PRINCIPLE: Direct Kysely database access for simplicity and consistency
  */
 
-// GET /api/users/[id]/permissions
+// GET /api/users/[code]/permissions
 export const GET: RequestHandler = async ({ params, locals }) => {
-	const userId = params.id;
+	const userCode = params.code;
 
-	if (!userId) {
-		return json({ error: 'Id de usuario requerido' }, { status: 400 });
+	if (!userCode) {
+		return json({ error: 'Codigo de usuario requerido' }, { status: 400 });
 	}
 
 	try {
 		const permissions = await locals.db
 			.selectFrom('permissions')
 			.selectAll()
-			.where('user_code', '=', userId)
+			.where('user_code', '=', userCode)
 			.execute();
 
 		return json({ permissions: permissions || [] });
@@ -29,12 +29,12 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	}
 };
 
-// POST /api/users/[id]/permissions
+// POST /api/users/[code]/permissions
 export const POST: RequestHandler = async ({ params, request, locals }) => {
-	const userId = params.id;
+	const userCode = params.code;
 
-	if (!userId) {
-		return json({ error: 'Id de usuario requerido' }, { status: 400 });
+	if (!userCode) {
+		return json({ error: 'Codigo de usuario requerido' }, { status: 400 });
 	}
 
 	try {
@@ -48,13 +48,13 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		// First delete all existing permissions (except users entity)
 		await locals.db
 			.deleteFrom('permissions')
-			.where('user_code', '=', userId)
+			.where('user_code', '=', userCode)
 			.where('entity', '!=', 'users')
 			.execute();
 
 		// Map permissions to the new structure
 		const permissionsToInsert = permissions.map((p) => ({
-			user_code: userId,
+			user_code: userCode,
 			entity: p.entity,
 			action: p.user_action
 		}));

@@ -19,7 +19,7 @@
 	let selectedLevel = $state<Levels | null>(null);
 	let users = $state<SimpleUser[]>([]);
 	let selectedUsers = $state<string[]>([]);
-	let selectedUserId = $state('');
+	let selecteduserCode = $state('');
 	const modalities = getModalityTypes();
 
 	const { data } = $props<{ data: { levels: Levels[] } }>();
@@ -113,30 +113,30 @@
 		selectedLevel = null;
 		message = '';
 		selectedUsers = [];
-		selectedUserId = '';
+		selecteduserCode = '';
 		const form = modal?.querySelector('form');
 		if (form) form.reset();
 	}
 
 	// Funciones para gestionar usuarios
 	function addUser() {
-		if (selectedUserId && !selectedUsers.includes(selectedUserId)) {
-			selectedUsers = [...selectedUsers, selectedUserId];
-			selectedUserId = '';
+		if (selecteduserCode && !selectedUsers.includes(selecteduserCode)) {
+			selectedUsers = [...selectedUsers, selecteduserCode];
+			selecteduserCode = '';
 		}
 	}
 
-	function removeUser(userId: string) {
-		selectedUsers = selectedUsers.filter((id) => id !== userId);
+	function removeUser(userCode: string) {
+		selectedUsers = selectedUsers.filter((code) => code !== userCode);
 	}
 
-	function getUserName(userId: string) {
-		const user = users.find((u) => u.id === userId);
-		return user ? `${user.name} ${user.last_name}` : userId;
+	function getUserName(userCode: string) {
+		const user = users.find((u) => u.code === userCode);
+		return user ? `${user.name} ${user.last_name}` : userCode;
 	}
 
 	function getAvailableUsers() {
-		return users.filter((user) => !selectedUsers.includes(user.id));
+		return users.filter((user) => !selectedUsers.includes(user.code));
 	}
 
 	onMount(() => {
@@ -222,19 +222,19 @@
 					<div class="flex gap-2">
 						<select
 							id="users"
-							bind:value={selectedUserId}
+							bind:value={selecteduserCode}
 							class="select select-sm flex-1 validator"
 						>
 							<option value="">Selecciona un usuario</option>
-							{#each getAvailableUsers() as user (user.id)}
-								<option value={user.id}>{user.name} {user.last_name}</option>
+							{#each getAvailableUsers() as user (user.code)}
+								<option value={user.code}>{user.name} {user.last_name}</option>
 							{/each}
 						</select>
 						<button
 							type="button"
 							class="btn btn-sm btn-primary"
 							onclick={addUser}
-							disabled={!selectedUserId}
+							disabled={!selecteduserCode}
 						>
 							<Plus class="w-4 h-4" />
 						</button>
@@ -243,14 +243,14 @@
 					<!-- Lista de usuarios seleccionados -->
 					{#if selectedUsers.length > 0}
 						<div class="mt-2 space-y-2">
-							{#each selectedUsers as userId (userId)}
+							{#each selectedUsers as userCode (userCode)}
 								<div class="flex justify-between items-center bg-base-100 p-2 rounded-md">
-									<span class="text-sm">{getUserName(userId)}</span>
-									<input type="hidden" name="selectedUsers" value={userId} />
+									<span class="text-sm">{getUserName(userCode)}</span>
+									<input type="hidden" name="selectedUsers" value={userCode} />
 									<button
 										type="button"
 										class="btn btn-xs btn-ghost text-error"
-										onclick={() => removeUser(userId)}
+										onclick={() => removeUser(userCode)}
 									>
 										<Minus class="w-3 h-3" />
 									</button>

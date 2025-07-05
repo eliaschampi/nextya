@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ depends, locals }) => {
 		const users = await locals.db
 			.selectFrom('users')
 			.select([
-				'code as id',
+				'code',
 				'email',
 				'name',
 				'last_name',

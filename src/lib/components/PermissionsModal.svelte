@@ -19,15 +19,13 @@
 		user_action: string;
 	};
 
-	const {
-		user,
-		open = false,
-		onClose = () => {}
-	} = $props<{
+	type PermissionProps = {
 		user: User;
 		open?: boolean;
 		onClose?: () => void;
-	}>();
+	};
+
+	const { user, open = false, onClose = () => {} }: PermissionProps = $props();
 
 	// State management
 	let modal: HTMLDialogElement | null = $state(null);
@@ -59,13 +57,13 @@
 
 	// Load permissions from API
 	async function loadPermissions() {
-		if (!user?.id) return;
+		if (!user.code) return;
 
 		loading = true;
 		error = '';
 
 		try {
-			const response = await fetch(`/api/users/${user.id}/permissions`);
+			const response = await fetch(`/api/users/${user.code}/permissions`);
 			if (!response.ok) {
 				const errorData = await response.json();
 				throw new Error(errorData.message || 'Error fetching permissions');
@@ -131,7 +129,7 @@
 				});
 			});
 
-			const response = await fetch(`/api/users/${user.id}/permissions`, {
+			const response = await fetch(`/api/users/${user.code}/permissions`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ permissions: permissionsToSave })
