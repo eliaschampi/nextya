@@ -17,8 +17,6 @@
  * - Type generation: Automatic after migrations or on-demand
  */
 
-import { Kysely, PostgresDialect } from 'kysely';
-import { Pool } from 'pg';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { writeFile } from 'fs/promises';
@@ -44,11 +42,7 @@ const migrationRunner = new MigrationRunner(db);
 async function checkConnection() {
 	console.log('🔍 Checking database connection...');
 	try {
-		await db
-			.selectFrom('users' as any)
-			.select('code')
-			.limit(1)
-			.execute();
+		await db.selectFrom('users').select('code').limit(1).execute();
 		console.log('✅ Database connection successful');
 		return true;
 	} catch (error) {
@@ -253,7 +247,7 @@ async function main() {
 	// Clean up database connection
 	try {
 		await db.destroy();
-	} catch (error) {
+	} catch {
 		// Ignore cleanup errors
 	}
 }

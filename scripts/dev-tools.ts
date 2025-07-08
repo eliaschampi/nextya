@@ -45,7 +45,9 @@ async function healthCheck(): Promise<void> {
 
 		for (const table of tables) {
 			try {
-				const result = await sql<{ count: number }>`SELECT COUNT(*) as count FROM ${sql.table(table)}`.execute(db);
+				const result = await sql<{
+					count: number;
+				}>`SELECT COUNT(*) as count FROM ${sql.table(table)}`.execute(db);
 				const count = result.rows[0]?.count || 0;
 				console.log(`  ${table.padEnd(12)}: ${count.toString().padStart(6)} records`);
 			} catch {

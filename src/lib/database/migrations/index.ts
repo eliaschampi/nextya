@@ -23,8 +23,8 @@ import { join } from 'path';
 export interface Migration {
 	id: string;
 	name: string;
-	up: (db: Kysely<any>) => Promise<void>;
-	down: (db: Kysely<any>) => Promise<void>;
+	up: (db: Kysely<Database>) => Promise<void>;
+	down: (db: Kysely<Database>) => Promise<void>;
 }
 
 export interface MigrationRecord {
@@ -59,11 +59,11 @@ export class MigrationRunner {
 	async getExecutedMigrations(): Promise<MigrationRecord[]> {
 		try {
 			return (await this.db
-				.selectFrom('_migrations' as any)
+				.selectFrom('_migrations' as DB)
 				.selectAll()
 				.orderBy('executed_at', 'asc')
 				.execute()) as MigrationRecord[];
-		} catch (error) {
+		} catch {
 			// Table doesn't exist yet
 			return [];
 		}
@@ -74,7 +74,7 @@ export class MigrationRunner {
 	 */
 	async getNextBatch(): Promise<number> {
 		const result = (await this.db
-			.selectFrom('_migrations' as any)
+			.selectFrom('_migrations')
 			.select(sql<number>`COALESCE(MAX(batch), 0) + 1`.as('next_batch'))
 			.executeTakeFirst()) as { next_batch: number } | undefined;
 
@@ -148,7 +148,7 @@ export class MigrationRunner {
 				await migration.up(this.db);
 
 				await this.db
-					.insertInto('_migrations' as any)
+					.insertInto('_migrations' as DB)
 					.values({
 						id: migration.id,
 						name: migration.name,
@@ -204,7 +204,7 @@ export class MigrationRunner {
 				await migration.down(this.db);
 
 				await this.db
-					.deleteFrom('_migrations' as any)
+					.deleteFrom('_migrations' as DB)
 					.where('id', '=', migration.id)
 					.execute();
 

@@ -12,7 +12,7 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { readFile, writeFile, copyFile, access } from 'fs/promises';
+import { readFile, copyFile, access } from 'fs/promises';
 import { join } from 'path';
 import type { Database } from './index';
 
@@ -41,7 +41,7 @@ export class TypeGenerator {
 
 			// Check for foreign key consistency
 			for (const table of tables) {
-				const columns = await this.db.introspection.getMetadata({ table: table.name });
+				await this.db.introspection.getMetadata({ table: table.name });
 				// Add specific validation logic here
 			}
 
@@ -70,7 +70,7 @@ export class TypeGenerator {
 			await copyFile(typesPath, backupPath);
 			console.log(`📦 Types backed up to: types.backup.${timestamp}.ts`);
 			return backupPath;
-		} catch (error) {
+		} catch {
 			// File doesn't exist, no backup needed
 			return null;
 		}
@@ -218,7 +218,7 @@ export class TypeGenerator {
 				lastGenerated: stats.mtime,
 				fileSize: stats.size
 			};
-		} catch (error) {
+		} catch {
 			return {
 				tablesCount: 0,
 				interfacesCount: 0,
