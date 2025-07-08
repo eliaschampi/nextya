@@ -7,7 +7,7 @@ config();
 
 // Configuration for kysely-codegen CLI
 // Usage: npx kysely-codegen --config-file kysely.config.ts
-export const kyselyConfig = {
+export default {
 	dialect: 'postgres' as const,
 	url: `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'postgres'}@${process.env.DB_HOST || 'localhost'}:5432/${process.env.DB_NAME || 'nextya'}`,
 	outFile: 'src/lib/database/types.ts',

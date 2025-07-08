@@ -38,7 +38,7 @@ logs() { docker-compose -f $COMPOSE_FILE logs -f; }
 shell() { docker exec -it ${PROJECT_NAME}_app /bin/sh; }
 npm() { shift; docker exec -it ${PROJECT_NAME}_app npm "$@"; }
 db_shell() { docker exec -it ${PROJECT_NAME}_postgres psql -U postgres -d nextya; }
-db_migrate() { docker exec -it ${PROJECT_NAME}_app npm run migrate:up; print_success "Migrations completed"; }
+db_migrate() { docker exec -it ${PROJECT_NAME}_app npm run db:migrate; print_success "Migrations completed"; }
 
 # Main
 check_docker

@@ -1245,11 +1245,12 @@ GRANT SELECT ON public.student_register_results TO postgres;
 -- INITIAL DATA (Optional)
 -- =====================================================
 
--- Insert a default super admin user (password: 'admin123' - change in production!)
+-- Insert a default super admin user (password: 'admin123' - MUST CHANGE IN PRODUCTION!)
+-- TODO: Replace this with a proper bcrypt hash before deploying to production
 INSERT INTO public.users (email, password_hash, is_super_admin, is_email_verified, name, last_name)
 VALUES (
     'admin@nextya.com',
-    '$2b$10$rOzJqQqQqQqQqQqQqQqQqOzJqQqQqQqQqQqQqQqQqOzJqQqQqQqQqQ', -- bcrypt hash for 'admin123'
+    '$2b$10$PLACEHOLDER_HASH_CHANGE_IN_PRODUCTION_PLACEHOLDER_HASH', -- PLACEHOLDER - Generate real bcrypt hash for 'admin123' or your chosen password
     true,
     true,
     'Super',
