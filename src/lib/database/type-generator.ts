@@ -40,10 +40,9 @@ export class TypeGenerator {
 			}
 
 			// Check for foreign key consistency
-			for (const table of tables) {
-				await this.db.introspection.getMetadata({ table: table.name });
-				// Add specific validation logic here
-			}
+			// Note: getMetadata() is deprecated, but we'll keep basic validation
+			await this.db.introspection.getMetadata();
+			// Add specific validation logic here if needed
 
 			// Check for proper indexes on foreign keys
 			// This would require custom queries to check index existence
@@ -116,7 +115,11 @@ export class TypeGenerator {
 	/**
 	 * Generate types with enhanced error handling and validation
 	 */
-	async generateTypes(): Promise<{ success: boolean; backupPath?: string; issues?: string[] }> {
+	async generateTypes(): Promise<{
+		success: boolean;
+		backupPath?: string | null;
+		issues?: string[];
+	}> {
 		console.log('🔍 Validating database schema...');
 
 		// Step 1: Validate schema
@@ -159,7 +162,8 @@ export class TypeGenerator {
 				}
 			}
 
-			return { success: false, backupPath, issues: [error.toString()] };
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			return { success: false, backupPath, issues: [errorMessage] };
 		}
 
 		// Step 4: Validate generated types

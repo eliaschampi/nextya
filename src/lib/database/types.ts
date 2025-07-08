@@ -135,3 +135,11 @@ export interface DB {
 	students: Students;
 	users: Users;
 }
+
+// Migration system table interface (internal use)
+export interface MigrationsTable {
+	id: string;
+	name: string;
+	executed_at: Date;
+	batch: number;
+}

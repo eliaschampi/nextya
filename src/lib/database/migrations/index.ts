@@ -16,15 +16,15 @@
  */
 
 import { Kysely, sql } from 'kysely';
-import type { Database } from '../index';
+import type { Database, DB, MigrationsTable } from '../index';
 import { readdir } from 'fs/promises';
 import { join } from 'path';
 
 export interface Migration {
 	id: string;
 	name: string;
-	up: (db: Kysely<Database>) => Promise<void>;
-	down: (db: Kysely<Database>) => Promise<void>;
+	up: (db: Database) => Promise<void>;
+	down: (db: Database) => Promise<void>;
 }
 
 export interface MigrationRecord {
@@ -32,6 +32,33 @@ export interface MigrationRecord {
 	name: string;
 	executed_at: Date;
 	batch: number;
+}
+
+// Extended DB interface that includes the migrations table
+interface ExtendedDB extends DB {
+	_migrations: MigrationsTable;
+}
+
+// Custom error types for better error handling
+export class MigrationError extends Error {
+	constructor(
+		message: string,
+		public migrationId?: string,
+		public cause?: Error
+	) {
+		super(message);
+		this.name = 'MigrationError';
+	}
+}
+
+export class MigrationValidationError extends Error {
+	constructor(
+		message: string,
+		public issues: string[]
+	) {
+		super(message);
+		this.name = 'MigrationValidationError';
+	}
 }
 
 export class MigrationRunner {
@@ -58,8 +85,8 @@ export class MigrationRunner {
 	 */
 	async getExecutedMigrations(): Promise<MigrationRecord[]> {
 		try {
-			return (await this.db
-				.selectFrom('_migrations' as DB)
+			return (await (this.db as unknown as Kysely<ExtendedDB>)
+				.selectFrom('_migrations')
 				.selectAll()
 				.orderBy('executed_at', 'asc')
 				.execute()) as MigrationRecord[];
@@ -73,7 +100,7 @@ export class MigrationRunner {
 	 * Get the next batch number
 	 */
 	async getNextBatch(): Promise<number> {
-		const result = (await this.db
+		const result = (await (this.db as unknown as Kysely<ExtendedDB>)
 			.selectFrom('_migrations')
 			.select(sql<number>`COALESCE(MAX(batch), 0) + 1`.as('next_batch'))
 			.executeTakeFirst()) as { next_batch: number } | undefined;
@@ -147,8 +174,8 @@ export class MigrationRunner {
 			try {
 				await migration.up(this.db);
 
-				await this.db
-					.insertInto('_migrations' as DB)
+				await (this.db as unknown as Kysely<ExtendedDB>)
+					.insertInto('_migrations')
 					.values({
 						id: migration.id,
 						name: migration.name,
@@ -159,8 +186,13 @@ export class MigrationRunner {
 
 				console.log(`  ✅ Migration completed: ${migration.name}`);
 			} catch (error) {
-				console.error(`  ❌ Migration failed: ${migration.name}`, error);
-				throw error;
+				const migrationError = new MigrationError(
+					`Migration failed: ${migration.name}`,
+					migration.id,
+					error instanceof Error ? error : new Error(String(error))
+				);
+				console.error(`  ❌ ${migrationError.message}`, migrationError.cause);
+				throw migrationError;
 			}
 		}
 
@@ -203,15 +235,20 @@ export class MigrationRunner {
 			try {
 				await migration.down(this.db);
 
-				await this.db
-					.deleteFrom('_migrations' as DB)
+				await (this.db as unknown as Kysely<ExtendedDB>)
+					.deleteFrom('_migrations')
 					.where('id', '=', migration.id)
 					.execute();
 
 				console.log(`  ✅ Migration rolled back: ${migration.name}`);
 			} catch (error) {
-				console.error(`  ❌ Rollback failed: ${migration.name}`, error);
-				throw error;
+				const rollbackError = new MigrationError(
+					`Rollback failed: ${migration.name}`,
+					migration.id,
+					error instanceof Error ? error : new Error(String(error))
+				);
+				console.error(`  ❌ ${rollbackError.message}`, rollbackError.cause);
+				throw rollbackError;
 			}
 		}
 

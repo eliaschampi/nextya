@@ -145,9 +145,40 @@ npm run db:migrate
 - ✅ **Type Generation**: Automatic TypeScript type updates
 - ✅ **Error Handling**: Comprehensive error handling and recovery
 
-## 📝 Type System
+## 📝 Database Layer & Type System
 
-### **Automatic Generation**
+### **Database Architecture**
+
+The database layer provides a clean, type-safe interface using Kysely ORM with PostgreSQL:
+
+#### **Core Components**
+1. **Database Factory** (`src/lib/database/index.ts`) - Creates configured Kysely instances with connection pooling
+2. **Type System** (`src/lib/database/types.ts`) - Auto-generated TypeScript interfaces for type-safe operations
+3. **Migration System** (`src/lib/database/migrations/index.ts`) - Version-controlled schema changes with rollback capabilities
+4. **Type Generator** (`src/lib/database/type-generator.ts`) - Automated type generation with validation and backup
+
+#### **Database Connection & Configuration**
+```typescript
+import { createDatabase } from '$lib/database';
+
+const db = createDatabase({
+  host: 'localhost',
+  user: 'username',
+  password: 'password',
+  database: 'dbname',
+  port: 5432
+});
+```
+
+**Connection Pool Settings:**
+- Development: max 10 connections
+- Production: max 20 connections
+- Idle timeout: 30 seconds
+- Connection timeout: 10 seconds
+- Automatic graceful shutdown on SIGTERM
+
+### **Type Safety & Auto-Generation**
+
 Types are automatically generated from your database schema:
 
 ```typescript
@@ -167,7 +198,7 @@ export interface DB {
 }
 ```
 
-### **Usage in Code**
+#### **Type-Safe Database Operations**
 ```typescript
 import { dbInstance } from '$lib/config/server';
 import type { Users } from '$lib/database/types';
@@ -187,7 +218,61 @@ await dbInstance
     // TypeScript ensures all required fields are provided
   })
   .execute();
+
+// TypeScript will catch errors at compile time
+const invalid = await dbInstance
+  .selectFrom('users')
+  .select(['nonexistent_column']) // ❌ TypeScript error
+  .execute();
 ```
+
+### **Enhanced Migration System**
+
+#### **Migration Runner Usage**
+```typescript
+import { MigrationRunner } from '$lib/database/migrations';
+
+const runner = new MigrationRunner(db);
+
+// Run pending migrations
+await runner.migrate();
+
+// Check migration status
+await runner.status();
+
+// Rollback last batch
+await runner.rollback();
+```
+
+#### **Error Handling**
+The system includes custom error types for better error handling:
+- `MigrationError` - Migration-specific errors with context and cause tracking
+- `MigrationValidationError` - Validation errors with detailed issues
+
+### **Type Generation System**
+
+#### **Automated Type Generation**
+```typescript
+import { TypeGenerator } from '$lib/database/type-generator';
+
+const generator = new TypeGenerator(db);
+const result = await generator.generateTypes();
+
+if (result.success) {
+  console.log('Types generated successfully');
+  if (result.backupPath) {
+    console.log('Backup created at:', result.backupPath);
+  }
+} else {
+  console.error('Type generation failed:', result.issues);
+}
+```
+
+#### **Features**
+- ✅ **Schema Validation** - Validates database schema before type generation
+- ✅ **Backup System** - Creates backups of existing types with rollback capability
+- ✅ **Error Recovery** - Automatic restoration from backup on failure
+- ✅ **Type Validation** - Validates generated types for correctness
 
 ## 🛠️ Development Features
 
@@ -271,14 +356,22 @@ nextya/
 - View database information with `npm run dev:info`
 - Check migration status regularly with `npm run db:status`
 
-### **4. Production Deployment**
+### **4. Database Layer Best Practices**
+- **Always run migrations in order** and test rollbacks before deploying
+- **Keep migrations small and focused** with proper up/down implementations
+- **Use transactions for complex migrations** to ensure atomicity
+- **Regenerate types after schema changes**: `npm run db:generate`
+- **Handle database errors appropriately** using the custom error types
+- **Never manually edit generated types** in `src/lib/database/types.ts`
+
+### **5. Production Deployment**
 - Test migrations in staging environment first
 - Always backup production database before migrations
 - Keep rollback plan ready
 - Monitor application after deployment
 - Use environment variables for all configuration
 
-### **5. Docker Best Practices**
+### **6. Docker Best Practices**
 - Use `./docker.sh` for consistent Docker operations
 - Keep containers updated and secure
 - Use multi-stage builds for production
@@ -323,6 +416,24 @@ docker exec -it nextya_postgres psql -U postgres -d nextya -c "\dt"
 
 # Verify database connection
 npm run db:check
+
+# Check for type validation errors
+npm run db:generate --verbose
+```
+
+### **Database Layer Issues**
+```bash
+# Check migration system status
+npm run db:status
+
+# Test database connection and health
+npm run dev:health
+
+# View migration table directly
+docker exec -it nextya_postgres psql -U postgres -d nextya -c "SELECT * FROM _migrations ORDER BY executed_at;"
+
+# Reset database in development (careful!)
+npm run db:reset && npm run db:generate
 ```
 
 ### **Docker Issues**
