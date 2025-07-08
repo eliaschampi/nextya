@@ -1,7 +1,7 @@
 /**
  * Enhanced Type Generation System for NextYa
  * ==========================================
- * 
+ *
  * This module provides enhanced type generation with:
  * - Schema validation before type generation
  * - Backup of existing types
@@ -30,7 +30,7 @@ export class TypeGenerator {
 		try {
 			// Check if essential tables exist
 			const tables = await this.db.introspection.getTables();
-			const tableNames = tables.map(t => t.name);
+			const tableNames = tables.map((t) => t.name);
 
 			const requiredTables = ['users', 'courses', 'students', 'levels'];
 			for (const table of requiredTables) {
@@ -47,7 +47,6 @@ export class TypeGenerator {
 
 			// Check for proper indexes on foreign keys
 			// This would require custom queries to check index existence
-
 		} catch (error) {
 			issues.push(`Schema validation error: ${error}`);
 		}
@@ -104,7 +103,6 @@ export class TypeGenerator {
 			if (!content.includes("import type { ColumnType } from 'kysely'")) {
 				issues.push('Missing Kysely imports');
 			}
-
 		} catch (error) {
 			issues.push(`Type validation error: ${error}`);
 		}
@@ -120,12 +118,12 @@ export class TypeGenerator {
 	 */
 	async generateTypes(): Promise<{ success: boolean; backupPath?: string; issues?: string[] }> {
 		console.log('🔍 Validating database schema...');
-		
+
 		// Step 1: Validate schema
 		const schemaValidation = await this.validateSchema();
 		if (!schemaValidation.isValid) {
 			console.error('❌ Schema validation failed:');
-			schemaValidation.issues.forEach(issue => console.error(`  • ${issue}`));
+			schemaValidation.issues.forEach((issue) => console.error(`  • ${issue}`));
 			return { success: false, issues: schemaValidation.issues };
 		}
 		console.log('✅ Schema validation passed');
@@ -147,10 +145,9 @@ export class TypeGenerator {
 			if (stdout && !stdout.includes('npm WARN')) {
 				console.log(stdout);
 			}
-
 		} catch (error) {
 			console.error('❌ Type generation failed:', error);
-			
+
 			// Restore backup if available
 			if (backupPath) {
 				try {
@@ -161,7 +158,7 @@ export class TypeGenerator {
 					console.error('❌ Failed to restore backup:', restoreError);
 				}
 			}
-			
+
 			return { success: false, backupPath, issues: [error.toString()] };
 		}
 
@@ -170,8 +167,8 @@ export class TypeGenerator {
 		const typeValidation = await this.validateGeneratedTypes();
 		if (!typeValidation.isValid) {
 			console.error('❌ Generated types validation failed:');
-			typeValidation.issues.forEach(issue => console.error(`  • ${issue}`));
-			
+			typeValidation.issues.forEach((issue) => console.error(`  • ${issue}`));
+
 			// Restore backup if available
 			if (backupPath) {
 				try {
@@ -182,7 +179,7 @@ export class TypeGenerator {
 					console.error('❌ Failed to restore backup:', restoreError);
 				}
 			}
-			
+
 			return { success: false, backupPath, issues: typeValidation.issues };
 		}
 
@@ -202,20 +199,18 @@ export class TypeGenerator {
 		fileSize: number;
 	}> {
 		const typesPath = join(process.cwd(), 'src/lib/database/types.ts');
-		
+
 		try {
 			const content = await readFile(typesPath, 'utf-8');
-			const stats = await import('fs').then(fs => fs.promises.stat(typesPath));
-			
+			const stats = await import('fs').then((fs) => fs.promises.stat(typesPath));
+
 			// Count interfaces
 			const interfaceMatches = content.match(/export interface \w+/g) || [];
 			const interfacesCount = interfaceMatches.length;
-			
+
 			// Get table count from DB interface
 			const dbInterfaceMatch = content.match(/export interface DB \{([\s\S]*?)\}/);
-			const tablesCount = dbInterfaceMatch 
-				? (dbInterfaceMatch[1].match(/\w+:/g) || []).length 
-				: 0;
+			const tablesCount = dbInterfaceMatch ? (dbInterfaceMatch[1].match(/\w+:/g) || []).length : 0;
 
 			return {
 				tablesCount,

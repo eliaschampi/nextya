@@ -1,13 +1,13 @@
 /**
  * NextYa Migration System - Clean Architecture
  * ============================================
- * 
+ *
  * This system provides a solid foundation for database migrations with:
  * - Version control for schema changes
  * - Rollback capabilities
  * - Type-safe migrations
  * - Automatic type generation after migrations
- * 
+ *
  * Architecture:
  * - Each migration is a TypeScript file with up/down functions
  * - Migrations are tracked in a migrations table
@@ -46,7 +46,9 @@ export class MigrationRunner {
 			.ifNotExists()
 			.addColumn('id', 'varchar(255)', (col) => col.primaryKey())
 			.addColumn('name', 'varchar(255)', (col) => col.notNull())
-			.addColumn('executed_at', 'timestamptz', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
+			.addColumn('executed_at', 'timestamptz', (col) =>
+				col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+			)
 			.addColumn('batch', 'integer', (col) => col.notNull())
 			.execute();
 	}
@@ -56,11 +58,11 @@ export class MigrationRunner {
 	 */
 	async getExecutedMigrations(): Promise<MigrationRecord[]> {
 		try {
-			return await this.db
+			return (await this.db
 				.selectFrom('_migrations' as any)
 				.selectAll()
 				.orderBy('executed_at', 'asc')
-				.execute() as MigrationRecord[];
+				.execute()) as MigrationRecord[];
 		} catch (error) {
 			// Table doesn't exist yet
 			return [];
@@ -71,11 +73,11 @@ export class MigrationRunner {
 	 * Get the next batch number
 	 */
 	async getNextBatch(): Promise<number> {
-		const result = await this.db
+		const result = (await this.db
 			.selectFrom('_migrations' as any)
 			.select(sql<number>`COALESCE(MAX(batch), 0) + 1`.as('next_batch'))
-			.executeTakeFirst() as { next_batch: number } | undefined;
-		
+			.executeTakeFirst()) as { next_batch: number } | undefined;
+
 		return result?.next_batch || 1;
 	}
 
@@ -84,20 +86,24 @@ export class MigrationRunner {
 	 */
 	async loadMigrations(): Promise<Migration[]> {
 		const migrationsDir = join(process.cwd(), 'src/lib/database/migrations/files');
-		
+
 		try {
 			const files = await readdir(migrationsDir);
 			const migrationFiles = files
-				.filter(file => file.endsWith('.ts') && file !== 'index.ts')
+				.filter((file) => file.endsWith('.ts') && file !== 'index.ts')
 				.sort();
 
 			const migrations: Migration[] = [];
-			
+
 			for (const file of migrationFiles) {
 				const migrationModule = await import(join(migrationsDir, file));
 				const migration = migrationModule.default || migrationModule;
-				
-				if (migration && typeof migration.up === 'function' && typeof migration.down === 'function') {
+
+				if (
+					migration &&
+					typeof migration.up === 'function' &&
+					typeof migration.down === 'function'
+				) {
 					migrations.push({
 						id: file.replace('.ts', ''),
 						name: migration.name || file.replace('.ts', ''),
@@ -106,7 +112,7 @@ export class MigrationRunner {
 					});
 				}
 			}
-			
+
 			return migrations;
 		} catch (error) {
 			console.warn('No migrations directory found or error loading migrations:', error);
@@ -119,28 +125,28 @@ export class MigrationRunner {
 	 */
 	async migrate(): Promise<void> {
 		await this.initialize();
-		
+
 		const executedMigrations = await this.getExecutedMigrations();
 		const allMigrations = await this.loadMigrations();
-		const executedIds = new Set(executedMigrations.map(m => m.id));
-		
-		const pendingMigrations = allMigrations.filter(m => !executedIds.has(m.id));
-		
+		const executedIds = new Set(executedMigrations.map((m) => m.id));
+
+		const pendingMigrations = allMigrations.filter((m) => !executedIds.has(m.id));
+
 		if (pendingMigrations.length === 0) {
 			console.log('✅ No pending migrations');
 			return;
 		}
 
 		const batch = await this.getNextBatch();
-		
+
 		console.log(`🔄 Running ${pendingMigrations.length} migration(s) in batch ${batch}...`);
-		
+
 		for (const migration of pendingMigrations) {
 			console.log(`  ⏳ Running migration: ${migration.name}`);
-			
+
 			try {
 				await migration.up(this.db);
-				
+
 				await this.db
 					.insertInto('_migrations' as any)
 					.values({
@@ -150,14 +156,14 @@ export class MigrationRunner {
 						batch
 					})
 					.execute();
-				
+
 				console.log(`  ✅ Migration completed: ${migration.name}`);
 			} catch (error) {
 				console.error(`  ❌ Migration failed: ${migration.name}`, error);
 				throw error;
 			}
 		}
-		
+
 		console.log('✅ All migrations completed successfully');
 	}
 
@@ -166,49 +172,49 @@ export class MigrationRunner {
 	 */
 	async rollback(): Promise<void> {
 		await this.initialize();
-		
+
 		const executedMigrations = await this.getExecutedMigrations();
-		
+
 		if (executedMigrations.length === 0) {
 			console.log('✅ No migrations to rollback');
 			return;
 		}
 
-		const lastBatch = Math.max(...executedMigrations.map(m => m.batch));
-		const migrationsToRollback = executedMigrations
-			.filter(m => m.batch === lastBatch)
-			.reverse(); // Rollback in reverse order
+		const lastBatch = Math.max(...executedMigrations.map((m) => m.batch));
+		const migrationsToRollback = executedMigrations.filter((m) => m.batch === lastBatch).reverse(); // Rollback in reverse order
 
 		const allMigrations = await this.loadMigrations();
-		const migrationMap = new Map(allMigrations.map(m => [m.id, m]));
+		const migrationMap = new Map(allMigrations.map((m) => [m.id, m]));
 
-		console.log(`🔄 Rolling back ${migrationsToRollback.length} migration(s) from batch ${lastBatch}...`);
+		console.log(
+			`🔄 Rolling back ${migrationsToRollback.length} migration(s) from batch ${lastBatch}...`
+		);
 
 		for (const migrationRecord of migrationsToRollback) {
 			const migration = migrationMap.get(migrationRecord.id);
-			
+
 			if (!migration) {
 				console.warn(`  ⚠️  Migration file not found: ${migrationRecord.name}`);
 				continue;
 			}
 
 			console.log(`  ⏳ Rolling back migration: ${migration.name}`);
-			
+
 			try {
 				await migration.down(this.db);
-				
+
 				await this.db
 					.deleteFrom('_migrations' as any)
 					.where('id', '=', migration.id)
 					.execute();
-				
+
 				console.log(`  ✅ Migration rolled back: ${migration.name}`);
 			} catch (error) {
 				console.error(`  ❌ Rollback failed: ${migration.name}`, error);
 				throw error;
 			}
 		}
-		
+
 		console.log('✅ Rollback completed successfully');
 	}
 
@@ -217,29 +223,29 @@ export class MigrationRunner {
 	 */
 	async status(): Promise<void> {
 		await this.initialize();
-		
+
 		const executedMigrations = await this.getExecutedMigrations();
 		const allMigrations = await this.loadMigrations();
-		const executedIds = new Set(executedMigrations.map(m => m.id));
-		
+		const executedIds = new Set(executedMigrations.map((m) => m.id));
+
 		console.log('\n📊 Migration Status');
 		console.log('==================');
-		
+
 		if (allMigrations.length === 0) {
 			console.log('No migrations found');
 			return;
 		}
-		
+
 		for (const migration of allMigrations) {
 			const isExecuted = executedIds.has(migration.id);
 			const status = isExecuted ? '✅ Executed' : '⏳ Pending';
-			const executedInfo = isExecuted 
-				? ` (batch ${executedMigrations.find(m => m.id === migration.id)?.batch})`
+			const executedInfo = isExecuted
+				? ` (batch ${executedMigrations.find((m) => m.id === migration.id)?.batch})`
 				: '';
-			
+
 			console.log(`  ${status} ${migration.name}${executedInfo}`);
 		}
-		
+
 		const pendingCount = allMigrations.length - executedMigrations.length;
 		console.log(`\n📈 Summary: ${executedMigrations.length} executed, ${pendingCount} pending`);
 	}

@@ -76,10 +76,9 @@ npm run db:fresh          # Reset + generate types
 ### **Development Tools**
 ```bash
 npm run dev:health        # Database health check
-npm run dev:analyze       # Schema analysis & optimization
+npm run dev:info          # Show database information
 npm run dev:seed          # Seed development data
 npm run dev:clean         # Clean all data
-npm run dev:report        # Generate development report
 ```
 
 ### **Docker Management**
@@ -198,16 +197,13 @@ npm run dev:health
 ```
 - Connection speed testing
 - Table record counts
-- Database size monitoring
-- Active connection tracking
 
-### **Schema Analysis**
+### **Database Information**
 ```bash
-npm run dev:analyze
+npm run dev:info
 ```
-- Missing index detection
-- Table size analysis
-- Performance optimization suggestions
+- Show available database tables
+- Basic database structure overview
 
 ### **Development Data Management**
 ```bash
@@ -216,9 +212,6 @@ npm run dev:seed
 
 # Clean all data
 npm run dev:clean
-
-# Generate development report
-npm run dev:report
 ```
 
 ## 🏗️ Project Structure
@@ -275,7 +268,7 @@ nextya/
 ### **3. Development Workflow**
 - Use `npm run dev:health` to monitor database health
 - Seed development data with `npm run dev:seed`
-- Analyze schema performance with `npm run dev:analyze`
+- View database information with `npm run dev:info`
 - Check migration status regularly with `npm run db:status`
 
 ### **4. Production Deployment**

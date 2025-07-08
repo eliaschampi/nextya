@@ -1,10 +1,10 @@
 /**
  * Migration Template
  * ==================
- * 
+ *
  * Copy this template to create new migrations.
  * Name your migration file with timestamp: YYYYMMDDHHMMSS_description.ts
- * 
+ *
  * Example: 20250108120000_add_user_preferences.ts
  */
 

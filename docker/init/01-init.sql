@@ -323,7 +323,7 @@ FROM
     JOIN public.levels l ON r.level_code = l.code;
 
 -- Student register results view
-CREATE OR REPLACE VIEW public.student_register_results WITH (security_invoker = true) AS
+CREATE OR REPLACE VIEW public.student_register_results AS
 SELECT
     er.code AS result_code,
     er.register_code,

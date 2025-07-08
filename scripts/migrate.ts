@@ -44,7 +44,11 @@ const migrationRunner = new MigrationRunner(db);
 async function checkConnection() {
 	console.log('🔍 Checking database connection...');
 	try {
-		await db.selectFrom('users' as any).select('code').limit(1).execute();
+		await db
+			.selectFrom('users' as any)
+			.select('code')
+			.limit(1)
+			.execute();
 		console.log('✅ Database connection successful');
 		return true;
 	} catch (error) {
