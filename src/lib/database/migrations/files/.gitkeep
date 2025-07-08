@@ -1,0 +1,6 @@
+# Migration files directory
+# 
+# This directory contains all database migration files.
+# Each migration should be named with a timestamp prefix for proper ordering.
+# 
+# Example: 20250108120000_add_user_preferences.ts
