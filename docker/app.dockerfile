@@ -17,15 +17,13 @@ RUN chown -R node:node /app
 
 # Development stage
 FROM base AS development
-USER node
 
 # Copy package files
-COPY --chown=node:node package.json package-lock.json* ./
+COPY --chown=node:node package.json ./
 
-# Install dependencies and upgrade undici to fix multipart/form-data support
-# Using undici@6.20.0 for Node.js 18.8.0 compatibility
-RUN npm install && \
-    npm install undici@6.20.0
+# Install dependencies as node user
+USER node
+RUN npm install
 
 # Copy source code
 COPY --chown=node:node . .
@@ -36,29 +34,46 @@ EXPOSE 5173
 # Start development server
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
-# Production stage
-FROM base AS production
+# Production dependencies stage
+FROM base AS dependencies
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY --chown=node:node package.json ./
 
-# Install production dependencies with undici fix and clean up
-# Using undici@6.20.0 for Node.js 18.8.0 compatibility
+# Install only production dependencies
+USER node
 RUN npm install --production && \
-    npm install undici@6.20.0 && \
     npm cache clean --force
 
+# Production build stage
+FROM base AS builder
+
+# Copy package files and install all dependencies for build
+COPY --chown=node:node package.json ./
+USER node
+RUN npm install
+
 # Copy source code and build
-COPY . .
+COPY --chown=node:node . .
 RUN npm run build
 
-# Remove unnecessary files
-RUN rm -rf src node_modules/**/*.{md,ts,map,h,c,cc,cpp,gyp,yml,txt} \
-    node_modules/{@types,@eslint} \
-    node_modules/**/{LICENSE,.github,.npmignore,LICENSE.txt,.travis.yml,.eslintrc,sponsors} \
-    node_modules/*/{test,binding.gyp} && \
-    find . -type f -empty -delete && \
-    find . -type d -empty -delete
+# Final production stage
+FROM base AS production
+
+# Copy production dependencies from dependencies stage
+COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
+
+# Copy built application from builder stage
+COPY --from=builder --chown=node:node /app/build ./build
+COPY --from=builder --chown=node:node /app/package.json ./package.json
+
+# Clean up unnecessary files in node_modules
+USER node
+RUN find node_modules -type f -name "*.md" -delete && \
+    find node_modules -type f -name "*.ts" -delete && \
+    find node_modules -type f -name "*.map" -delete && \
+    find node_modules -type d -name "test" -exec rm -rf {} + 2>/dev/null || true && \
+    find node_modules -type d -name ".github" -exec rm -rf {} + 2>/dev/null || true
 
 # Expose production port
 EXPOSE 3000

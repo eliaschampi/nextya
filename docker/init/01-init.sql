@@ -4,210 +4,227 @@
 -- This schema exactly matches the Supabase migration structure
 -- but with clean architecture and consistent naming conventions
 -- =====================================================
-
 -- Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Set configuration
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
+SET
+  statement_timeout = 0;
+
+SET
+  lock_timeout = 0;
+
+SET
+  idle_in_transaction_session_timeout = 0;
+
+SET
+  client_encoding = 'UTF8';
+
+SET
+  standard_conforming_strings = ON;
+
+SET
+  check_function_bodies = FALSE;
+
+SET
+  xmloption = content;
+
+SET
+  client_min_messages = warning;
+
+SET
+  row_security = off;
 
 -- =====================================================
 -- ENUMS
 -- =====================================================
-
-CREATE TYPE public.entity_enum AS ENUM (
-    'users',
-    'levels',
-    'courses',
-    'students',
-    'registers',
-    'evals',
-    'eval_sections',
-    'eval_questions',
-    'eval_answers',
-    'eval_results'
+CREATE TYPE public.entity_enum AS ENUM(
+  'users',
+  'levels',
+  'courses',
+  'students',
+  'registers',
+  'evals',
+  'eval_sections',
+  'eval_questions',
+  'eval_answers',
+  'eval_results'
 );
 
 -- =====================================================
 -- TABLES
 -- =====================================================
-
 -- Users table (clean implementation without Supabase auth)
 CREATE TABLE public.users (
-    code UUID NOT NULL DEFAULT gen_random_uuid(),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    email VARCHAR(255) NOT NULL,
-    is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    is_super_admin BOOLEAN NOT NULL DEFAULT FALSE,
-    last_login TIMESTAMPTZ NULL,
-    last_name VARCHAR(150) NULL,
-    name VARCHAR(100) NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    photo_url TEXT NULL,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT users_pk PRIMARY KEY (code),
-    CONSTRAINT users_email_uq UNIQUE (email)
+  code UUID NOT NULL DEFAULT gen_random_uuid (),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  email VARCHAR(255) NOT NULL,
+  is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  is_super_admin BOOLEAN NOT NULL DEFAULT FALSE,
+  last_login TIMESTAMPTZ NULL,
+  last_name VARCHAR(150) NULL,
+  name VARCHAR(100) NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  photo_url TEXT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT users_pk PRIMARY KEY (code),
+  CONSTRAINT users_email_uq UNIQUE (email)
 );
 
 -- Permissions table
 CREATE TABLE public.permissions (
-    code UUID NOT NULL DEFAULT gen_random_uuid(),
-    user_code UUID NOT NULL,
-    entity entity_enum NOT NULL,
-    action VARCHAR(10) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT permissions_pk PRIMARY KEY (code),
-    CONSTRAINT permissions_user_fk FOREIGN KEY (user_code) REFERENCES public.users(code) ON DELETE CASCADE,
-    CONSTRAINT permissions_entity_user_action_uq UNIQUE (entity, user_code, action)
+  code UUID NOT NULL DEFAULT gen_random_uuid (),
+  user_code UUID NOT NULL,
+  entity entity_enum NOT NULL,
+  action VARCHAR(10) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT permissions_pk PRIMARY KEY (code),
+  CONSTRAINT permissions_user_fk FOREIGN KEY (user_code) REFERENCES public.users (code) ON DELETE CASCADE,
+  CONSTRAINT permissions_entity_user_action_uq UNIQUE (entity, user_code, action)
 );
 
 -- Levels table
 CREATE TABLE public.levels (
-    code UUID NOT NULL DEFAULT gen_random_uuid(),
-    name VARCHAR(100) NOT NULL,
-    abr TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    users UUID[] NOT NULL,
-    CONSTRAINT levels_pk PRIMARY KEY (code)
+  code UUID NOT NULL DEFAULT gen_random_uuid (),
+  name VARCHAR(100) NOT NULL,
+  abr TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  users UUID[] NOT NULL,
+  CONSTRAINT levels_pk PRIMARY KEY (code)
 );
 
 -- Courses table (abr field was removed in migration 20251212000008)
 CREATE TABLE public.courses (
-    code UUID NOT NULL DEFAULT gen_random_uuid(),
-    name VARCHAR(100) NOT NULL,
-    user_code UUID NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    "order" INTEGER NOT NULL DEFAULT 0,
-    CONSTRAINT courses_pk PRIMARY KEY (code),
-    CONSTRAINT courses_user_fk FOREIGN KEY (user_code) REFERENCES public.users(code) ON DELETE CASCADE
+  code UUID NOT NULL DEFAULT gen_random_uuid (),
+  name VARCHAR(100) NOT NULL,
+  user_code UUID NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  "order" INTEGER NOT NULL DEFAULT 0,
+  CONSTRAINT courses_pk PRIMARY KEY (code),
+  CONSTRAINT courses_user_fk FOREIGN KEY (user_code) REFERENCES public.users (code) ON DELETE CASCADE
 );
 
 -- Students table
 CREATE TABLE public.students (
-    code UUID NOT NULL DEFAULT gen_random_uuid(),
-    name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(150) NOT NULL,
-    email VARCHAR(100) NOT NULL,
-    phone VARCHAR(100) NULL,
-    user_code UUID NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT students_pk PRIMARY KEY (code),
-    CONSTRAINT students_user_fk FOREIGN KEY (user_code) REFERENCES public.users(code) ON DELETE CASCADE,
-    CONSTRAINT students_name_lastname_uq UNIQUE (name, last_name)
+  code UUID NOT NULL DEFAULT gen_random_uuid (),
+  name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(150) NOT NULL,
+  email VARCHAR(100) NOT NULL,
+  phone VARCHAR(100) NULL,
+  user_code UUID NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT students_pk PRIMARY KEY (code),
+  CONSTRAINT students_user_fk FOREIGN KEY (user_code) REFERENCES public.users (code) ON DELETE CASCADE,
+  CONSTRAINT students_name_lastname_uq UNIQUE (name, last_name)
 );
 
 -- Registers table
 CREATE TABLE public.registers (
-    code UUID NOT NULL DEFAULT gen_random_uuid(),
-    student_code UUID NOT NULL,
-    level_code UUID NOT NULL,
-    group_name CHAR(1) NOT NULL,
-    user_code UUID NOT NULL,
-    roll_code CHAR(4) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT registers_pk PRIMARY KEY (code),
-    CONSTRAINT registers_student_fk FOREIGN KEY (student_code) REFERENCES public.students(code) ON DELETE CASCADE,
-    CONSTRAINT registers_level_fk FOREIGN KEY (level_code) REFERENCES public.levels(code) ON DELETE CASCADE,
-    CONSTRAINT registers_user_fk FOREIGN KEY (user_code) REFERENCES public.users(code) ON DELETE CASCADE,
-    CONSTRAINT registers_student_level_group_uq UNIQUE (student_code, level_code, group_name),
-    CONSTRAINT registers_roll_code_uq UNIQUE (level_code, roll_code),
-    CONSTRAINT registers_group_ck CHECK (group_name IN ('A','B','C','D'))
+  code UUID NOT NULL DEFAULT gen_random_uuid (),
+  student_code UUID NOT NULL,
+  level_code UUID NOT NULL,
+  group_name CHAR(1) NOT NULL,
+  user_code UUID NOT NULL,
+  roll_code CHAR(4) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT registers_pk PRIMARY KEY (code),
+  CONSTRAINT registers_student_fk FOREIGN KEY (student_code) REFERENCES public.students (code) ON DELETE CASCADE,
+  CONSTRAINT registers_level_fk FOREIGN KEY (level_code) REFERENCES public.levels (code) ON DELETE CASCADE,
+  CONSTRAINT registers_user_fk FOREIGN KEY (user_code) REFERENCES public.users (code) ON DELETE CASCADE,
+  CONSTRAINT registers_student_level_group_uq UNIQUE (student_code, level_code, group_name),
+  CONSTRAINT registers_roll_code_uq UNIQUE (level_code, roll_code),
+  CONSTRAINT registers_group_ck CHECK (group_name IN ('A', 'B', 'C', 'D'))
 );
 
 -- Evals table
 CREATE TABLE public.evals (
-    code UUID NOT NULL DEFAULT gen_random_uuid(),
-    name VARCHAR NOT NULL,
-    level_code UUID NOT NULL,
-    group_name CHAR(1) NOT NULL,
-    eval_date DATE NOT NULL,
-    user_code UUID NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT evals_pk PRIMARY KEY (code),
-    CONSTRAINT evals_level_fk FOREIGN KEY (level_code) REFERENCES public.levels(code),
-    CONSTRAINT evals_user_fk FOREIGN KEY (user_code) REFERENCES public.users(code),
-    CONSTRAINT evals_group_ck CHECK (group_name IN ('A','B','C','D'))
+  code UUID NOT NULL DEFAULT gen_random_uuid (),
+  name VARCHAR NOT NULL,
+  level_code UUID NOT NULL,
+  group_name CHAR(1) NOT NULL,
+  eval_date DATE NOT NULL,
+  user_code UUID NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT evals_pk PRIMARY KEY (code),
+  CONSTRAINT evals_level_fk FOREIGN KEY (level_code) REFERENCES public.levels (code),
+  CONSTRAINT evals_user_fk FOREIGN KEY (user_code) REFERENCES public.users (code),
+  CONSTRAINT evals_group_ck CHECK (group_name IN ('A', 'B', 'C', 'D'))
 );
 
 -- Eval sections table
 CREATE TABLE public.eval_sections (
-    code UUID NOT NULL DEFAULT gen_random_uuid(),
-    eval_code UUID NOT NULL,
-    course_code UUID NOT NULL,
-    order_in_eval INT NOT NULL,
-    question_count INT NOT NULL,
-    CONSTRAINT eval_sections_pk PRIMARY KEY (code),
-    CONSTRAINT eval_sections_eval_fk FOREIGN KEY (eval_code) REFERENCES public.evals(code) ON DELETE CASCADE,
-    CONSTRAINT eval_sections_course_fk FOREIGN KEY (course_code) REFERENCES public.courses(code),
-    CONSTRAINT eval_sections_eval_course_uq UNIQUE (eval_code, course_code),
-    CONSTRAINT eval_sections_eval_order_uq UNIQUE (eval_code, order_in_eval)
+  code UUID NOT NULL DEFAULT gen_random_uuid (),
+  eval_code UUID NOT NULL,
+  course_code UUID NOT NULL,
+  order_in_eval INT NOT NULL,
+  question_count INT NOT NULL,
+  CONSTRAINT eval_sections_pk PRIMARY KEY (code),
+  CONSTRAINT eval_sections_eval_fk FOREIGN KEY (eval_code) REFERENCES public.evals (code) ON DELETE CASCADE,
+  CONSTRAINT eval_sections_course_fk FOREIGN KEY (course_code) REFERENCES public.courses (code),
+  CONSTRAINT eval_sections_eval_course_uq UNIQUE (eval_code, course_code),
+  CONSTRAINT eval_sections_eval_order_uq UNIQUE (eval_code, order_in_eval)
 );
 
 -- Eval questions table
 CREATE TABLE public.eval_questions (
-    code UUID NOT NULL DEFAULT gen_random_uuid(),
-    eval_code UUID NOT NULL,
-    section_code UUID NOT NULL,
-    order_in_eval INT NOT NULL,
-    correct_key CHAR(1) NOT NULL,
-    omitable BOOLEAN DEFAULT FALSE,
-    score_percent NUMERIC(3,2) NOT NULL DEFAULT 1.00,
-    CONSTRAINT eval_questions_pk PRIMARY KEY (code),
-    CONSTRAINT eval_questions_eval_fk FOREIGN KEY (eval_code) REFERENCES public.evals(code) ON DELETE CASCADE,
-    CONSTRAINT eval_questions_section_fk FOREIGN KEY (section_code) REFERENCES public.eval_sections(code) ON DELETE CASCADE,
-    CONSTRAINT eval_questions_order_uq UNIQUE (eval_code, order_in_eval),
-    CONSTRAINT eval_questions_correct_key_ck CHECK (correct_key IN ('A','B','C','D','E')),
-    CONSTRAINT eval_questions_score_ck CHECK (score_percent BETWEEN 0 AND 1)
+  code UUID NOT NULL DEFAULT gen_random_uuid (),
+  eval_code UUID NOT NULL,
+  section_code UUID NOT NULL,
+  order_in_eval INT NOT NULL,
+  correct_key CHAR(1) NOT NULL,
+  omitable BOOLEAN DEFAULT FALSE,
+  score_percent NUMERIC(3, 2) NOT NULL DEFAULT 1.00,
+  CONSTRAINT eval_questions_pk PRIMARY KEY (code),
+  CONSTRAINT eval_questions_eval_fk FOREIGN KEY (eval_code) REFERENCES public.evals (code) ON DELETE CASCADE,
+  CONSTRAINT eval_questions_section_fk FOREIGN KEY (section_code) REFERENCES public.eval_sections (code) ON DELETE CASCADE,
+  CONSTRAINT eval_questions_order_uq UNIQUE (eval_code, order_in_eval),
+  CONSTRAINT eval_questions_correct_key_ck CHECK (correct_key IN ('A', 'B', 'C', 'D', 'E')),
+  CONSTRAINT eval_questions_score_ck CHECK (score_percent BETWEEN 0 AND 1)
 );
 
 -- Eval answers table
 CREATE TABLE public.eval_answers (
-    code UUID NOT NULL DEFAULT gen_random_uuid(),
-    register_code UUID NOT NULL,
-    question_code UUID NOT NULL,
-    student_answer TEXT NULL,
-    CONSTRAINT eval_answers_pk PRIMARY KEY (code),
-    CONSTRAINT eval_answers_register_fk FOREIGN KEY (register_code) REFERENCES public.registers(code) ON DELETE CASCADE,
-    CONSTRAINT eval_answers_question_fk FOREIGN KEY (question_code) REFERENCES public.eval_questions(code) ON DELETE CASCADE,
-    CONSTRAINT eval_answers_unique_uq UNIQUE (register_code, question_code),
-    CONSTRAINT eval_answers_answer_ck CHECK (student_answer IN ('A','B','C','D','E', 'error_multiple') OR student_answer IS NULL)
+  code UUID NOT NULL DEFAULT gen_random_uuid (),
+  register_code UUID NOT NULL,
+  question_code UUID NOT NULL,
+  student_answer TEXT NULL,
+  CONSTRAINT eval_answers_pk PRIMARY KEY (code),
+  CONSTRAINT eval_answers_register_fk FOREIGN KEY (register_code) REFERENCES public.registers (code) ON DELETE CASCADE,
+  CONSTRAINT eval_answers_question_fk FOREIGN KEY (question_code) REFERENCES public.eval_questions (code) ON DELETE CASCADE,
+  CONSTRAINT eval_answers_unique_uq UNIQUE (register_code, question_code),
+  CONSTRAINT eval_answers_answer_ck CHECK (
+    student_answer IN ('A', 'B', 'C', 'D', 'E', 'error_multiple')
+    OR student_answer IS NULL
+  )
 );
 
 -- Eval results table
 CREATE TABLE public.eval_results (
-    code UUID NOT NULL DEFAULT gen_random_uuid(),
-    register_code UUID NOT NULL,
-    eval_code UUID NOT NULL,
-    section_code UUID NULL,
-    correct_count INT NOT NULL DEFAULT 0,
-    blank_count INT NOT NULL DEFAULT 0,
-    incorrect_count INT NOT NULL DEFAULT 0,
-    score NUMERIC(5, 2) NOT NULL DEFAULT 0.00,
-    calculated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT eval_results_pk PRIMARY KEY (code),
-    CONSTRAINT eval_results_register_fk FOREIGN KEY (register_code) REFERENCES public.registers(code) ON DELETE CASCADE,
-    CONSTRAINT eval_results_eval_fk FOREIGN KEY (eval_code) REFERENCES public.evals(code) ON DELETE CASCADE,
-    CONSTRAINT eval_results_section_fk FOREIGN KEY (section_code) REFERENCES public.eval_sections(code) ON DELETE CASCADE,
-    CONSTRAINT eval_results_unique_uq UNIQUE (register_code, eval_code, section_code)
+  code UUID NOT NULL DEFAULT gen_random_uuid (),
+  register_code UUID NOT NULL,
+  eval_code UUID NOT NULL,
+  section_code UUID NULL,
+  correct_count INT NOT NULL DEFAULT 0,
+  blank_count INT NOT NULL DEFAULT 0,
+  incorrect_count INT NOT NULL DEFAULT 0,
+  score NUMERIC(5, 2) NOT NULL DEFAULT 0.00,
+  calculated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT eval_results_pk PRIMARY KEY (code),
+  CONSTRAINT eval_results_register_fk FOREIGN KEY (register_code) REFERENCES public.registers (code) ON DELETE CASCADE,
+  CONSTRAINT eval_results_eval_fk FOREIGN KEY (eval_code) REFERENCES public.evals (code) ON DELETE CASCADE,
+  CONSTRAINT eval_results_section_fk FOREIGN KEY (section_code) REFERENCES public.eval_sections (code) ON DELETE CASCADE,
+  CONSTRAINT eval_results_unique_uq UNIQUE (register_code, eval_code, section_code)
 );
 
 -- =====================================================
 -- FUNCTIONS
 -- =====================================================
-
 -- Function to verify permissions (simplified for clean architecture)
-CREATE OR REPLACE FUNCTION public.has_permission(entity_name TEXT, permission TEXT) RETURNS BOOLEAN AS $$
+CREATE OR REPLACE FUNCTION public.has_permission (entity_name TEXT, permission TEXT) RETURNS BOOLEAN AS $$
 BEGIN
     -- For clean architecture, we'll implement a simple permission check
     -- This can be enhanced with proper session management later
@@ -216,8 +233,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Timestamp updater function
-CREATE OR REPLACE FUNCTION public.timestamp_updater()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION public.timestamp_updater () RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
     RETURN NEW;
@@ -227,153 +243,166 @@ $$ LANGUAGE plpgsql;
 -- =====================================================
 -- TRIGGERS
 -- =====================================================
-
 -- Users table trigger
-CREATE TRIGGER users_updated_at_tg
-BEFORE UPDATE ON public.users
-FOR EACH ROW
-EXECUTE FUNCTION public.timestamp_updater();
+CREATE TRIGGER users_updated_at_tg BEFORE
+UPDATE ON public.users FOR EACH ROW
+EXECUTE FUNCTION public.timestamp_updater ();
 
 -- Students table trigger
-CREATE TRIGGER students_updated_at_tg
-BEFORE UPDATE ON public.students
-FOR EACH ROW
-EXECUTE FUNCTION public.timestamp_updater();
+CREATE TRIGGER students_updated_at_tg BEFORE
+UPDATE ON public.students FOR EACH ROW
+EXECUTE FUNCTION public.timestamp_updater ();
 
 -- Evals table trigger
-CREATE TRIGGER evals_updated_at_tg
-BEFORE UPDATE ON public.evals
-FOR EACH ROW
-EXECUTE FUNCTION public.timestamp_updater();
+CREATE TRIGGER evals_updated_at_tg BEFORE
+UPDATE ON public.evals FOR EACH ROW
+EXECUTE FUNCTION public.timestamp_updater ();
 
 -- =====================================================
 -- INDEXES
 -- =====================================================
-
 -- Users table indexes
-CREATE INDEX users_email_idx ON public.users(email);
+CREATE INDEX users_email_idx ON public.users (email);
 
 -- Permissions table indexes
-CREATE INDEX permissions_user_code_idx ON public.permissions(user_code);
-CREATE INDEX permissions_entity_idx ON public.permissions(entity);
+CREATE INDEX permissions_user_code_idx ON public.permissions (user_code);
+
+CREATE INDEX permissions_entity_idx ON public.permissions (entity);
 
 -- Students table indexes
-CREATE INDEX students_user_code_idx ON public.students(user_code);
-CREATE INDEX students_name_search_idx ON public.students USING GIN (to_tsvector('english', name || ' ' || last_name));
+CREATE INDEX students_user_code_idx ON public.students (user_code);
+
+CREATE INDEX students_name_search_idx ON public.students USING GIN (TO_TSVECTOR('english', name || ' ' || last_name));
 
 -- Levels table indexes
-CREATE INDEX levels_name_idx ON public.levels(name);
+CREATE INDEX levels_name_idx ON public.levels (name);
 
 -- Courses table indexes
-CREATE INDEX courses_user_code_idx ON public.courses(user_code);
+CREATE INDEX courses_user_code_idx ON public.courses (user_code);
 
 -- Registers table indexes
-CREATE INDEX registers_student_code_idx ON public.registers(student_code);
-CREATE INDEX registers_level_code_idx ON public.registers(level_code);
-CREATE INDEX registers_user_code_idx ON public.registers(user_code);
-CREATE INDEX registers_group_level_idx ON public.registers(group_name, level_code);
+CREATE INDEX registers_student_code_idx ON public.registers (student_code);
+
+CREATE INDEX registers_level_code_idx ON public.registers (level_code);
+
+CREATE INDEX registers_user_code_idx ON public.registers (user_code);
+
+CREATE INDEX registers_group_level_idx ON public.registers (group_name, level_code);
 
 -- Evals table indexes
-CREATE INDEX evals_level_code_idx ON public.evals(level_code);
-CREATE INDEX evals_user_code_idx ON public.evals(user_code);
-CREATE INDEX evals_group_date_idx ON public.evals(group_name, eval_date);
+CREATE INDEX evals_level_code_idx ON public.evals (level_code);
+
+CREATE INDEX evals_user_code_idx ON public.evals (user_code);
+
+CREATE INDEX evals_group_date_idx ON public.evals (group_name, eval_date);
 
 -- Eval sections table indexes
-CREATE INDEX eval_sections_eval_code_idx ON public.eval_sections(eval_code);
-CREATE INDEX eval_sections_course_code_idx ON public.eval_sections(course_code);
-CREATE INDEX eval_sections_order_idx ON public.eval_sections(order_in_eval);
+CREATE INDEX eval_sections_eval_code_idx ON public.eval_sections (eval_code);
+
+CREATE INDEX eval_sections_course_code_idx ON public.eval_sections (course_code);
+
+CREATE INDEX eval_sections_order_idx ON public.eval_sections (order_in_eval);
 
 -- Eval questions table indexes
-CREATE INDEX eval_questions_eval_code_idx ON public.eval_questions(eval_code);
-CREATE INDEX eval_questions_section_code_idx ON public.eval_questions(section_code);
-CREATE INDEX eval_questions_order_idx ON public.eval_questions(order_in_eval);
+CREATE INDEX eval_questions_eval_code_idx ON public.eval_questions (eval_code);
+
+CREATE INDEX eval_questions_section_code_idx ON public.eval_questions (section_code);
+
+CREATE INDEX eval_questions_order_idx ON public.eval_questions (order_in_eval);
 
 -- Eval answers table indexes
-CREATE INDEX eval_answers_register_code_idx ON public.eval_answers(register_code);
-CREATE INDEX eval_answers_question_code_idx ON public.eval_answers(question_code);
-CREATE INDEX eval_answers_student_answer_idx ON public.eval_answers(student_answer) WHERE student_answer IS NOT NULL;
+CREATE INDEX eval_answers_register_code_idx ON public.eval_answers (register_code);
+
+CREATE INDEX eval_answers_question_code_idx ON public.eval_answers (question_code);
+
+CREATE INDEX eval_answers_student_answer_idx ON public.eval_answers (student_answer)
+WHERE
+  student_answer IS NOT NULL;
 
 -- Eval results table indexes
-CREATE INDEX eval_results_register_code_idx ON public.eval_results(register_code);
-CREATE INDEX eval_results_eval_code_idx ON public.eval_results(eval_code);
-CREATE INDEX eval_results_section_code_idx ON public.eval_results(section_code) WHERE section_code IS NOT NULL;
-CREATE INDEX eval_results_score_idx ON public.eval_results(score);
+CREATE INDEX eval_results_register_code_idx ON public.eval_results (register_code);
+
+CREATE INDEX eval_results_eval_code_idx ON public.eval_results (eval_code);
+
+CREATE INDEX eval_results_section_code_idx ON public.eval_results (section_code)
+WHERE
+  section_code IS NOT NULL;
+
+CREATE INDEX eval_results_score_idx ON public.eval_results (score);
 
 -- =====================================================
 -- VIEWS
 -- =====================================================
-
 -- Student registers view
 CREATE VIEW public.student_registers AS
 SELECT
-    s.code as student_code,
-    r.code as register_code,
-    s.name,
-    s.last_name,
-    s.email,
-    s.phone,
-    r.roll_code,
-    r.group_name,
-    r.level_code,
-    l.name as level,
-    s.created_at
+  s.code AS student_code,
+  r.code AS register_code,
+  s.name,
+  s.last_name,
+  s.email,
+  s.phone,
+  r.roll_code,
+  r.group_name,
+  r.level_code,
+  l.name AS level,
+  s.created_at
 FROM
-    public.registers r
-    JOIN public.students s ON r.student_code = s.code
-    JOIN public.levels l ON r.level_code = l.code;
+  public.registers r
+  JOIN public.students s ON r.student_code = s.code
+  JOIN public.levels l ON r.level_code = l.code;
 
 -- Student register results view
 CREATE OR REPLACE VIEW public.student_register_results AS
 SELECT
-    er.code AS result_code,
-    er.register_code,
-    er.eval_code,
-    er.correct_count,
-    er.incorrect_count,
-    er.blank_count,
-    er.score,
-    er.calculated_at,
-    r.student_code,
-    r.roll_code,
-    r.group_name AS register_group_name,
-    r.level_code,
-    s.name AS student_name,
-    s.last_name AS student_last_name,
-    l.name AS level_name,
-    e.name AS eval_name,
-    e.eval_date
+  er.code AS result_code,
+  er.register_code,
+  er.eval_code,
+  er.correct_count,
+  er.incorrect_count,
+  er.blank_count,
+  er.score,
+  er.calculated_at,
+  r.student_code,
+  r.roll_code,
+  r.group_name AS register_group_name,
+  r.level_code,
+  s.name AS student_name,
+  s.last_name AS student_last_name,
+  l.name AS level_name,
+  e.name AS eval_name,
+  e.eval_date
 FROM
-    public.eval_results er
-    JOIN public.registers r ON er.register_code = r.code
-    JOIN public.students s ON r.student_code = s.code
-    JOIN public.levels l ON r.level_code = l.code
-    JOIN public.evals e ON er.eval_code = e.code
+  public.eval_results er
+  JOIN public.registers r ON er.register_code = r.code
+  JOIN public.students s ON r.student_code = s.code
+  JOIN public.levels l ON r.level_code = l.code
+  JOIN public.evals e ON er.eval_code = e.code
 WHERE
-    er.section_code IS NULL; -- Only include general results (not section-specific)
+  er.section_code IS NULL;
 
+-- Only include general results (not section-specific)
 -- =====================================================
 -- COMPLEX FUNCTIONS
 -- =====================================================
-
 -- Function to get evaluation results with student information
-CREATE OR REPLACE FUNCTION public.get_register_eval_results(p_eval_code TEXT)
-RETURNS TABLE (
-    result_code TEXT,
-    register_code TEXT,
-    eval_code TEXT,
-    section_code TEXT,
-    correct_count INTEGER,
-    incorrect_count INTEGER,
-    blank_count INTEGER,
-    score NUMERIC,
-    calculated_at TIMESTAMP WITH TIME ZONE,
-    student_code TEXT,
-    roll_code TEXT,
-    group_name TEXT,
-    level_code TEXT,
-    name TEXT,
-    last_name TEXT,
-    level_name TEXT
+CREATE OR REPLACE FUNCTION public.get_register_eval_results (p_eval_code TEXT) RETURNS TABLE (
+  result_code TEXT,
+  register_code TEXT,
+  eval_code TEXT,
+  section_code TEXT,
+  correct_count INTEGER,
+  incorrect_count INTEGER,
+  blank_count INTEGER,
+  score NUMERIC,
+  calculated_at TIMESTAMP WITH TIME ZONE,
+  student_code TEXT,
+  roll_code TEXT,
+  group_name TEXT,
+  level_code TEXT,
+  name TEXT,
+  last_name TEXT,
+  level_name TEXT
 ) LANGUAGE SQL SECURITY DEFINER AS $$
     SELECT
         er.code::TEXT AS result_code,
@@ -405,14 +434,13 @@ RETURNS TABLE (
 $$;
 
 -- Upsert eval results function
-CREATE OR REPLACE FUNCTION public.upsert_eval_results(
-    p_eval_code uuid,
-    p_register_code uuid,
-    p_answers jsonb, -- Array de objetos: { question_code: uuid, student_answer: text }
-    p_general_result jsonb, -- Objeto: { correct_count, incorrect_count, blank_count, score }
-    p_section_results jsonb -- Objeto: { section_code: { correct_count, incorrect_count, blank_count, score } }
-)
-RETURNS void AS $$
+CREATE OR REPLACE FUNCTION public.upsert_eval_results (
+  p_eval_code uuid,
+  p_register_code uuid,
+  p_answers JSONB, -- Array de objetos: { question_code: uuid, student_answer: text }
+  p_general_result JSONB, -- Objeto: { correct_count, incorrect_count, blank_count, score }
+  p_section_results JSONB -- Objeto: { section_code: { correct_count, incorrect_count, blank_count, score } }
+) RETURNS void AS $$
 DECLARE
     v_answer record;
     v_section_code uuid;
@@ -466,7 +494,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Import student register function
-CREATE OR REPLACE FUNCTION public.import_student_register(
+CREATE OR REPLACE FUNCTION public.import_student_register (
   p_name TEXT,
   p_last_name TEXT,
   p_phone TEXT,
@@ -520,15 +548,14 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Student evaluation report function
-CREATE OR REPLACE FUNCTION public.get_student_eval_report(p_student_code TEXT)
-RETURNS TABLE (
-    eval_name VARCHAR,
-    eval_code TEXT,
-    eval_date DATE,
-    general_score NUMERIC,
-    register_code TEXT,
-    result_code TEXT,
-    course_scores JSON
+CREATE OR REPLACE FUNCTION public.get_student_eval_report (p_student_code TEXT) RETURNS TABLE (
+  eval_name VARCHAR,
+  eval_code TEXT,
+  eval_date DATE,
+  general_score NUMERIC,
+  register_code TEXT,
+  result_code TEXT,
+  course_scores JSON
 ) LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
     v_register_codes UUID[];
@@ -612,13 +639,11 @@ $$;
 -- =====================================================
 -- DASHBOARD FUNCTIONS
 -- =====================================================
-
 -- Course dashboard functions
-CREATE OR REPLACE FUNCTION public.get_level_course_scores(p_level_code TEXT, p_group_name TEXT)
-RETURNS TABLE (
-    course_code TEXT,
-    course_name VARCHAR,
-    average_score NUMERIC
+CREATE OR REPLACE FUNCTION public.get_level_course_scores (p_level_code TEXT, p_group_name TEXT) RETURNS TABLE (
+  course_code TEXT,
+  course_name VARCHAR,
+  average_score NUMERIC
 ) LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
     RETURN QUERY
@@ -661,16 +686,15 @@ END;
 $$;
 
 -- Course evaluation scores function
-CREATE OR REPLACE FUNCTION public.get_course_eval_scores(
-    p_level_code TEXT,
-    p_course_code TEXT,
-    p_group_name TEXT
-)
-RETURNS TABLE (
-    eval_code TEXT,
-    eval_name VARCHAR,
-    eval_date DATE,
-    average_score NUMERIC
+CREATE OR REPLACE FUNCTION public.get_course_eval_scores (
+  p_level_code TEXT,
+  p_course_code TEXT,
+  p_group_name TEXT
+) RETURNS TABLE (
+  eval_code TEXT,
+  eval_name VARCHAR,
+  eval_date DATE,
+  average_score NUMERIC
 ) LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
     RETURN QUERY
@@ -717,12 +741,11 @@ END;
 $$;
 
 -- Student dashboard functions
-CREATE OR REPLACE FUNCTION public.get_student_score_evolution(p_student_code TEXT)
-RETURNS TABLE (
-    eval_code TEXT,
-    eval_name VARCHAR,
-    eval_date DATE,
-    score NUMERIC
+CREATE OR REPLACE FUNCTION public.get_student_score_evolution (p_student_code TEXT) RETURNS TABLE (
+  eval_code TEXT,
+  eval_name VARCHAR,
+  eval_date DATE,
+  score NUMERIC
 ) LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
     RETURN QUERY
@@ -754,11 +777,10 @@ END;
 $$;
 
 -- Student course scores function
-CREATE OR REPLACE FUNCTION public.get_student_course_scores(p_student_code TEXT)
-RETURNS TABLE (
-    course_code TEXT,
-    course_name VARCHAR,
-    average_score NUMERIC
+CREATE OR REPLACE FUNCTION public.get_student_course_scores (p_student_code TEXT) RETURNS TABLE (
+  course_code TEXT,
+  course_name VARCHAR,
+  average_score NUMERIC
 ) LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
     RETURN QUERY
@@ -800,14 +822,13 @@ END;
 $$;
 
 -- Student course evolution function
-CREATE OR REPLACE FUNCTION public.get_student_course_evolution(p_student_code TEXT)
-RETURNS TABLE (
-    eval_code TEXT,
-    eval_name VARCHAR,
-    eval_date DATE,
-    course_code TEXT,
-    course_name VARCHAR,
-    score NUMERIC
+CREATE OR REPLACE FUNCTION public.get_student_course_evolution (p_student_code TEXT) RETURNS TABLE (
+  eval_code TEXT,
+  eval_name VARCHAR,
+  eval_date DATE,
+  course_code TEXT,
+  course_name VARCHAR,
+  score NUMERIC
 ) LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
     RETURN QUERY
@@ -845,11 +866,7 @@ END;
 $$;
 
 -- Level dashboard data function
-CREATE OR REPLACE FUNCTION public.get_level_dashboard_data(p_level_code TEXT)
-RETURNS TABLE (
-    data_type TEXT,
-    json_data JSONB
-) LANGUAGE plpgsql SECURITY DEFINER AS $$
+CREATE OR REPLACE FUNCTION public.get_level_dashboard_data (p_level_code TEXT) RETURNS TABLE (data_type TEXT, json_data JSONB) LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
     v_correct_vs_incorrect JSONB;
     v_scores_by_group JSONB;
@@ -904,11 +921,7 @@ END;
 $$;
 
 -- Group dashboard data function
-CREATE OR REPLACE FUNCTION public.get_group_dashboard_data(p_level_code TEXT, p_group_name TEXT)
-RETURNS TABLE (
-    data_type TEXT,
-    json_data JSONB
-) LANGUAGE plpgsql SECURITY DEFINER AS $$
+CREATE OR REPLACE FUNCTION public.get_group_dashboard_data (p_level_code TEXT, p_group_name TEXT) RETURNS TABLE (data_type TEXT, json_data JSONB) LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
     v_scores_by_eval JSONB;
     v_student_performance JSONB;
@@ -980,11 +993,7 @@ END;
 $$;
 
 -- Evaluation dashboard data function
-CREATE OR REPLACE FUNCTION public.get_eval_dashboard_data(p_eval_code TEXT)
-RETURNS TABLE (
-    data_type TEXT,
-    json_data JSONB
-) LANGUAGE plpgsql SECURITY DEFINER AS $$
+CREATE OR REPLACE FUNCTION public.get_eval_dashboard_data (p_eval_code TEXT) RETURNS TABLE (data_type TEXT, json_data JSONB) LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
     v_top_correct_questions JSONB;
     v_top_incorrect_questions JSONB;
@@ -1125,138 +1134,265 @@ $$;
 -- =====================================================
 -- ROW LEVEL SECURITY
 -- =====================================================
-
 -- Enable RLS on all tables
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE public.permissions ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE public.levels ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE public.registers ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE public.evals ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE public.eval_sections ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE public.eval_questions ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE public.eval_answers ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE public.eval_results ENABLE ROW LEVEL SECURITY;
 
 -- =====================================================
 -- RLS POLICIES (Simplified for clean architecture)
 -- =====================================================
-
 -- Users policies
-CREATE POLICY "users_select_policy" ON public.users FOR SELECT USING (true);
-CREATE POLICY "users_insert_policy" ON public.users FOR INSERT WITH CHECK (true);
-CREATE POLICY "users_update_policy" ON public.users FOR UPDATE USING (true);
-CREATE POLICY "users_delete_policy" ON public.users FOR DELETE USING (true);
+CREATE POLICY "users_select_policy" ON public.users FOR
+SELECT
+  USING (TRUE);
+
+CREATE POLICY "users_insert_policy" ON public.users FOR INSERT
+WITH
+  CHECK (TRUE);
+
+CREATE POLICY "users_update_policy" ON public.users
+FOR UPDATE
+  USING (TRUE);
+
+CREATE POLICY "users_delete_policy" ON public.users FOR DELETE USING (TRUE);
 
 -- Permissions policies
-CREATE POLICY "permissions_select_policy" ON public.permissions FOR SELECT USING (public.has_permission('permissions', 'read'));
-CREATE POLICY "permissions_insert_policy" ON public.permissions FOR INSERT WITH CHECK (public.has_permission('permissions', 'create'));
-CREATE POLICY "permissions_update_policy" ON public.permissions FOR UPDATE USING (public.has_permission('permissions', 'update'));
-CREATE POLICY "permissions_delete_policy" ON public.permissions FOR DELETE USING (public.has_permission('permissions', 'delete'));
+CREATE POLICY "permissions_select_policy" ON public.permissions FOR
+SELECT
+  USING (public.has_permission ('permissions', 'read'));
+
+CREATE POLICY "permissions_insert_policy" ON public.permissions FOR INSERT
+WITH
+  CHECK (public.has_permission ('permissions', 'create'));
+
+CREATE POLICY "permissions_update_policy" ON public.permissions
+FOR UPDATE
+  USING (public.has_permission ('permissions', 'update'));
+
+CREATE POLICY "permissions_delete_policy" ON public.permissions FOR DELETE USING (public.has_permission ('permissions', 'delete'));
 
 -- Levels policies
-CREATE POLICY "levels_select_policy" ON public.levels FOR SELECT USING (public.has_permission('levels', 'read'));
-CREATE POLICY "levels_insert_policy" ON public.levels FOR INSERT WITH CHECK (public.has_permission('levels', 'create'));
-CREATE POLICY "levels_update_policy" ON public.levels FOR UPDATE USING (public.has_permission('levels', 'update'));
-CREATE POLICY "levels_delete_policy" ON public.levels FOR DELETE USING (public.has_permission('levels', 'delete'));
+CREATE POLICY "levels_select_policy" ON public.levels FOR
+SELECT
+  USING (public.has_permission ('levels', 'read'));
+
+CREATE POLICY "levels_insert_policy" ON public.levels FOR INSERT
+WITH
+  CHECK (public.has_permission ('levels', 'create'));
+
+CREATE POLICY "levels_update_policy" ON public.levels
+FOR UPDATE
+  USING (public.has_permission ('levels', 'update'));
+
+CREATE POLICY "levels_delete_policy" ON public.levels FOR DELETE USING (public.has_permission ('levels', 'delete'));
 
 -- Courses policies
-CREATE POLICY "courses_select_policy" ON public.courses FOR SELECT USING (public.has_permission('courses', 'read'));
-CREATE POLICY "courses_insert_policy" ON public.courses FOR INSERT WITH CHECK (public.has_permission('courses', 'create'));
-CREATE POLICY "courses_update_policy" ON public.courses FOR UPDATE USING (public.has_permission('courses', 'update'));
-CREATE POLICY "courses_delete_policy" ON public.courses FOR DELETE USING (public.has_permission('courses', 'delete'));
+CREATE POLICY "courses_select_policy" ON public.courses FOR
+SELECT
+  USING (public.has_permission ('courses', 'read'));
+
+CREATE POLICY "courses_insert_policy" ON public.courses FOR INSERT
+WITH
+  CHECK (public.has_permission ('courses', 'create'));
+
+CREATE POLICY "courses_update_policy" ON public.courses
+FOR UPDATE
+  USING (public.has_permission ('courses', 'update'));
+
+CREATE POLICY "courses_delete_policy" ON public.courses FOR DELETE USING (public.has_permission ('courses', 'delete'));
 
 -- Students policies
-CREATE POLICY "students_select_policy" ON public.students FOR SELECT USING (public.has_permission('students', 'read'));
-CREATE POLICY "students_insert_policy" ON public.students FOR INSERT WITH CHECK (public.has_permission('students', 'create'));
-CREATE POLICY "students_update_policy" ON public.students FOR UPDATE USING (public.has_permission('students', 'update'));
-CREATE POLICY "students_delete_policy" ON public.students FOR DELETE USING (public.has_permission('students', 'delete'));
+CREATE POLICY "students_select_policy" ON public.students FOR
+SELECT
+  USING (public.has_permission ('students', 'read'));
+
+CREATE POLICY "students_insert_policy" ON public.students FOR INSERT
+WITH
+  CHECK (public.has_permission ('students', 'create'));
+
+CREATE POLICY "students_update_policy" ON public.students
+FOR UPDATE
+  USING (public.has_permission ('students', 'update'));
+
+CREATE POLICY "students_delete_policy" ON public.students FOR DELETE USING (public.has_permission ('students', 'delete'));
 
 -- Registers policies
-CREATE POLICY "registers_select_policy" ON public.registers FOR SELECT USING (public.has_permission('registers', 'read'));
-CREATE POLICY "registers_insert_policy" ON public.registers FOR INSERT WITH CHECK (public.has_permission('registers', 'create'));
-CREATE POLICY "registers_update_policy" ON public.registers FOR UPDATE USING (public.has_permission('registers', 'update'));
-CREATE POLICY "registers_delete_policy" ON public.registers FOR DELETE USING (public.has_permission('registers', 'delete'));
+CREATE POLICY "registers_select_policy" ON public.registers FOR
+SELECT
+  USING (public.has_permission ('registers', 'read'));
+
+CREATE POLICY "registers_insert_policy" ON public.registers FOR INSERT
+WITH
+  CHECK (public.has_permission ('registers', 'create'));
+
+CREATE POLICY "registers_update_policy" ON public.registers
+FOR UPDATE
+  USING (public.has_permission ('registers', 'update'));
+
+CREATE POLICY "registers_delete_policy" ON public.registers FOR DELETE USING (public.has_permission ('registers', 'delete'));
 
 -- Evals policies
-CREATE POLICY "evals_select_policy" ON public.evals FOR SELECT USING (public.has_permission('evals', 'read'));
-CREATE POLICY "evals_insert_policy" ON public.evals FOR INSERT WITH CHECK (public.has_permission('evals', 'create'));
-CREATE POLICY "evals_update_policy" ON public.evals FOR UPDATE USING (public.has_permission('evals', 'update'));
-CREATE POLICY "evals_delete_policy" ON public.evals FOR DELETE USING (public.has_permission('evals', 'delete'));
+CREATE POLICY "evals_select_policy" ON public.evals FOR
+SELECT
+  USING (public.has_permission ('evals', 'read'));
+
+CREATE POLICY "evals_insert_policy" ON public.evals FOR INSERT
+WITH
+  CHECK (public.has_permission ('evals', 'create'));
+
+CREATE POLICY "evals_update_policy" ON public.evals
+FOR UPDATE
+  USING (public.has_permission ('evals', 'update'));
+
+CREATE POLICY "evals_delete_policy" ON public.evals FOR DELETE USING (public.has_permission ('evals', 'delete'));
 
 -- Eval sections policies
-CREATE POLICY "eval_sections_select_policy" ON public.eval_sections FOR SELECT USING (public.has_permission('eval_sections', 'read'));
-CREATE POLICY "eval_sections_insert_policy" ON public.eval_sections FOR INSERT WITH CHECK (public.has_permission('eval_sections', 'create'));
-CREATE POLICY "eval_sections_update_policy" ON public.eval_sections FOR UPDATE USING (public.has_permission('eval_sections', 'update'));
-CREATE POLICY "eval_sections_delete_policy" ON public.eval_sections FOR DELETE USING (public.has_permission('eval_sections', 'delete'));
+CREATE POLICY "eval_sections_select_policy" ON public.eval_sections FOR
+SELECT
+  USING (public.has_permission ('eval_sections', 'read'));
+
+CREATE POLICY "eval_sections_insert_policy" ON public.eval_sections FOR INSERT
+WITH
+  CHECK (public.has_permission ('eval_sections', 'create'));
+
+CREATE POLICY "eval_sections_update_policy" ON public.eval_sections
+FOR UPDATE
+  USING (public.has_permission ('eval_sections', 'update'));
+
+CREATE POLICY "eval_sections_delete_policy" ON public.eval_sections FOR DELETE USING (public.has_permission ('eval_sections', 'delete'));
 
 -- Eval questions policies
-CREATE POLICY "eval_questions_select_policy" ON public.eval_questions FOR SELECT USING (public.has_permission('eval_questions', 'read'));
-CREATE POLICY "eval_questions_insert_policy" ON public.eval_questions FOR INSERT WITH CHECK (public.has_permission('eval_questions', 'create'));
-CREATE POLICY "eval_questions_update_policy" ON public.eval_questions FOR UPDATE USING (public.has_permission('eval_questions', 'update'));
-CREATE POLICY "eval_questions_delete_policy" ON public.eval_questions FOR DELETE USING (public.has_permission('eval_questions', 'delete'));
+CREATE POLICY "eval_questions_select_policy" ON public.eval_questions FOR
+SELECT
+  USING (public.has_permission ('eval_questions', 'read'));
+
+CREATE POLICY "eval_questions_insert_policy" ON public.eval_questions FOR INSERT
+WITH
+  CHECK (
+    public.has_permission ('eval_questions', 'create')
+  );
+
+CREATE POLICY "eval_questions_update_policy" ON public.eval_questions
+FOR UPDATE
+  USING (
+    public.has_permission ('eval_questions', 'update')
+  );
+
+CREATE POLICY "eval_questions_delete_policy" ON public.eval_questions FOR DELETE USING (
+  public.has_permission ('eval_questions', 'delete')
+);
 
 -- Eval answers policies
-CREATE POLICY "eval_answers_select_policy" ON public.eval_answers FOR SELECT USING (public.has_permission('eval_answers', 'read'));
-CREATE POLICY "eval_answers_insert_policy" ON public.eval_answers FOR INSERT WITH CHECK (public.has_permission('eval_answers', 'create'));
-CREATE POLICY "eval_answers_update_policy" ON public.eval_answers FOR UPDATE USING (public.has_permission('eval_answers', 'update'));
-CREATE POLICY "eval_answers_delete_policy" ON public.eval_answers FOR DELETE USING (public.has_permission('eval_answers', 'delete'));
+CREATE POLICY "eval_answers_select_policy" ON public.eval_answers FOR
+SELECT
+  USING (public.has_permission ('eval_answers', 'read'));
+
+CREATE POLICY "eval_answers_insert_policy" ON public.eval_answers FOR INSERT
+WITH
+  CHECK (public.has_permission ('eval_answers', 'create'));
+
+CREATE POLICY "eval_answers_update_policy" ON public.eval_answers
+FOR UPDATE
+  USING (public.has_permission ('eval_answers', 'update'));
+
+CREATE POLICY "eval_answers_delete_policy" ON public.eval_answers FOR DELETE USING (public.has_permission ('eval_answers', 'delete'));
 
 -- Eval results policies
-CREATE POLICY "eval_results_select_policy" ON public.eval_results FOR SELECT USING (public.has_permission('eval_results', 'read'));
-CREATE POLICY "eval_results_insert_policy" ON public.eval_results FOR INSERT WITH CHECK (public.has_permission('eval_results', 'create'));
-CREATE POLICY "eval_results_update_policy" ON public.eval_results FOR UPDATE USING (public.has_permission('eval_results', 'update'));
-CREATE POLICY "eval_results_delete_policy" ON public.eval_results FOR DELETE USING (public.has_permission('eval_results', 'delete'));
+CREATE POLICY "eval_results_select_policy" ON public.eval_results FOR
+SELECT
+  USING (public.has_permission ('eval_results', 'read'));
+
+CREATE POLICY "eval_results_insert_policy" ON public.eval_results FOR INSERT
+WITH
+  CHECK (public.has_permission ('eval_results', 'create'));
+
+CREATE POLICY "eval_results_update_policy" ON public.eval_results
+FOR UPDATE
+  USING (public.has_permission ('eval_results', 'update'));
+
+CREATE POLICY "eval_results_delete_policy" ON public.eval_results FOR DELETE USING (public.has_permission ('eval_results', 'delete'));
 
 -- =====================================================
 -- GRANTS AND PERMISSIONS
 -- =====================================================
-
 -- Grant usage on schema
 GRANT USAGE ON SCHEMA public TO postgres;
 
 -- Grant permissions on all tables
 GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres;
+
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres;
+
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO postgres;
 
 -- Grant execute on functions
-GRANT EXECUTE ON FUNCTION public.get_register_eval_results(TEXT) TO postgres;
-GRANT EXECUTE ON FUNCTION public.upsert_eval_results(uuid, uuid, jsonb, jsonb, jsonb) TO postgres;
-GRANT EXECUTE ON FUNCTION public.has_permission(TEXT, TEXT) TO postgres;
-GRANT EXECUTE ON FUNCTION public.timestamp_updater() TO postgres;
-GRANT EXECUTE ON FUNCTION public.import_student_register(TEXT, TEXT, TEXT, TEXT, UUID, TEXT, TEXT, UUID) TO postgres;
-GRANT EXECUTE ON FUNCTION public.get_student_eval_report(TEXT) TO postgres;
-GRANT EXECUTE ON FUNCTION public.get_level_course_scores(TEXT, TEXT) TO postgres;
-GRANT EXECUTE ON FUNCTION public.get_course_eval_scores(TEXT, TEXT, TEXT) TO postgres;
-GRANT EXECUTE ON FUNCTION public.get_student_score_evolution(TEXT) TO postgres;
-GRANT EXECUTE ON FUNCTION public.get_student_course_scores(TEXT) TO postgres;
-GRANT EXECUTE ON FUNCTION public.get_student_course_evolution(TEXT) TO postgres;
-GRANT EXECUTE ON FUNCTION public.get_level_dashboard_data(TEXT) TO postgres;
-GRANT EXECUTE ON FUNCTION public.get_group_dashboard_data(TEXT, TEXT) TO postgres;
-GRANT EXECUTE ON FUNCTION public.get_eval_dashboard_data(TEXT) TO postgres;
+GRANT
+EXECUTE ON FUNCTION public.get_register_eval_results (TEXT) TO postgres;
+
+GRANT
+EXECUTE ON FUNCTION public.upsert_eval_results (uuid, uuid, JSONB, JSONB, JSONB) TO postgres;
+
+GRANT
+EXECUTE ON FUNCTION public.has_permission (TEXT, TEXT) TO postgres;
+
+GRANT
+EXECUTE ON FUNCTION public.timestamp_updater () TO postgres;
+
+GRANT
+EXECUTE ON FUNCTION public.import_student_register (TEXT, TEXT, TEXT, TEXT, UUID, TEXT, TEXT, UUID) TO postgres;
+
+GRANT
+EXECUTE ON FUNCTION public.get_student_eval_report (TEXT) TO postgres;
+
+GRANT
+EXECUTE ON FUNCTION public.get_level_course_scores (TEXT, TEXT) TO postgres;
+
+GRANT
+EXECUTE ON FUNCTION public.get_course_eval_scores (TEXT, TEXT, TEXT) TO postgres;
+
+GRANT
+EXECUTE ON FUNCTION public.get_student_score_evolution (TEXT) TO postgres;
+
+GRANT
+EXECUTE ON FUNCTION public.get_student_course_scores (TEXT) TO postgres;
+
+GRANT
+EXECUTE ON FUNCTION public.get_student_course_evolution (TEXT) TO postgres;
+
+GRANT
+EXECUTE ON FUNCTION public.get_level_dashboard_data (TEXT) TO postgres;
+
+GRANT
+EXECUTE ON FUNCTION public.get_group_dashboard_data (TEXT, TEXT) TO postgres;
+
+GRANT
+EXECUTE ON FUNCTION public.get_eval_dashboard_data (TEXT) TO postgres;
 
 -- Grant select permissions on views
-GRANT SELECT ON public.student_registers TO postgres;
-GRANT SELECT ON public.student_register_results TO postgres;
+GRANT
+SELECT
+  ON public.student_registers TO postgres;
 
--- =====================================================
--- INITIAL DATA (Optional)
--- =====================================================
-
--- Insert a default super admin user (password: 'admin123' - MUST CHANGE IN PRODUCTION!)
--- TODO: Replace this with a proper bcrypt hash before deploying to production
-INSERT INTO public.users (email, password_hash, is_super_admin, is_email_verified, name, last_name)
-VALUES (
-    'admin@nextya.com',
-    '$2b$10$PLACEHOLDER_HASH_CHANGE_IN_PRODUCTION_PLACEHOLDER_HASH', -- PLACEHOLDER - Generate real bcrypt hash for 'admin123' or your chosen password
-    true,
-    true,
-    'Super',
-    'Admin'
-);
-
--- =====================================================
--- SCHEMA COMPLETE
--- =====================================================
+GRANT
+SELECT
+  ON public.student_register_results TO postgres;
+--end

@@ -1,55 +1,250 @@
 #!/bin/bash
 
-# Simplified Docker Management Script for NextYa
-# Usage: ./docker.sh [command]
+#=============================================================================
+# Docker Management Script for NextYa
+#=============================================================================
+# Description: Simplified Docker operations for NextYa development environment
+# Usage:       ./docker.sh [command] [options]
+# Version:     1.0.0
+#=============================================================================
 
 set -e
 
+#-----------------------------------------------------------------------------
 # Configuration
-PROJECT_NAME="nextya"
-COMPOSE_FILE="docker-compose.yml"
+#-----------------------------------------------------------------------------
+readonly SCRIPT_NAME=$(basename "$0")
+readonly PROJECT_NAME="nextya"
+readonly COMPOSE_FILE="docker-compose.yml"
+
+# Export user permissions for Docker volumes
 export USER_ID=$(id -u)
 export GROUP_ID=$(id -g)
 
-# Colors
-BLUE='\033[0;34m'
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m'
+#-----------------------------------------------------------------------------
+# Color Definitions
+#-----------------------------------------------------------------------------
+readonly COLOR_BLUE='\033[0;34m'
+readonly COLOR_GREEN='\033[0;32m'
+readonly COLOR_RED='\033[0;31m'
+readonly COLOR_YELLOW='\033[0;33m'
+readonly COLOR_RESET='\033[0m'
 
-# Helpers
-print_info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
-print_success() { echo -e "${GREEN}✅ $1${NC}"; }
-print_error() { echo -e "${RED}❌ $1${NC}"; }
+#-----------------------------------------------------------------------------
+# Output Functions
+#-----------------------------------------------------------------------------
+print_info() {
+    echo -e "${COLOR_BLUE}ℹ️  $1${COLOR_RESET}"
+}
 
-# Check Docker
+print_success() {
+    echo -e "${COLOR_GREEN}✅ $1${COLOR_RESET}"
+}
+
+print_error() {
+    echo -e "${COLOR_RED}❌ $1${COLOR_RESET}"
+}
+
+print_warning() {
+    echo -e "${COLOR_YELLOW}⚠️  $1${COLOR_RESET}"
+}
+
+print_header() {
+    echo -e "\n${COLOR_BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLOR_RESET}"
+    echo -e "${COLOR_BLUE}  $1${COLOR_RESET}"
+    echo -e "${COLOR_BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLOR_RESET}\n"
+}
+
+#-----------------------------------------------------------------------------
+# Utility Functions
+#-----------------------------------------------------------------------------
 check_docker() {
-    if ! command -v docker &> /dev/null || ! command -v docker-compose &> /dev/null; then
-        print_error "Docker and Docker Compose are required"
+    if ! command -v docker &> /dev/null; then
+        print_error "Docker is not installed"
+        exit 1
+    fi
+
+    if ! command -v docker-compose &> /dev/null; then
+        print_error "Docker Compose is not installed"
+        exit 1
+    fi
+
+    if ! docker info &> /dev/null; then
+        print_error "Docker daemon is not running"
         exit 1
     fi
 }
 
-# Commands
-build() { print_info "Building images..."; docker-compose -f $COMPOSE_FILE build; print_success "Build completed"; }
-up() { print_info "Starting services..."; docker-compose -f $COMPOSE_FILE up -d; print_success "Services started"; }
-down() { print_info "Stopping services..."; docker-compose -f $COMPOSE_FILE down; print_success "Services stopped"; }
-logs() { docker-compose -f $COMPOSE_FILE logs -f; }
-shell() { docker exec -it ${PROJECT_NAME}_app /bin/sh; }
-npm() { shift; docker exec -it ${PROJECT_NAME}_app npm "$@"; }
-db_shell() { docker exec -it ${PROJECT_NAME}_postgres psql -U postgres -d nextya; }
-db_migrate() { docker exec -it ${PROJECT_NAME}_app npm run db:migrate; print_success "Migrations completed"; }
+check_compose_file() {
+    if [[ ! -f "$COMPOSE_FILE" ]]; then
+        print_error "Docker Compose file not found: $COMPOSE_FILE"
+        exit 1
+    fi
+}
 
-# Main
-check_docker
-case "$1" in
-    "build") build ;;
-    "up") up ;;
-    "down") down ;;
-    "logs") logs ;;
-    "shell") shell ;;
-    "npm") npm "$@" ;;
-    "db:shell") db_shell ;;
-    "db:migrate") db_migrate ;;
-    *) echo "Usage: ./docker.sh [build|up|down|logs|shell|npm|db:shell|db:migrate]"; exit 1 ;;
-esac
+#-----------------------------------------------------------------------------
+# Command Functions
+#-----------------------------------------------------------------------------
+cmd_build() {
+    print_header "Building Docker Images"
+    print_info "Building images for $PROJECT_NAME..."
+    
+    docker-compose -f "$COMPOSE_FILE" build
+    
+    print_success "Build completed successfully!"
+}
+
+cmd_up() {
+    print_header "Starting Services"
+    print_info "Starting $PROJECT_NAME services..."
+    
+    docker-compose -f "$COMPOSE_FILE" up -d
+    
+    print_success "All services are up and running!"
+    print_info "View logs with: $SCRIPT_NAME logs"
+}
+
+cmd_down() {
+    print_header "Stopping Services"
+    print_info "Stopping $PROJECT_NAME services..."
+    
+    docker-compose -f "$COMPOSE_FILE" down
+    
+    print_success "All services have been stopped!"
+}
+
+cmd_restart() {
+    print_header "Restarting Services"
+    cmd_down
+    cmd_up
+}
+
+cmd_logs() {
+    print_header "Viewing Logs"
+    print_info "Showing logs (Ctrl+C to exit)..."
+    
+    docker-compose -f "$COMPOSE_FILE" logs -f
+}
+
+cmd_shell() {
+    print_header "Opening Shell"
+    print_info "Connecting to app container..."
+    
+    docker exec -it "${PROJECT_NAME}_app" /bin/sh
+}
+
+cmd_npm() {
+    shift  # Remove the 'npm' command from arguments
+    print_header "Running NPM Command"
+    print_info "Executing: npm $*"
+    
+    docker exec -it "${PROJECT_NAME}_app" npm "$@"
+}
+
+cmd_db_shell() {
+    print_header "Database Shell"
+    print_info "Connecting to PostgreSQL..."
+    
+    docker exec -it "${PROJECT_NAME}_postgres" psql -U postgres -d "$PROJECT_NAME"
+}
+
+cmd_db_migrate() {
+    print_header "Database Migration"
+    print_info "Running database migrations..."
+    
+    docker exec -it "${PROJECT_NAME}_app" npm run db:migrate
+    
+    print_success "Migrations completed successfully!"
+}
+
+cmd_status() {
+    print_header "Service Status"
+    docker-compose -f "$COMPOSE_FILE" ps
+}
+
+cmd_clean() {
+    print_header "Cleanup"
+    print_warning "This will remove containers, networks, and volumes!"
+    read -p "Are you sure? (y/N) " -n 1 -r
+    echo
+    
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        docker-compose -f "$COMPOSE_FILE" down -v
+        print_success "Cleanup completed!"
+    else
+        print_info "Cleanup cancelled"
+    fi
+}
+
+#-----------------------------------------------------------------------------
+# Help Function
+#-----------------------------------------------------------------------------
+show_help() {
+    cat << EOF
+
+${COLOR_BLUE}Docker Management Script for NextYa${COLOR_RESET}
+
+${COLOR_GREEN}Usage:${COLOR_RESET}
+  $SCRIPT_NAME [command] [options]
+
+${COLOR_GREEN}Available Commands:${COLOR_RESET}
+  build       Build Docker images
+  up          Start all services in detached mode
+  down        Stop all running services
+  restart     Restart all services
+  logs        View logs from all services
+  status      Show status of all services
+  shell       Open shell in app container
+  npm         Run npm commands in app container
+  db:shell    Open PostgreSQL shell
+  db:migrate  Run database migrations
+  clean       Remove containers, networks, and volumes
+  help        Show this help message
+
+${COLOR_GREEN}Examples:${COLOR_RESET}
+  $SCRIPT_NAME up              # Start all services
+  $SCRIPT_NAME npm install     # Install npm dependencies
+  $SCRIPT_NAME npm run dev     # Run development server
+  $SCRIPT_NAME db:migrate      # Run database migrations
+
+${COLOR_GREEN}Environment:${COLOR_RESET}
+  Project:     $PROJECT_NAME
+  Compose:     $COMPOSE_FILE
+  User ID:     $USER_ID
+  Group ID:    $GROUP_ID
+
+EOF
+}
+
+#-----------------------------------------------------------------------------
+# Main Entry Point
+#-----------------------------------------------------------------------------
+main() {
+    # Check prerequisites
+    check_docker
+    check_compose_file
+
+    # Parse command
+    case "${1:-help}" in
+        "build")      cmd_build ;;
+        "up")         cmd_up ;;
+        "down")       cmd_down ;;
+        "restart")    cmd_restart ;;
+        "logs")       cmd_logs ;;
+        "status")     cmd_status ;;
+        "shell")      cmd_shell ;;
+        "npm")        cmd_npm "$@" ;;
+        "db:shell")   cmd_db_shell ;;
+        "db:migrate") cmd_db_migrate ;;
+        "clean")      cmd_clean ;;
+        "help"|"-h"|"--help") show_help ;;
+        *)
+            print_error "Unknown command: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+# Execute main function
+main "$@"
