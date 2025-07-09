@@ -22,8 +22,10 @@ USER node
 # Copy package files
 COPY --chown=node:node package.json package-lock.json* ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies and upgrade undici to fix multipart/form-data support
+# Using undici@6.20.0 for Node.js 18.8.0 compatibility
+RUN npm install && \
+    npm install undici@6.20.0
 
 # Copy source code
 COPY --chown=node:node . .
@@ -40,8 +42,10 @@ FROM base AS production
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install production dependencies and clean up
-RUN npm ci --omit=dev && \
+# Install production dependencies with undici fix and clean up
+# Using undici@6.20.0 for Node.js 18.8.0 compatibility
+RUN npm install --production && \
+    npm install undici@6.20.0 && \
     npm cache clean --force
 
 # Copy source code and build
