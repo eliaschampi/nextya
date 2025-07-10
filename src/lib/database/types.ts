@@ -5,6 +5,18 @@
 
 import type { ColumnType } from 'kysely';
 
+export type EntityEnum =
+	| 'courses'
+	| 'eval_answers'
+	| 'eval_questions'
+	| 'eval_results'
+	| 'eval_sections'
+	| 'evals'
+	| 'levels'
+	| 'registers'
+	| 'students'
+	| 'users';
+
 export type Generated<T> =
 	T extends ColumnType<infer S, infer I, infer U>
 		? ColumnType<S, I | undefined, U>
@@ -15,7 +27,6 @@ export type Numeric = ColumnType<string, number | string, number | string>;
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface Courses {
-	abr: string;
 	code: Generated<string>;
 	created_at: Generated<Timestamp | null>;
 	name: string;
@@ -76,14 +87,14 @@ export interface Levels {
 	code: Generated<string>;
 	created_at: Generated<Timestamp | null>;
 	name: string;
-	users: Generated<string[]>;
+	users: string[];
 }
 
 export interface Permissions {
 	action: string;
 	code: Generated<string>;
 	created_at: Generated<Timestamp>;
-	entity: string;
+	entity: EntityEnum;
 	user_code: string;
 }
 
@@ -95,6 +106,20 @@ export interface Registers {
 	roll_code: string;
 	student_code: string;
 	user_code: string;
+}
+
+export interface StudentRegisters {
+	created_at: Timestamp | null;
+	email: string | null;
+	group_name: string | null;
+	last_name: string | null;
+	level: string | null;
+	level_code: string | null;
+	name: string | null;
+	phone: string | null;
+	register_code: string | null;
+	roll_code: string | null;
+	student_code: string | null;
 }
 
 export interface Students {
@@ -132,14 +157,7 @@ export interface DB {
 	levels: Levels;
 	permissions: Permissions;
 	registers: Registers;
+	student_registers: StudentRegisters;
 	students: Students;
 	users: Users;
-}
-
-// Migration system table interface (internal use)
-export interface MigrationsTable {
-	id: string;
-	name: string;
-	executed_at: Date;
-	batch: number;
 }

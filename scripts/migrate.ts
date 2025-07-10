@@ -1,28 +1,24 @@
 #!/usr/bin/env tsx
 
 /**
- * NextYa Database Management CLI - Enhanced Version
- * =================================================
+ * NextYa Database Migration CLI - Simplified
+ * ==========================================
  *
- * This enhanced CLI provides comprehensive database management including:
- * - Schema initialization via Docker
- * - Progressive migrations for future changes
- * - Automatic type generation
- * - Database status and health checks
- * - Migration rollback capabilities
- *
- * Architecture:
- * - Initial schema: /docker/init/01-init.sql (Docker initialization)
- * - Future changes: Progressive migrations in /src/lib/database/migrations/files/
- * - Type generation: Automatic after migrations or on-demand
+ * Clean, minimal migration system with only essential commands:
+ * - db:migrate - Run pending migrations
+ * - db:create - Create new migration file
+ * - db:rollback - Rollback last migration
+ * - db:generate - Generate TypeScript types
  */
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { writeFile } from 'fs/promises';
+import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { MigrationRunner } from '../src/lib/database/migrations/index.js';
-import { createDatabase } from '../src/lib/database/index.js';
+import { Kysely, PostgresDialect, Migrator, FileMigrationProvider } from 'kysely';
+import { Pool } from 'pg';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 
 const execAsync = promisify(exec);
 
@@ -36,8 +32,22 @@ const dbConfig = {
 };
 
 // Create database instance
-const db = createDatabase(dbConfig);
-const migrationRunner = new MigrationRunner(db);
+const db = new Kysely<unknown>({
+	dialect: new PostgresDialect({
+		pool: new Pool(dbConfig)
+	})
+});
+
+// Migration provider
+const migrationFolder = path.join(process.cwd(), 'src/lib/database/migrations/files');
+const migrator = new Migrator({
+	db,
+	provider: new FileMigrationProvider({
+		fs,
+		path,
+		migrationFolder
+	})
+});
 
 async function checkConnection() {
 	console.log('🔍 Checking database connection...');
@@ -75,22 +85,22 @@ async function generateTypes() {
 async function createMigration(name: string) {
 	if (!name) {
 		console.error('❌ Migration name is required');
-		console.log('Usage: npm run db:create-migration "migration_name"');
+		console.log('Usage: npm run db:create "migration_name"');
 		return false;
 	}
 
 	const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
 	const fileName = `${timestamp}_${name.toLowerCase().replace(/\s+/g, '_')}.ts`;
-	const filePath = join(process.cwd(), 'src/lib/database/migrations/files', fileName);
+	const filePath = join(migrationFolder, fileName);
 
-	const template = `/**
- * Migration: ${name}
- * Created: ${new Date().toISOString()}
- */
+	// Ensure migrations directory exists
+	try {
+		await mkdir(migrationFolder, { recursive: true });
+	} catch {
+		// Directory might already exist
+	}
 
-import { Kysely, sql } from 'kysely';
-
-export const name = '${name}';
+	const template = `import { Kysely, sql } from 'kysely';
 
 export async function up(db: Kysely<any>): Promise<void> {
 	// Add your schema changes here
@@ -112,8 +122,6 @@ export async function down(db: Kysely<any>): Promise<void> {
 	await db.schema.dropTable('example_table').execute();
 	*/
 }
-
-export default { name, up, down };
 `;
 
 	try {
@@ -130,7 +138,21 @@ export default { name, up, down };
 async function runMigrations() {
 	console.log('🔄 Running database migrations...');
 	try {
-		await migrationRunner.migrate();
+		const { error, results } = await migrator.migrateToLatest();
+
+		results?.forEach((it) => {
+			if (it.status === 'Success') {
+				console.log(`✅ Migration "${it.migrationName}" executed successfully`);
+			} else if (it.status === 'Error') {
+				console.error(`❌ Failed to execute migration "${it.migrationName}"`);
+			}
+		});
+
+		if (error) {
+			console.error('❌ Migration failed:', error);
+			return false;
+		}
+
 		console.log('🔄 Regenerating types after migration...');
 		await generateTypes();
 		return true;
@@ -141,9 +163,23 @@ async function runMigrations() {
 }
 
 async function rollbackMigrations() {
-	console.log('🔄 Rolling back last migration batch...');
+	console.log('🔄 Rolling back last migration...');
 	try {
-		await migrationRunner.rollback();
+		const { error, results } = await migrator.migrateDown();
+
+		results?.forEach((it) => {
+			if (it.status === 'Success') {
+				console.log(`✅ Migration "${it.migrationName}" rolled back successfully`);
+			} else if (it.status === 'Error') {
+				console.error(`❌ Failed to rollback migration "${it.migrationName}"`);
+			}
+		});
+
+		if (error) {
+			console.error('❌ Rollback failed:', error);
+			return false;
+		}
+
 		console.log('🔄 Regenerating types after rollback...');
 		await generateTypes();
 		return true;
@@ -156,7 +192,26 @@ async function rollbackMigrations() {
 async function migrationStatus() {
 	console.log('📊 Checking migration status...');
 	try {
-		await migrationRunner.status();
+		const migrations = await migrator.getMigrations();
+
+		console.log('\n📊 Migration Status');
+		console.log('==================');
+
+		if (migrations.length === 0) {
+			console.log('No migrations found');
+			return true;
+		}
+
+		migrations.forEach((migration) => {
+			const status = migration.executedAt ? '✅ Executed' : '⏳ Pending';
+			const executedInfo = migration.executedAt ? ` (${migration.executedAt.toISOString()})` : '';
+			console.log(`  ${status} ${migration.name}${executedInfo}`);
+		});
+
+		const executedCount = migrations.filter((m) => m.executedAt).length;
+		const pendingCount = migrations.length - executedCount;
+		console.log(`\n📈 Summary: ${executedCount} executed, ${pendingCount} pending`);
+
 		return true;
 	} catch (error) {
 		console.error('❌ Failed to get migration status:', error);
@@ -164,20 +219,38 @@ async function migrationStatus() {
 	}
 }
 
-async function showStatus() {
-	console.log('\n📊 NextYa Database Management System');
-	console.log('====================================');
-	console.log('🏗️  Initial Schema: /docker/init/01-init.sql (Docker auto-init)');
-	console.log('🔄 Future Changes: Progressive migrations');
-	console.log('📝 TypeScript Types: src/lib/database/types.ts');
-	console.log('📁 Migrations: src/lib/database/migrations/files/');
-	console.log('\n💡 Common Commands:');
-	console.log('   npm run db:migrate        - Run pending migrations');
-	console.log('   npm run db:rollback       - Rollback last migration batch');
-	console.log('   npm run db:status         - Show migration status');
-	console.log('   npm run db:generate       - Generate TypeScript types');
-	console.log('   npm run db:create "name"  - Create new migration');
-	console.log('   npm run db:reset          - Reset database (Docker)');
+async function resetDatabase() {
+	console.log('🔄 Resetting database (Docker containers)...');
+	try {
+		const { stderr } = await execAsync('docker-compose down -v && docker-compose up -d');
+
+		if (stderr && !stderr.includes('warning')) {
+			console.error('❌ Error resetting database:', stderr);
+			return false;
+		}
+
+		console.log('✅ Database reset successfully');
+		console.log('⏳ Waiting for database to be ready...');
+
+		// Wait a bit for the database to be ready
+		await new Promise((resolve) => setTimeout(resolve, 5000));
+
+		console.log('🔄 Regenerating types after reset...');
+		await generateTypes();
+		return true;
+	} catch (error) {
+		console.error('❌ Failed to reset database:', error);
+		return false;
+	}
+}
+
+// Clean up database connection
+async function cleanup() {
+	try {
+		await db.destroy();
+	} catch {
+		// Ignore cleanup errors
+	}
 }
 
 // Parse command line arguments
@@ -185,70 +258,50 @@ const command = process.argv[2];
 const migrationName = process.argv[3];
 
 async function main() {
-	switch (command) {
-		case 'migrate':
-		case 'up':
-			if (await checkConnection()) {
-				await runMigrations();
-			}
-			break;
-		case 'rollback':
-		case 'down':
-			if (await checkConnection()) {
-				await rollbackMigrations();
-			}
-			break;
-		case 'status':
-		case 'info':
-			if (await checkConnection()) {
-				await migrationStatus();
-			} else {
-				await showStatus();
-			}
-			break;
-		case 'generate':
-		case 'types':
-			if (await checkConnection()) {
-				await generateTypes();
-			}
-			break;
-		case 'create':
-		case 'new':
-			await createMigration(migrationName);
-			break;
-		case 'check':
-			await checkConnection();
-			break;
-		default:
-			console.log('NextYa Database Management CLI - Enhanced');
-			console.log('========================================');
-			console.log('Usage: tsx scripts/migrate.ts [command] [options]');
-			console.log('');
-			console.log('Commands:');
-			console.log('  migrate, up              Run pending migrations');
-			console.log('  rollback, down           Rollback last migration batch');
-			console.log('  status, info             Show migration status');
-			console.log('  generate, types          Generate TypeScript types');
-			console.log('  create "name"            Create new migration file');
-			console.log('  check                    Check database connection');
-			console.log('');
-			console.log('Examples:');
-			console.log('  tsx scripts/migrate.ts migrate');
-			console.log('  tsx scripts/migrate.ts create "add user preferences"');
-			console.log('  tsx scripts/migrate.ts rollback');
-			console.log('');
-			console.log('Architecture:');
-			console.log('  • Initial schema: Docker initialization (/docker/init/01-init.sql)');
-			console.log('  • Future changes: Progressive migrations with rollback support');
-			console.log('  • Type safety: Automatic TypeScript type generation');
-			break;
-	}
-
-	// Clean up database connection
 	try {
-		await db.destroy();
-	} catch {
-		// Ignore cleanup errors
+		switch (command) {
+			case 'migrate':
+				if (await checkConnection()) {
+					await runMigrations();
+				}
+				break;
+			case 'rollback':
+				if (await checkConnection()) {
+					await rollbackMigrations();
+				}
+				break;
+			case 'status':
+				if (await checkConnection()) {
+					await migrationStatus();
+				}
+				break;
+			case 'generate':
+				if (await checkConnection()) {
+					await generateTypes();
+				}
+				break;
+			case 'create':
+				await createMigration(migrationName);
+				break;
+			case 'reset':
+				await resetDatabase();
+				break;
+			default:
+				console.log('NextYa Database Migration CLI');
+				console.log('============================');
+				console.log('Usage: npm run db:[command]');
+				console.log('');
+				console.log('Commands:');
+				console.log('  db:migrate     Run pending migrations');
+				console.log('  db:rollback    Rollback last migration');
+				console.log('  db:status      Show migration status');
+				console.log('  db:generate    Generate TypeScript types');
+				console.log('  db:create      Create new migration file');
+				console.log('  db:reset       Reset database (Docker)');
+				break;
+		}
+	} finally {
+		await cleanup();
 	}
 }
 

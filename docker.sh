@@ -151,10 +151,61 @@ cmd_db_shell() {
 cmd_db_migrate() {
     print_header "Database Migration"
     print_info "Running database migrations..."
-    
+
     docker exec -it "${PROJECT_NAME}_app" npm run db:migrate
-    
+
     print_success "Migrations completed successfully!"
+}
+
+cmd_db_rollback() {
+    print_header "Database Rollback"
+    print_info "Rolling back last migration..."
+
+    docker exec -it "${PROJECT_NAME}_app" npm run db:rollback
+
+    print_success "Rollback completed successfully!"
+}
+
+cmd_db_generate() {
+    print_header "Generate Database Types"
+    print_info "Generating TypeScript types from database schema..."
+
+    docker exec -it "${PROJECT_NAME}_app" npm run db:generate
+
+    print_success "Types generated successfully!"
+}
+
+cmd_db_create() {
+    shift  # Remove the 'db:create' command from arguments
+    print_header "Create Migration"
+    print_info "Creating new migration: $*"
+
+    docker exec -it "${PROJECT_NAME}_app" npm run db:create "$@"
+
+    print_success "Migration file created successfully!"
+}
+
+cmd_db_reset() {
+    print_header "Reset Database"
+    print_warning "This will destroy all data and recreate the database!"
+    read -p "Are you sure? (y/N) " -n 1 -r
+    echo
+
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        print_info "Resetting database..."
+        docker-compose down -v
+        docker-compose up -d
+
+        print_info "Waiting for database to be ready..."
+        sleep 5
+
+        print_info "Generating types..."
+        docker exec -it "${PROJECT_NAME}_app" npm run db:generate
+
+        print_success "Database reset completed successfully!"
+    else
+        print_info "Database reset cancelled"
+    fi
 }
 
 cmd_status() {
@@ -195,17 +246,23 @@ ${COLOR_GREEN}Available Commands:${COLOR_RESET}
   logs        View logs from all services
   status      Show status of all services
   shell       Open shell in app container
-  npm         Run npm commands in app container
-  db:shell    Open PostgreSQL shell
-  db:migrate  Run database migrations
-  clean       Remove containers, networks, and volumes
-  help        Show this help message
+  npm           Run npm commands in app container
+  db:shell      Open PostgreSQL shell
+  db:migrate    Run database migrations
+  db:rollback   Rollback last migration
+  db:generate   Generate TypeScript types
+  db:create     Create new migration file
+  db:reset      Reset database (destroys all data)
+  clean         Remove containers, networks, and volumes
+  help          Show this help message
 
 ${COLOR_GREEN}Examples:${COLOR_RESET}
   $SCRIPT_NAME up              # Start all services
-  $SCRIPT_NAME npm install     # Install npm dependencies
-  $SCRIPT_NAME npm run dev     # Run development server
-  $SCRIPT_NAME db:migrate      # Run database migrations
+  $SCRIPT_NAME npm install       # Install npm dependencies
+  $SCRIPT_NAME npm run dev       # Run development server
+  $SCRIPT_NAME db:migrate        # Run database migrations
+  $SCRIPT_NAME db:create "name"  # Create new migration
+  $SCRIPT_NAME db:reset          # Reset database
 
 ${COLOR_GREEN}Environment:${COLOR_RESET}
   Project:     $PROJECT_NAME
@@ -234,9 +291,13 @@ main() {
         "status")     cmd_status ;;
         "shell")      cmd_shell ;;
         "npm")        cmd_npm "$@" ;;
-        "db:shell")   cmd_db_shell ;;
-        "db:migrate") cmd_db_migrate ;;
-        "clean")      cmd_clean ;;
+        "db:shell")     cmd_db_shell ;;
+        "db:migrate")   cmd_db_migrate ;;
+        "db:rollback")  cmd_db_rollback ;;
+        "db:generate")  cmd_db_generate ;;
+        "db:create")    cmd_db_create "$@" ;;
+        "db:reset")     cmd_db_reset ;;
+        "clean")        cmd_clean ;;
         "help"|"-h"|"--help") show_help ;;
         *)
             print_error "Unknown command: $1"
