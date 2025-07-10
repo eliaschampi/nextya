@@ -95,7 +95,7 @@ CREATE TABLE public.levels (
   CONSTRAINT levels_pk PRIMARY KEY (code)
 );
 
--- Courses table (abr field was removed in migration 20251212000008)
+-- Courses
 CREATE TABLE public.courses (
   code UUID NOT NULL DEFAULT gen_random_uuid (),
   name VARCHAR(100) NOT NULL,
