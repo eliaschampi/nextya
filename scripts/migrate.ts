@@ -39,7 +39,7 @@ const migrator = new Migrator({
 async function checkConnection() {
 	console.log('🔍 Checking database connection...');
 	try {
-		await db.executeQuery('SELECT 1' as any);
+		await db.executeQuery('SELECT 1' as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 		console.log('✅ Database connection successful');
 		return true;
 	} catch (error) {

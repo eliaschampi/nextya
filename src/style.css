@@ -219,11 +219,12 @@
 	}
 }
 
-
 .card-gradient-primary {
-	background: linear-gradient(to bottom right,
-			color-mix(in oklch, var(--color-primary) 25%, transparent),
-			color-mix(in oklch, var(--color-primary) 8%, transparent));
+	background: linear-gradient(
+		to bottom right,
+		color-mix(in oklch, var(--color-primary) 25%, transparent),
+		color-mix(in oklch, var(--color-primary) 8%, transparent)
+	);
 	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
 	border: 1px solid color-mix(in oklch, var(--color-primary) 20%, transparent);
 	transition: all 0.2s ease-in-out;
@@ -236,9 +237,11 @@
 }
 
 .card-gradient-secondary {
-	background: linear-gradient(to bottom right,
-			color-mix(in oklch, var(--color-secondary) 25%, transparent),
-			color-mix(in oklch, var(--color-secondary) 8%, transparent));
+	background: linear-gradient(
+		to bottom right,
+		color-mix(in oklch, var(--color-secondary) 25%, transparent),
+		color-mix(in oklch, var(--color-secondary) 8%, transparent)
+	);
 	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
 	border: 1px solid color-mix(in oklch, var(--color-secondary) 20%, transparent);
 	transition: all 0.2s ease-in-out;
@@ -251,9 +254,11 @@
 }
 
 .card-gradient-accent {
-	background: linear-gradient(to bottom right,
-			color-mix(in oklch, var(--color-accent) 25%, transparent),
-			color-mix(in oklch, var(--color-accent) 8%, transparent));
+	background: linear-gradient(
+		to bottom right,
+		color-mix(in oklch, var(--color-accent) 25%, transparent),
+		color-mix(in oklch, var(--color-accent) 8%, transparent)
+	);
 	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
 	border: 1px solid color-mix(in oklch, var(--color-accent) 20%, transparent);
 	transition: all 0.2s ease-in-out;
@@ -266,9 +271,11 @@
 }
 
 .card-gradient-info {
-	background: linear-gradient(to bottom right,
-			color-mix(in oklch, var(--color-info) 25%, transparent),
-			color-mix(in oklch, var(--color-info) 8%, transparent));
+	background: linear-gradient(
+		to bottom right,
+		color-mix(in oklch, var(--color-info) 25%, transparent),
+		color-mix(in oklch, var(--color-info) 8%, transparent)
+	);
 	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
 	border: 1px solid color-mix(in oklch, var(--color-info) 20%, transparent);
 	transition: all 0.2s ease-in-out;
@@ -281,9 +288,11 @@
 }
 
 .card-gradient-success {
-	background: linear-gradient(to bottom right,
-			color-mix(in oklch, var(--color-success) 25%, transparent),
-			color-mix(in oklch, var(--color-success) 8%, transparent));
+	background: linear-gradient(
+		to bottom right,
+		color-mix(in oklch, var(--color-success) 25%, transparent),
+		color-mix(in oklch, var(--color-success) 8%, transparent)
+	);
 	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
 	border: 1px solid color-mix(in oklch, var(--color-success) 20%, transparent);
 	transition: all 0.2s ease-in-out;
@@ -296,9 +305,11 @@
 }
 
 .card-gradient-warning {
-	background: linear-gradient(to bottom right,
-			color-mix(in oklch, var(--color-warning) 25%, transparent),
-			color-mix(in oklch, var(--color-warning) 8%, transparent));
+	background: linear-gradient(
+		to bottom right,
+		color-mix(in oklch, var(--color-warning) 25%, transparent),
+		color-mix(in oklch, var(--color-warning) 8%, transparent)
+	);
 	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
 	border: 1px solid color-mix(in oklch, var(--color-warning) 20%, transparent);
 	transition: all 0.2s ease-in-out;
@@ -311,9 +322,11 @@
 }
 
 .card-gradient-error {
-	background: linear-gradient(to bottom right,
-			color-mix(in oklch, var(--color-error) 25%, transparent),
-			color-mix(in oklch, var(--color-error) 8%, transparent));
+	background: linear-gradient(
+		to bottom right,
+		color-mix(in oklch, var(--color-error) 25%, transparent),
+		color-mix(in oklch, var(--color-error) 8%, transparent)
+	);
 	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
 	border: 1px solid color-mix(in oklch, var(--color-error) 20%, transparent);
 	transition: all 0.2s ease-in-out;
@@ -326,9 +339,11 @@
 }
 
 .card-gradient-neutral {
-	background: linear-gradient(to bottom right,
-			color-mix(in oklch, var(--color-base-200) 80%, var(--color-base-100)),
-			var(--color-base-100));
+	background: linear-gradient(
+		to bottom right,
+		color-mix(in oklch, var(--color-base-200) 80%, var(--color-base-100)),
+		var(--color-base-100)
+	);
 	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
 	border: 1px solid color-mix(in oklch, var(--color-base-300) 20%, transparent);
 	transition: all 0.2s ease-in-out;
