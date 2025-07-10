@@ -24,7 +24,6 @@ export const actions: Actions = {
 	create: async ({ locals, request }) => {
 		const formData = await request.formData();
 		const name = formData.get('name') as string;
-		const abr = (formData.get('abr') as string) || name.substring(0, 3).toUpperCase();
 		const userId = locals.user?.code;
 		// Make sure userId is available, otherwise return an error
 		if (!userId) return fail(401, { error: 'User not authenticated' });
@@ -42,7 +41,7 @@ export const actions: Actions = {
 
 			await locals.db
 				.insertInto('courses')
-				.values({ name, abr, user_code: userId, order: newOrder })
+				.values({ name, user_code: userId, order: newOrder })
 				.execute();
 
 			return { success: true };

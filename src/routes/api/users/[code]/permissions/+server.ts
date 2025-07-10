@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import type { EntityEnum } from '$lib/database/types';
 
 /**
  * USER PERMISSIONS API - Modern Clean Architecture
@@ -54,8 +55,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 		// Map permissions to the new structure
 		const permissionsToInsert = permissions.map((p) => ({
-			user_code: userCode,
-			entity: p.entity,
+			user_code: userCode as string,
+			entity: p.entity as EntityEnum,
 			action: p.user_action
 		}));
 

@@ -43,4 +43,4 @@ export function createDatabase(config: {
 export type Database = Kysely<DB>;
 
 // Re-export types for convenience
-export type { DB, MigrationsTable } from './types';
+export type { DB } from './types';
