@@ -5,53 +5,48 @@
 	exclude: rootscrollgutter;
 }
 
-/* Dark Theme - Refined for better consistency */
 @plugin "daisyui/theme" {
 	name: 'dark';
 	default: true;
 	prefersdark: true;
 	color-scheme: 'dark';
-	/* Base colors - Refined dark blue palette */
-	--color-base-100: oklch(12% 0.025 265);
-	/* Deep dark blue background */
-	--color-base-200: oklch(16% 0.02 265);
-	/* Slightly lighter for cards and elevated elements */
-	--color-base-300: oklch(20% 0.015 265);
-	/* For borders and dividers */
-	--color-base-content: oklch(92% 0.01 265);
-	/* High contrast text for readability */
-	--color-base-content-rgb: 235, 235, 240;
+	/* Base colors - Deep blue foundation for immersion */
+	--color-base-100: oklch(14% 0.03 260); /* Refined deep blue for better depth */
+	--color-base-200: oklch(18% 0.025 260); /* Subtle elevation for cards */
+	--color-base-300: oklch(22% 0.02 260); /* Clean borders/dividers */
+	--color-base-content: oklch(94% 0.01 260); /* Crisp, high-contrast text */
+	--color-base-content-rgb: 240, 240, 245;
 
-	/* Primary - Vibrant teal that pops in dark mode */
-	--color-primary: oklch(65% 0.15 180);
+	/* Primary - Vibrant teal that energizes dark backgrounds */
+	--color-primary: oklch(68% 0.16 180);
 	--color-primary-content: oklch(98% 0.005 180);
 
-	/* Secondary - Warm amber for contrast with primary */
-	--color-secondary: oklch(60% 0.12 60);
+	/* Secondary - Warm amber for complementary warmth */
+	--color-secondary: oklch(62% 0.13 60);
 	--color-secondary-content: oklch(98% 0.005 60);
 
-	/* Accent - Soft purple for highlights */
-	--color-accent: oklch(60% 0.14 300);
+	/* Accent - Soft purple for elegant highlights */
+	--color-accent: oklch(62% 0.15 300);
 	--color-accent-content: oklch(98% 0.005 300);
 
-	/* Neutral - Subtle blue-gray */
-	--color-neutral: oklch(25% 0.02 265);
-	--color-neutral-content: oklch(92% 0.01 265);
+	/* Neutral - Blue-gray for subtle, consistent neutrals */
+	--color-neutral: oklch(26% 0.025 260);
+	--color-neutral-content: oklch(94% 0.01 260);
 
-	/* Semantic colors - More vibrant for better visibility in dark mode */
-	--color-info: oklch(60% 0.14 220);
+	/* Semantic colors - Vibrant, distinct, and harmonious */
+	--color-info: oklch(62% 0.15 220); /* Cyan-blue for info */
 	--color-info-content: oklch(98% 0.005 220);
 
-	--color-success: oklch(65% 0.15 150);
+	--color-success: oklch(68% 0.16 150); /* Green-teal for success */
 	--color-success-content: oklch(98% 0.005 150);
 
-	--color-warning: oklch(65% 0.15 80);
+	--color-warning: oklch(68% 0.16 80); /* Orange-amber for warning */
 	--color-warning-content: oklch(98% 0.005 80);
 
-	--color-error: oklch(60% 0.18 10);
+	--color-error: oklch(62% 0.19 10); /* Vivid red for error */
 	--color-error-content: oklch(98% 0.005 10);
 
-	/* UI Properties */
+	/* UI Properties - Elegant, consistent rounding and depth */
 	--radius-selector: 0.5rem;
 	--radius-field: 0.375rem;
 	--radius-box: 1rem;
@@ -59,56 +54,55 @@
 	--size-field: 0.25rem;
 	--border: 1px;
 	--depth: 1;
-	--noise: 0;
+	--noise: 0.05; /* Subtle noise for premium texture */
+
+	/* Custom shadow for dark mode */
+	--shadow-color: 0 0% 0%;
+	--shadow-strength: 5%;
 }
 
-/* Light Theme - Refined for better consistency with dark theme */
 @plugin "daisyui/theme" {
 	name: 'light';
 	default: false;
 	prefersdark: false;
 	color-scheme: 'light';
-	/* Base colors - Soft blue-white palette */
-	--color-base-100: oklch(98% 0.01 265);
-	/* Almost white with hint of blue */
-	--color-base-200: oklch(95% 0.015 265);
-	/* Slightly darker for cards */
-	--color-base-300: oklch(90% 0.02 265);
-	/* For borders and dividers */
-	--color-base-content: oklch(20% 0.03 265);
-	/* Dark text for readability */
-	--color-base-content-rgb: 40, 40, 60;
+	/* Base colors - Soft blue-white for a fresh, airy feel */
+	--color-base-100: oklch(98% 0.015 260); /* Light blue-tint white */
+	--color-base-200: oklch(94% 0.02 260); /* Gentle elevation for cards */
+	--color-base-300: oklch(88% 0.025 260); /* Subtle borders/dividers */
+	--color-base-content: oklch(18% 0.035 260); /* Deep blue-gray text for contrast */
+	--color-base-content-rgb: 35, 35, 55;
 
-	/* Primary - Same hue as dark theme but adjusted for light background */
-	--color-primary: oklch(55% 0.18 180);
+	/* Primary - Teal adjusted for light backgrounds (darker for visibility) */
+	--color-primary: oklch(52% 0.19 180);
 	--color-primary-content: oklch(98% 0.005 180);
 
-	/* Secondary - Warm amber matching dark theme */
-	--color-secondary: oklch(55% 0.15 60);
+	/* Secondary - Amber toned for harmony */
+	--color-secondary: oklch(52% 0.16 60);
 	--color-secondary-content: oklch(98% 0.005 60);
 
-	/* Accent - Soft purple matching dark theme */
-	--color-accent: oklch(55% 0.16 300);
+	/* Accent - Purple softened for light mode */
+	--color-accent: oklch(52% 0.17 300);
 	--color-accent-content: oklch(98% 0.005 300);
 
-	/* Neutral - Light blue-gray */
-	--color-neutral: oklch(75% 0.03 265);
-	--color-neutral-content: oklch(20% 0.03 265);
+	/* Neutral - Light blue-gray matching dark's hue */
+	--color-neutral: oklch(78% 0.035 260);
+	--color-neutral-content: oklch(18% 0.035 260);
 
-	/* Semantic colors - Adjusted for light mode visibility */
-	--color-info: oklch(55% 0.16 220);
+	/* Semantic colors - Balanced for light mode (darker tones for readability) */
+	--color-info: oklch(52% 0.17 220);
 	--color-info-content: oklch(98% 0.005 220);
 
-	--color-success: oklch(55% 0.17 150);
+	--color-success: oklch(52% 0.18 150);
 	--color-success-content: oklch(98% 0.005 150);
 
-	--color-warning: oklch(60% 0.17 80);
-	--color-warning-content: oklch(20% 0.03 80);
+	--color-warning: oklch(58% 0.18 80);
+	--color-warning-content: oklch(98% 0.005 80); /* Fixed: Now light for better contrast */
 
-	--color-error: oklch(60% 0.2 10);
+	--color-error: oklch(58% 0.21 10);
 	--color-error-content: oklch(98% 0.005 10);
 
-	/* UI Properties - Matching with dark theme for consistency */
+	/* UI Properties - Identical to dark for seamless consistency */
 	--radius-selector: 0.5rem;
 	--radius-field: 0.375rem;
 	--radius-box: 1rem;
@@ -118,12 +112,12 @@
 	--depth: 0;
 	--noise: 0;
 
-	/* Custom shadow properties for light theme */
+	/* Custom shadow for light mode */
 	--shadow-color: 220 3% 15%;
-	--shadow-strength: 1%;
+	--shadow-strength: 2%;
 }
 
-/* Enhanced form elements with consistent styling */
+/* Enhanced form elements - Consistent, beautiful focus states */
 .input,
 .textarea,
 .select {
@@ -131,63 +125,56 @@
 	&:focus-within {
 		outline-width: 2px;
 		outline-style: solid;
-		outline-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
-		box-shadow: 0 0 0 1px var(--color-primary-focus, var(--color-primary));
+		outline-color: color-mix(in oklch, var(--color-primary) 50%, transparent);
+		box-shadow: 0 0 0 4px color-mix(in oklch, var(--color-primary) 20%, transparent);
 		border-color: var(--color-primary);
-		transition: all 0.2s ease;
+		transition: all 0.2s ease-in-out;
 	}
 }
 
-/* Button enhancements */
+/* Button enhancements - Premium feel with subtle interactions */
 .btn {
 	font-weight: 500;
-	letter-spacing: 0.01em;
-	transition: all 0.2s ease;
+	letter-spacing: 0.02em;
+	transition: all 0.2s ease-in-out;
+	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 10%, transparent);
 
 	&:active {
 		transform: translateY(1px);
+		box-shadow: 0 1px 2px color-mix(in oklch, var(--color-base-content) 15%, transparent);
 	}
 
-	&.btn-primary {
-		&:hover {
-			box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 30%, transparent);
-		}
+	&.btn-primary:hover {
+		box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-primary) 30%, transparent);
 	}
 
-	&.btn-secondary {
-		&:hover {
-			box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-secondary) 30%, transparent);
-		}
+	&.btn-secondary:hover {
+		box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-secondary) 30%, transparent);
 	}
 
-	&.btn-accent {
-		&:hover {
-			box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 30%, transparent);
-		}
+	&.btn-accent:hover {
+		box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent) 30%, transparent);
 	}
 }
 
-/* Card enhancements */
 .card {
-	transition:
-		transform 0.2s ease,
-		box-shadow 0.2s ease;
+	transition: all 0.2s ease-in-out;
+	box-shadow: 0 4px 6px -1px color-mix(in oklch, var(--color-base-content) 5%, transparent);
 
 	&.card-hover:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 10px 25px -5px color-mix(in srgb, var(--color-base-content) 2%, transparent);
+		transform: translateY(-4px);
+		box-shadow: 0 10px 20px -5px color-mix(in oklch, var(--color-base-content) 10%, transparent);
 	}
 }
 
-/* Enhanced modals */
 .modal {
-	backdrop-filter: blur(12px);
+	backdrop-filter: blur(8px) saturate(1.2);
 
 	.modal-box {
 		border: 1px solid var(--color-base-300);
-		box-shadow: 0 25px 50px -12px color-mix(in srgb, var(--color-base-content) 5%, transparent);
-		transition: transform 0.3s ease;
-		transform: scale(0.95);
+		box-shadow: 0 20px 40px -10px color-mix(in oklch, var(--color-base-content) 8%, transparent);
+		transition: transform 0.3s ease-out;
+		transform: scale(0.96);
 	}
 
 	&.modal-open .modal-box {
@@ -195,40 +182,408 @@
 	}
 }
 
-/* Table enhancements */
 .table {
-	--border-color: color-mix(in srgb, var(--color-base-content) 10%, transparent);
+	--border-color: color-mix(in oklch, var(--color-base-content) 15%, transparent);
 
 	th {
 		font-weight: 600;
-		letter-spacing: 0.02em;
-		background-color: color-mix(in srgb, var(--color-base-200) 80%, var(--color-primary) 5%);
+		letter-spacing: 0.03em;
+		background-color: color-mix(in oklch, var(--color-base-200) 85%, var(--color-primary) 8%);
 	}
 
 	tr.hover:hover {
-		background-color: color-mix(in srgb, var(--color-primary) 5%, var(--color-base-100));
+		background-color: color-mix(in oklch, var(--color-primary) 8%, var(--color-base-100));
 	}
 
 	&.table-zebra tbody tr:nth-child(even) {
-		background-color: color-mix(in srgb, var(--color-base-200) 70%, transparent);
+		background-color: color-mix(in oklch, var(--color-base-200) 75%, transparent);
 	}
 }
 
-/* Badge enhancements */
 .badge {
 	font-weight: 500;
-	letter-spacing: 0.02em;
+	letter-spacing: 0.03em;
+	box-shadow: 0 1px 2px color-mix(in oklch, var(--color-base-content) 10%, transparent);
 }
 
-/* Tabs enhancements */
 .tabs {
 	.tab {
 		font-weight: 500;
-		letter-spacing: 0.01em;
-		transition: all 0.2s ease;
+		letter-spacing: 0.02em;
+		transition: all 0.2s ease-in-out;
 
 		&.tab-active:not(.tab-disabled) {
 			border-color: var(--color-primary);
+			box-shadow: inset 0 -2px 0 var(--color-primary);
 		}
 	}
+}
+
+
+.card-gradient-primary {
+	background: linear-gradient(to bottom right,
+			color-mix(in oklch, var(--color-primary) 25%, transparent),
+			color-mix(in oklch, var(--color-primary) 8%, transparent));
+	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
+	border: 1px solid color-mix(in oklch, var(--color-primary) 20%, transparent);
+	transition: all 0.2s ease-in-out;
+	border-radius: var(--radius-box);
+}
+
+.card-gradient-primary:hover {
+	box-shadow: 0 6px 12px -2px color-mix(in oklch, var(--color-base-content) 10%, transparent);
+	transform: translateY(-4px);
+}
+
+.card-gradient-secondary {
+	background: linear-gradient(to bottom right,
+			color-mix(in oklch, var(--color-secondary) 25%, transparent),
+			color-mix(in oklch, var(--color-secondary) 8%, transparent));
+	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
+	border: 1px solid color-mix(in oklch, var(--color-secondary) 20%, transparent);
+	transition: all 0.2s ease-in-out;
+	border-radius: var(--radius-box);
+}
+
+.card-gradient-secondary:hover {
+	box-shadow: 0 6px 12px -2px color-mix(in oklch, var(--color-base-content) 10%, transparent);
+	transform: translateY(-4px);
+}
+
+.card-gradient-accent {
+	background: linear-gradient(to bottom right,
+			color-mix(in oklch, var(--color-accent) 25%, transparent),
+			color-mix(in oklch, var(--color-accent) 8%, transparent));
+	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
+	border: 1px solid color-mix(in oklch, var(--color-accent) 20%, transparent);
+	transition: all 0.2s ease-in-out;
+	border-radius: var(--radius-box);
+}
+
+.card-gradient-accent:hover {
+	box-shadow: 0 6px 12px -2px color-mix(in oklch, var(--color-base-content) 10%, transparent);
+	transform: translateY(-4px);
+}
+
+.card-gradient-info {
+	background: linear-gradient(to bottom right,
+			color-mix(in oklch, var(--color-info) 25%, transparent),
+			color-mix(in oklch, var(--color-info) 8%, transparent));
+	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
+	border: 1px solid color-mix(in oklch, var(--color-info) 20%, transparent);
+	transition: all 0.2s ease-in-out;
+	border-radius: var(--radius-box);
+}
+
+.card-gradient-info:hover {
+	box-shadow: 0 6px 12px -2px color-mix(in oklch, var(--color-base-content) 10%, transparent);
+	transform: translateY(-4px);
+}
+
+.card-gradient-success {
+	background: linear-gradient(to bottom right,
+			color-mix(in oklch, var(--color-success) 25%, transparent),
+			color-mix(in oklch, var(--color-success) 8%, transparent));
+	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
+	border: 1px solid color-mix(in oklch, var(--color-success) 20%, transparent);
+	transition: all 0.2s ease-in-out;
+	border-radius: var(--radius-box);
+}
+
+.card-gradient-success:hover {
+	box-shadow: 0 6px 12px -2px color-mix(in oklch, var(--color-base-content) 10%, transparent);
+	transform: translateY(-4px);
+}
+
+.card-gradient-warning {
+	background: linear-gradient(to bottom right,
+			color-mix(in oklch, var(--color-warning) 25%, transparent),
+			color-mix(in oklch, var(--color-warning) 8%, transparent));
+	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
+	border: 1px solid color-mix(in oklch, var(--color-warning) 20%, transparent);
+	transition: all 0.2s ease-in-out;
+	border-radius: var(--radius-box);
+}
+
+.card-gradient-warning:hover {
+	box-shadow: 0 6px 12px -2px color-mix(in oklch, var(--color-base-content) 10%, transparent);
+	transform: translateY(-4px);
+}
+
+.card-gradient-error {
+	background: linear-gradient(to bottom right,
+			color-mix(in oklch, var(--color-error) 25%, transparent),
+			color-mix(in oklch, var(--color-error) 8%, transparent));
+	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
+	border: 1px solid color-mix(in oklch, var(--color-error) 20%, transparent);
+	transition: all 0.2s ease-in-out;
+	border-radius: var(--radius-box);
+}
+
+.card-gradient-error:hover {
+	box-shadow: 0 6px 12px -2px color-mix(in oklch, var(--color-base-content) 10%, transparent);
+	transform: translateY(-4px);
+}
+
+.card-gradient-neutral {
+	background: linear-gradient(to bottom right,
+			color-mix(in oklch, var(--color-base-200) 80%, var(--color-base-100)),
+			var(--color-base-100));
+	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 5%, transparent);
+	border: 1px solid color-mix(in oklch, var(--color-base-300) 20%, transparent);
+	transition: all 0.2s ease-in-out;
+	border-radius: var(--radius-box);
+}
+
+.card-gradient-neutral:hover {
+	box-shadow: 0 6px 12px -2px color-mix(in oklch, var(--color-base-content) 10%, transparent);
+	transform: translateY(-4px);
+}
+
+.icon-container {
+	padding: 0.75rem;
+	border-radius: 9999px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 1px 2px color-mix(in oklch, var(--color-base-content) 5%, transparent);
+	transition: box-shadow 0.2s ease-in-out;
+}
+
+.icon-container:hover {
+	box-shadow: 0 2px 4px color-mix(in oklch, var(--color-base-content) 10%, transparent);
+}
+
+.icon-container-primary {
+	background-color: color-mix(in oklch, var(--color-primary) 15%, transparent);
+	color: var(--color-primary);
+}
+
+.icon-container-secondary {
+	background-color: color-mix(in oklch, var(--color-secondary) 15%, transparent);
+	color: var(--color-secondary);
+}
+
+.icon-container-accent {
+	background-color: color-mix(in oklch, var(--color-accent) 15%, transparent);
+	color: var(--color-accent);
+}
+
+.icon-container-info {
+	background-color: color-mix(in oklch, var(--color-info) 15%, transparent);
+	color: var(--color-info);
+}
+
+.icon-container-success {
+	background-color: color-mix(in oklch, var(--color-success) 15%, transparent);
+	color: var(--color-success);
+}
+
+.icon-container-warning {
+	background-color: color-mix(in oklch, var(--color-warning) 15%, transparent);
+	color: var(--color-warning);
+}
+
+.icon-container-error {
+	background-color: color-mix(in oklch, var(--color-error) 15%, transparent);
+	color: var(--color-error);
+}
+
+.form-group {
+	margin-bottom: 1rem;
+}
+
+.form-group-label {
+	display: flex;
+	font-weight: 500;
+	padding: 0.5rem 0;
+	color: var(--color-base-content);
+}
+
+.form-group-hint {
+	font-size: 0.875rem;
+	opacity: 0.75;
+	margin-top: 0.25rem;
+	display: block;
+	color: color-mix(in oklch, var(--color-base-content) 70%, transparent);
+}
+
+.fieldset-container {
+	display: grid;
+	grid-template-columns: repeat(1, minmax(0, 1fr));
+	gap: 1.5rem;
+	padding: 1.25rem;
+	border-radius: var(--radius-box);
+	border: 1px solid var(--color-base-300);
+	background-color: color-mix(in oklch, var(--color-base-200) 90%, transparent);
+	box-shadow: 0 1px 3px color-mix(in oklch, var(--color-base-content) 3%, transparent);
+}
+
+@media (min-width: 768px) {
+	.fieldset-container {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+/* Page sections - Clean, with theme typography */
+.page-section {
+	margin-bottom: 2.5rem;
+	/* Slightly more space for elegance */
+}
+
+.page-section-title {
+	font-size: 1.5rem;
+	font-weight: 600;
+	margin-bottom: 1rem;
+	color: var(--color-base-content);
+}
+
+/* Data display - Subtle elevation matching cards */
+.data-display {
+	padding: 1.25rem;
+	background-color: var(--color-base-200);
+	border-radius: var(--radius-box);
+	margin-bottom: 1.25rem;
+	box-shadow: 0 1px 3px color-mix(in oklch, var(--color-base-content) 3%, transparent);
+}
+
+.data-display-title {
+	font-size: 1.125rem;
+	font-weight: 500;
+	margin-bottom: 0.75rem;
+	color: var(--color-base-content);
+}
+
+/* Status indicators - Vibrant, with subtle glow */
+.status-indicator {
+	width: 0.625rem;
+	/* Slightly larger for visibility */
+	height: 0.625rem;
+	border-radius: 9999px;
+	display: inline-block;
+	margin-right: 0.375rem;
+	box-shadow: 0 0 4px color-mix(in oklch, currentColor 30%, transparent);
+}
+
+.status-online {
+	background-color: var(--color-success);
+}
+
+.status-offline {
+	background-color: var(--color-error);
+}
+
+.status-away {
+	background-color: var(--color-warning);
+}
+
+/* Empty states - Beautiful, centered with adaptive colors */
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	padding: 3rem;
+	/* More padding for a premium feel */
+	background-color: color-mix(in oklch, var(--color-base-100) 95%, var(--color-base-200));
+	border-radius: var(--radius-box);
+}
+
+.empty-state-icon {
+	color: color-mix(in oklch, var(--color-base-content) 40%, transparent);
+	margin-left: auto;
+	margin-right: auto;
+	margin-bottom: 1.25rem;
+	font-size: 3rem;
+	/* Larger icon for impact */
+}
+
+.empty-state-title {
+	font-size: 1.25rem;
+	/* Slightly larger for emphasis */
+	font-weight: 600;
+	margin-bottom: 0.75rem;
+	color: var(--color-base-content);
+}
+
+.empty-state-message {
+	color: color-mix(in oklch, var(--color-base-content) 70%, transparent);
+	margin-bottom: 1.25rem;
+	font-size: 0.875rem;
+}
+
+/* Loading states */
+.loading-container {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding-top: 2rem;
+	padding-bottom: 2rem;
+}
+
+.loading-text {
+	margin-left: 1rem;
+	color: color-mix(in srgb, var(--color-base-content) 70%, transparent);
+}
+
+/* Animations */
+.animate-fade-in {
+	animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slide-up {
+	animation: slideUp 0.3s ease-out;
+}
+
+.animate-pulse {
+	animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes slideUp {
+	from {
+		transform: translateY(10px);
+		opacity: 0;
+	}
+
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}
+
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+
+	50% {
+		opacity: 0.5;
+	}
+}
+
+/* Typography helpers */
+.text-emphasis {
+	font-weight: 500;
+}
+
+.text-muted {
+	opacity: 0.7;
+}
+
+.text-truncate {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }

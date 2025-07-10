@@ -1,16 +1,3 @@
-#!/usr/bin/env tsx
-
-/**
- * NextYa Database Migration CLI - Simplified
- * ==========================================
- *
- * Clean, minimal migration system with only essential commands:
- * - db:migrate - Run pending migrations
- * - db:create - Create new migration file
- * - db:rollback - Rollback last migration
- * - db:generate - Generate TypeScript types
- */
-
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { writeFile, mkdir } from 'fs/promises';
@@ -52,7 +39,7 @@ const migrator = new Migrator({
 async function checkConnection() {
 	console.log('🔍 Checking database connection...');
 	try {
-		await db.selectFrom('users').select('code').limit(1).execute();
+		await db.executeQuery('SELECT 1' as any);
 		console.log('✅ Database connection successful');
 		return true;
 	} catch (error) {
@@ -64,7 +51,6 @@ async function checkConnection() {
 
 async function generateTypes() {
 	console.log('🔄 Generating TypeScript types from database schema...');
-
 	try {
 		const { stdout, stderr } = await execAsync('npm run db:generate');
 
@@ -101,28 +87,27 @@ async function createMigration(name: string) {
 	}
 
 	const template = `import { Kysely, sql } from 'kysely';
+		export async function up(db: Kysely<any>): Promise<void> {
+			// Add your schema changes here
+			// Example:
+			/*
+			await db.schema
+				.createTable('example_table')
+				.addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql\`gen_random_uuid()\`))
+				.addColumn('name', 'varchar(255)', (col) => col.notNull())
+				.addColumn('created_at', 'timestamptz', (col) => col.notNull().defaultTo(sql\`CURRENT_TIMESTAMP\`))
+				.execute();
+			*/
+		}
 
-export async function up(db: Kysely<any>): Promise<void> {
-	// Add your schema changes here
-	// Example:
-	/*
-	await db.schema
-		.createTable('example_table')
-		.addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql\`gen_random_uuid()\`))
-		.addColumn('name', 'varchar(255)', (col) => col.notNull())
-		.addColumn('created_at', 'timestamptz', (col) => col.notNull().defaultTo(sql\`CURRENT_TIMESTAMP\`))
-		.execute();
-	*/
-}
-
-export async function down(db: Kysely<any>): Promise<void> {
-	// Add rollback logic here (reverse of up function)
-	// Example:
-	/*
-	await db.schema.dropTable('example_table').execute();
-	*/
-}
-`;
+		export async function down(db: Kysely<any>): Promise<void> {
+			// Add rollback logic here (reverse of up function)
+			// Example:
+			/*
+			await db.schema.dropTable('example_table').execute();
+			*/
+		}
+	`;
 
 	try {
 		await writeFile(filePath, template);
