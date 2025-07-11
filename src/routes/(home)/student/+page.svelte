@@ -19,7 +19,8 @@
 	let message = $state('');
 	let selectedCode = $state<string | null>(null);
 	let selectForDelete = $state<SelectForDelete | null>(null);
-	let searchQuery = $state('');
+	let mainSearchQuery = $state('');
+	let modalSearchQuery = $state('');
 	let searchResults = $state<Students[]>([]);
 	let activeTab = $state<'search' | 'new'>('search');
 	let selectedLevelCode = $state('');
@@ -37,9 +38,9 @@
 	// Filtered students based on search query
 	const filteredStudents = $derived(
 		students.filter((student) => {
-			if (!searchQuery.trim()) return true;
+			if (!mainSearchQuery.trim()) return true;
 
-			const query = searchQuery.toLowerCase();
+			const query = mainSearchQuery.toLowerCase();
 			return (
 				student.name?.toLowerCase().includes(query) ||
 				student.last_name?.toLowerCase().includes(query) ||
@@ -111,7 +112,6 @@
 		const response = await fetch(`/api/student/${selectedLevelCode}/${selectedGroup}`);
 		if (response.ok) {
 			students = await response.json();
-			// Reset to first page when loading new students
 			currentPage = 1;
 		}
 	}
@@ -146,16 +146,16 @@
 	}
 
 	async function searchStudents() {
-		if (!searchQuery.trim()) {
+		if (!modalSearchQuery.trim()) {
 			searchResults = [];
 			return;
 		}
-		const response = await fetch(`/api/student?search=${encodeURIComponent(searchQuery)}`);
+		const response = await fetch(`/api/student?search=${encodeURIComponent(modalSearchQuery)}`);
 		if (response.ok) searchResults = await response.json();
 	}
 
 	function selectStudent(student: Students) {
-		searchQuery = '';
+		modalSearchQuery = '';
 		searchResults = [];
 		selectedCode = student.code;
 		activeTab = 'new';
@@ -262,7 +262,7 @@
 	function resetFormOnClose() {
 		selectedCode = null;
 		message = '';
-		searchQuery = '';
+		modalSearchQuery = '';
 		searchResults = [];
 		if (nameInput) nameInput.value = '';
 		if (lastNameInput) lastNameInput.value = '';
@@ -341,7 +341,7 @@
 					type="text"
 					placeholder="Buscar estudiante..."
 					class="input input-bordered join-item w-full"
-					bind:value={searchQuery}
+					bind:value={mainSearchQuery}
 				/>
 				<button class="btn btn-primary join-item">
 					<Search size={18} />
@@ -418,14 +418,14 @@
 					<!-- Paginación -->
 					<Pagination {currentPage} {totalPages} onPageChange={goToPage} />
 				</div>
-			{:else if searchQuery}
+			{:else if mainSearchQuery}
 				<div class="empty-state p-8 w-full max-w-md mx-auto">
 					<div class="empty-state-icon">
 						<Search size={48} />
 					</div>
 					<h3 class="empty-state-title">Sin resultados</h3>
 					<p class="empty-state-message">
-						No se encontraron estudiantes que coincidan con la búsqueda "{searchQuery}".
+						No se encontraron estudiantes que coincidan con la búsqueda "{mainSearchQuery}".
 					</p>
 				</div>
 			{/if}
@@ -472,13 +472,13 @@
 					type="text"
 					placeholder="Buscar estudiante por nombre"
 					class="input input-bordered join-item flex-1"
-					bind:value={searchQuery}
+					bind:value={modalSearchQuery}
 					onkeydown={handleKeyDown}
 				/>
 				<button
 					class="btn btn-primary join-item"
 					onclick={searchStudents}
-					disabled={!searchQuery.trim()}
+					disabled={!modalSearchQuery.trim()}
 				>
 					<Search class="w-4 h-4" />
 				</button>
