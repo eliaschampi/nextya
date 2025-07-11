@@ -163,7 +163,16 @@ export const actions: Actions = {
 				if (isGroupChanging || isLevelChanging) await deleteEvals(trx, currentRegister.code);
 
 				// Update student
-				await trx.updateTable('students').set(data).where('code', '=', code).execute();
+				await trx
+					.updateTable('students')
+					.set({
+						name: data.name,
+						last_name: data.last_name,
+						phone: data.phone,
+						email: data.email
+					})
+					.where('code', '=', code)
+					.execute();
 
 				// Update only this register
 				await trx

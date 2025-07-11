@@ -16,13 +16,10 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	try {
 		const students = await locals.db
-			.selectFrom('students')
-			.innerJoin('registers', 'registers.student_code', 'students.code')
-			.selectAll('students')
-			.select(['registers.roll_code', 'registers.group_name'])
-			.where('registers.level_code', '=', level)
-			.where('registers.group_name', '=', group)
-			.orderBy('registers.roll_code', 'asc')
+			.selectFrom('student_registers')
+			.selectAll()
+			.where('level_code', '=', level)
+			.where('group_name', '=', group)
 			.execute();
 
 		return json(students);
