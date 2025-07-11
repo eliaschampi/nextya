@@ -108,6 +108,26 @@ export interface Registers {
 	user_code: string;
 }
 
+export interface StudentRegisterResults {
+	blank_count: number | null;
+	calculated_at: Timestamp | null;
+	correct_count: number | null;
+	eval_code: string | null;
+	eval_date: Timestamp | null;
+	eval_name: string | null;
+	incorrect_count: number | null;
+	level_code: string | null;
+	level_name: string | null;
+	register_code: string | null;
+	register_group_name: string | null;
+	result_code: string | null;
+	roll_code: string | null;
+	score: Numeric | null;
+	student_code: string | null;
+	student_last_name: string | null;
+	student_name: string | null;
+}
+
 export interface StudentRegisters {
 	created_at: Timestamp | null;
 	email: string | null;
@@ -157,6 +177,7 @@ export interface DB {
 	levels: Levels;
 	permissions: Permissions;
 	registers: Registers;
+	student_register_results: StudentRegisterResults;
 	student_registers: StudentRegisters;
 	students: Students;
 	users: Users;

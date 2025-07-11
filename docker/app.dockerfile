@@ -1,5 +1,21 @@
-# Base stage with OpenCV and Node.js
-FROM urielch/opencv-nodejs:6.2.4 AS base
+# --- Base Stage ---
+# We'll create our own base image to use a more recent version of Node.js
+# while still having OpenCV available for the `@u4/opencv4nodejs` package.
+# We are using Node.js 20 LTS (Bookworm) as it's a stable, long-term support release.
+FROM node:20-bookworm-slim AS base
+
+# Install OpenCV development libraries required by @u4/opencv4nodejs,
+# along with build-essential and cmake which are often needed for native modules.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    pkg-config \
+    python3 \
+    libopencv-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Tell opencv4nodejs to use the system-installed OpenCV and not build its own
+ENV OPENCV4NODEJS_DISABLE_AUTOBUILD=1
 
 # Set build arguments for user mapping
 ARG USER_ID=1000

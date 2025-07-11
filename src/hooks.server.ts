@@ -1,6 +1,3 @@
-// Load polyfills for Node.js 18.8.0 compatibility BEFORE any other imports
-import './polyfills';
-
 import { type Handle, redirect } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { getSession } from '$lib/auth/session';
