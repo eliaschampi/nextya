@@ -4,7 +4,7 @@
 	import { User, X, Search, ListChecks, SortAsc, SortDesc, FileDown } from 'lucide-svelte';
 	import type { Students, StudentRegister, StudentResult, SortOrder } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
-	import { onMount, onDestroy } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { goto } from '$app/navigation';
 
@@ -13,9 +13,6 @@
 	import { studentStore } from '$lib/stores/student';
 	import StudentCard from '$lib/components/StudentCard.svelte';
 	import StudentSearchModal from '$lib/components/StudentSearchModal.svelte';
-
-	// Define EventListener type for custom events
-	type EventListener = (event: Event) => void;
 
 	// Modal state
 	let studentSearchModalOpen = $state(false);
@@ -83,62 +80,14 @@
 
 	// Define table columns
 	const resultColumns: TableColumn<StudentResult>[] = [
-		{
-			label: 'Fecha',
-			cell: (row: StudentResult) => formatDate(row.eval_date)
-		},
-		{
-			label: 'Evaluación',
-			key: 'eval_name',
-			class: 'font-medium'
-		},
-		{
-			label: 'Preguntas',
-			class: 'text-center',
-			cell: (row: StudentResult) => row.correct_count + row.incorrect_count + row.blank_count
-		},
-		{
-			label: 'Correctas',
-			key: 'correct_count',
-			class: 'text-center text-success font-medium'
-		},
-		{
-			label: 'Incorrectas',
-			key: 'incorrect_count',
-			class: 'text-center text-error font-medium'
-		},
-		{
-			label: 'En blanco',
-			key: 'blank_count',
-			class: 'text-center opacity-70'
-		},
-		{
-			label: 'Nota',
-			class: 'text-center font-bold',
-			cell: (row: StudentResult) => `
-				<span class="badge badge-lg ${row.score >= 10.5 ? 'badge-success' : 'badge-error'}">
-					${row.score.toFixed(2)}
-				</span>
-			`
-		},
-		{
-			label: 'Acciones',
-			class: 'text-center',
-			cell: (row: StudentResult) => {
-				const eyeIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye w-4 h-4 mr-1"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
-
-				return `
-					<button
-						class="btn btn-sm btn-primary btn-outline ${!$canViewDetails ? 'btn-disabled' : ''}"
-						onclick="document.dispatchEvent(new CustomEvent('view-result', {detail: '${row.result_code}'}))"
-						title="Ver detalles"
-						${!$canViewDetails ? 'disabled' : ''}
-					>
-						${eyeIcon} Ver
-					</button>
-				`;
-			}
-		}
+		{ label: 'Fecha', render: dateCell },
+		{ key: 'eval_name', label: 'Evaluación', class: 'font-medium' },
+		{ label: 'Preguntas', class: 'text-center', render: questionsCell },
+		{ key: 'correct_count', label: 'Correctas', class: 'text-center text-success font-medium' },
+		{ key: 'incorrect_count', label: 'Incorrectas', class: 'text-center text-error font-medium' },
+		{ key: 'blank_count', label: 'En blanco', class: 'text-center opacity-70' },
+		{ label: 'Nota', class: 'text-center font-bold', render: scoreCell },
+		{ label: 'Acciones', class: 'text-center', render: actionsCell }
 	];
 
 	// Initialize the store from URL parameters or session storage
@@ -290,32 +239,54 @@
 		}
 	}
 
-	// Event handlers for custom events from table
-	function setupTableEventListeners() {
-		const handleViewResult = (event: CustomEvent) => {
-			const resultCode = event.detail;
-			const result = storeState.results.find((r: StudentResult) => r.result_code === resultCode);
-			if (result) {
-				viewResultDetails(result);
-			}
-		};
-
-		document.addEventListener('view-result', handleViewResult as EventListener);
-
-		return () => {
-			document.removeEventListener('view-result', handleViewResult as EventListener);
-		};
-	}
-
-	onMount(() => {
-		const cleanup = setupTableEventListeners();
-		return () => cleanup();
-	});
-
 	onDestroy(() => {
 		// Clean up any remaining resources
 	});
 </script>
+
+<!-- Define snippets for custom cells -->
+{#snippet dateCell(row: StudentResult)}
+	{formatDate(row.eval_date)}
+{/snippet}
+
+{#snippet questionsCell(row: StudentResult)}
+	{row.correct_count + row.incorrect_count + row.blank_count}
+{/snippet}
+
+{#snippet scoreCell(row: StudentResult)}
+	<span class="badge badge-lg {row.score >= 10.5 ? 'badge-success' : 'badge-error'}">
+		{row.score.toFixed(2)}
+	</span>
+{/snippet}
+
+{#snippet actionsCell(row: StudentResult)}
+	<button
+		class="btn btn-sm btn-primary btn-outline {$canViewDetails ? '' : 'btn-disabled'}"
+		onclick={() => viewResultDetails(row)}
+		title="Ver detalles"
+		aria-label="Ver detalles del resultado"
+		disabled={!$canViewDetails}
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="16"
+			height="16"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			class="lucide lucide-eye w-4 h-4 mr-1"
+			><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle
+				cx="12"
+				cy="12"
+				r="3"
+			/></svg
+		>
+		Ver
+	</button>
+{/snippet}
 
 <PageTitle
 	title="Informe de Estudiante"
@@ -401,14 +372,8 @@
 						{#if filteredResults.length > 0}
 							<div class="overflow-x-auto">
 								<Table
-									columns={resultColumns as unknown as {
-										key?: string;
-										label: string;
-										headerClass?: string;
-										class?: string;
-										cell?: (row: unknown) => unknown;
-									}[]}
-									rows={paginatedResults as unknown[]}
+									columns={resultColumns}
+									rows={paginatedResults}
 									striped={true}
 									hover={true}
 									bordered={true}

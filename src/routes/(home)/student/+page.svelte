@@ -8,9 +8,7 @@
 	import { onMount } from 'svelte';
 	import type { Levels, RegisterStudent, SelectForDelete, Students } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
-	// Define EventListener type
-	type EventListener = (event: Event) => void;
-	import { Search, UserPlus } from 'lucide-svelte';
+	import { Search, UserPlus, Pencil, Trash2, Book } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { permissionsStore } from '$lib/stores/permissions';
@@ -80,135 +78,24 @@
 	const { data } = $props<{ data: { levels: Levels[] } }>();
 	const groupOptions = ['A', 'B', 'C', 'D'];
 
-	// Define table columns
+	// Define studentColumns as a static array (not reactive)
 	const studentColumns: TableColumn<RegisterStudent>[] = [
 		{ key: 'roll_code', label: 'Código', class: 'text-accent font-medium' },
 		{ key: 'name', label: 'Nombre', class: 'font-medium' },
 		{ key: 'last_name', label: 'Apellido' },
-		{
-			key: 'phone',
-			label: 'Teléfono',
-			class: 'text-center',
-			cell: (row: RegisterStudent) => row.phone || 'N/A'
-		},
-		{
-			key: 'level',
-			label: 'Nivel',
-			class: 'text-center',
-			cell: (row: RegisterStudent) =>
-				`<span class="badge badge-primary badge-outline">${row.level}</span>`
-		},
-		{
-			key: 'group_name',
-			label: 'Grupo',
-			class: 'text-center',
-			cell: (row: RegisterStudent) => `<span class="badge badge-secondary">${row.group_name}</span>`
-		},
-		{
-			key: 'created_at',
-			label: 'Fecha de registro',
-			class: 'text-sm text-gray-500',
-			cell: (row: RegisterStudent) => formatDate(row.created_at)
-		},
-		{
-			label: 'Acciones',
-			headerClass: 'text-center',
-			cell: (row: RegisterStudent) => {
-				// Create SVG icons for the buttons
-				const pencilIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil w-4 h-4"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>`;
-
-				const trashIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`;
-
-				const bookIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book w-4 h-4"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>`;
-
-				return `
-					<div class="flex gap-2 justify-center">
-						<button
-							class="btn btn-sm btn-primary btn-outline ${!$canUpdate ? 'btn-disabled' : ''}"
-							onclick="document.dispatchEvent(new CustomEvent('student-edit', {detail: '${row.student_code}'}))"
-							aria-label="Editar estudiante"
-							${!$canUpdate ? 'disabled' : ''}
-						>
-							${pencilIcon}
-						</button>
-						<button
-							class="btn btn-sm btn-error btn-outline ${!$canDelete ? 'btn-disabled' : ''}"
-							onclick="document.dispatchEvent(new CustomEvent('student-delete', {detail: '${row.student_code}'}))"
-							aria-label="Eliminar estudiante"
-							${!$canDelete ? 'disabled' : ''}
-						>
-							${trashIcon}
-						</button>
-						<button
-							class="btn btn-sm btn-secondary btn-outline"
-							onclick="document.dispatchEvent(new CustomEvent('student-registers', {detail: '${row.student_code}'}))"
-							aria-label="Ver matrículas"
-						>
-							${bookIcon}
-						</button>
-					</div>
-				`;
-			}
-		}
+		{ label: 'Teléfono', class: 'text-center', render: phoneCell },
+		{ label: 'Nivel', class: 'text-center', render: levelCell },
+		{ label: 'Grupo', class: 'text-center', render: groupCell },
+		{ label: 'Fecha de registro', render: createdCell },
+		{ label: 'Acciones', headerClass: 'text-center', render: actions }
 	];
 
-	// Event handlers for custom events from table
-	function setupTableEventListeners() {
-		const handleStudentEdit = (event: CustomEvent) => {
-			const studentCode = event.detail;
-			const student = students.find((s) => s.student_code === studentCode);
-			if (student) {
-				openEditModal(student);
-			}
-		};
-
-		const handleStudentDelete = (event: CustomEvent) => {
-			const studentCode = event.detail;
-			const student = students.find((s) => s.student_code === studentCode);
-			if (student) {
-				openDeleteConfirmModal(student);
-			}
-		};
-
-		const handleViewRegisters = (event: CustomEvent) => {
-			const studentCode = event.detail;
-			const student = students.find((s) => s.student_code === studentCode);
-			if (student) {
-				openRegistersModal(student);
-			}
-		};
-
-		document.addEventListener('student-edit', handleStudentEdit as EventListener);
-		document.addEventListener('student-delete', handleStudentDelete as EventListener);
-		document.addEventListener('student-registers', handleViewRegisters as EventListener);
-
-		return () => {
-			document.removeEventListener('student-edit', handleStudentEdit as EventListener);
-			document.removeEventListener('student-delete', handleStudentDelete as EventListener);
-			document.removeEventListener('student-registers', handleViewRegisters as EventListener);
-		};
-	}
-
-	function openRegistersModal(student: RegisterStudent) {
-		selectedStudentForRegisters = {
-			code: student.student_code,
-			name: `${student.name} ${student.last_name}`
-		};
-		registersModalOpen = true;
-	}
-
-	// Event listener cleanup
-	let eventCleanup: (() => void) | null = null;
-
 	onMount(() => {
-		eventCleanup = setupTableEventListeners();
-
-		// Setup modal close listener
+		// Setup modal close listener (no more event listeners for table)
 		const handleModalClose = () => resetFormOnClose();
 		modal?.addEventListener('close', handleModalClose);
 
 		return () => {
-			eventCleanup?.();
 			modal?.removeEventListener('close', handleModalClose);
 		};
 	});
@@ -331,6 +218,14 @@
 		confirmModal?.showModal();
 	}
 
+	function openRegistersModal(student: RegisterStudent) {
+		selectedStudentForRegisters = {
+			code: student.student_code,
+			name: `${student.name} ${student.last_name}`
+		};
+		registersModalOpen = true;
+	}
+
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
 
@@ -347,7 +242,7 @@
 			formData.append('code', selectedCode.toString());
 		}
 
-		const action = selectedCode ? '?/update' : '?/create';
+		const action = selectedCode ? '?/update' : '?/upsert';
 		const response = await fetch(action, { method: 'POST', body: formData });
 		const res = await response.json();
 
@@ -377,7 +272,6 @@
 		if (groupSelect) groupSelect.value = '';
 		if (rollCodeInput) rollCodeInput.value = '';
 	}
-	// Modal close listener is now handled in the main onMount above
 
 	async function handleDelete() {
 		if (!selectForDelete) return;
@@ -457,29 +351,68 @@
 	{/if}
 </div>
 
+<!-- Define snippets for custom cells -->
+{#snippet phoneCell(row: RegisterStudent)}
+	{row.phone || 'N/A'}
+{/snippet}
+
+{#snippet levelCell(row: RegisterStudent)}
+	<span class="badge badge-primary badge-outline">{row.level}</span>
+{/snippet}
+
+{#snippet groupCell(row: RegisterStudent)}
+	<span class="badge badge-secondary">{row.group_name}</span>
+{/snippet}
+
+{#snippet createdCell(row: RegisterStudent)}
+	<span class="text-sm text-gray-500">{formatDate(row.created_at)}</span>
+{/snippet}
+
+{#snippet actions(row: RegisterStudent)}
+	<div class="flex gap-2 justify-center">
+		<button
+			class="btn btn-sm btn-primary btn-outline {$canUpdate ? '' : 'btn-disabled'}"
+			onclick={() => openEditModal(row)}
+			aria-label="Editar estudiante"
+			disabled={!$canUpdate}
+		>
+			<Pencil class="w-4 h-4" />
+		</button>
+		<button
+			class="btn btn-sm btn-error btn-outline {$canDelete ? '' : 'btn-disabled'}"
+			onclick={() => openDeleteConfirmModal(row)}
+			aria-label="Eliminar estudiante"
+			disabled={!$canDelete}
+		>
+			<Trash2 class="w-4 h-4" />
+		</button>
+		<button
+			class="btn btn-sm btn-secondary btn-outline"
+			onclick={() => openRegistersModal(row)}
+			aria-label="Ver matrículas"
+		>
+			<Book class="w-4 h-4" />
+		</button>
+	</div>
+{/snippet}
+
 {#if selectedLevelCode && students.length > 0}
 	<div class="card card-gradient-neutral rounded-xl overflow-hidden">
 		<div class="card-body">
 			{#if filteredStudents.length > 0}
 				<div class="overflow-x-auto animate-fade-in">
 					<Table
-						columns={studentColumns as unknown as {
-							key?: string;
-							label: string;
-							headerClass?: string;
-							class?: string;
-							cell?: (row: unknown) => unknown;
-						}[]}
-						rows={paginatedStudents as unknown[]}
+						columns={studentColumns}
+						rows={paginatedStudents}
 						striped={true}
 						hover={true}
 						bordered={true}
 						emptyMessage="No hay estudiantes en este nivel y grupo."
 					/>
 					<div class="text-center mt-2">
-						<span class="badge badge-primary badge-outline"
-							>{paginatedStudents.length} estudiantes</span
-						>
+						<span class="badge badge-primary badge-outline">
+							{paginatedStudents.length} estudiantes
+						</span>
 					</div>
 
 					<!-- Paginación -->

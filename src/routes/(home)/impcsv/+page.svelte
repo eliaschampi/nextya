@@ -174,33 +174,35 @@
 		{ key: 'last_name', label: 'Apellidos' },
 		{ key: 'roll_code', label: 'Código', class: 'font-mono' },
 		{ key: 'group_name', label: 'Grupo' },
-		{
-			key: 'email',
-			label: 'Email',
-			class: 'text-xs',
-			cell: (row: StudentRegisterData) => row.email || '-'
-		}
+		{ label: 'Email', class: 'text-xs', render: emailCell }
 	];
 
 	// Define table columns for omitted rows
 	const omittedRowsColumns: TableColumn<OmittedRowDetail>[] = [
 		{ key: 'rowNumber', label: 'Fila', class: 'font-mono' },
-		{
-			label: 'Nombre',
-			cell: (row: OmittedRowDetail) => row.row.name || '-'
-		},
-		{
-			label: 'Apellidos',
-			cell: (row: OmittedRowDetail) => row.row.last_name || '-'
-		},
-		{
-			label: 'Código',
-			class: 'font-mono',
-			cell: (row: OmittedRowDetail) => row.row.roll_code || '-'
-		},
+		{ label: 'Nombre', render: nameCell },
+		{ label: 'Apellidos', render: lastNameCell },
+		{ label: 'Código', class: 'font-mono', render: rollCodeCell },
 		{ key: 'reason', label: 'Razón', class: 'text-error text-xs' }
 	];
 </script>
+
+<!-- Define snippets for custom cells -->
+{#snippet emailCell(row: StudentRegisterData)}
+	{row.email || '-'}
+{/snippet}
+
+{#snippet nameCell(row: OmittedRowDetail)}
+	{row.row.name || '-'}
+{/snippet}
+
+{#snippet lastNameCell(row: OmittedRowDetail)}
+	{row.row.last_name || '-'}
+{/snippet}
+
+{#snippet rollCodeCell(row: OmittedRowDetail)}
+	{row.row.roll_code || '-'}
+{/snippet}
 
 <PageTitle
 	title="Importación CSV"
@@ -400,14 +402,8 @@
 				<div class="overflow-x-auto max-h-96">
 					{#if activeTab === 'valid'}
 						<Table
-							columns={validRowsColumns as unknown as {
-								key?: string;
-								label: string;
-								headerClass?: string;
-								class?: string;
-								cell?: (row: unknown) => unknown;
-							}[]}
-							rows={validRows as unknown[]}
+							columns={validRowsColumns}
+							rows={validRows}
 							striped={true}
 							hover={true}
 							bordered={true}
@@ -416,14 +412,8 @@
 						/>
 					{:else if activeTab === 'omitted'}
 						<Table
-							columns={omittedRowsColumns as unknown as {
-								key?: string;
-								label: string;
-								headerClass?: string;
-								class?: string;
-								cell?: (row: unknown) => unknown;
-							}[]}
-							rows={omittedRows as unknown[]}
+							columns={omittedRowsColumns}
+							rows={omittedRows}
 							striped={true}
 							hover={true}
 							bordered={true}

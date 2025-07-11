@@ -16,8 +16,6 @@
 	} from 'lucide-svelte';
 	import type { EvalWithSections, ResultItem } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
-	// Define EventListener type
-	type EventListener = (event: Event) => void;
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { permissionsStore } from '$lib/stores/permissions';
@@ -97,13 +95,9 @@
 			evaluationStore.initFromUrl(data.levelCode, data.evalCode, 'result-page');
 		}
 
-		// Setup table event listeners
-		const cleanup = setupTableEventListeners();
-
 		// Cleanup function
 		return () => {
 			unsubscribeStore?.();
-			cleanup();
 		};
 	});
 
@@ -389,97 +383,80 @@
 		{ key: 'roll_code', label: 'Código', class: 'font-mono text-accent font-medium' },
 		{ key: 'name', label: 'Nombre', class: 'font-medium' },
 		{ key: 'last_name', label: 'Apellidos' },
-		{
-			key: 'group_name',
-			label: 'Grupo',
-			class: 'text-center',
-			cell: (row: ResultItem) => `<span class="badge badge-secondary">${row.group_name}</span>`
-		},
-		{
-			key: 'correct_count',
-			label: 'Correctas',
-			class: 'text-center text-success font-medium'
-		},
-		{
-			key: 'incorrect_count',
-			label: 'Incorrectas',
-			class: 'text-center text-error font-medium'
-		},
-		{
-			key: 'blank_count',
-			label: 'En blanco',
-			class: 'text-center opacity-70'
-		},
-		{
-			key: 'score',
-			label: 'Nota',
-			class: 'text-center font-bold',
-			cell: (row: ResultItem) => `
-				<span class="badge badge-lg ${row.score >= 10.5 ? 'badge-success' : 'badge-error'}">
-					${row.score.toFixed(2)}
-				</span>
-			`
-		},
-		{
-			label: 'Acciones',
-			class: 'text-center',
-			cell: (row: ResultItem) => {
-				const eyeIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye w-4 h-4 mr-1"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
-				const trashIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2 w-4 h-4 mr-1"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`;
-
-				return `
-					<div class="flex gap-2 justify-center">
-						<button
-							class="btn btn-sm btn-primary btn-outline ${!$canViewDetails ? 'btn-disabled' : ''}"
-							onclick="document.dispatchEvent(new CustomEvent('view-result', {detail: '${row.result_code}'}))"
-							title="Ver detalles"
-							${!$canViewDetails ? 'disabled' : ''}
-						>
-							${eyeIcon}
-						</button>
-						<button
-							class="btn btn-sm btn-error btn-outline ${!$canDeleteResults ? 'btn-disabled' : ''}"
-							onclick="document.dispatchEvent(new CustomEvent('delete-result', {detail: '${row.result_code}'}))"
-							title="Eliminar resultado"
-							${!$canDeleteResults ? 'disabled' : ''}
-						>
-							${trashIcon}
-						</button>
-					</div>
-				`;
-			}
-		}
+		{ label: 'Grupo', class: 'text-center', render: groupCell },
+		{ key: 'correct_count', label: 'Correctas', class: 'text-center text-success font-medium' },
+		{ key: 'incorrect_count', label: 'Incorrectas', class: 'text-center text-error font-medium' },
+		{ key: 'blank_count', label: 'En blanco', class: 'text-center opacity-70' },
+		{ label: 'Nota', class: 'text-center font-bold', render: scoreCell },
+		{ label: 'Acciones', class: 'text-center', render: actionsCell }
 	];
-
-	// Event handlers for custom events from table
-	function setupTableEventListeners() {
-		const handleViewResult = (event: CustomEvent) => {
-			const resultCode = event.detail;
-			const result = results.find((r) => r.result_code === resultCode);
-			if (result) {
-				viewStudentDetails(result);
-			}
-		};
-
-		const handleDeleteResult = (event: CustomEvent) => {
-			const resultCode = event.detail;
-			const result = results.find((r) => r.result_code === resultCode);
-			if (result) {
-				openDeleteModal(result);
-			}
-		};
-
-		document.addEventListener('view-result', handleViewResult as EventListener);
-		document.addEventListener('delete-result', handleDeleteResult as EventListener);
-
-		return () => {
-			document.removeEventListener('view-result', handleViewResult as EventListener);
-			document.removeEventListener('delete-result', handleDeleteResult as EventListener);
-		};
-	}
 
 	// Remove duplicate onMount since it's now handled above
 </script>
+
+<!-- Define snippets for custom cells -->
+{#snippet groupCell(row: ResultItem)}
+	<span class="badge badge-secondary">{row.group_name}</span>
+{/snippet}
+
+{#snippet scoreCell(row: ResultItem)}
+	<span class="badge badge-lg {row.score >= 10.5 ? 'badge-success' : 'badge-error'}">
+		{row.score.toFixed(2)}
+	</span>
+{/snippet}
+
+{#snippet actionsCell(row: ResultItem)}
+	<div class="flex gap-2 justify-center">
+		<button
+			class="btn btn-sm btn-primary btn-outline {$canViewDetails ? '' : 'btn-disabled'}"
+			onclick={() => viewStudentDetails(row)}
+			title="Ver detalles"
+			aria-label="Ver detalles del resultado"
+			disabled={!$canViewDetails}
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="16"
+				height="16"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="lucide lucide-eye w-4 h-4"
+				><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle
+					cx="12"
+					cy="12"
+					r="3"
+				/></svg
+			>
+		</button>
+		<button
+			class="btn btn-sm btn-error btn-outline {$canDeleteResults ? '' : 'btn-disabled'}"
+			onclick={() => openDeleteModal(row)}
+			title="Eliminar resultado"
+			aria-label="Eliminar resultado"
+			disabled={!$canDeleteResults}
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="16"
+				height="16"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="lucide lucide-trash-2 w-4 h-4"
+				><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path
+					d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
+				/><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg
+			>
+		</button>
+	</div>
+{/snippet}
 
 <PageTitle
 	title="Resultados"
@@ -562,14 +539,8 @@
 					{#if filteredResults.length > 0}
 						<div class="overflow-x-auto">
 							<Table
-								columns={resultColumns as unknown as {
-									key?: string;
-									label: string;
-									headerClass?: string;
-									class?: string;
-									cell?: (row: unknown) => unknown;
-								}[]}
-								rows={paginatedResults as unknown[]}
+								columns={resultColumns}
+								rows={paginatedResults}
 								striped={true}
 								hover={true}
 								bordered={true}

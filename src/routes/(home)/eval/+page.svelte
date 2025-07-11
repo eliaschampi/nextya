@@ -4,8 +4,6 @@
 	import { showToast } from '$lib/stores/Toast';
 	import type { Levels, Courses, FormSection, EvalWithSections } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
-	// Define EventListener type
-	type EventListener = (event: Event) => void;
 	import {
 		ClipboardEdit,
 		Trash2,
@@ -20,7 +18,6 @@
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { permissionsStore } from '$lib/stores/permissions';
-	import { onMount } from 'svelte';
 
 	let modal: HTMLDialogElement | null = null;
 	let confirmModal: HTMLDialogElement | null = null;
@@ -235,118 +232,103 @@
 
 	// Define table columns for evaluations
 	const evalColumns: TableColumn<EvalWithSections>[] = [
-		{
-			key: 'name',
-			label: 'Nombre',
-			class: 'py-4 px-6 font-bold opacity-70 whitespace-nowrap'
-		},
-		{
-			key: 'levels.name',
-			label: 'Nivel',
-			class: 'py-4 px-6',
-			cell: (row: EvalWithSections) => `
-				<span class="badge badge-primary badge-outline flex items-center gap-1 whitespace-nowrap">
-					${row.levels?.name || 'N/A'}
-				</span>
-			`
-		},
-		{
-			key: 'group_name',
-			label: 'Grupo',
-			class: 'py-4 px-6',
-			cell: (row: EvalWithSections) => row.group_name || 'N/A'
-		},
-		{
-			key: 'eval_date',
-			label: 'Fecha',
-			class: 'py-4 px-6',
-			cell: (row: EvalWithSections) => `
-				<div class="flex items-center gap-1 text-sm text-gray-500">
-					${formatDate(row.eval_date)}
-				</div>
-			`
-		},
-		{
-			label: 'Claves',
-			class: 'py-4 px-6',
-			cell: (row: EvalWithSections) => `
-				<a
-					href="/eval/keys/${row.code}"
-					class="badge badge-soft flex items-center gap-1 whitespace-nowrap"
-					aria-label="Gestionar preguntas"
-				>
-					<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-key w-3 h-3"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-					${row.eval_sections?.length || 0} Cursos
-				</a>
-			`
-		},
-		{
-			label: 'Acciones',
-			class: 'py-4 px-6',
-			cell: (row: EvalWithSections) => {
-				// Create SVG icons for the buttons
-				const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-edit w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
-
-				const trashIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`;
-
-				return `
-					<div class="flex gap-2">
-						<button
-							class="btn btn-xs sm:btn-sm btn-primary btn-soft ${!$canUpdate ? 'btn-disabled' : ''}"
-							onclick="document.dispatchEvent(new CustomEvent('eval-edit', {detail: '${row.code}'}))"
-							title="Editar examen"
-							aria-label="Editar examen ${row.name}"
-							${!$canUpdate ? 'disabled' : ''}
-						>
-							${editIcon}
-						</button>
-						<button
-							class="btn btn-xs sm:btn-sm btn-error btn-soft ${!$canDelete ? 'btn-disabled' : ''}"
-							onclick="document.dispatchEvent(new CustomEvent('eval-delete', {detail: '${row.code}'}))"
-							title="Eliminar examen"
-							aria-label="Eliminar examen ${row.name}"
-							${!$canDelete ? 'disabled' : ''}
-						>
-							${trashIcon}
-						</button>
-					</div>
-				`;
-			}
-		}
+		{ key: 'name', label: 'Nombre', class: 'py-4 px-6 font-bold opacity-70 whitespace-nowrap' },
+		{ label: 'Nivel', class: 'py-4 px-6', render: levelCell },
+		{ key: 'group_name', label: 'Grupo', class: 'py-4 px-6' },
+		{ label: 'Fecha', class: 'py-4 px-6', render: dateCell },
+		{ label: 'Claves', class: 'py-4 px-6', render: keysCell },
+		{ label: 'Acciones', class: 'py-4 px-6', render: actionsCell }
 	];
-
-	// Event handlers for custom events from table
-	function setupTableEventListeners() {
-		const handleEvalEdit = (event: CustomEvent) => {
-			const evalCode = event.detail;
-			const evalItem = formState.evals.find((e) => e.code === evalCode);
-			if (evalItem) {
-				openEditModal(evalItem);
-			}
-		};
-
-		const handleEvalDelete = (event: CustomEvent) => {
-			const evalCode = event.detail;
-			const evalItem = formState.evals.find((e) => e.code === evalCode);
-			if (evalItem) {
-				openDeleteConfirmModal(evalItem);
-			}
-		};
-
-		document.addEventListener('eval-edit', handleEvalEdit as EventListener);
-		document.addEventListener('eval-delete', handleEvalDelete as EventListener);
-
-		return () => {
-			document.removeEventListener('eval-edit', handleEvalEdit as EventListener);
-			document.removeEventListener('eval-delete', handleEvalDelete as EventListener);
-		};
-	}
-
-	onMount(() => {
-		const cleanup = setupTableEventListeners();
-		return () => cleanup();
-	});
 </script>
+
+<!-- Define snippets for custom cells -->
+{#snippet levelCell(row: EvalWithSections)}
+	<span class="badge badge-primary badge-outline flex items-center gap-1 whitespace-nowrap">
+		{row.levels?.name || 'N/A'}
+	</span>
+{/snippet}
+
+{#snippet dateCell(row: EvalWithSections)}
+	<div class="flex items-center gap-1 text-sm text-gray-500">
+		{formatDate(row.eval_date)}
+	</div>
+{/snippet}
+
+{#snippet keysCell(row: EvalWithSections)}
+	<a
+		href="/eval/keys/{row.code}"
+		class="badge badge-soft flex items-center gap-1 whitespace-nowrap"
+		aria-label="Gestionar preguntas"
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="12"
+			height="12"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			class="lucide lucide-key w-3 h-3"
+			><path
+				d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"
+			/></svg
+		>
+		{row.eval_sections?.length || 0} Cursos
+	</a>
+{/snippet}
+
+{#snippet actionsCell(row: EvalWithSections)}
+	<div class="flex gap-2">
+		<button
+			class="btn btn-xs sm:btn-sm btn-primary btn-soft {$canUpdate ? '' : 'btn-disabled'}"
+			onclick={() => openEditModal(row)}
+			title="Editar examen"
+			aria-label="Editar examen {row.name}"
+			disabled={!$canUpdate}
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="16"
+				height="16"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="lucide lucide-edit w-4 h-4"
+				><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path
+					d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+				/></svg
+			>
+		</button>
+		<button
+			class="btn btn-xs sm:btn-sm btn-error btn-soft {$canDelete ? '' : 'btn-disabled'}"
+			onclick={() => openDeleteConfirmModal(row)}
+			title="Eliminar examen"
+			aria-label="Eliminar examen {row.name}"
+			disabled={!$canDelete}
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="16"
+				height="16"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="lucide lucide-trash-2 w-4 h-4"
+				><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path
+					d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
+				/><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg
+			>
+		</button>
+	</div>
+{/snippet}
 
 <PageTitle title="Exámenes" description="Gestión de evaluaciones por nivel y grupo">
 	{#if $canCreate}
@@ -399,14 +381,8 @@
 		<div class="card-body p-2 overflow-x-auto">
 			{#if filteredEvals.length > 0}
 				<Table
-					columns={evalColumns as unknown as {
-						key?: string;
-						label: string;
-						headerClass?: string;
-						class?: string;
-						cell?: (row: unknown) => unknown;
-					}[]}
-					rows={filteredEvals as unknown[]}
+					columns={evalColumns}
+					rows={filteredEvals}
 					striped={true}
 					hover={true}
 					bordered={true}

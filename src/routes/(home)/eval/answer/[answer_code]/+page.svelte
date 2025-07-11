@@ -123,25 +123,14 @@
 	}
 
 	// Table column configurations
-	function createSectionScoreColumns(): TableColumn<SectionScore>[] {
-		return [
-			{ key: 'section_name', label: 'Sección', class: 'font-medium' },
-			{ key: 'correct_count', label: 'Correctas', class: 'text-center text-success' },
-			{ key: 'incorrect_count', label: 'Incorrectas', class: 'text-center text-error' },
-			{ key: 'blank_count', label: 'Blanco', class: 'text-center text-warning' },
-			{ key: 'total_questions', label: 'Total', class: 'text-center' },
-			{
-				key: 'score',
-				label: 'Nota',
-				class: 'text-center font-bold',
-				cell: (row: SectionScore) => `
-					<span class="${getScoreColorClass(row.score)}">
-						${row.score.toFixed(2)}
-					</span>
-				`
-			}
-		];
-	}
+	const sectionScoreColumns: TableColumn<SectionScore>[] = [
+		{ key: 'section_name', label: 'Sección', class: 'font-medium' },
+		{ key: 'correct_count', label: 'Correctas', class: 'text-center text-success' },
+		{ key: 'incorrect_count', label: 'Incorrectas', class: 'text-center text-error' },
+		{ key: 'blank_count', label: 'Blanco', class: 'text-center text-warning' },
+		{ key: 'total_questions', label: 'Total', class: 'text-center' },
+		{ label: 'Nota', class: 'text-center font-bold', render: sectionScoreCell }
+	];
 
 	function getAnswerBadgeText(answer: StudentQuestionAnswer): string {
 		if (answer.is_blank) return '-';
@@ -149,69 +138,12 @@
 		return answer.student_answer || '-';
 	}
 
-	function getAnswerStatusBadge(answer: StudentQuestionAnswer): string {
-		const badgeClass = answer.is_blank
-			? 'badge-warning'
-			: answer.is_multiple
-				? 'badge-error'
-				: answer.is_correct
-					? 'badge-success'
-					: 'badge-error';
-
-		const icons = {
-			check:
-				'<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg>',
-			alert:
-				'<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-alert-circle w-3 h-3"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>',
-			x: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x w-3 h-3"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>'
-		};
-
-		const icon = answer.is_correct ? icons.check : answer.is_blank ? icons.alert : icons.x;
-		const text = answer.is_correct
-			? 'Correcta'
-			: answer.is_blank
-				? 'En blanco'
-				: answer.is_multiple
-					? 'Múltiple'
-					: 'Incorrecta';
-
-		return `<span class="badge gap-1 ${badgeClass}">${icon} ${text}</span>`;
-	}
-
-	function createAnswerColumns(): TableColumn<StudentQuestionAnswer>[] {
-		return [
-			{
-				key: 'order_in_eval',
-				label: 'N°',
-				class: 'w-12 text-center font-medium'
-			},
-			{
-				label: 'Respuesta',
-				class: 'w-20 text-center',
-				cell: (row: StudentQuestionAnswer) => `
-					<span class="badge badge-lg font-mono">
-						${getAnswerBadgeText(row)}
-					</span>
-				`
-			},
-			{
-				key: 'correct_key',
-				label: 'Correcta',
-				class: 'w-20 text-center',
-				cell: (row: StudentQuestionAnswer) => `
-					<span class="badge badge-outline badge-primary badge-lg font-mono">
-						${row.correct_key}
-					</span>
-				`
-			},
-			{
-				label: 'Estado',
-				cell: (row: StudentQuestionAnswer) => getAnswerStatusBadge(row)
-			}
-		];
-	}
-
-	const sectionScoreColumns = createSectionScoreColumns();
+	const answerColumns: TableColumn<StudentQuestionAnswer>[] = [
+		{ key: 'order_in_eval', label: 'N°', class: 'w-12 text-center font-medium' },
+		{ label: 'Respuesta', class: 'w-20 text-center', render: answerCell },
+		{ label: 'Correcta', class: 'w-20 text-center', render: correctKeyCell },
+		{ label: 'Estado', render: statusCell }
+	];
 
 	// Type for StatCard snippet parameters
 	interface StatCardProps {
@@ -224,6 +156,101 @@
 		subtitle: string;
 	}
 </script>
+
+<!-- Define snippets for custom cells -->
+{#snippet sectionScoreCell(row: SectionScore)}
+	<span class={getScoreColorClass(row.score)}>
+		{row.score.toFixed(2)}
+	</span>
+{/snippet}
+
+{#snippet answerCell(row: StudentQuestionAnswer)}
+	<span class="badge badge-lg font-mono">
+		{getAnswerBadgeText(row)}
+	</span>
+{/snippet}
+
+{#snippet correctKeyCell(row: StudentQuestionAnswer)}
+	<span class="badge badge-outline badge-primary badge-lg font-mono">
+		{row.correct_key}
+	</span>
+{/snippet}
+
+{#snippet statusCell(row: StudentQuestionAnswer)}
+	{#if row.is_blank}
+		<span class="badge gap-1 badge-warning">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="12"
+				height="12"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="lucide lucide-alert-circle w-3 h-3"
+				><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line
+					x1="12"
+					x2="12.01"
+					y1="16"
+					y2="16"
+				/></svg
+			>
+			En blanco
+		</span>
+	{:else if row.is_correct}
+		<span class="badge gap-1 badge-success">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="12"
+				height="12"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="lucide lucide-check w-3 h-3"><polyline points="20 6 9 17 4 12" /></svg
+			>
+			Correcta
+		</span>
+	{:else if row.is_multiple}
+		<span class="badge gap-1 badge-error">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="12"
+				height="12"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="lucide lucide-x w-3 h-3"
+				><line x1="18" x2="6" y1="6" y2="18" /><line x1="6" x2="18" y1="6" y2="18" /></svg
+			>
+			Múltiple
+		</span>
+	{:else}
+		<span class="badge gap-1 badge-error">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="12"
+				height="12"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="lucide lucide-x w-3 h-3"
+				><line x1="18" x2="6" y1="6" y2="18" /><line x1="6" x2="18" y1="6" y2="18" /></svg
+			>
+			Incorrecta
+		</span>
+	{/if}
+{/snippet}
 
 {#snippet StatCard({
 	title,
@@ -377,14 +404,8 @@
 							<h3 class="card-title text-primary mb-2">Puntajes por Sección</h3>
 							<div class="overflow-x-auto">
 								<Table
-									columns={sectionScoreColumns as {
-										key?: string;
-										label: string;
-										headerClass?: string;
-										class?: string;
-										cell?: (row: unknown) => unknown;
-									}[]}
-									rows={Object.values(result.scores.by_section) as unknown[]}
+									columns={sectionScoreColumns}
+									rows={Object.values(result.scores.by_section)}
 									striped={true}
 									hover={true}
 									bordered={true}
@@ -402,14 +423,8 @@
 								<h3 class="card-title text-primary mb-2">{section.name}</h3>
 								<div class="overflow-x-auto">
 									<Table
-										columns={createAnswerColumns() as {
-											key?: string;
-											label: string;
-											headerClass?: string;
-											class?: string;
-											cell?: (row: unknown) => unknown;
-										}[]}
-										rows={section.answers as unknown[]}
+										columns={answerColumns}
+										rows={section.answers}
 										striped={true}
 										hover={true}
 										bordered={true}
