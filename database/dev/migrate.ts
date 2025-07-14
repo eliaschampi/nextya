@@ -1,8 +1,8 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, readFile, readdir } from 'fs/promises';
 import { join } from 'path';
-import { Kysely, PostgresDialect, Migrator, FileMigrationProvider } from 'kysely';
+import { Kysely, PostgresDialect, Migrator, FileMigrationProvider, sql } from 'kysely';
 import { Pool } from 'pg';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -17,6 +17,14 @@ const dbConfig = {
 	database: process.env.DB_NAME || 'nextya',
 	port: parseInt(process.env.DB_PORT || '5432')
 };
+
+// SQL File interface for organized init files
+interface SqlFile {
+	filename: string;
+	order: number;
+	content: string;
+	description: string;
+}
 
 // Create database instance
 const db = new Kysely<unknown>({
@@ -36,6 +44,38 @@ const migrator = new Migrator({
 	})
 });
 
+async function loadSqlFiles(): Promise<SqlFile[]> {
+	const initDir = join(process.cwd(), 'database/init');
+	try {
+		const files = await readdir(initDir);
+		const sqlFiles: SqlFile[] = [];
+
+		for (const filename of files.filter(f => f.endsWith('.sql'))) {
+			const content = await readFile(join(initDir, filename), 'utf-8');
+			const order = parseInt(filename.split('-')[0]) || 999;
+
+			// Extract description from filename
+			const description = filename
+				.replace(/^\d+-/, '')
+				.replace(/\.sql$/, '')
+				.replace(/-/g, ' ')
+				.replace(/\b\w/g, l => l.toUpperCase());
+
+			sqlFiles.push({
+				filename,
+				order,
+				content: content.trim(),
+				description
+			});
+		}
+
+		return sqlFiles.sort((a, b) => a.order - b.order);
+	} catch (error) {
+		console.error('❌ Failed to load SQL files:', error);
+		return [];
+	}
+}
+
 async function checkConnection() {
 	console.log('🔍 Checking database connection...');
 	try {
@@ -45,6 +85,87 @@ async function checkConnection() {
 	} catch (error) {
 		console.error('❌ Database connection failed:', error);
 		console.log('💡 Make sure Docker containers are running: docker-compose up -d');
+		return false;
+	}
+}
+
+async function initializeFromSqlFiles(): Promise<boolean> {
+	console.log('🚀 Initializing database from SQL files...');
+
+	try {
+		const sqlFiles = await loadSqlFiles();
+		if (sqlFiles.length === 0) {
+			console.log('⚠️ No SQL files found in database/init/');
+			return false;
+		}
+
+		console.log(`📁 Found ${sqlFiles.length} SQL files to process`);
+
+		// Check if migrations table exists and has any migrations
+		try {
+			const migrations = await migrator.getMigrations();
+			if (migrations.length > 0) {
+				console.log('✅ Database already initialized with migrations');
+				return true;
+			}
+		} catch {
+			// Migrations table doesn't exist yet, continue with initialization
+		}
+
+		// Create initial migration from SQL files
+		const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+		const migrationName = `${timestamp}_initial_schema.ts`;
+		const migrationPath = join(migrationFolder, migrationName);
+
+		// Ensure migrations directory exists
+		await mkdir(migrationFolder, { recursive: true });
+
+		// Combine all SQL files into one migration
+		const combinedSql = sqlFiles.map(file =>
+			`-- ${file.description} (${file.filename})\n${file.content}`
+		).join('\n\n');
+
+		const migrationContent = `import { Kysely, sql } from 'kysely';
+
+export async function up(db: Kysely<unknown>): Promise<void> {
+	// Initial schema from organized SQL files
+	// Generated from: ${sqlFiles.map(f => f.filename).join(', ')}
+
+	await sql\`${combinedSql.replace(/`/g, '\\`')}\`.execute(db);
+}
+
+export async function down(db: Kysely<unknown>): Promise<void> {
+	// Drop all tables in reverse order
+	const tables = [
+		'student_register_results', 'student_registers', 'eval_results',
+		'eval_answers', 'eval_questions', 'eval_sections', 'evals',
+		'registers', 'students', 'courses', 'levels', 'permissions', 'users'
+	];
+
+	for (const table of tables) {
+		await sql\`DROP TABLE IF EXISTS \${sql.identifier([table])} CASCADE\`.execute(db);
+	}
+
+	// Drop custom types
+	await sql\`DROP TYPE IF EXISTS entity_enum CASCADE\`.execute(db);
+}
+`;
+
+		await writeFile(migrationPath, migrationContent);
+		console.log(`✅ Created initial migration: ${migrationName}`);
+
+		// Run the migration
+		const { error } = await migrator.migrateToLatest();
+		if (error) {
+			console.error('❌ Failed to run initial migration:', error);
+			return false;
+		}
+
+		console.log('✅ Database initialized successfully from SQL files');
+		return true;
+
+	} catch (error) {
+		console.error('❌ Failed to initialize from SQL files:', error);
 		return false;
 	}
 }
@@ -232,6 +353,14 @@ const migrationName = process.argv[3];
 async function main() {
 	try {
 		switch (command) {
+			case 'init':
+				if (await checkConnection()) {
+					const success = await initializeFromSqlFiles();
+					if (success) {
+						await generateTypes();
+					}
+				}
+				break;
 			case 'migrate':
 				if (await checkConnection()) {
 					await runMigrations();
@@ -259,17 +388,23 @@ async function main() {
 				await resetDatabase();
 				break;
 			default:
-				console.log('NextYa Database Migration CLI');
-				console.log('============================');
+				console.log('NextYa Database Migration CLI - Unified System');
+				console.log('==============================================');
 				console.log('Usage: npm run db:[command]');
 				console.log('');
 				console.log('Commands:');
+				console.log('  db:init        Initialize database from SQL files (first time)');
 				console.log('  db:migrate     Run pending migrations');
 				console.log('  db:rollback    Rollback last migration');
 				console.log('  db:status      Show migration status');
 				console.log('  db:generate    Generate TypeScript types');
 				console.log('  db:create      Create new migration file');
 				console.log('  db:reset       Reset database (Docker)');
+				console.log('');
+				console.log('🚀 Quick Start:');
+				console.log('  npm run db:init     # First time setup from your SQL files');
+				console.log('  npm run db:create   # Create new migration for changes');
+				console.log('  npm run db:migrate  # Apply new migrations');
 				break;
 		}
 	} finally {

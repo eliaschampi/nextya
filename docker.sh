@@ -128,6 +128,20 @@ cmd_db_shell() {
     docker exec -it "${PROJECT_NAME}_postgres" psql -U postgres -d "$PROJECT_NAME"
 }
 
+cmd_db_setup() {
+    print_header "Database Setup"
+    print_info "Setting up database with unified migration system"
+    docker exec -it "${PROJECT_NAME}_app" npm run docker:setup
+    print_success "Database setup completed"
+}
+
+cmd_db_init() {
+    print_header "Database Initialization"
+    print_info "Initializing database from SQL files"
+    docker exec -it "${PROJECT_NAME}_app" npm run db:init
+    print_success "Database initialized"
+}
+
 cmd_db_migrate() {
     print_header "Database Migration"
     print_info "Running database migrations"
@@ -140,6 +154,12 @@ cmd_db_rollback() {
     print_info "Rolling back last migration"
     docker exec -it "${PROJECT_NAME}_app" npm run db:rollback
     print_success "Rollback completed"
+}
+
+cmd_db_status() {
+    print_header "Migration Status"
+    print_info "Checking migration status"
+    docker exec -it "${PROJECT_NAME}_app" npm run db:status
 }
 
 cmd_db_generate() {
@@ -167,10 +187,9 @@ cmd_db_reset() {
         print_info "Resetting database"
         docker-compose down -v
         docker-compose up -d
-        print_info "Waiting for database to be ready"
+        print_info "Waiting for database to be ready..."
         sleep 5
-        print_info "Generating types"
-        docker exec -it "${PROJECT_NAME}_app" npm run db:generate
+        docker exec -it "${PROJECT_NAME}_app" npm run docker:setup
         print_success "Database reset completed"
     else
         print_info "Database reset cancelled"
@@ -217,8 +236,11 @@ Available Commands:
   shell         Open shell in app container
   npm           Run npm commands in app container
   db:shell      Open PostgreSQL shell
+  db:setup      Complete database setup (unified system)
+  db:init       Initialize database from SQL files
   db:migrate    Run database migrations
   db:rollback   Rollback last migration
+  db:status     Show migration status
   db:generate   Generate TypeScript types
   db:create     Create new migration file
   db:reset      Reset database (destroys all data)
@@ -227,6 +249,7 @@ Available Commands:
 
 Examples:
   $SCRIPT_NAME up                    # Start all services
+  $SCRIPT_NAME db:setup              # Complete database setup (first time)
   $SCRIPT_NAME npm install           # Install npm dependencies
   $SCRIPT_NAME npm run dev           # Run development server
   $SCRIPT_NAME db:migrate            # Run database migrations
@@ -261,8 +284,11 @@ main() {
         "shell")      cmd_shell ;;
         "npm")        cmd_npm "$@" ;;
         "db:shell")     cmd_db_shell ;;
+        "db:setup")     cmd_db_setup ;;
+        "db:init")      cmd_db_init ;;
         "db:migrate")   cmd_db_migrate ;;
         "db:rollback")  cmd_db_rollback ;;
+        "db:status")    cmd_db_status ;;
         "db:generate")  cmd_db_generate ;;
         "db:create")    cmd_db_create "$@" ;;
         "db:reset")     cmd_db_reset ;;
