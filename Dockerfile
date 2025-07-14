@@ -34,6 +34,10 @@ RUN npm install
 # Now, copy the rest of your application source code
 COPY . .
 
+# Fix permissions for volume mounts
+# This ensures that when volumes are mounted, the container can still access the files
+RUN chmod -R 755 /app
+
 # Expose the port your app runs on
 EXPOSE 5173
 
