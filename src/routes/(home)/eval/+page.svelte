@@ -17,14 +17,14 @@
 	} from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
-	import { permissionsStore } from '$lib/stores/permissions';
+	import { can } from '$lib/stores/permissions-helper';
 
 	let modal: HTMLDialogElement | null = null;
 	let confirmModal: HTMLDialogElement | null = null;
 
-	const canCreate = permissionsStore.has({ entity: 'evals', action: 'create' });
-	const canUpdate = permissionsStore.has({ entity: 'evals', action: 'update' });
-	const canDelete = permissionsStore.has({ entity: 'evals', action: 'delete' });
+	const canCreate = can('evals:create');
+	const canUpdate = can('evals:update');
+	const canDelete = can('evals:delete');
 
 	const DEFAULT_QUESTIONS_PER_SECTION = 10;
 	const MAX_TOTAL_QUESTIONS = 80;

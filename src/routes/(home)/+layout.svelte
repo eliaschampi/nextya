@@ -20,8 +20,14 @@
 	import { getInitials } from '$lib/utils/initialName';
 	import { theme } from '$lib/stores/theme';
 	import Background from '$lib/components/background.svelte';
-	import { permissionsStore } from '$lib/stores/permissions';
-	import { onMount, onDestroy } from 'svelte';
+	// Helper function para verificar permisos
+	function hasPermission(permissionKey: string): boolean {
+		return page.data.userPermissions?.includes(permissionKey) || false;
+	}
+
+	function hasAnyPermission(...permissionKeys: string[]): boolean {
+		return permissionKeys.some((key) => hasPermission(key));
+	}
 
 	let { children } = $props();
 
@@ -42,17 +48,8 @@
 		theme.toggle();
 	}
 
-	// Initialize permissions when user is available
-	onMount(() => {
-		if (page.data.user?.code) {
-			permissionsStore.fetchPermissions(page.data.user.code);
-		}
-	});
-
-	// Clear permissions when leaving
-	onDestroy(() => {
-		permissionsStore.clearPermissions();
-	});
+	// Los permisos se cargan automáticamente desde page.data.userPermissions
+	// No necesitamos fetchPermissions ni clearPermissions
 </script>
 
 <svelte:head>
@@ -163,92 +160,139 @@
 						</a>
 					</li>
 
-					<li class="menu-title pt-2">
-						<span>Dashboards</span>
-					</li>
+					<!-- Dashboards - Solo si tiene permisos -->
+					{#if hasAnyPermission('dashboard:general', 'dashboard:courses', 'dashboard:students', 'dashboard:evaluations')}
+						<li class="menu-title pt-2">
+							<span>Dashboards</span>
+						</li>
 
-					<li>
-						<details>
-							<summary class="flex gap-2.5 py-2">
-								<ChartArea class="h-4 w-4" />
-								<span>Reportes</span>
-							</summary>
-							<ul class="pl-4">
-								<li><a href="/dashboard">General</a></li>
-								<li><a href="/dashboard/course">Cursos</a></li>
-								<li><a href="/dashboard/student">Estudiantes</a></li>
-								<li><a href="/dashboard/eval">Evaluaciones</a></li>
-							</ul>
-						</details>
-					</li>
-					<li class="menu-title pt-2">
-						<span>Académico</span>
-					</li>
+						<li>
+							<details>
+								<summary class="flex gap-2.5 py-2">
+									<ChartArea class="h-4 w-4" />
+									<span>Reportes</span>
+								</summary>
+								<ul class="pl-4">
+									{#if hasPermission('dashboard:general')}
+										<li><a href="/dashboard">General</a></li>
+									{/if}
+									{#if hasPermission('dashboard:courses')}
+										<li><a href="/dashboard/course">Cursos</a></li>
+									{/if}
+									{#if hasPermission('dashboard:students')}
+										<li><a href="/dashboard/student">Estudiantes</a></li>
+									{/if}
+									{#if hasPermission('dashboard:evaluations')}
+										<li><a href="/dashboard/eval">Evaluaciones</a></li>
+									{/if}
+								</ul>
+							</details>
+						</li>
+					{/if}
+					<!-- Sección Académica -->
+					{#if hasPermission('levels:read') || hasPermission('courses:read') || hasPermission('students:read') || hasPermission('evals:read')}
+						<li class="menu-title pt-2">
+							<span>Académico</span>
+						</li>
 
-					<li>
-						<details>
-							<summary class="flex gap-2.5 py-2">
-								<Settings class="h-4 w-4" />
-								<span>Estructura</span>
-							</summary>
-							<ul class="pl-4">
-								<li><a href="/levels">Niveles</a></li>
-								<li><a href="/courses">Cursos</a></li>
-							</ul>
-						</details>
-					</li>
+						<!-- Estructura -->
+						{#if hasPermission('levels:read') || hasPermission('courses:read')}
+							<li>
+								<details>
+									<summary class="flex gap-2.5 py-2">
+										<Settings class="h-4 w-4" />
+										<span>Estructura</span>
+									</summary>
+									<ul class="pl-4">
+										{#if hasPermission('levels:read')}
+											<li><a href="/levels">Niveles</a></li>
+										{/if}
+										{#if hasPermission('courses:read')}
+											<li><a href="/courses">Cursos</a></li>
+										{/if}
+									</ul>
+								</details>
+							</li>
+						{/if}
 
-					<li>
-						<details>
-							<summary class="flex gap-2.5 py-2">
-								<UserRound class="h-4 w-4" />
-								<span>Estudiantes</span>
-							</summary>
-							<ul class="pl-4">
-								<li><a href="/student">Gestionar</a></li>
-								<li><a href="/impcsv">Importar</a></li>
-								<li><a href="/eval/student">Resultados</a></li>
-							</ul>
-						</details>
-					</li>
+						<!-- Estudiantes -->
+						{#if hasPermission('students:read') || hasPermission('students:import')}
+							<li>
+								<details>
+									<summary class="flex gap-2.5 py-2">
+										<UserRound class="h-4 w-4" />
+										<span>Estudiantes</span>
+									</summary>
+									<ul class="pl-4">
+										{#if hasPermission('students:read')}
+											<li><a href="/student">Gestionar</a></li>
+										{/if}
+										{#if hasPermission('students:import')}
+											<li><a href="/impcsv">Importar</a></li>
+										{/if}
+										{#if hasPermission('results:read')}
+											<li><a href="/eval/student">Resultados</a></li>
+										{/if}
+									</ul>
+								</details>
+							</li>
+						{/if}
 
-					<li>
-						<details>
-							<summary class="flex gap-2.5 py-2">
-								<FolderPen class="h-4 w-4" />
-								<span>Evaluaciones</span>
-							</summary>
-							<ul class="pl-4">
-								<li><a href="/eval">Registrar</a></li>
-								<li><a href="/eval/check">Procesar</a></li>
-							</ul>
-						</details>
-					</li>
+						<!-- Evaluaciones -->
+						{#if hasPermission('evals:read') || hasPermission('evals:process')}
+							<li>
+								<details>
+									<summary class="flex gap-2.5 py-2">
+										<FolderPen class="h-4 w-4" />
+										<span>Evaluaciones</span>
+									</summary>
+									<ul class="pl-4">
+										{#if hasPermission('evals:read')}
+											<li><a href="/eval">Registrar</a></li>
+										{/if}
+										{#if hasPermission('evals:process')}
+											<li><a href="/eval/check">Procesar</a></li>
+										{/if}
+									</ul>
+								</details>
+							</li>
+						{/if}
 
-					<li>
-						<a href="/result" class="flex gap-2.5 py-2.5">
-							<FileText class="h-4 w-4" />
-							<span>Resultados</span>
-						</a>
-					</li>
+						<!-- Resultados -->
+						{#if hasPermission('results:read')}
+							<li>
+								<a href="/result" class="flex gap-2.5 py-2.5">
+									<FileText class="h-4 w-4" />
+									<span>Resultados</span>
+								</a>
+							</li>
+						{/if}
+					{/if}
 
-					<li class="menu-title pt-2">
-						<span>Administración</span>
-					</li>
+					<!-- Administración -->
+					{#if hasPermission('users:read') || hasPermission('system:config')}
+						<li class="menu-title pt-2">
+							<span>Administración</span>
+						</li>
 
-					<li>
-						<a href="/users" class="flex gap-2.5 py-2.5">
-							<UserCog class="h-4 w-4" />
-							<span>Usuarios</span>
-						</a>
-					</li>
+						{#if hasPermission('users:read')}
+							<li>
+								<a href="/users" class="flex gap-2.5 py-2.5">
+									<UserCog class="h-4 w-4" />
+									<span>Usuarios</span>
+								</a>
+							</li>
+						{/if}
 
-					<li>
-						<a href="/config" class="flex gap-2.5 py-2.5">
-							<Bird class="h-4 w-4" />
-							<span>Configuración</span>
-						</a>
-					</li>
+						{#if hasPermission('system:config')}
+							<li>
+								<a href="/config" class="flex gap-2.5 py-2.5">
+									<Bird class="h-4 w-4" />
+									<span>Configuración</span>
+								</a>
+							</li>
+						{/if}
+					{/if}
 				</ul>
 			</div>
 

@@ -7,7 +7,7 @@
 	import type { Courses } from '$lib/types';
 	import { EllipsisVertical, ChevronUp, ChevronDown } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
-	import { permissionsStore } from '$lib/stores/permissions';
+	import { can } from '$lib/stores/permissions-helper';
 
 	// Estados y referencias
 	let modal: HTMLDialogElement | null = $state(null);
@@ -19,9 +19,9 @@
 
 	const { data } = $props<{ data: { courses: Courses[] } }>();
 
-	const canCreate = permissionsStore.has({ entity: 'courses', action: 'create' });
-	const canUpdate = permissionsStore.has({ entity: 'courses', action: 'update' });
-	const canDelete = permissionsStore.has({ entity: 'courses', action: 'delete' });
+	const canCreate = can('courses:create');
+	const canUpdate = can('courses:update');
+	const canDelete = can('courses:delete');
 
 	function openCreateModal() {
 		isEditing = false;

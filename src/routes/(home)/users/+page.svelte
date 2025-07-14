@@ -11,7 +11,7 @@
 	import { getInitials } from '$lib/utils/initialName';
 	import { formatDate } from '$lib/utils/formatDate';
 	import type { Users } from '$lib/types';
-	import { permissionsStore } from '$lib/stores/permissions';
+	import { can } from '$lib/stores/permissions-helper';
 	import { page } from '$app/state';
 
 	// Estados y referencias
@@ -37,7 +37,8 @@
 	];
 
 	// permissions
-	const canRead = permissionsStore.has({ entity: 'users', action: 'read' });
+	const canRead = can('users:read');
+	const canManagePermissions = can('users:manage_permissions');
 	const mySelf = (userId: string) => {
 		return userId === page.data.user?.code;
 	};
@@ -421,9 +422,11 @@
 						<EllipsisVertical class="w-4 h-4" />
 					</div>
 					<ul class="dropdown-content menu bg-base-100 rounded-box z-10 w-52 p-2 shadow-sm">
-						<li>
-							<button onclick={() => openPermissionsModal(user)}>Gestionar Permisos</button>
-						</li>
+						{#if $canManagePermissions}
+							<li>
+								<button onclick={() => openPermissionsModal(user)}>Gestionar Permisos</button>
+							</li>
+						{/if}
 						<li>
 							<button onclick={() => openDeleteConfirmModal(user)}>Eliminar</button>
 						</li>

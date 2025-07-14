@@ -6,7 +6,7 @@
 	import { showToast } from '$lib/stores/Toast';
 	import type { ToastType } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
-	import { permissionsStore } from '$lib/stores/permissions';
+	import { can } from '$lib/stores/permissions-helper';
 
 	// Props from server
 	const { data } = $props<{
@@ -21,7 +21,7 @@
 	let showFileInput = $state(true);
 
 	// Permissions
-	const canSaveImport = permissionsStore.has({ entity: 'students', action: 'create' });
+	const canSaveImport = can('students:create');
 
 	// Data
 	let file = $state<File | null>(null);

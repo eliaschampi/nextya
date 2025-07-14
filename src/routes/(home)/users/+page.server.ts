@@ -6,6 +6,11 @@ import { hash } from 'bcryptjs';
 export const load: PageServerLoad = async ({ depends, locals }) => {
 	depends('users:load');
 
+	// Verificar permiso para ver usuarios
+	if (!(await locals.can('users:read'))) {
+		return { users: [], title: 'Usuarios', error: 'Sin permisos para ver usuarios' };
+	}
+
 	try {
 		const users = await locals.db
 			.selectFrom('users')
@@ -29,6 +34,11 @@ export const load: PageServerLoad = async ({ depends, locals }) => {
 
 export const actions: Actions = {
 	create: async ({ request, locals }) => {
+		// Verificar permiso para crear usuarios
+		if (!(await locals.can('users:create'))) {
+			return fail(403, { error: 'Sin permisos para crear usuarios' });
+		}
+
 		const formData = await request.formData();
 		const email = formData.get('email') as string;
 		const name = formData.get('name') as string;

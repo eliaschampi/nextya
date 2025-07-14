@@ -11,7 +11,7 @@
 	import { Search, UserPlus, Pencil, Trash2, Book } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
-	import { permissionsStore } from '$lib/stores/permissions';
+	import { can } from '$lib/stores/permissions-helper';
 
 	let modal: HTMLDialogElement | null = $state(null);
 	let confirmModal: HTMLDialogElement | null = $state(null);
@@ -72,9 +72,9 @@
 	let groupSelect: HTMLSelectElement | null = $state(null);
 	let rollCodeInput: HTMLInputElement | null = $state(null);
 
-	const canCreate = permissionsStore.has({ entity: 'students', action: 'create' });
-	const canUpdate = permissionsStore.has({ entity: 'students', action: 'update' });
-	const canDelete = permissionsStore.has({ entity: 'students', action: 'delete' });
+	const canCreate = can('students:create');
+	const canUpdate = can('students:update');
+	const canDelete = can('students:delete');
 
 	const { data } = $props<{ data: { levels: Levels[] } }>();
 	const groupOptions = ['A', 'B', 'C', 'D'];

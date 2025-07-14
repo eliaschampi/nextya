@@ -28,7 +28,7 @@
 	import type { ApiOmrBatchResponse, ApiOmrBatchRequest } from '$lib/types/api';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { permissionsStore } from '$lib/stores/permissions';
+	import { can } from '$lib/stores/permissions-helper';
 	import { evaluationStore } from '$lib/stores/evaluation';
 
 	interface ValidationError {
@@ -45,7 +45,7 @@
 	}>();
 
 	// Permissions
-	const canSaveResults = permissionsStore.has({ entity: 'eval_results', action: 'create' });
+	const canSaveResults = can('eval_results:create');
 
 	// Store state
 	let storeState = $state({

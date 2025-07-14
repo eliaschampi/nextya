@@ -16,6 +16,11 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		return json({ error: 'Codigo de usuario requerido' }, { status: 400 });
 	}
 
+	// Validar permiso para ver permisos de usuarios
+	if (!(await locals.can('users:manage_permissions'))) {
+		return json({ error: 'Permiso requerido: users:manage_permissions' }, { status: 403 });
+	}
+
 	try {
 		const permissions = await locals.db
 			.selectFrom('permissions')
@@ -38,6 +43,11 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		return json({ error: 'Codigo de usuario requerido' }, { status: 400 });
 	}
 
+	// Validar permiso para gestionar permisos de usuarios
+	if (!(await locals.can('users:manage_permissions'))) {
+		return json({ error: 'Permiso requerido: users:manage_permissions' }, { status: 403 });
+	}
+
 	try {
 		const body = await request.json();
 		const { permissions } = body as { permissions: { entity: string; user_action: string }[] };
@@ -46,21 +56,16 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			return json({ error: 'Formato de permisos inválido' }, { status: 400 });
 		}
 
-		// First delete all existing permissions (except users entity)
-		await locals.db
-			.deleteFrom('permissions')
-			.where('user_code', '=', userCode)
-			.where('entity', '!=', 'users')
-			.execute();
+		// Eliminar permisos existentes
+		await locals.db.deleteFrom('permissions').where('user_code', '=', userCode).execute();
 
-		// Map permissions to the new structure
+		// Insertar nuevos permisos
 		const permissionsToInsert = permissions.map((p) => ({
 			user_code: userCode as string,
 			entity: p.entity as EntityEnum,
 			action: p.user_action
 		}));
 
-		// If we have permissions to insert, do it
 		if (permissionsToInsert.length > 0) {
 			await locals.db.insertInto('permissions').values(permissionsToInsert).execute();
 		}

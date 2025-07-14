@@ -9,7 +9,7 @@
 	import { goto } from '$app/navigation';
 
 	import Table from '$lib/components/Table.svelte';
-	import { permissionsStore } from '$lib/stores/permissions';
+	import { can } from '$lib/stores/permissions-helper';
 	import { studentStore } from '$lib/stores/student';
 	import StudentCard from '$lib/components/StudentCard.svelte';
 	import StudentSearchModal from '$lib/components/StudentSearchModal.svelte';
@@ -76,7 +76,7 @@
 	}>();
 
 	// Permissions
-	const canViewDetails = permissionsStore.has({ entity: 'eval_results', action: 'read' });
+	const canViewDetails = can('eval_results:read');
 
 	// Define table columns
 	const resultColumns: TableColumn<StudentResult>[] = [

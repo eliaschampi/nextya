@@ -269,6 +269,10 @@
 	animation: fadeIn 0.3s ease-in-out;
 }
 
+dialog.modal .modal-box {
+	border: 1px solid var(--color-base-300);
+}
+
 @keyframes fadeIn {
 	from {
 		opacity: 0;

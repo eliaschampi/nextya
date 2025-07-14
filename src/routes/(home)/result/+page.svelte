@@ -18,7 +18,7 @@
 	import type { TableColumn } from '$lib/types/table';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { permissionsStore } from '$lib/stores/permissions';
+	import { can } from '$lib/stores/permissions-helper';
 	import { evaluationStore } from '$lib/stores/evaluation';
 
 	// Props from server
@@ -46,8 +46,8 @@
 	let searchQuery = $state('');
 
 	// Permissions
-	const canViewDetails = permissionsStore.has({ entity: 'eval_results', action: 'read' });
-	const canDeleteResults = permissionsStore.has({ entity: 'eval_results', action: 'delete' });
+	const canViewDetails = can('eval_results:read');
+	const canDeleteResults = can('eval_results:delete');
 
 	// Delete state
 	let deleteModalOpen = $state(false);

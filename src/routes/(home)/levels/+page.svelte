@@ -9,7 +9,7 @@
 	import { EllipsisVertical, Plus, Minus } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getModalityTypes } from '$lib/data/modality';
-	import { permissionsStore } from '$lib/stores/permissions';
+	import { can } from '$lib/stores/permissions-helper';
 
 	// Estados y referencias
 	let modal: HTMLDialogElement | null = $state(null);
@@ -23,9 +23,9 @@
 	const modalities = getModalityTypes();
 
 	const { data } = $props<{ data: { levels: Levels[] } }>();
-	const canCreate = permissionsStore.has({ entity: 'levels', action: 'create' });
-	const canUpdate = permissionsStore.has({ entity: 'levels', action: 'update' });
-	const canDelete = permissionsStore.has({ entity: 'levels', action: 'delete' });
+	const canCreate = can('levels:create');
+	const canUpdate = can('levels:update');
+	const canDelete = can('levels:delete');
 
 	async function fetchUsers() {
 		if (users.length === 0) {

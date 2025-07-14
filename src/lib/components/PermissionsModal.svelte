@@ -3,14 +3,9 @@
 	import { invalidate } from '$app/navigation';
 	import Message from '$lib/components/Message.svelte';
 	import { showToast } from '$lib/stores/Toast';
-	import { entities } from '$lib/data/entities';
-	import { Shield } from 'lucide-svelte';
-	import PermissionTableRow from '$lib/components/PermissionTableRow.svelte';
-	import { ACTIONS } from '$lib/types/permissions';
-	import type { Action, EntityPermissions } from '$lib/types/permissions';
+	import { Shield, Plus, X } from 'lucide-svelte';
+	import { SPECIFIC_PERMISSIONS, getPermissionByKey } from '$lib/data/permissions';
 	import type { Users } from '$lib/types';
-
-	type PermissionRecord = Record<string, EntityPermissions>;
 
 	type ApiPermission = {
 		code: string;
@@ -29,11 +24,16 @@
 
 	// State management
 	let modal: HTMLDialogElement | null = $state(null);
-	let permissions = $state<PermissionRecord>({});
+	let userPermissions = $state<string[]>([]); // Array of permission keys like 'users:read'
 	let loading = $state(false);
 	let error = $state('');
 	let saving = $state(false);
-	let allEntities = $derived(entities);
+	let selectedPermission = $state('');
+
+	// Computed
+	let availablePermissions = $derived(
+		SPECIFIC_PERMISSIONS.filter((p) => !userPermissions.includes(p.key))
+	);
 
 	// Modal control
 	$effect(() => {
@@ -73,34 +73,8 @@
 				permissions: ApiPermission[];
 			};
 
-			// Group permissions by entity
-			const permissionsByEntity: Record<string, string[]> = {};
-			permissionsData.forEach((p) => {
-				if (!permissionsByEntity[p.entity]) {
-					permissionsByEntity[p.entity] = [];
-				}
-				permissionsByEntity[p.entity].push(p.action);
-			});
-
-			// Convert to our permission record format
-			const permissionsMap: PermissionRecord = {};
-			Object.entries(permissionsByEntity).forEach(([entity, actions]) => {
-				permissionsMap[entity] = ACTIONS.reduce((acc, action) => {
-					acc[action] = actions.includes(action);
-					return acc;
-				}, {} as EntityPermissions);
-			});
-
-			// Initialize all entities with their permissions
-			permissions = allEntities.reduce<PermissionRecord>((acc, entity) => {
-				acc[entity.label] =
-					permissionsMap[entity.label] ||
-					ACTIONS.reduce((perms, action) => {
-						perms[action] = false;
-						return perms;
-					}, {} as EntityPermissions);
-				return acc;
-			}, {});
+			// Convert to permission keys format (entity:action)
+			userPermissions = permissionsData.map((p) => `${p.entity}:${p.action}`);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Error loading permissions';
 			console.error('Permission loading error:', err);
@@ -109,24 +83,29 @@
 		}
 	}
 
+	// Add permission
+	function addPermission() {
+		if (selectedPermission && !userPermissions.includes(selectedPermission)) {
+			userPermissions = [...userPermissions, selectedPermission];
+			selectedPermission = '';
+		}
+	}
+
+	// Remove permission
+	function removePermission(permissionKey: string) {
+		userPermissions = userPermissions.filter((p) => p !== permissionKey);
+	}
+
 	// Save permissions
 	async function savePermissions() {
 		saving = true;
 		error = '';
 
 		try {
-			// Convert our permission format to the API format
-			const permissionsToSave: { entity: string; user_action: string }[] = [];
-
-			Object.entries(permissions).forEach(([entity, entityPermissions]) => {
-				ACTIONS.forEach((action) => {
-					if (entityPermissions[action]) {
-						permissionsToSave.push({
-							entity,
-							user_action: action
-						});
-					}
-				});
+			// Convert permission keys to API format
+			const permissionsToSave = userPermissions.map((key) => {
+				const [entity, action] = key.split(':');
+				return { entity, user_action: action };
 			});
 
 			const response = await fetch(`/api/users/${user.code}/permissions`, {
@@ -156,23 +135,11 @@
 	function closeModal() {
 		modal?.close();
 	}
-
-	function getEntityName(label: string): string {
-		return allEntities.find((e) => e.label === label)?.name || label;
-	}
-
-	// Action name mapping for display
-	const actionNames: Record<Action, string> = {
-		read: 'Leer',
-		create: 'Crear',
-		update: 'Editar',
-		delete: 'Eliminar'
-	};
 </script>
 
 <dialog bind:this={modal} class="modal">
-	<div class="modal-box max-w-3xl">
-		<div class="flex justify-between items-center mb-4">
+	<div class="modal-box max-w-4xl">
+		<div class="flex justify-between items-center mb-6">
 			<h3 class="text-lg font-bold flex items-center gap-2">
 				<Shield class="w-5 h-5 text-primary" />
 				Permisos de Usuario: {user.name}
@@ -188,39 +155,57 @@
 			<div class="my-4">
 				<Message description={error} type="error" />
 				<div class="flex justify-center mt-4">
-					<button class="btn btn-sm btn-primary" onclick={loadPermissions}> Reintentar </button>
+					<button class="btn btn-sm btn-primary" onclick={loadPermissions}>Reintentar</button>
 				</div>
 			</div>
 		{:else}
-			<div class="overflow-x-auto my-4">
-				<table class="table table-zebra">
-					<thead>
-						<tr>
-							<th>Entidad</th>
-							{#each ACTIONS as action (action)}
-								<th class="text-center">{actionNames[action]}</th>
-							{/each}
-						</tr>
-					</thead>
-					<tbody>
-						{#each Object.entries(permissions) as [entity, permission] (entity)}
-							<PermissionTableRow
-								entity={getEntityName(entity)}
-								{permission}
-								{loading}
-								onPermissionChange={(action, value) => {
-									permissions = {
-										...permissions,
-										[entity]: {
-											...permission,
-											[action]: value
-										}
-									};
-								}}
-							/>
+			<!-- Add Permission Section -->
+			<div class="mb-6 p-4 bg-base-200 rounded-lg">
+				<h4 class="font-semibold mb-3">Agregar Permiso</h4>
+				<div class="flex gap-2">
+					<select bind:value={selectedPermission} class="select select-bordered flex-1">
+						<option value="">Seleccionar permiso...</option>
+						{#each availablePermissions as permission (permission.key)}
+							<option value={permission.key}>
+								{permission.category} - {permission.label}
+							</option>
 						{/each}
-					</tbody>
-				</table>
+					</select>
+					<button class="btn btn-primary" onclick={addPermission} disabled={!selectedPermission}>
+						<Plus class="w-4 h-4" />
+						Agregar
+					</button>
+				</div>
+			</div>
+
+			<!-- Current Permissions -->
+			<div class="mb-4">
+				<h4 class="font-semibold mb-3">Permisos Actuales ({userPermissions.length})</h4>
+				{#if userPermissions.length === 0}
+					<div class="text-center py-8 text-base-content/60">No hay permisos asignados</div>
+				{:else}
+					<div class="space-y-2 max-h-60 overflow-y-auto">
+						{#each userPermissions as permissionKey (permissionKey)}
+							{@const permission = getPermissionByKey(permissionKey)}
+							{#if permission}
+								<div class="flex items-center justify-between p-3 bg-base-100 rounded border">
+									<div>
+										<div class="font-medium">{permission.label}</div>
+										<div class="text-sm text-base-content/60">
+											{permission.category} • {permission.description}
+										</div>
+									</div>
+									<button
+										class="btn btn-sm btn-ghost btn-circle text-error"
+										onclick={() => removePermission(permissionKey)}
+									>
+										<X class="w-4 h-4" />
+									</button>
+								</div>
+							{/if}
+						{/each}
+					</div>
+				{/if}
 			</div>
 		{/if}
 
@@ -234,7 +219,7 @@
 				{#if saving}
 					<span class="loading loading-spinner loading-xs"></span>
 				{/if}
-				Guardar
+				Guardar Permisos
 			</button>
 		</div>
 	</div>

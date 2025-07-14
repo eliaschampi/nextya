@@ -2,6 +2,7 @@ import { type Handle, redirect } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { getSession } from '$lib/auth/session';
 import { dbInstance } from '$lib/config/server';
+import { hasPermission } from '$lib/auth/permissions';
 
 // Create database instance with environment variables (server-only)
 
@@ -16,6 +17,12 @@ const authHandle: Handle = async ({ event, resolve }) => {
 	const session = await getSession(dbInstance, event.cookies);
 	event.locals.session = session;
 	event.locals.user = session?.user ?? null;
+
+	// Add permission checker to locals
+	event.locals.can = async (permissionKey: string): Promise<boolean> => {
+		if (!event.locals.user?.code) return false;
+		return await hasPermission(event.locals.db, event.locals.user.code, permissionKey);
+	};
 
 	return resolve(event);
 };

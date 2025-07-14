@@ -9,7 +9,7 @@
 
 	// Store imports
 	import { showToast } from '$lib/stores/Toast';
-	import { permissionsStore } from '$lib/stores/permissions';
+	import { can } from '$lib/stores/permissions-helper';
 
 	// Utility imports
 	import { responseMessage } from '$lib/utils/responseMessage';
@@ -32,7 +32,7 @@
 	} from 'lucide-svelte';
 
 	// Permissions
-	const canCreate = permissionsStore.has({ entity: 'eval_questions', action: 'create' });
+	const canCreate = can('eval_questions:create');
 
 	// Props from parent
 	const { data } = $props<{
