@@ -1,7 +1,8 @@
-# Base stage for development
+# Base stage with all system dependencies
 FROM node:20-bookworm-slim AS base
 
-# Install system dependencies for OpenCV and native modules
+# Install system dependencies for OpenCV and other native modules
+# This needs to run as root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -10,28 +11,32 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopencv-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Configure OpenCV to use system installation
+# Configure environment for opencv4nodejs to use the system-installed library
 ENV OPENCV4NODEJS_DISABLE_AUTOBUILD=1
 
 # Set working directory
 WORKDIR /app
-RUN chown -R node:node /app
+
 
 # Development stage
 FROM base AS development
 
-# Copy package files
-COPY --chown=node:node package.json ./
+# Copy package files for dependency installation.
+# This improves Docker layer caching.
+COPY package*.json ./
 
-# Switch to node user and install dependencies
-USER node
-RUN npm install --ignore-scripts
+# Run npm install as root. This is crucial for two reasons:
+# 1. To have permissions to install packages globally if needed.
+# 2. To allow native modules like opencv4nodejs to build correctly.
+# NOTE: We removed '--ignore-scripts' as opencv4nodejs likely needs its scripts to build.
+RUN npm install
 
-# Copy source code
-COPY --chown=node:node . .
+# Now, copy the rest of your application source code
+COPY . .
 
-# Expose development port
+# Expose the port your app runs on
 EXPOSE 5173
 
-# Start development server
+# The command to start the development server.
+# This will run as the root user by default, which solves the volume mount permission issue.
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

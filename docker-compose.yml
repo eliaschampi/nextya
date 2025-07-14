@@ -3,7 +3,7 @@ services:
     container_name: nextya_app
     build:
       context: .
-      dockerfile: Dockfile
+      dockerfile: Dockerfile  # Corrected filename if needed
       target: development
     ports:
       - '5173:5173'
