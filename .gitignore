@@ -17,7 +17,7 @@ docker/data/
 .env.*
 !.env.example
 !.env.test
-
+.devcontainer
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
