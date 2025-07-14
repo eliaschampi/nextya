@@ -26,7 +26,7 @@ CREATE TABLE public.permissions (
   code UUID NOT NULL DEFAULT gen_random_uuid (),
   user_code UUID NOT NULL,
   entity entity_enum NOT NULL,
-  action VARCHAR(10) NOT NULL,
+  action VARCHAR(100) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT permissions_pk PRIMARY KEY (code),
   CONSTRAINT permissions_user_fk FOREIGN KEY (user_code) REFERENCES public.users (code) ON DELETE CASCADE,
