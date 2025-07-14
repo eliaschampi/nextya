@@ -3,8 +3,8 @@
 
 	// Props with defaults for customization
 	const {
-		opacity = 0.15,
-		maxOpacity = 0.3,
+		opacity = 0.3,
+		maxOpacity = 0.5,
 		zIndex = '',
 		gridSpacing = 25,
 		dotSize = 2,

@@ -25,7 +25,7 @@ COPY --chown=node:node package.json ./
 
 # Switch to node user and install dependencies
 USER node
-RUN npm install
+RUN npm install --ignore-scripts
 
 # Copy source code
 COPY --chown=node:node . .
