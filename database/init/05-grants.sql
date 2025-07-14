@@ -1,7 +1,7 @@
 -- =====================================================
--- NextYa Database Grants - NO POLICIES VERSION
+-- NextYa Database Grants - SIMPLE PUBLIC SCHEMA
 -- =====================================================
--- Simple grants without any RLS or permission checking
+-- Simple grants using only public schema and postgres user
 -- All security handled at the application level
 -- =====================================================
 

@@ -17,30 +17,18 @@ ENV OPENCV4NODEJS_DISABLE_AUTOBUILD=1
 # Set working directory
 WORKDIR /app
 
-
 # Development stage
 FROM base AS development
 
-# Copy package files for dependency installation.
-# This improves Docker layer caching.
 COPY package*.json ./
 
-# Run npm install as root. This is crucial for two reasons:
-# 1. To have permissions to install packages globally if needed.
-# 2. To allow native modules like opencv4nodejs to build correctly.
-# NOTE: We removed '--ignore-scripts' as opencv4nodejs likely needs its scripts to build.
-RUN npm install
+# we can remove --ignore-scripts when docker builds correctly or npm rebuild @u4/opencv4nodejs
+RUN npm install --ignore-scripts
 
-# Now, copy the rest of your application source code
 COPY . .
-
-# Fix permissions for volume mounts
-# This ensures that when volumes are mounted, the container can still access the files
-RUN chmod -R 755 /app
 
 # Expose the port your app runs on
 EXPOSE 5173
 
-# The command to start the development server.
-# This will run as the root user by default, which solves the volume mount permission issue.
+# The command to start the development server
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
