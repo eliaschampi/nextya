@@ -13,11 +13,11 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"test": "npm run format && npm run lint && npm run check",
-		"db:migrate": "npx tsx scripts/migrate.ts migrate",
-		"db:rollback": "npx tsx scripts/migrate.ts rollback",
+		"db:migrate": "npx tsx database/dev/migrate.ts migrate",
+		"db:rollback": "npx tsx database/dev/migrate.ts rollback",
 		"db:generate": "kysely-codegen --config-file kysely.config.ts",
-		"db:create": "npx tsx scripts/migrate.ts create",
-		"db:reset": "npx tsx scripts/migrate.ts reset"
+		"db:create": "npx tsx database/dev/migrate.ts create",
+		"db:reset": "npx tsx database/dev/migrate.ts reset"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.3.0",

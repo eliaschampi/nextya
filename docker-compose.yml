@@ -3,7 +3,7 @@ services:
     container_name: nextya_app
     build:
       context: .
-      dockerfile: docker/app.dockerfile
+      dockerfile: Dockfile
       target: development
     ports:
       - '5173:5173'
@@ -33,7 +33,6 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: nextya
     volumes:
-      - ./docker/init:/docker-entrypoint-initdb.d:ro
       - postgres_data:/var/lib/postgresql/data
     ports:
       - '5432:5432'

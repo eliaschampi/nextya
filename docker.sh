@@ -184,12 +184,12 @@ cmd_status() {
 
 cmd_clean() {
     print_header "Cleanup"
-    print_warning "This will remove containers, networks, and volumes!"
+    print_warning "This will remove all containers"
     read -p "Are you sure? (y/N) " -n 1 -r
     echo
 
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        docker-compose -f "$COMPOSE_FILE" down -v
+        docker rm -vf $(docker ps -aq)
         print_success "Cleanup completed"
     else
         print_info "Cleanup cancelled"
@@ -222,7 +222,7 @@ Available Commands:
   db:generate   Generate TypeScript types
   db:create     Create new migration file
   db:reset      Reset database (destroys all data)
-  clean         Remove containers, networks, and volumes
+  clean         Remove all containers
   help          Show this help message
 
 Examples:
