@@ -1,4 +1,4 @@
-FROM node:20-bookworm-slim
+FROM node:20-bookworm-slim AS base
 
 FROM base AS deps
 WORKDIR /app
@@ -9,11 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ENV OPENCV4NODEJS_DISABLE_AUTOBUILD=1
 
-WORKDIR /app
-RUN /app
-USER node
-
-COPY --chown=node:node package*.json ./
+COPY package*.json ./
 RUN npm install --ignore-scripts
 
 COPY . .
