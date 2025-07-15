@@ -72,9 +72,10 @@
 	let groupSelect: HTMLSelectElement | null = $state(null);
 	let rollCodeInput: HTMLInputElement | null = $state(null);
 
-	const canCreate = can('students:create');
-	const canUpdate = can('students:update');
-	const canDelete = can('students:delete');
+	// Permissions - using Svelte 5 reactive approach
+	let canCreate = $derived(can('students:create'));
+	let canUpdate = $derived(can('students:update'));
+	let canDelete = $derived(can('students:delete'));
 
 	const { data } = $props<{ data: { levels: Levels[] } }>();
 	const groupOptions = ['A', 'B', 'C', 'D'];
@@ -293,7 +294,7 @@
 </script>
 
 <PageTitle title="Estudiantes" description="Selecciona un nivel y grupo para ver los estudiantes.">
-	{#if $canCreate}
+	{#if canCreate}
 		<button class="btn btn-primary gap-2" onclick={openCreateModal}>
 			<UserPlus class="w-4 h-4" />
 			Registrar
@@ -371,18 +372,18 @@
 {#snippet actions(row: RegisterStudent)}
 	<div class="flex gap-2 justify-center">
 		<button
-			class="btn btn-sm btn-primary btn-outline {$canUpdate ? '' : 'btn-disabled'}"
+			class="btn btn-sm btn-primary btn-outline {canUpdate ? '' : 'btn-disabled'}"
 			onclick={() => openEditModal(row)}
 			aria-label="Editar estudiante"
-			disabled={!$canUpdate}
+			disabled={!canUpdate}
 		>
 			<Pencil class="w-4 h-4" />
 		</button>
 		<button
-			class="btn btn-sm btn-error btn-outline {$canDelete ? '' : 'btn-disabled'}"
+			class="btn btn-sm btn-error btn-outline {canDelete ? '' : 'btn-disabled'}"
 			onclick={() => openDeleteConfirmModal(row)}
 			aria-label="Eliminar estudiante"
-			disabled={!$canDelete}
+			disabled={!canDelete}
 		>
 			<Trash2 class="w-4 h-4" />
 		</button>

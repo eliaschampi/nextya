@@ -44,8 +44,8 @@
 		};
 	}>();
 
-	// Permissions
-	const canSaveResults = can('eval_results:create');
+	// Permissions - using Svelte 5 reactive approach
+	let canSaveResults = $derived(can('eval_results:create'));
 
 	// Store state
 	let storeState = $state({
@@ -774,7 +774,7 @@
 						<button
 							type="submit"
 							class="btn btn-success btn-soft btn-sm"
-							disabled={!canSave || isSavingBatch || !$canSaveResults}
+							disabled={!canSave || isSavingBatch || !canSaveResults}
 						>
 							{#if isSavingBatch}
 								<Loader2 class="animate-spin mr-1" size={16} /> Guardando...

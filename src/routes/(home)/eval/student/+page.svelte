@@ -75,8 +75,8 @@
 		};
 	}>();
 
-	// Permissions
-	const canViewDetails = can('eval_results:read');
+	// Permissions - using Svelte 5 reactive approach
+	let canViewDetails = $derived(can('eval_results:read'));
 
 	// Define table columns
 	const resultColumns: TableColumn<StudentResult>[] = [
@@ -261,11 +261,11 @@
 
 {#snippet actionsCell(row: StudentResult)}
 	<button
-		class="btn btn-sm btn-primary btn-outline {$canViewDetails ? '' : 'btn-disabled'}"
+		class="btn btn-sm btn-primary btn-outline {canViewDetails ? '' : 'btn-disabled'}"
 		onclick={() => viewResultDetails(row)}
 		title="Ver detalles"
 		aria-label="Ver detalles del resultado"
-		disabled={!$canViewDetails}
+		disabled={!canViewDetails}
 	>
 		<svg
 			xmlns="http://www.w3.org/2000/svg"

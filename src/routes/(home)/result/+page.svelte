@@ -45,9 +45,9 @@
 	let sortOrder = $state<'asc' | 'desc'>('desc'); // Default sort by highest score
 	let searchQuery = $state('');
 
-	// Permissions
-	const canViewDetails = can('eval_results:read');
-	const canDeleteResults = can('eval_results:delete');
+	// Permissions - using Svelte 5 reactive approach
+	let canViewDetails = $derived(can('eval_results:read'));
+	let canDeleteResults = $derived(can('eval_results:delete'));
 
 	// Delete state
 	let deleteModalOpen = $state(false);
@@ -408,11 +408,11 @@
 {#snippet actionsCell(row: ResultItem)}
 	<div class="flex gap-2 justify-center">
 		<button
-			class="btn btn-sm btn-primary btn-outline {$canViewDetails ? '' : 'btn-disabled'}"
+			class="btn btn-sm btn-primary btn-outline {canViewDetails ? '' : 'btn-disabled'}"
 			onclick={() => viewStudentDetails(row)}
 			title="Ver detalles"
 			aria-label="Ver detalles del resultado"
-			disabled={!$canViewDetails}
+			disabled={!canViewDetails}
 		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -433,11 +433,11 @@
 			>
 		</button>
 		<button
-			class="btn btn-sm btn-error btn-outline {$canDeleteResults ? '' : 'btn-disabled'}"
+			class="btn btn-sm btn-error btn-outline {canDeleteResults ? '' : 'btn-disabled'}"
 			onclick={() => openDeleteModal(row)}
 			title="Eliminar resultado"
 			aria-label="Eliminar resultado"
-			disabled={!$canDeleteResults}
+			disabled={!canDeleteResults}
 		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -509,7 +509,7 @@
 							class="btn btn-sm btn-error btn-outline"
 							onclick={() => openDeleteModal()}
 							title="Eliminar todos los resultados"
-							disabled={filteredResults.length === 0 || !$canDeleteResults}
+							disabled={filteredResults.length === 0 || !canDeleteResults}
 						>
 							<Trash2 size={16} class="mr-1" />
 						</button>

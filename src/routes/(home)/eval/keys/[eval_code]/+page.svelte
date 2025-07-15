@@ -31,8 +31,8 @@
 		Eraser
 	} from 'lucide-svelte';
 
-	// Permissions
-	const canCreate = can('eval_questions:create');
+	// Permissions - using Svelte 5 reactive approach
+	let canCreate = $derived(can('eval_questions:create'));
 
 	// Props from parent
 	const { data } = $props<{
@@ -429,7 +429,7 @@
 		type="submit"
 		form="keysForm"
 		class="btn btn-md {isValid ? 'btn-success' : 'btn-primary'} gap-2 w-full sm:w-auto shadow"
-		disabled={!isValid || isSaving || !$canCreate}
+		disabled={!isValid || isSaving || !canCreate}
 	>
 		{#if isSaving}
 			<span class="loading loading-spinner loading-sm"></span>
@@ -667,9 +667,3 @@
 	</div>
 	<form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
 </dialog>
-
-<style>
-	.tab-active {
-		font-weight: 500;
-	}
-</style>

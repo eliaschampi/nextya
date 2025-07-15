@@ -36,9 +36,9 @@
 		{ src: 'man2.svg', label: 'Man 2' }
 	];
 
-	// permissions
-	const canRead = can('users:read');
-	const canManagePermissions = can('users:manage_permissions');
+	// permissions - using Svelte 5 reactive approach
+	let canRead = $derived(can('users:read'));
+	let canManagePermissions = $derived(can('users:manage_permissions'));
 	const mySelf = (userId: string) => {
 		return userId === page.data.user?.code;
 	};
@@ -241,7 +241,7 @@
 </script>
 
 <PageTitle title="Usuarios" description="Lista de usuarios disponibles en la aplicación.">
-	{#if $canRead}
+	{#if canRead}
 		<button class="btn btn-primary" onclick={openCreateModal}>Agregar Usuario</button>
 	{/if}
 </PageTitle>
@@ -416,13 +416,13 @@
 		class="card bg-gradient-to-br from-base-200 to-base-100 shadow duration-300 border border-base-300/30 rounded-xl overflow-hidden"
 	>
 		<div class="card-body p-6 space-y-4">
-			{#if $canRead}
+			{#if canRead}
 				<div class="absolute top-4 right-4 dropdown dropdown-end">
 					<div tabindex="0" role="button" class="cursor-pointer">
 						<EllipsisVertical class="w-4 h-4" />
 					</div>
 					<ul class="dropdown-content menu bg-base-100 rounded-box z-10 w-52 p-2 shadow-sm">
-						{#if $canManagePermissions}
+						{#if canManagePermissions}
 							<li>
 								<button onclick={() => openPermissionsModal(user)}>Gestionar Permisos</button>
 							</li>
@@ -495,7 +495,7 @@
 
 			<!-- Action buttons with subtle hover effects -->
 			<div class="flex justify-end gap-2 pt-2">
-				{#if mySelf(user.code) || $canRead}
+				{#if mySelf(user.code) || canRead}
 					<button class="btn btn-sm btn-soft btn-primary" onclick={() => openEditModal(user)}>
 						<Pencil class="w-4 h-4" />
 					</button>

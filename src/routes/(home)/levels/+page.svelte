@@ -23,9 +23,10 @@
 	const modalities = getModalityTypes();
 
 	const { data } = $props<{ data: { levels: Levels[] } }>();
-	const canCreate = can('levels:create');
-	const canUpdate = can('levels:update');
-	const canDelete = can('levels:delete');
+	// Permissions - using Svelte 5 reactive approach
+	let canCreate = $derived(can('levels:create'));
+	let canUpdate = $derived(can('levels:update'));
+	let canDelete = $derived(can('levels:delete'));
 
 	async function fetchUsers() {
 		if (users.length === 0) {
@@ -179,7 +180,7 @@
 	title="Niveles"
 	description="Aquí encontrarás todas las niveles disponibles en la aplicación."
 >
-	{#if $canCreate}
+	{#if canCreate}
 		<button class="btn btn-primary" onclick={openCreateModal}>Añadir</button>
 	{/if}
 </PageTitle>
@@ -313,10 +314,10 @@
 					</div>
 					<ul class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
 						<li>
-							<button onclick={() => openEditModal(item)} disabled={!$canUpdate}>Editar</button>
+							<button onclick={() => openEditModal(item)} disabled={!canUpdate}>Editar</button>
 						</li>
 						<li>
-							<button onclick={() => openDeleteConfirmModal(item)} disabled={!$canDelete}>
+							<button onclick={() => openDeleteConfirmModal(item)} disabled={!canDelete}>
 								Eliminar
 							</button>
 						</li>

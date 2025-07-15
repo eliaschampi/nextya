@@ -19,9 +19,10 @@
 
 	const { data } = $props<{ data: { courses: Courses[] } }>();
 
-	const canCreate = can('courses:create');
-	const canUpdate = can('courses:update');
-	const canDelete = can('courses:delete');
+	// Permissions - using Svelte 5 reactive approach
+	let canCreate = $derived(can('courses:create'));
+	let canUpdate = $derived(can('courses:update'));
+	let canDelete = $derived(can('courses:delete'));
 
 	function openCreateModal() {
 		isEditing = false;
@@ -157,7 +158,7 @@
 </script>
 
 <PageTitle title="Cursos" description="Aquí puedes ver y gestionar los cursos disponibles">
-	{#if $canCreate}
+	{#if canCreate}
 		<button class="btn btn-primary" onclick={openCreateModal}>Añadir</button>
 	{/if}
 </PageTitle>
@@ -220,7 +221,7 @@
 				<div class="font-medium text-base-content">{item.name}</div>
 			</div>
 			<div class="flex items-center gap-2">
-				{#if $canUpdate}
+				{#if canUpdate}
 					<div class="flex flex-col">
 						<button
 							type="button"
@@ -248,10 +249,10 @@
 					</button>
 					<ul class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
 						<li>
-							<button onclick={() => openEditModal(item)} disabled={!$canUpdate}>Editar</button>
+							<button onclick={() => openEditModal(item)} disabled={!canUpdate}>Editar</button>
 						</li>
 						<li>
-							<button onclick={() => openDeleteConfirmModal(item)} disabled={!$canDelete}>
+							<button onclick={() => openDeleteConfirmModal(item)} disabled={!canDelete}>
 								Eliminar
 							</button>
 						</li>

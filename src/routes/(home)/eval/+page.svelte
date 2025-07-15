@@ -22,9 +22,10 @@
 	let modal: HTMLDialogElement | null = null;
 	let confirmModal: HTMLDialogElement | null = null;
 
-	const canCreate = can('evals:create');
-	const canUpdate = can('evals:update');
-	const canDelete = can('evals:delete');
+	// Permissions - using Svelte 5 reactive approach
+	let canCreate = $derived(can('evals:create'));
+	let canUpdate = $derived(can('evals:update'));
+	let canDelete = $derived(can('evals:delete'));
 
 	const DEFAULT_QUESTIONS_PER_SECTION = 10;
 	const MAX_TOTAL_QUESTIONS = 80;
@@ -282,11 +283,11 @@
 {#snippet actionsCell(row: EvalWithSections)}
 	<div class="flex gap-2">
 		<button
-			class="btn btn-xs sm:btn-sm btn-primary btn-soft {$canUpdate ? '' : 'btn-disabled'}"
+			class="btn btn-xs sm:btn-sm btn-primary btn-soft {canUpdate ? '' : 'btn-disabled'}"
 			onclick={() => openEditModal(row)}
 			title="Editar examen"
 			aria-label="Editar examen {row.name}"
-			disabled={!$canUpdate}
+			disabled={!canUpdate}
 		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -305,11 +306,11 @@
 			>
 		</button>
 		<button
-			class="btn btn-xs sm:btn-sm btn-error btn-soft {$canDelete ? '' : 'btn-disabled'}"
+			class="btn btn-xs sm:btn-sm btn-error btn-soft {canDelete ? '' : 'btn-disabled'}"
 			onclick={() => openDeleteConfirmModal(row)}
 			title="Eliminar examen"
 			aria-label="Eliminar examen {row.name}"
-			disabled={!$canDelete}
+			disabled={!canDelete}
 		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -331,7 +332,7 @@
 {/snippet}
 
 <PageTitle title="Exámenes" description="Gestión de evaluaciones por nivel y grupo">
-	{#if $canCreate}
+	{#if canCreate}
 		<button class="btn btn-primary gap-2" onclick={openCreateModal}>
 			<Plus class="w-4 h-4" />
 			Nuevo Examen

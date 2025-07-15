@@ -20,8 +20,8 @@
 	let committing = $state(false);
 	let showFileInput = $state(true);
 
-	// Permissions
-	const canSaveImport = can('students:create');
+	// Permissions - using Svelte 5 reactive approach
+	let canSaveImport = $derived(can('students:create'));
 
 	// Data
 	let file = $state<File | null>(null);
@@ -248,7 +248,7 @@
 					<button
 						class="btn btn-primary"
 						onclick={processFile}
-						disabled={loading || !file || !levelCode || !$canSaveImport}
+						disabled={loading || !file || !levelCode || !canSaveImport}
 					>
 						{#if loading}
 							<span class="loading loading-spinner loading-sm mr-2"></span>
@@ -278,7 +278,7 @@
 					disabled={committing ||
 						validRows.length === 0 ||
 						commitResults !== null ||
-						!$canSaveImport}
+						!canSaveImport}
 				>
 					{#if committing}
 						<span class="loading loading-spinner loading-sm mr-2"></span>

@@ -20,13 +20,18 @@
 	import { getInitials } from '$lib/utils/initialName';
 	import { theme } from '$lib/stores/theme';
 	import Background from '$lib/components/background.svelte';
-	// Helper function para verificar permisos
+	import { initializePermissions, can, canAny } from '$lib/stores/permissions';
+
+	// Initialize permissions context with data from server
+	initializePermissions(page.data.userPermissions || []);
+
+	// Helper functions using the new permission store
 	function hasPermission(permissionKey: string): boolean {
-		return page.data.userPermissions?.includes(permissionKey) || false;
+		return can(permissionKey);
 	}
 
 	function hasAnyPermission(...permissionKeys: string[]): boolean {
-		return permissionKeys.some((key) => hasPermission(key));
+		return canAny(...permissionKeys);
 	}
 
 	let { children } = $props();
