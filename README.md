@@ -92,7 +92,7 @@ git clone <repository-url> && cd nextya
 ### Daily Development
 ```bash
 ./docker.sh up                              # Start containers
-./docker.sh npm run dev                     # Development server
+./docker.sh npm run test                    # Run tests                    # Development server
 ./docker.sh db:create "add feature"         # Create migration
 ./docker.sh db:migrate                      # Apply changes
 ./docker.sh db:generate                     # Update types
