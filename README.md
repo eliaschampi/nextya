@@ -1,131 +1,132 @@
 # NextYa
 
-A modern educational management system built with SvelteKit, TypeScript, and PostgreSQL.
+Modern educational management system with **clean code philosophy**, **minimalism approach**, and **extremely fast performance**.
 
-## Tech Stack
+## 🚀 Tech Stack
 
-- **Frontend**: SvelteKit + TypeScript + DaisyUI
-- **Database**: PostgreSQL with Kysely query builder
+- **Frontend**: SvelteKit + TypeScript + DaisyUI + TailwindCSS
+- **Database**: PostgreSQL 16 with Kysely query builder
 - **Containerization**: Docker & Docker Compose
 - **Authentication**: JWT-based sessions
+- **Migration System**: Custom TypeScript-based migrations
 
-## Quick Start
+## ⚡ Quick Start
 
-### Prerequisites
-- Docker & Docker Compose
-
-### Setup (Any Computer/OS)
+**Prerequisites**: Docker & Docker Compose installed
 
 ```bash
-# Complete setup - works on any system with Docker
-./docker.sh db:setup
+# Complete setup (3 commands)
+./docker.sh build    # Build images
+./docker.sh up        # Start containers
+./docker.sh setup     # Initialize database
 
 # Start development
 ./docker.sh npm run dev
+# → http://localhost:5173
 ```
 
-## Available Commands
+## 📋 Commands
 
-### Docker Commands (Recommended)
+### 🐳 Docker Commands
 ```bash
-./docker.sh up           # Start containers
-./docker.sh db:setup     # Complete database setup
-./docker.sh db:create    # Create new migration
-./docker.sh db:migrate   # Run migrations
-./docker.sh db:status    # Show migration status
-./docker.sh npm run dev  # Start development server
-./docker.sh shell        # Open container shell
-./docker.sh down         # Stop containers
+# Core workflow
+./docker.sh build                    # Build images
+./docker.sh up                       # Start containers
+./docker.sh down                     # Stop containers
+./docker.sh status                   # Show status
+./docker.sh logs                     # View logs
+
+# Database
+./docker.sh setup                    # Initialize database
+./docker.sh setup:reset              # Reset database
+./docker.sh db:migrate               # Run migrations
+./docker.sh db:rollback              # Rollback migrations
+./docker.sh db:status                # Migration status
+./docker.sh db:create "name"         # Create migration
+./docker.sh db:generate              # Generate types
+./docker.sh db:shell                 # PostgreSQL shell
+
+# Development
+./docker.sh npm run dev              # Development server
+./docker.sh npm run build            # Build production
+./docker.sh npm run test             # Run tests
+./docker.sh shell                    # App container shell
 ```
 
-### Container Commands (Inside Container)
-```bash
-npm run setup            # Database setup
-npm run setup:status     # Show database status
-npm run dev              # Start development server
-npm run build            # Build for production
-npm run test             # Run tests (format + lint + check)
-```
-
-### Database Migration Commands
-```bash
-npm run db:create "name" # Create new migration
-npm run db:migrate       # Run pending migrations
-npm run db:rollback      # Rollback last migration
-npm run db:status        # Show migration status
-npm run db:generate      # Generate TypeScript types
-```
-
-## Database Structure
-
-Clean, organized SQL files with unified migration system:
+## 🗄️ Database Structure
 
 ```
 database/
-├── init/                    # Organized SQL files (initial schema)
-│   ├── 00-config.sql       # Extensions, settings, enums
-│   ├── 01-tables.sql       # Table definitions
-│   ├── 02-constraints-indexes.sql
-│   ├── 03-functions.sql    # Database functions
-│   ├── 04-views.sql        # Database views
-│   └── 05-grants.sql       # Permissions
+├── init/                           # Initial schema (sorted by importance)
+│   ├── 00-config.sql              # Extensions, settings
+│   ├── 01-tables.sql              # Tables
+│   ├── 02-constraints-indexes.sql # Constraints, indexes
+│   ├── 03-functions*.sql          # Functions
+│   ├── 04-views.sql               # Views
+│   └── 05-grants.sql              # Permissions
+├── migrations/                     # Future changes
 └── dev/
-    ├── migrate.ts          # Migration system
-    └── setup.sh            # Setup script
-
-src/lib/database/
-├── migrations/files/       # Generated TypeScript migrations
-├── types.ts               # Auto-generated TypeScript types
-└── index.ts              # Database connection
+    ├── migrate.ts                 # Migration system
+    └── setup.sh                   # Setup script
 ```
 
-## Environment Variables
+**Migration Features**: Initialization, tracking, rollbacks, type generation, container-aware
+
+## 🔧 Environment
+
+Docker automatically configures:
+- `DB_HOST=postgres` (container name)
+- `DB_USER=postgres`, `DB_PASSWORD=postgres`, `DB_NAME=nextya`
+- `JWT_SECRET`, `NODE_ENV=development`
+
+External connection: `localhost:5432` (postgres/postgres)
+
+## 🚀 Workflows
+
+### First Time Setup
+```bash
+git clone <repository-url> && cd nextya
+./docker.sh build && ./docker.sh up && ./docker.sh setup
+./docker.sh npm run dev  # → http://localhost:5173
+```
+
+### Daily Development
+```bash
+./docker.sh up                              # Start containers
+./docker.sh npm run dev                     # Development server
+./docker.sh db:create "add feature"         # Create migration
+./docker.sh db:migrate                      # Apply changes
+./docker.sh db:generate                     # Update types
+```
+
+### Database Management
+```bash
+./docker.sh db:status                       # Check status
+./docker.sh db:rollback                     # Rollback if needed
+./docker.sh setup:reset                     # Complete reset
+```
+
+## 🛠️ Troubleshooting
 
 ```bash
-# Database (Docker handles these automatically)
-DB_HOST=postgres
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=nextya
-DB_PORT=5432
+# Container issues
+./docker.sh status                          # Check status
+./docker.sh logs                            # View logs
+./docker.sh restart                         # Restart
 
-# Application
-NODE_ENV=development
-JWT_SECRET=your-super-secret-jwt-key-change-in-production-2024
-JWT_EXPIRES_IN=8h
+# Database issues
+./docker.sh db:shell                        # PostgreSQL shell
+./docker.sh setup:reset                     # Complete reset
+
+# Migration issues
+./docker.sh db:status                       # Check migrations
+./docker.sh setup:reset                     # Reset if corrupted
 ```
 
-## Troubleshooting
+## 🏗️ Architecture
 
-### Database Issues
-```bash
-# Check status
-./docker.sh status
+**Clean code philosophy**: Minimalist approach, extremely fast performance, container-first design, full TypeScript integration, migration-driven development.
 
-# Reset everything
-./docker.sh db:reset
-
-# View logs
-./docker.sh logs
-```
-
-### Migration Issues
-```bash
-# Check migration status
-./docker.sh db:status
-
-# Reset database if needed
-./docker.sh db:reset
-```
-
-## Development Workflow
-
-1. **First time setup**: `./docker.sh db:setup`
-2. **Start development**: `./docker.sh npm run dev`
-3. **Create new features**: `./docker.sh db:create "feature_name"`
-4. **Apply changes**: `./docker.sh db:migrate`
-5. **Check status**: `./docker.sh db:status`
-
-## License
+## 📝 License
 
 MIT License

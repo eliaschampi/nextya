@@ -1,97 +1,135 @@
 #!/bin/bash
-
-# NextYa Database Setup - Container Version
 set -e
 
 echo "🚀 NextYa Database Setup"
 echo "========================"
 
-# Check if running inside container
 is_container() {
     [ -f /.dockerenv ] || grep -q docker /proc/1/cgroup 2>/dev/null
 }
 
-# Wait for database (using Node.js connection test)
 wait_for_db() {
     echo "⏳ Waiting for database..."
     local attempt=1
     while [ $attempt -le 30 ]; do
-        if npm run db:check >/dev/null 2>&1; then
+        if node -e "
+const { Pool } = require('pg');
+const pool = new Pool({
+  host: process.env.DB_HOST || 'postgres',
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || 'nextya',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'postgres'
+});
+pool.query('SELECT 1').then(() => { pool.end(); process.exit(0); }).catch(() => { pool.end(); process.exit(1); });
+" >/dev/null 2>&1; then
             echo "✅ Database ready!"
             return 0
         fi
-        echo "⏳ Attempt $attempt/30..."
+        echo "⏳ Attempt $attempt/30 (waiting 2s)..."
         sleep 2
         ((attempt++))
     done
-    echo "❌ Database timeout"
+    echo "❌ Database connection timeout after 60 seconds"
     return 1
 }
 
-# Check if database has tables (using Node.js)
 is_db_initialized() {
-    local result=$(npm run db:check:tables 2>/dev/null | tail -1)
-    [ "$result" = "true" ]
+    node -e "
+const { Pool } = require('pg');
+const pool = new Pool({
+  host: process.env.DB_HOST || 'postgres',
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || 'nextya',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'postgres'
+});
+pool.query(\"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'\")
+  .then(result => {
+    pool.end();
+    process.exit(result.rows[0].count > 0 ? 0 : 1);
+  })
+  .catch(() => {
+    pool.end();
+    process.exit(1);
+  });
+" >/dev/null 2>&1
 }
 
-# Setup database (container version)
 setup_database() {
     if ! is_container; then
         echo "❌ This script must run inside container"
-        echo "💡 Use: ./docker.sh db:setup"
+        echo "💡 Use: ./docker.sh setup"
         exit 1
     fi
 
+    echo "🔍 Checking database connection..."
     if ! wait_for_db; then
-        echo "❌ Setup failed"
+        echo "❌ Setup failed - cannot connect to database"
+        echo "💡 Make sure PostgreSQL container is running"
         exit 1
     fi
 
+    echo "🔍 Checking database state..."
     if is_db_initialized; then
-        echo "✅ Database exists, generating types..."
+        echo "✅ Database already initialized"
+        echo "🔄 Running pending migrations..."
+        npm run db:migrate
+        echo "🔧 Generating TypeScript types..."
         npm run db:generate
     else
-        echo "🔄 Initializing database..."
+        echo "🔄 Initializing database from init files..."
         npm run db:init
+        echo "🔄 Running initial migrations..."
+        npm run db:migrate
+        echo "🔧 Generating TypeScript types..."
+        npm run db:generate
     fi
 
-    echo "✅ Setup complete!"
+    echo ""
+    echo "✅ Database setup completed successfully!"
+    echo "💡 Use 'npm run db:status' to check migration status"
 }
 
-# Reset database (container version)
 reset_database() {
-    echo "❌ Reset not available from container"
-    echo "💡 Use: ./docker.sh db:reset"
+    echo "❌ Database reset not available from container"
+    echo "💡 Use: ./docker.sh setup:reset"
     exit 1
 }
 
-# Show status (container version)
 show_status() {
-    echo "📊 Status"
-    echo "========="
-    
-    if npm run db:check >/dev/null 2>&1; then
-        local result=$(npm run db:check:tables 2>/dev/null | tail -1)
-        if [ "$result" = "true" ]; then
-            echo "✅ Database: initialized"
+    echo "📊 NextYa Database Status"
+    echo "========================="
+
+    echo "🔍 Checking database connection..."
+    if wait_for_db >/dev/null 2>&1; then
+        echo "✅ Database connection: OK"
+
+        echo "🔍 Checking database tables..."
+        if is_db_initialized; then
+            echo "✅ Database tables: Initialized"
+            echo "📋 Migration Status:"
+            npm run db:status 2>/dev/null || echo "Migration system not yet initialized"
         else
-            echo "✅ Database: connected, no tables"
+            echo "⚠️  Database tables: Not initialized"
+            echo "💡 Run: ./docker.sh setup"
         fi
-        npm run db:status
     else
-        echo "❌ Database not accessible"
+        echo "❌ Database connection: Failed"
+        echo "💡 Make sure containers are running: ./docker.sh up"
     fi
 }
 
-# Commands
 case "${1:-setup}" in
     "setup"|"init") setup_database ;;
     "reset") reset_database ;;
     "status") show_status ;;
     *)
-        echo "Usage: ./database/dev/setup.sh [setup|reset|status]"
-        echo "  setup  - Initialize database (default)"
-        echo "  reset  - Reset database"
-        echo "  status - Show status"
+        echo "NextYa Database Setup"
+        echo "Usage: bash database/dev/setup.sh [command]"
+        echo "Commands:"
+        echo "  setup   - Initialize database (default)"
+        echo "  reset   - Reset database (use docker.sh setup:reset)"
+        echo "  status  - Show database and migration status"
         ;;
 esac
