@@ -16,16 +16,15 @@
 		"setup": "bash database/dev/setup.sh",
 		"setup:reset": "bash database/dev/setup.sh reset",
 		"setup:status": "bash database/dev/setup.sh status",
-		"docker:setup": "bash database/dev/docker-setup.sh",
-		"docker:reset": "bash database/dev/docker-setup.sh reset",
-		"docker:status": "bash database/dev/docker-setup.sh status",
 		"db:init": "npx tsx database/dev/migrate.ts init",
 		"db:migrate": "npx tsx database/dev/migrate.ts migrate",
 		"db:rollback": "npx tsx database/dev/migrate.ts rollback",
 		"db:status": "npx tsx database/dev/migrate.ts status",
 		"db:generate": "kysely-codegen --config-file kysely.config.ts",
 		"db:create": "npx tsx database/dev/migrate.ts create",
-		"db:reset": "npx tsx database/dev/migrate.ts reset"
+		"db:reset": "npx tsx database/dev/migrate.ts reset",
+		"db:check": "npx tsx database/dev/migrate.ts check",
+		"db:check:tables": "npx tsx database/dev/migrate.ts check-tables"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.3.0",

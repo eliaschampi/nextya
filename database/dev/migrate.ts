@@ -50,16 +50,17 @@ async function loadSqlFiles(): Promise<SqlFile[]> {
 		const files = await readdir(initDir);
 		const sqlFiles: SqlFile[] = [];
 
-		for (const filename of files.filter(f => f.endsWith('.sql'))) {
+		for (const filename of files.filter((f) => f.endsWith('.sql'))) {
 			const content = await readFile(join(initDir, filename), 'utf-8');
-			const order = parseInt(filename.split('-')[0]) || 999;
+			const orderStr = filename.split('-')[0];
+			const order = orderStr ? parseInt(orderStr) : 999;
 
 			// Extract description from filename
 			const description = filename
 				.replace(/^\d+-/, '')
 				.replace(/\.sql$/, '')
 				.replace(/-/g, ' ')
-				.replace(/\b\w/g, l => l.toUpperCase());
+				.replace(/\b\w/g, (l) => l.toUpperCase());
 
 			sqlFiles.push({
 				filename,
@@ -79,7 +80,7 @@ async function loadSqlFiles(): Promise<SqlFile[]> {
 async function checkConnection() {
 	console.log('🔍 Checking database connection...');
 	try {
-		await db.executeQuery('SELECT 1' as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+		await sql`SELECT 1`.execute(db);
 		console.log('✅ Database connection successful');
 		return true;
 	} catch (error) {
@@ -121,15 +122,15 @@ async function initializeFromSqlFiles(): Promise<boolean> {
 		await mkdir(migrationFolder, { recursive: true });
 
 		// Combine all SQL files into one migration
-		const combinedSql = sqlFiles.map(file =>
-			`-- ${file.description} (${file.filename})\n${file.content}`
-		).join('\n\n');
+		const combinedSql = sqlFiles
+			.map((file) => `-- ${file.description} (${file.filename})\n${file.content}`)
+			.join('\n\n');
 
 		const migrationContent = `import { Kysely, sql } from 'kysely';
 
 export async function up(db: Kysely<unknown>): Promise<void> {
 	// Initial schema from organized SQL files
-	// Generated from: ${sqlFiles.map(f => f.filename).join(', ')}
+	// Generated from: ${sqlFiles.map((f) => f.filename).join(', ')}
 
 	await sql\`${combinedSql.replace(/`/g, '\\`')}\`.execute(db);
 }
@@ -163,7 +164,6 @@ export async function down(db: Kysely<unknown>): Promise<void> {
 
 		console.log('✅ Database initialized successfully from SQL files');
 		return true;
-
 	} catch (error) {
 		console.error('❌ Failed to initialize from SQL files:', error);
 		return false;
@@ -386,6 +386,29 @@ async function main() {
 				break;
 			case 'reset':
 				await resetDatabase();
+				break;
+			case 'check':
+				process.exit((await checkConnection()) ? 0 : 1);
+				break;
+			case 'check-tables':
+				if (await checkConnection()) {
+					try {
+						const result = await db
+							.selectFrom('information_schema.tables')
+							.select(db.fn.count('table_name').as('count'))
+							.where('table_schema', '=', 'public')
+							.executeTakeFirst();
+						const hasTable = result && Number(result.count) > 0;
+						console.log(hasTable);
+						process.exit(0);
+					} catch {
+						console.log(false);
+						process.exit(0);
+					}
+				} else {
+					console.log(false);
+					process.exit(1);
+				}
 				break;
 			default:
 				console.log('NextYa Database Migration CLI - Unified System');

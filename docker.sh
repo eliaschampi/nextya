@@ -131,7 +131,7 @@ cmd_db_shell() {
 cmd_db_setup() {
     print_header "Database Setup"
     print_info "Setting up database with unified migration system"
-    docker exec -it "${PROJECT_NAME}_app" npm run docker:setup
+    docker exec -it "${PROJECT_NAME}_app" npm run setup
     print_success "Database setup completed"
 }
 
@@ -189,7 +189,7 @@ cmd_db_reset() {
         docker-compose up -d
         print_info "Waiting for database to be ready..."
         sleep 5
-        docker exec -it "${PROJECT_NAME}_app" npm run docker:setup
+        docker exec -it "${PROJECT_NAME}_app" npm run setup
         print_success "Database reset completed"
     else
         print_info "Database reset cancelled"

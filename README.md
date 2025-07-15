@@ -13,133 +13,103 @@ A modern educational management system built with SvelteKit, TypeScript, and Pos
 
 ### Prerequisites
 - Docker & Docker Compose
-- Node.js 18+
 
-### Setup
-
-```bash
-# Complete database setup (unified system)
-npm run setup
-
-# Start development
-npm run dev
-```
-
-### Alternative Docker Setup
+### Setup (Any Computer/OS)
 
 ```bash
-# Using Docker script
-./docker.sh up
+# Complete setup - works on any system with Docker
 ./docker.sh db:setup
 
-# Start development in container
+# Start development
 ./docker.sh npm run dev
 ```
 
 ## Available Commands
 
-### Setup & Development
+### Docker Commands (Recommended)
 ```bash
-npm run setup            # Complete database setup (first time)
-npm run setup:reset      # Reset and reinitialize database
+./docker.sh up           # Start containers
+./docker.sh db:setup     # Complete database setup
+./docker.sh db:create    # Create new migration
+./docker.sh db:migrate   # Run migrations
+./docker.sh db:status    # Show migration status
+./docker.sh npm run dev  # Start development server
+./docker.sh shell        # Open container shell
+./docker.sh down         # Stop containers
+```
+
+### Container Commands (Inside Container)
+```bash
+npm run setup            # Database setup
 npm run setup:status     # Show database status
 npm run dev              # Start development server
 npm run build            # Build for production
 npm run test             # Run tests (format + lint + check)
 ```
 
-### Database (Unified Migration System)
+### Database Migration Commands
 ```bash
-npm run db:init          # Initialize from SQL files
 npm run db:create "name" # Create new migration
 npm run db:migrate       # Run pending migrations
 npm run db:rollback      # Rollback last migration
 npm run db:status        # Show migration status
 npm run db:generate      # Generate TypeScript types
-npm run db:reset         # Reset database (Docker)
-```
-
-### Docker
-```bash
-./docker.sh up           # Start services
-./docker.sh db:setup     # Complete database setup (Docker environment)
-./docker.sh db:create    # Create new migration
-./docker.sh db:migrate   # Run migrations
-./docker.sh db:status    # Show migration status
-./docker.sh down         # Stop services
-./docker.sh logs         # View logs
-./docker.sh shell        # Open shell in app container
-```
-
-### Docker-specific Commands (inside container)
-```bash
-npm run docker:setup     # Setup database (Docker environment)
-npm run docker:reset     # Reset database (Docker environment)
-npm run docker:status    # Show status (Docker environment)
 ```
 
 ## Database Structure
 
-The database uses a **unified migration system** with organized SQL files:
+Clean, organized SQL files with unified migration system:
 
 ```
 database/
-├── init/                      # Organized SQL files (initial schema)
-│   ├── 00-config.sql         # Extensions and settings
-│   ├── 01-tables.sql         # Table definitions
+├── init/                    # Organized SQL files (initial schema)
+│   ├── 00-config.sql       # Extensions, settings, enums
+│   ├── 01-tables.sql       # Table definitions
 │   ├── 02-constraints-indexes.sql
-│   ├── 03-functions.sql      # Database functions
-│   ├── 04-views.sql          # Database views
-│   └── 05-grants.sql         # Permissions
-├── dev/
-│   ├── migrate.ts            # Unified migration system
-│   └── setup.sh              # Setup script
-└── README.md                 # Database documentation
+│   ├── 03-functions.sql    # Database functions
+│   ├── 04-views.sql        # Database views
+│   └── 05-grants.sql       # Permissions
+└── dev/
+    ├── migrate.ts          # Migration system
+    └── setup.sh            # Setup script
 
 src/lib/database/
-├── migrations/files/         # Generated TypeScript migrations
-├── types.ts                  # Auto-generated TypeScript types
-└── index.ts                  # Database connection
-
-## Docker & Permissions
-
-### Docker Environment Detection
-The system automatically detects if it's running inside Docker and adjusts accordingly:
-- **Host system**: Uses `docker exec` commands to interact with containers
-- **Docker container**: Uses direct database connections
-
-### Permission Handling
-The Docker setup handles file permissions properly:
-- Container runs as root to avoid permission issues
-- Volume mounts work correctly with the current user
-- Migration files are created with proper permissions
-
-### Troubleshooting
-
-#### Permission Issues
-```bash
-# If you encounter permission issues with migration files
-sudo chown -R $USER:$USER src/lib/database/migrations/
-
-# Or reset with proper permissions
-./docker.sh db:reset
+├── migrations/files/       # Generated TypeScript migrations
+├── types.ts               # Auto-generated TypeScript types
+└── index.ts              # Database connection
 ```
 
-#### Database Connection Issues
+## Environment Variables
+
 ```bash
-# Check container status
+# Database (Docker handles these automatically)
+DB_HOST=postgres
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=nextya
+DB_PORT=5432
+
+# Application
+NODE_ENV=development
+JWT_SECRET=your-super-secret-jwt-key-change-in-production-2024
+JWT_EXPIRES_IN=8h
+```
+
+## Troubleshooting
+
+### Database Issues
+```bash
+# Check status
 ./docker.sh status
 
-# View database logs
-docker-compose logs postgres
-
 # Reset everything
-./docker.sh down
-./docker.sh up
-./docker.sh db:setup
+./docker.sh db:reset
+
+# View logs
+./docker.sh logs
 ```
 
-#### Migration Issues
+### Migration Issues
 ```bash
 # Check migration status
 ./docker.sh db:status
@@ -147,28 +117,14 @@ docker-compose logs postgres
 # Reset database if needed
 ./docker.sh db:reset
 ```
-├── 01-tables.sql              # Table definitions
-├── 02-constraints-indexes.sql # Constraints and indexes
-├── 03-functions.sql           # Database functions
-├── 04-views.sql               # Database views
-└── 05-grants.sql              # Permissions
-```
 
-## Environment Variables
+## Development Workflow
 
-```bash
-# Database
-DB_HOST=localhost
-DB_USER=postgres
-DB_PASSWORD=password
-DB_NAME=nextya
-DB_PORT=5432
-
-# Application
-NODE_ENV=development
-JWT_SECRET=your-secret-key
-JWT_EXPIRES_IN=8h
-```
+1. **First time setup**: `./docker.sh db:setup`
+2. **Start development**: `./docker.sh npm run dev`
+3. **Create new features**: `./docker.sh db:create "feature_name"`
+4. **Apply changes**: `./docker.sh db:migrate`
+5. **Check status**: `./docker.sh db:status`
 
 ## License
 
