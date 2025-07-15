@@ -2,7 +2,7 @@ import { type Handle, redirect } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { getSession } from '$lib/auth/session';
 import { dbInstance } from '$lib/config/server';
-import { hasPermission } from '$lib/auth/permissions';
+import { getUserPermissions, hasPermission } from '$lib/permissions/server';
 
 // Create database instance with environment variables (server-only)
 
@@ -18,10 +18,20 @@ const authHandle: Handle = async ({ event, resolve }) => {
 	event.locals.session = session;
 	event.locals.user = session?.user ?? null;
 
-	// Add permission checker to locals
+	// Get user permissions ONCE per session and store in locals
+	// This avoids multiple database calls per request
+	if (event.locals.user?.code) {
+		event.locals.userPermissions = await getUserPermissions(
+			event.locals.db,
+			event.locals.user.code
+		);
+	} else {
+		event.locals.userPermissions = [];
+	}
+
+	// Simple permission checker using cached permissions
 	event.locals.can = async (permissionKey: string): Promise<boolean> => {
-		if (!event.locals.user?.code) return false;
-		return await hasPermission(event.locals.db, event.locals.user.code, permissionKey);
+		return hasPermission(event.locals.userPermissions || [], permissionKey);
 	};
 
 	return resolve(event);

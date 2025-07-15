@@ -7,7 +7,7 @@
 	import type { Courses } from '$lib/types';
 	import { EllipsisVertical, ChevronUp, ChevronDown } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
-	import { can } from '$lib/stores/permissions-helper';
+	import { can } from '$lib/stores/permissions';
 
 	// Estados y referencias
 	let modal: HTMLDialogElement | null = $state(null);

@@ -4,7 +4,7 @@
 	import Message from '$lib/components/Message.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { Shield, Plus, X } from 'lucide-svelte';
-	import { SPECIFIC_PERMISSIONS, getPermissionByKey } from '$lib/data/permissions';
+	import { PERMISSION_DEFINITIONS, getPermissionByKey } from '$lib/permissions/definitions';
 	import type { Users } from '$lib/types';
 
 	type ApiPermission = {
@@ -32,7 +32,7 @@
 
 	// Computed
 	let availablePermissions = $derived(
-		SPECIFIC_PERMISSIONS.filter((p) => !userPermissions.includes(p.key))
+		PERMISSION_DEFINITIONS.filter((p) => !userPermissions.includes(p.key))
 	);
 
 	// Modal control

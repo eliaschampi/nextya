@@ -7,6 +7,7 @@ declare global {
 			db: Database;
 			user: User | null;
 			session: Session | null;
+			userPermissions: string[];
 			can: (permissionKey: string) => Promise<boolean>;
 		}
 		interface PageData {

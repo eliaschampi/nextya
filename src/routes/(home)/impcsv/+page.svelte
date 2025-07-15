@@ -6,7 +6,7 @@
 	import { showToast } from '$lib/stores/Toast';
 	import type { ToastType } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
-	import { can } from '$lib/stores/permissions-helper';
+	import { can } from '$lib/stores/permissions';
 
 	// Props from server
 	const { data } = $props<{

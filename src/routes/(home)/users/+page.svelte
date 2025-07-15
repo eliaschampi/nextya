@@ -11,7 +11,7 @@
 	import { getInitials } from '$lib/utils/initialName';
 	import { formatDate } from '$lib/utils/formatDate';
 	import type { Users } from '$lib/types';
-	import { can } from '$lib/stores/permissions-helper';
+	import { can } from '$lib/stores/permissions';
 	import { page } from '$app/state';
 
 	// Estados y referencias

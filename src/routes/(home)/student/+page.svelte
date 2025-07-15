@@ -11,7 +11,7 @@
 	import { Search, UserPlus, Pencil, Trash2, Book } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
-	import { can } from '$lib/stores/permissions-helper';
+	import { can } from '$lib/stores/permissions';
 
 	let modal: HTMLDialogElement | null = $state(null);
 	let confirmModal: HTMLDialogElement | null = $state(null);

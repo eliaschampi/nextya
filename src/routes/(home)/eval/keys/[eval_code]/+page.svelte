@@ -9,7 +9,7 @@
 
 	// Store imports
 	import { showToast } from '$lib/stores/Toast';
-	import { can } from '$lib/stores/permissions-helper';
+	import { can } from '$lib/stores/permissions';
 
 	// Utility imports
 	import { responseMessage } from '$lib/utils/responseMessage';

@@ -18,7 +18,7 @@
 	import type { TableColumn } from '$lib/types/table';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { can } from '$lib/stores/permissions-helper';
+	import { can } from '$lib/stores/permissions';
 	import { evaluationStore } from '$lib/stores/evaluation';
 
 	// Props from server

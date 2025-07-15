@@ -1,68 +1,93 @@
-// src/lib/stores/permissions.ts
-// Sistema de permisos simple y profesional
+/**
+ * UNIFIED PERMISSION SYSTEM
+ * Simple, efficient, modern approach - fetch ONCE, store in Svelte store
+ *
+ * ARCHITECTURE:
+ * - Permissions loaded ONCE per session from +layout.server.ts
+ * - Stored in reactive Svelte store
+ * - No multiple API calls, no complex database queries
+ * - Clean, minimalist, solid approach
+ */
+
 import { writable, derived, type Readable } from 'svelte/store';
+import { page } from '$app/stores';
 
-// Simple permission structure
-type Permission = {
-	code: string;
-	user_code: string;
-	entity: string;
-	action: string;
-};
+// ============================================================================
+// TYPES - Clean and minimal
+// ============================================================================
 
-// Permission key format: 'entity:action' (e.g., 'users:read', 'dashboard:general')
-type PermissionKey = string;
+export type PermissionKey = string; // Format: 'entity:action' (e.g., 'users:read')
 
-const createPermissionsStore = () => {
-	const permissions = writable<Permission[]>([]);
-	const isLoading = writable<boolean>(false);
+// ============================================================================
+// STORE - Single source of truth
+// ============================================================================
 
-	// Fetch user permissions
-	const fetchPermissions = async (userCode: string) => {
-		isLoading.set(true);
-		try {
-			const response = await fetch(`/api/users/${userCode}/permissions`);
-			if (!response.ok) throw new Error(`Failed to fetch permissions: ${response.statusText}`);
+// Internal store for permission keys
+const userPermissions = writable<PermissionKey[]>([]);
 
-			const { permissions: data } = await response.json();
-			permissions.set(data || []);
-		} catch (error) {
-			console.error('Error fetching permissions:', error);
-			permissions.set([]);
-		} finally {
-			isLoading.set(false);
-		}
-	};
+// Initialize permissions from page data (loaded once per session)
+page.subscribe(($page) => {
+	if ($page.data?.userPermissions) {
+		userPermissions.set($page.data.userPermissions);
+	}
+});
 
-	// Clear permissions
-	const clearPermissions = () => {
-		permissions.set([]);
-	};
+// ============================================================================
+// PUBLIC API - Simple and efficient
+// ============================================================================
 
-	// Check if user has specific permission (simple string format: 'entity:action')
-	const has = (permissionKey: PermissionKey): Readable<boolean> => {
-		return derived(permissions, ($permissions: Permission[]) => {
-			if (!$permissions.length) return false;
-			const [entity, action] = permissionKey.split(':');
-			return $permissions.some((p: Permission) => p.entity === entity && p.action === action);
-		});
-	};
+/**
+ * Check if user has a specific permission
+ * @param permissionKey - Permission in format 'entity:action'
+ * @returns Readable<boolean> - Reactive permission state
+ */
+export function can(permissionKey: PermissionKey): Readable<boolean> {
+	return derived(userPermissions, ($permissions) => {
+		return $permissions.includes(permissionKey);
+	});
+}
 
-	// Get all permission keys for current user
-	const getPermissionKeys = (): Readable<PermissionKey[]> => {
-		return derived(permissions, ($permissions: Permission[]) => {
-			return $permissions.map((p: Permission) => `${p.entity}:${p.action}`);
-		});
-	};
+/**
+ * Check if user has ANY of the specified permissions
+ * @param permissionKeys - Array of permission keys
+ * @returns Readable<boolean> - True if user has at least one permission
+ */
+export function canAny(...permissionKeys: PermissionKey[]): Readable<boolean> {
+	return derived(userPermissions, ($permissions) => {
+		return permissionKeys.some((key) => $permissions.includes(key));
+	});
+}
 
-	return {
-		permissions: { subscribe: permissions.subscribe },
-		isLoading: { subscribe: isLoading.subscribe },
-		fetchPermissions,
-		clearPermissions,
-		has,
-		getPermissionKeys
-	};
-};
+/**
+ * Check if user has ALL of the specified permissions
+ * @param permissionKeys - Array of permission keys
+ * @returns Readable<boolean> - True if user has all permissions
+ */
+export function canAll(...permissionKeys: PermissionKey[]): Readable<boolean> {
+	return derived(userPermissions, ($permissions) => {
+		return permissionKeys.every((key) => $permissions.includes(key));
+	});
+}
 
-export const permissionsStore = createPermissionsStore();
+/**
+ * Get all user permissions (reactive)
+ * @returns Readable<PermissionKey[]> - Array of permission keys
+ */
+export function getPermissions(): Readable<PermissionKey[]> {
+	return { subscribe: userPermissions.subscribe };
+}
+
+/**
+ * Update permissions (for admin operations like PermissionsModal)
+ * @param permissions - New permission keys array
+ */
+export function updatePermissions(permissions: PermissionKey[]): void {
+	userPermissions.set(permissions);
+}
+
+/**
+ * Clear all permissions (for logout)
+ */
+export function clearPermissions(): void {
+	userPermissions.set([]);
+}

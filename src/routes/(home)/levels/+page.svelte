@@ -9,7 +9,7 @@
 	import { EllipsisVertical, Plus, Minus } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getModalityTypes } from '$lib/data/modality';
-	import { can } from '$lib/stores/permissions-helper';
+	import { can } from '$lib/stores/permissions';
 
 	// Estados y referencias
 	let modal: HTMLDialogElement | null = $state(null);

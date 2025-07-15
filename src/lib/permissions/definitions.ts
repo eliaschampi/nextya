@@ -1,14 +1,17 @@
-// src/lib/data/permissions.ts
-// Sistema de permisos específicos - Simple y profesional
+/**
+ * PERMISSION DEFINITIONS
+ * Clean, organized permission definitions for the application
+ * Used by PermissionsModal and other admin components
+ */
 
-export interface SpecificPermission {
+export interface PermissionDefinition {
 	key: string;
 	label: string;
 	category: string;
 	description: string;
 }
 
-export const SPECIFIC_PERMISSIONS: SpecificPermission[] = [
+export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
 	// Usuarios
 	{
 		key: 'users:read',
@@ -212,9 +215,15 @@ export const SPECIFIC_PERMISSIONS: SpecificPermission[] = [
 	}
 ];
 
-// Helper functions
-export function getPermissionsByCategory(): Record<string, SpecificPermission[]> {
-	return SPECIFIC_PERMISSIONS.reduce(
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Get permissions grouped by category
+ */
+export function getPermissionsByCategory(): Record<string, PermissionDefinition[]> {
+	return PERMISSION_DEFINITIONS.reduce(
 		(acc, permission) => {
 			if (!acc[permission.category]) {
 				acc[permission.category] = [];
@@ -222,14 +231,20 @@ export function getPermissionsByCategory(): Record<string, SpecificPermission[]>
 			acc[permission.category].push(permission);
 			return acc;
 		},
-		{} as Record<string, SpecificPermission[]>
+		{} as Record<string, PermissionDefinition[]>
 	);
 }
 
-export function getPermissionByKey(key: string): SpecificPermission | undefined {
-	return SPECIFIC_PERMISSIONS.find((p) => p.key === key);
+/**
+ * Get permission definition by key
+ */
+export function getPermissionByKey(key: string): PermissionDefinition | undefined {
+	return PERMISSION_DEFINITIONS.find((p) => p.key === key);
 }
 
+/**
+ * Parse permission key into entity and action
+ */
 export function parsePermissionKey(key: string): { entity: string; action: string } {
 	const [entity, action] = key.split(':');
 	return { entity, action };

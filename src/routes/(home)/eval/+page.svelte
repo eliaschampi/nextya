@@ -17,7 +17,7 @@
 	} from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
-	import { can } from '$lib/stores/permissions-helper';
+	import { can } from '$lib/stores/permissions';
 
 	let modal: HTMLDialogElement | null = null;
 	let confirmModal: HTMLDialogElement | null = null;
