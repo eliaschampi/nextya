@@ -21,7 +21,6 @@ Modern educational management system with **clean code philosophy**, **minimalis
 ./docker.sh setup     # Initialize database
 
 # Start development
-./docker.sh npm run dev
 # → http://localhost:5173
 ```
 
@@ -47,7 +46,7 @@ Modern educational management system with **clean code philosophy**, **minimalis
 ./docker.sh db:shell                 # PostgreSQL shell
 
 # Development
-./docker.sh npm run dev              # Development server
+./docker.sh npm rebuild @u4/opencv4nodejs            # Development server
 ./docker.sh npm run build            # Build production
 ./docker.sh npm run test             # Run tests
 ./docker.sh shell                    # App container shell
@@ -87,7 +86,7 @@ External connection: `localhost:5432` (postgres/postgres)
 ```bash
 git clone <repository-url> && cd nextya
 ./docker.sh build && ./docker.sh up && ./docker.sh setup
-./docker.sh npm run dev  # → http://localhost:5173
+./docker.sh logs  # → http://localhost:5173
 ```
 
 ### Daily Development
