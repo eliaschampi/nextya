@@ -1,23 +1,9 @@
 import { getLevels } from '$lib/data/levels';
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
-import { studentSchema } from '$lib/schemas/student';
+import { validateStudent } from '$lib/schemas/student';
 import type { DB, Levels } from '$lib/types';
-import type { StudentRegisterData } from '$lib/csvProcessor';
 import type { Kysely } from 'kysely';
-
-// Reusable validation function
-function validateStudentData(data: StudentRegisterData) {
-	const result = studentSchema.safeParse(data);
-	if (!result.success) {
-		const firstError = result.error.errors[0];
-		throw fail(400, {
-			error: firstError.message || 'Error de validación',
-			errors: result.error.format()
-		});
-	}
-	return result.data;
-}
 
 // Reusable eval deletion function
 async function deleteEvals(db: Kysely<DB>, registerCode: string) {
@@ -48,7 +34,7 @@ export const actions: Actions = {
 
 		if (!user_code) return fail(401, { error: 'Usuario no autenticado' });
 
-		validateStudentData(data);
+		validateStudent(data);
 
 		try {
 			await locals.db.transaction().execute(async (trx) => {
@@ -143,7 +129,7 @@ export const actions: Actions = {
 			roll_code: formData.get('roll_code') as string
 		};
 
-		validateStudentData(data);
+		validateStudent(data);
 
 		try {
 			await locals.db.transaction().execute(async (trx) => {

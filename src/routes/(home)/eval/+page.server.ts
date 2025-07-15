@@ -4,7 +4,7 @@ import type { Levels } from '$lib/types';
 import { hasEvalQuestions } from '$lib/data/question';
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
-import { evalSchema, evalSectionSchema } from '$lib/schemas/eval';
+import { validateEval, validateEvalSection } from '$lib/schemas/eval';
 import type { FormSection } from '$lib/types';
 import type { Kysely } from 'kysely';
 import type { DB } from '$lib/database/types';
@@ -51,30 +51,24 @@ export const actions: Actions = {
 		if (!user_code) return fail(401, { error: 'No autenticado' });
 
 		// Validar datos del examen
-		const parsedEval = evalSchema.safeParse({ name, level_code, group_name, eval_date });
-		if (!parsedEval.success) {
-			return fail(400, { error: parsedEval.error.message, errors: parsedEval.error.format() });
-		}
+		validateEval({ name, level_code, group_name, eval_date });
 
 		// Validar secciones
 		if (!sections.length) {
 			return fail(400, { error: 'Debe agregar al menos una sección al examen' });
 		}
 
-		const sectionErrors = sections
-			.map((section: FormSection, index: number) => {
-				const sectionResult = evalSectionSchema.safeParse({
-					course_code: section.course_code,
-					question_count: section.question_count,
-					order_in_eval: section.order_in_eval
+		for (let i = 0; i < sections.length; i++) {
+			try {
+				validateEvalSection({
+					course_code: sections[i].course_code,
+					question_count: sections[i].question_count,
+					order_in_eval: sections[i].order_in_eval
 				});
-				return sectionResult.success
-					? null
-					: `Sección ${index + 1}: ${sectionResult.error.message}`;
-			})
-			.filter((error: unknown): error is string => error !== null);
-		if (sectionErrors.length > 0) {
-			return fail(400, { error: 'Errores en las secciones', errors: sectionErrors });
+			} catch (error) {
+				const message = error instanceof Error ? error.message : 'Error de validación';
+				return fail(400, { error: `Sección ${i + 1}: ${message}` });
+			}
 		}
 
 		const code = formData.get('code') as string | null;
