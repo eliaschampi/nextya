@@ -131,15 +131,8 @@ cmd_db_shell() {
 cmd_db_setup() {
     print_header "Database Setup"
     print_info "Setting up database with unified migration system"
-    docker exec -it "${PROJECT_NAME}_app" npm run setup
+    docker exec -it "${PROJECT_NAME}_app" bash database/dev/setup.sh
     print_success "Database setup completed"
-}
-
-cmd_db_init() {
-    print_header "Database Initialization"
-    print_info "Initializing database from SQL files"
-    docker exec -it "${PROJECT_NAME}_app" npm run db:init
-    print_success "Database initialized"
 }
 
 cmd_db_migrate() {
@@ -237,7 +230,6 @@ Available Commands:
   npm           Run npm commands in app container
   db:shell      Open PostgreSQL shell
   db:setup      Complete database setup (unified system)
-  db:init       Initialize database from SQL files
   db:migrate    Run database migrations
   db:rollback   Rollback last migration
   db:status     Show migration status
@@ -285,7 +277,6 @@ main() {
         "npm")        cmd_npm "$@" ;;
         "db:shell")     cmd_db_shell ;;
         "db:setup")     cmd_db_setup ;;
-        "db:init")      cmd_db_init ;;
         "db:migrate")   cmd_db_migrate ;;
         "db:rollback")  cmd_db_rollback ;;
         "db:status")    cmd_db_status ;;

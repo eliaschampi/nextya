@@ -16,7 +16,6 @@
 		"setup": "bash database/dev/setup.sh",
 		"setup:reset": "bash database/dev/setup.sh reset",
 		"setup:status": "bash database/dev/setup.sh status",
-		"db:init": "npx tsx database/dev/migrate.ts init",
 		"db:migrate": "npx tsx database/dev/migrate.ts migrate",
 		"db:rollback": "npx tsx database/dev/migrate.ts rollback",
 		"db:status": "npx tsx database/dev/migrate.ts status",
