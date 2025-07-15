@@ -47,7 +47,7 @@ class DatabaseManager {
 		this.pool = new Pool(DB_CONFIG);
 	}
 
-	async query(text: string, params?: any[]): Promise<any> {
+	async query(text: string, params?: unknown[]): Promise<unknown> {
 		const client = await this.pool.connect();
 		try {
 			return await client.query(text, params);
