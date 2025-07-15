@@ -103,13 +103,15 @@
 	--border: 1px;
 }
 
-/* Clean form focus states */
-.input:focus,
-.textarea:focus,
-.select:focus {
-	outline: 2px solid var(--color-primary);
-	outline-offset: 2px;
-	border-color: var(--color-primary);
+.input,
+.textarea,
+.select {
+	&:focus,
+	&:focus-within {
+		outline-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+		border-color: var(--color-primary);
+		transition: all 0.2s ease;
+	}
 }
 
 /* Card gradient styles - Clean and modern */
