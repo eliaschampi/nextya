@@ -22,6 +22,18 @@ export type Generated<T> =
 		? ColumnType<S, I | undefined, U>
 		: ColumnType<T, T | undefined, T>;
 
+export type Json = JsonValue;
+
+export type JsonArray = JsonValue[];
+
+export type JsonObject = {
+	[x: string]: JsonValue | undefined;
+};
+
+export type JsonPrimitive = boolean | number | string | null;
+
+export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
+
 export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
@@ -80,6 +92,19 @@ export interface EvalSections {
 	eval_code: string;
 	order_in_eval: number;
 	question_count: number;
+}
+
+export interface EvalsWithSections {
+	code: string | null;
+	created_at: Timestamp | null;
+	eval_date: Timestamp | null;
+	eval_sections: Json | null;
+	group_name: string | null;
+	level_code: string | null;
+	level_name: string | null;
+	name: string | null;
+	updated_at: Timestamp | null;
+	user_code: string | null;
 }
 
 export interface Levels {
@@ -181,6 +206,7 @@ export interface DB {
 	eval_results: EvalResults;
 	eval_sections: EvalSections;
 	evals: Evals;
+	evals_with_sections: EvalsWithSections;
 	levels: Levels;
 	migrations: Migrations;
 	permissions: Permissions;
