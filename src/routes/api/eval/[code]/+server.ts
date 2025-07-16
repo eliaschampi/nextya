@@ -3,8 +3,8 @@ import type { RequestHandler } from '@sveltejs/kit';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const { code } = params;
-	if (!code) {
-		return json({ error: 'Código de nivel no proporcionado' }, { status: 400 });
+	if (!code || !(await locals.can('evals:read'))) {
+		return json([]);
 	}
 
 	try {

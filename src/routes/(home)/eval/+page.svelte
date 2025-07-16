@@ -82,6 +82,7 @@
 	}
 
 	function openCreateModal() {
+		if (!canCreate) return;
 		formState.selectedCode = null;
 		formState.sections = [];
 		formState.name = '';
@@ -94,6 +95,7 @@
 	}
 
 	function openEditModal(item: EvalWithSections) {
+		if (!canUpdate) return;
 		formState.selectedCode = item.code;
 		formState.name = item.name || '';
 		formState.level_code = item.level_code || '';
@@ -115,6 +117,7 @@
 	}
 
 	function openDeleteConfirmModal(evalItem: EvalWithSections) {
+		if (!canDelete) return;
 		formState.selectForDelete = { code: evalItem.code, name: evalItem.name };
 		confirmModal?.showModal();
 	}
@@ -283,7 +286,7 @@
 {#snippet actionsCell(row: EvalWithSections)}
 	<div class="flex gap-2">
 		<button
-			class="btn btn-xs sm:btn-sm btn-primary btn-soft {canUpdate ? '' : 'btn-disabled'}"
+			class="btn btn-xs sm:btn-sm btn-primary btn-soft"
 			onclick={() => openEditModal(row)}
 			title="Editar examen"
 			aria-label="Editar examen {row.name}"
@@ -300,13 +303,12 @@
 				stroke-linecap="round"
 				stroke-linejoin="round"
 				class="lucide lucide-edit w-4 h-4"
-				><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path
-					d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
-				/></svg
-			>
+				><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+				<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+			</svg>
 		</button>
 		<button
-			class="btn btn-xs sm:btn-sm btn-error btn-soft {canDelete ? '' : 'btn-disabled'}"
+			class="btn btn-xs sm:btn-sm btn-error btn-soft"
 			onclick={() => openDeleteConfirmModal(row)}
 			title="Eliminar examen"
 			aria-label="Eliminar examen {row.name}"
@@ -325,19 +327,18 @@
 				class="lucide lucide-trash-2 w-4 h-4"
 				><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path
 					d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
-				/><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg
-			>
+				/>
+				<line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" />
+			</svg>
 		</button>
 	</div>
 {/snippet}
 
 <PageTitle title="Exámenes" description="Gestión de evaluaciones por nivel y grupo">
-	{#if canCreate}
-		<button class="btn btn-primary gap-2" onclick={openCreateModal}>
-			<Plus class="w-4 h-4" />
-			Nuevo Examen
-		</button>
-	{/if}
+	<button class="btn btn-primary gap-2" onclick={openCreateModal} disabled={!canCreate}>
+		<Plus class="w-4 h-4" />
+		Nuevo Examen
+	</button>
 </PageTitle>
 
 <div
