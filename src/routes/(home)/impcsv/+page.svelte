@@ -308,7 +308,7 @@
 						<FileText size={20} />
 						Resumen de Procesamiento
 					</h3>
-					<div class="stats stats-vertical lg:stats-horizontal shadow-sm w-full">
+					<div class="stats stats-vertical lg:stats-horizontal shadow w-full">
 						<div class="stat">
 							<div class="stat-title">Total Procesados</div>
 							<div class="stat-value">{importSummary.totalProcessed}</div>
@@ -338,7 +338,7 @@
 						Importación Completada
 					</h3>
 
-					<div class="stats stats-vertical lg:stats-horizontal shadow-sm w-full">
+					<div class="stats stats-vertical lg:stats-horizontal shadow w-full">
 						<div class="stat">
 							<div class="stat-title">Registros Insertados</div>
 							<div class="stat-value text-success">{commitResults.inserted}</div>

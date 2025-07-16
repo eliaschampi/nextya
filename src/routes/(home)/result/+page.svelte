@@ -46,8 +46,8 @@
 	let searchQuery = $state('');
 
 	// Permissions - using Svelte 5 reactive approach
-	let canViewDetails = $derived(can('eval_results:read'));
-	let canDeleteResults = $derived(can('eval_results:delete'));
+	let canViewDetails = $derived(can('results:read'));
+	let canDeleteResults = $derived(can('results:delete'));
 
 	// Delete state
 	let deleteModalOpen = $state(false);

@@ -51,6 +51,8 @@ export async function getUserPermissions(db: Database, userCode: string): Promis
 				'evals:create',
 				'evals:update',
 				'evals:delete',
+				'keys:read',
+				'keys:upsert',
 				'evals:process',
 				// Results
 				'results:read',

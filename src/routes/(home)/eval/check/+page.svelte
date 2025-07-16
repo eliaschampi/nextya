@@ -28,7 +28,6 @@
 	import type { ApiOmrBatchResponse, ApiOmrBatchRequest } from '$lib/types/api';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { can } from '$lib/stores/permissions';
 	import { evaluationStore } from '$lib/stores/evaluation';
 
 	interface ValidationError {
@@ -43,9 +42,6 @@
 			serverQuestions: EvalQuestions[];
 		};
 	}>();
-
-	// Permissions - using Svelte 5 reactive approach
-	let canSaveResults = $derived(can('eval_results:create'));
 
 	// Store state
 	let storeState = $state({
@@ -774,7 +770,7 @@
 						<button
 							type="submit"
 							class="btn btn-success btn-soft btn-sm"
-							disabled={!canSave || isSavingBatch || !canSaveResults}
+							disabled={!canSave || isSavingBatch}
 						>
 							{#if isSavingBatch}
 								<Loader2 class="animate-spin mr-1" size={16} /> Guardando...

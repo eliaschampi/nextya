@@ -1,4 +1,4 @@
-import { fail } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import type { OptimizedResultPayload } from '$lib/types/api';
 import { getLevels } from '$lib/data/levels';
@@ -81,6 +81,9 @@ async function saveAllResults(
 }
 
 export const load: PageServerLoad = async ({ locals }) => {
+	if (!(await locals.can('evals:process'))) {
+		throw error(403, 'Acceso no autorizado');
+	}
 	const userId = locals.user?.code;
 	let levels: Levels[] = [];
 
