@@ -5,6 +5,9 @@ import { fail } from '@sveltejs/kit';
 export const load: PageServerLoad = async ({ locals, depends }) => {
 	depends('levels:load');
 
+	if (!(await locals.can('levels:read'))) {
+		return { levels: [], title: 'Niveles' };
+	}
 	try {
 		const levels = await locals.db.selectFrom('levels').selectAll().execute();
 		return { levels, title: 'Niveles' };
@@ -19,17 +22,17 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const name = formData.get('name') as string;
 		const abr = formData.get('abr') as string;
-		// Make sure userId is available, otherwise return an error
-		const userId = locals.user?.code;
-		if (!userId) return fail(401, { error: 'User not authenticated' });
 
 		// Get selected users from form data
 		const selectedUsers = formData.getAll('selectedUsers') as string[];
-		// Ensure current user is included in the users array
-		const users = [...new Set([userId, ...selectedUsers])];
+
+		// Validate that users were selected
+		if (selectedUsers.length === 0) {
+			return fail(400, { error: 'Debe seleccionar al menos un usuario' });
+		}
 
 		try {
-			await locals.db.insertInto('levels').values({ name, abr, users }).execute();
+			await locals.db.insertInto('levels').values({ name, abr, users: selectedUsers }).execute();
 			return { success: true };
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'Error creando nivel';
@@ -46,14 +49,16 @@ export const actions: Actions = {
 
 		// Get selected users from form data
 		const selectedUsers = formData.getAll('selectedUsers') as string[];
-		// Ensure current user is included in the users array if they're the one updating
-		const userId = locals.user?.code;
-		const users = userId ? [...new Set([userId, ...selectedUsers])] : selectedUsers;
+
+		// Validate that users were selected
+		if (selectedUsers.length === 0) {
+			return fail(400, { error: 'Debe seleccionar al menos un usuario' });
+		}
 
 		try {
 			await locals.db
 				.updateTable('levels')
-				.set({ name, abr, users })
+				.set({ name, abr, users: selectedUsers })
 				.where('code', '=', levelCode)
 				.execute();
 

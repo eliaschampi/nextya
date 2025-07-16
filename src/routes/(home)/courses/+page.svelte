@@ -25,11 +25,13 @@
 	let canDelete = $derived(can('courses:delete'));
 
 	function openCreateModal() {
+		if (!canCreate) return;
 		isEditing = false;
 		modal?.showModal();
 	}
 
 	function openEditModal(course: Courses) {
+		if (!canUpdate) return;
 		isEditing = true;
 		selectedcourse = course;
 		modal?.showModal();
@@ -158,9 +160,7 @@
 </script>
 
 <PageTitle title="Cursos" description="Aquí puedes ver y gestionar los cursos disponibles">
-	{#if canCreate}
-		<button class="btn btn-primary" onclick={openCreateModal}>Añadir</button>
-	{/if}
+	<button class="btn btn-primary" onclick={openCreateModal} disabled={!canCreate}>Añadir</button>
 </PageTitle>
 
 <div class="space-y-4 p-4">
@@ -249,13 +249,13 @@
 					</button>
 					<ul class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
 						<li>
-							<button onclick={() => openEditModal(item)} disabled={!canUpdate}>Editar</button>
+							<button onclick={() => openEditModal(item)}>Editar</button>
 						</li>
-						<li>
-							<button onclick={() => openDeleteConfirmModal(item)} disabled={!canDelete}>
-								Eliminar
-							</button>
-						</li>
+						{#if canDelete}
+							<li>
+								<button onclick={() => openDeleteConfirmModal(item)}> Eliminar </button>
+							</li>
+						{/if}
 					</ul>
 				</div>
 			</div>

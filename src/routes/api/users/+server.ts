@@ -4,7 +4,7 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = async ({ locals }) => {
 	// Validar permiso específico usando locals.can
 	if (!(await locals.can('users:read'))) {
-		return json({ error: 'Permiso requerido: users:read' }, { status: 403 });
+		return json([]);
 	}
 
 	// Obtener usuarios de la base de datos

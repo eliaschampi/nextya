@@ -6,9 +6,8 @@ import { hash } from 'bcryptjs';
 export const load: PageServerLoad = async ({ depends, locals }) => {
 	depends('users:load');
 
-	// Verificar permiso para ver usuarios
 	if (!(await locals.can('users:read'))) {
-		return { users: [], title: 'Usuarios', error: 'Sin permisos para ver usuarios' };
+		return { users: [], title: 'Usuarios' };
 	}
 
 	try {
@@ -20,9 +19,9 @@ export const load: PageServerLoad = async ({ depends, locals }) => {
 				'name',
 				'last_name',
 				'photo_url',
-				'is_email_verified as email_confirmed_at',
+				'is_super_admin',
 				'created_at',
-				'last_login as last_sign_in_at'
+				'last_login'
 			])
 			.execute();
 

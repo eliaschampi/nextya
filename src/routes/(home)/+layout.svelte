@@ -20,6 +20,9 @@
 	import { getInitials } from '$lib/utils/initialName';
 	import { theme } from '$lib/stores/theme';
 	import Background from '$lib/components/background.svelte';
+	import { initializePermissions } from '$lib/stores/permissions';
+
+	initializePermissions(page.data.userPermissions || []);
 
 	let { children } = $props();
 

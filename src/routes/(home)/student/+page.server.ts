@@ -2,7 +2,7 @@ import { getLevels } from '$lib/data/levels';
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
 import { validateStudent } from '$lib/schemas/student';
-import type { DB, Levels } from '$lib/types';
+import type { DB } from '$lib/types';
 import type { Kysely } from 'kysely';
 
 // Reusable eval deletion function
@@ -13,8 +13,7 @@ async function deleteEvals(db: Kysely<DB>, registerCode: string) {
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user?.code;
-	const levels: Levels[] = userId ? await getLevels(locals.db, userId) : [];
-	return { levels, title: 'Estudiantes' };
+	return { levels: userId ? await getLevels(locals.db, userId) : [], title: 'Estudiantes' };
 };
 
 export const actions: Actions = {

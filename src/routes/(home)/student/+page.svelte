@@ -181,6 +181,9 @@
 		}
 	}
 	function openCreateModal() {
+		if (!canCreate) {
+			return;
+		}
 		isEditing = false;
 		selectedCode = null;
 		activeTab = 'search';
@@ -193,6 +196,9 @@
 	}
 
 	function openEditModal(item: RegisterStudent) {
+		if (!canUpdate) {
+			return;
+		}
 		isEditing = true;
 		selectedCode = item.student_code;
 		activeTab = 'new';
@@ -210,6 +216,7 @@
 	}
 
 	function openDeleteConfirmModal(payload: RegisterStudent) {
+		if (!canDelete) return;
 		selectForDelete = {
 			code: payload.student_code,
 			register_code: payload.register_code,
@@ -294,12 +301,10 @@
 </script>
 
 <PageTitle title="Estudiantes" description="Selecciona un nivel y grupo para ver los estudiantes.">
-	{#if canCreate}
-		<button class="btn btn-primary gap-2" onclick={openCreateModal}>
-			<UserPlus class="w-4 h-4" />
-			Registrar
-		</button>
-	{/if}
+	<button class="btn btn-primary gap-2" onclick={openCreateModal} disabled={!canCreate}>
+		<UserPlus class="w-4 h-4" />
+		Registrar
+	</button>
 </PageTitle>
 
 <div class="data-display flex flex-col sm:flex-row items-center gap-4">
@@ -372,7 +377,7 @@
 {#snippet actions(row: RegisterStudent)}
 	<div class="flex gap-2 justify-center">
 		<button
-			class="btn btn-sm btn-primary btn-outline {canUpdate ? '' : 'btn-disabled'}"
+			class="btn btn-sm btn-primary btn-outline"
 			onclick={() => openEditModal(row)}
 			aria-label="Editar estudiante"
 			disabled={!canUpdate}
@@ -380,7 +385,7 @@
 			<Pencil class="w-4 h-4" />
 		</button>
 		<button
-			class="btn btn-sm btn-error btn-outline {canDelete ? '' : 'btn-disabled'}"
+			class="btn btn-sm btn-error btn-outline"
 			onclick={() => openDeleteConfirmModal(row)}
 			aria-label="Eliminar estudiante"
 			disabled={!canDelete}

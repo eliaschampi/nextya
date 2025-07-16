@@ -6,6 +6,9 @@ import { reorderCourse } from '$lib/data/courses';
 export const load: PageServerLoad = async ({ locals, depends }) => {
 	depends('courses:load');
 
+	if (!(await locals.can('courses:read'))) {
+		return { courses: [], title: 'Cursos' };
+	}
 	try {
 		const courses = await locals.db
 			.selectFrom('courses')

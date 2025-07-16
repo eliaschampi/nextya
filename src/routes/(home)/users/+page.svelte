@@ -37,13 +37,19 @@
 	];
 
 	// permissions - using Svelte 5 reactive approach
-	let canRead = $derived(can('users:read'));
+	let canCreate = $derived(can('users:create'));
+	let canDelete = $derived(can('users:delete'));
+	let canUpdate = $derived(can('users:update'));
 	let canManagePermissions = $derived(can('users:manage_permissions'));
+
 	const mySelf = (userId: string) => {
 		return userId === page.data.user?.code;
 	};
 
 	function openCreateModal() {
+		if (!canCreate) {
+			return;
+		}
 		isEditing = false;
 		selectedAvatar = 'avatar.svg';
 		modal?.showModal();
@@ -177,8 +183,7 @@
 	// Manejar actualización de contraseña
 	async function handlePasswordUpdate(event: Event) {
 		event.preventDefault();
-		if (!selectedUser) return;
-
+		if (!selectedUser || !canDelete) return;
 		const formElement = event.currentTarget as HTMLFormElement;
 		const dataToSend = new FormData(formElement);
 		dataToSend.append('user_id', selectedUser.code);
@@ -241,9 +246,9 @@
 </script>
 
 <PageTitle title="Usuarios" description="Lista de usuarios disponibles en la aplicación.">
-	{#if canRead}
-		<button class="btn btn-primary" onclick={openCreateModal}>Agregar Usuario</button>
-	{/if}
+	<button class="btn btn-primary" onclick={openCreateModal} disabled={!canCreate}
+		>Agregar Usuario
+	</button>
 </PageTitle>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
@@ -416,17 +421,15 @@
 		class="card bg-gradient-to-br from-base-200 to-base-100 shadow duration-300 border border-base-300/30 rounded-xl overflow-hidden"
 	>
 		<div class="card-body p-6 space-y-4">
-			{#if canRead}
+			{#if canManagePermissions && canDelete}
 				<div class="absolute top-4 right-4 dropdown dropdown-end">
 					<div tabindex="0" role="button" class="cursor-pointer">
 						<EllipsisVertical class="w-4 h-4" />
 					</div>
 					<ul class="dropdown-content menu bg-base-100 rounded-box z-10 w-52 p-2 shadow-sm">
-						{#if canManagePermissions}
-							<li>
-								<button onclick={() => openPermissionsModal(user)}>Gestionar Permisos</button>
-							</li>
-						{/if}
+						<li>
+							<button onclick={() => openPermissionsModal(user)}>Gestionar Permisos</button>
+						</li>
 						<li>
 							<button onclick={() => openDeleteConfirmModal(user)}>Eliminar</button>
 						</li>
@@ -495,7 +498,7 @@
 
 			<!-- Action buttons with subtle hover effects -->
 			<div class="flex justify-end gap-2 pt-2">
-				{#if mySelf(user.code) || canRead}
+				{#if mySelf(user.code) || canUpdate}
 					<button class="btn btn-sm btn-soft btn-primary" onclick={() => openEditModal(user)}>
 						<Pencil class="w-4 h-4" />
 					</button>
