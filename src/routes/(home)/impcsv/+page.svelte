@@ -6,7 +6,6 @@
 	import { showToast } from '$lib/stores/Toast';
 	import type { ToastType } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
-	import { can } from '$lib/stores/permissions';
 
 	// Props from server
 	const { data } = $props<{
@@ -19,9 +18,6 @@
 	let loading = $state(false);
 	let committing = $state(false);
 	let showFileInput = $state(true);
-
-	// Permissions - using Svelte 5 reactive approach
-	let canSaveImport = $derived(can('students:create'));
 
 	// Data
 	let file = $state<File | null>(null);
@@ -248,7 +244,7 @@
 					<button
 						class="btn btn-primary"
 						onclick={processFile}
-						disabled={loading || !file || !levelCode || !canSaveImport}
+						disabled={loading || !file || !levelCode}
 					>
 						{#if loading}
 							<span class="loading loading-spinner loading-sm mr-2"></span>
@@ -275,10 +271,7 @@
 				<button
 					class="btn btn-primary"
 					onclick={commitData}
-					disabled={committing ||
-						validRows.length === 0 ||
-						commitResults !== null ||
-						!canSaveImport}
+					disabled={committing || validRows.length === 0 || commitResults !== null}
 				>
 					{#if committing}
 						<span class="loading loading-spinner loading-sm mr-2"></span>

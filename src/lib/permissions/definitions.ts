@@ -154,6 +154,18 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
 		description: 'Eliminar evaluaciones'
 	},
 	{
+		key: 'keys:read',
+		label: 'Ver claves',
+		category: 'Evaluaciones',
+		description: 'Visualizar claves'
+	},
+	{
+		key: 'keys:upsert',
+		label: 'Actualizar claves',
+		category: 'Evaluaciones',
+		description: 'Actualizar claves'
+	},
+	{
 		key: 'evals:process',
 		label: 'Procesar evaluaciones',
 		category: 'Evaluaciones',

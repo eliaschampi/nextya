@@ -188,7 +188,7 @@
 						{#each userPermissions as permissionKey (permissionKey)}
 							{@const permission = getPermissionByKey(permissionKey)}
 							{#if permission}
-								<div class="flex items-center justify-between p-3 bg-base-100 rounded border">
+								<div class="flex items-center justify-between p-3 bg-base-300 rounded">
 									<div>
 										<div class="font-medium">{permission.label}</div>
 										<div class="text-sm text-base-content/60">

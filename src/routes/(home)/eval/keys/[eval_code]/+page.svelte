@@ -32,7 +32,7 @@
 	} from 'lucide-svelte';
 
 	// Permissions - using Svelte 5 reactive approach
-	let canCreate = $derived(can('eval_questions:create'));
+	let canUpsert = $derived(can('keys:upsert'));
 
 	// Props from parent
 	const { data } = $props<{
@@ -207,6 +207,8 @@
 	}
 
 	async function handleSubmit(e: SubmitEvent): Promise<void> {
+		if (!canUpsert) return;
+
 		e.preventDefault();
 
 		if (!isValid) {
@@ -429,7 +431,7 @@
 		type="submit"
 		form="keysForm"
 		class="btn btn-md {isValid ? 'btn-success' : 'btn-primary'} gap-2 w-full sm:w-auto shadow"
-		disabled={!isValid || isSaving || !canCreate}
+		disabled={!isValid || isSaving || !canUpsert}
 	>
 		{#if isSaving}
 			<span class="loading loading-spinner loading-sm"></span>

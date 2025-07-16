@@ -18,19 +18,3 @@ SET check_function_bodies = FALSE;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-
--- =====================================================
--- ENUMS
--- =====================================================
-CREATE TYPE public.entity_enum AS ENUM(
-  'users',
-  'levels',
-  'courses',
-  'students',
-  'registers',
-  'evals',
-  'eval_sections',
-  'eval_questions',
-  'eval_answers',
-  'eval_results'
-);

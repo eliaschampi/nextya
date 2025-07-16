@@ -3,6 +3,10 @@ import type { PageServerLoad, Actions } from './$types';
 import type { EvalQuestions, Evals, EvalSectionWithCourse } from '$lib/types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
+	if (!(await locals.can('keys:read'))) {
+		throw error(403, 'Acceso no autorizado');
+	}
+
 	const evalCode = params.eval_code;
 	if (!evalCode) {
 		throw error(404, 'Examen no encontrado');

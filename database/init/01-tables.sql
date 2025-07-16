@@ -25,7 +25,7 @@ CREATE TABLE public.users (
 CREATE TABLE public.permissions (
   code UUID NOT NULL DEFAULT gen_random_uuid (),
   user_code UUID NOT NULL,
-  entity entity_enum NOT NULL,
+  entity TEXT NOT NULL,
   action VARCHAR(100) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT permissions_pk PRIMARY KEY (code),
