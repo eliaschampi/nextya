@@ -639,7 +639,7 @@
 			type="warning"
 			description={`El estudiante "${selectForDelete?.name}" será eliminado`}
 		/>
-		<fieldset class="fieldset-container mt-4 grid-cols-1">
+		<fieldset class="fieldset mt-4 grid-cols-1">
 			<legend class="text-emphasis px-2">Opciones de eliminación</legend>
 			<div class="flex flex-col gap-2">
 				{#if selectForDelete}

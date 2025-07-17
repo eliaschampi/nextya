@@ -207,25 +207,13 @@
 
 /* Modern fieldset styling */
 .fieldset {
-	display: grid;
-	grid-template-columns: 1fr;
-	gap: 1rem;
 	padding: 1rem;
 	border-radius: var(--radius-box);
 	border: 1px solid var(--color-base-300);
-	background-color: var(--color-base-200);
 }
 
-@media (min-width: 768px) {
-	.fieldset {
-		grid-template-columns: repeat(2, 1fr);
-	}
-}
-
-.fieldset-legend {
-	font-weight: 600;
-	color: var(--color-base-content);
-	padding: 0 0.5rem;
+.fieldset > div {
+	margin: 0.5rem;
 }
 
 .label {
