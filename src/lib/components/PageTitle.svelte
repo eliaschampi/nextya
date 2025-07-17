@@ -40,6 +40,5 @@
 				transparent 40%
 			);
 		filter: blur(30px);
-		z-index: -1;
 	}
 </style>

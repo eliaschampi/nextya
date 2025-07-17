@@ -56,7 +56,7 @@
 	<div class="drawer-content flex flex-col h-screen">
 		<!-- Modern Floating Navbar -->
 		<nav
-			class="navbar bg-base-100/80 backdrop-blur-md border-b border-base-300/50 px-6 h-16 sticky top-0 z-30"
+			class="navbar bg-base-300/80 backdrop-blur-md border-b border-base-300 px-6 h-16 sticky top-0 z-30"
 		>
 			<label for="drawer-toggle" class="drawer-button lg:hidden btn btn-ghost btn-sm btn-circle">
 				<Menu class="w-5 h-5" />
@@ -67,9 +67,8 @@
 				</a>
 				<div class="text-lg font-semibold text-base-content/90">{page.data.title ?? 'Inicio'}</div>
 			</div>
-			<!-- Navbar Actions -->
+
 			<div class="flex items-center gap-3">
-				<!-- Theme Toggle -->
 				<button
 					class="btn btn-ghost btn-sm btn-circle hover:bg-primary/10 transition-colors"
 					onclick={toggleTheme}
@@ -82,7 +81,6 @@
 					{/if}
 				</button>
 
-				<!-- User Menu Dropdown -->
 				{#if page.data.user}
 					<div class="dropdown dropdown-end">
 						<div
@@ -111,12 +109,12 @@
 									{/if}
 								</div>
 							</div>
-							<ChevronDown class="h-4 w-4 opacity-60 transition-transform" />
+							<ChevronDown class="h-4 w-4 opacity-60" />
 						</div>
 						<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 						<ul
 							tabindex="0"
-							class="dropdown-content menu bg-base-100 border border-base-300/50 rounded-xl shadow-xl w-56 mt-3 p-3 z-50 backdrop-blur-md"
+							class="dropdown-content menu bg-base-100 border border-base-300 w-56 mt-3 p-3 z-50 backdrop-blur-md overflow-hidden"
 						>
 							<li class="menu-title pt-0 pb-3 border-b border-base-300/30">
 								<span class="font-semibold text-base-content/90"
@@ -124,18 +122,12 @@
 								>
 							</li>
 							<li>
-								<a
-									href="/profile"
-									class="flex gap-3 py-2.5 hover:bg-primary/10 rounded-lg transition-colors"
-								>
+								<a href="/profile" class="flex gap-3 py-2.5 hover:bg-primary/10 rounded-lg">
 									<UserCog class="h-4 w-4" />Mi perfil
 								</a>
 							</li>
 							<li>
-								<a
-									href="/config"
-									class="flex gap-3 py-2.5 hover:bg-primary/10 rounded-lg transition-colors"
-								>
+								<a href="/config" class="flex gap-3 py-2.5 hover:bg-primary/10 rounded-lg">
 									<Bird class="h-4 w-4" />Sistema
 								</a>
 							</li>
@@ -143,7 +135,7 @@
 								<form action="/api/logout" method="POST">
 									<button
 										type="submit"
-										class="w-full flex gap-3 py-2.5 text-error hover:bg-error/10 rounded-lg transition-colors"
+										class="w-full flex gap-3 py-2.5 text-error hover:bg-error/10 rounded-lg"
 									>
 										<LogOut class="h-4 w-4" />Cerrar sesión
 									</button>
@@ -154,9 +146,9 @@
 				{/if}
 			</div>
 		</nav>
+
 		<main class="flex-1 p-6 overflow-y-auto">
 			<Background
-				zIndex="z-[-2]"
 				enableAnimation={true}
 				enableInteraction={true}
 				opacity={0.06}
@@ -173,12 +165,11 @@
 	</div>
 
 	<div class="drawer-side z-40">
-		<!-- Clicking this label closes the sidebar on mobile -->
 		<label for="drawer-toggle" aria-label="Close sidebar" class="drawer-overlay"></label>
+		<!-- 4. Same backdrop & border as navbar -->
 		<aside
-			class="bg-base-100/95 backdrop-blur-xl border-r border-base-300/50 text-base-content h-screen w-80 flex flex-col overflow-hidden"
+			class="bg-base-300/80 backdrop-blur-md border-r border-base-300 text-base-content h-screen w-72 flex flex-col overflow-hidden"
 		>
-			<!-- Logo Section -->
 			<div class="p-6 border-b border-base-300/30">
 				<div class="w-32 mx-auto">
 					<LogoHead />
@@ -209,7 +200,7 @@
 					<div class="space-y-1">
 						<details class="group">
 							<summary
-								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-200/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
+								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-100/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
 							>
 								<ChartArea class="h-5 w-5 text-base-content/70" />
 								<span class="font-medium flex-1">Reportes</span>
@@ -263,7 +254,7 @@
 						<!-- Estructura -->
 						<details class="group">
 							<summary
-								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-200/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
+								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-100/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
 							>
 								<Settings class="h-5 w-5 text-base-content/70" />
 								<span class="font-medium flex-1">Estructura</span>
@@ -292,7 +283,7 @@
 						<!-- Estudiantes -->
 						<details class="group">
 							<summary
-								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-200/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
+								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-100/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
 							>
 								<UserRound class="h-5 w-5 text-base-content/70" />
 								<span class="font-medium flex-1">Estudiantes</span>
@@ -328,7 +319,7 @@
 						<!-- Evaluaciones -->
 						<details class="group">
 							<summary
-								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-200/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
+								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-100/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
 							>
 								<FolderPen class="h-5 w-5 text-base-content/70" />
 								<span class="font-medium flex-1">Evaluaciones</span>
@@ -357,7 +348,7 @@
 						<!-- Resultados -->
 						<a
 							href="/result"
-							class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-200/50 text-base-content/80 hover:text-primary transition-all duration-200 group"
+							class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-100/50 text-base-content/80 hover:text-primary transition-all duration-200 group"
 						>
 							<FileText class="h-5 w-5 group-hover:scale-110 transition-transform" />
 							<span class="font-medium">Resultados</span>
@@ -376,7 +367,7 @@
 					<div class="space-y-1">
 						<a
 							href="/users"
-							class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-200/50 text-base-content/80 hover:text-primary transition-all duration-200 group"
+							class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-100/50 text-base-content/80 hover:text-primary transition-all duration-200 group"
 						>
 							<UserCog class="h-5 w-5 group-hover:scale-110 transition-transform" />
 							<span class="font-medium">Usuarios</span>
@@ -385,7 +376,6 @@
 				</div>
 			</div>
 
-			<!-- Mobile user profile section -->
 			{#if page.data.user}
 				<div class="border-t border-base-300/30 p-4 lg:hidden">
 					<div class="flex items-center gap-4 px-4 py-3 rounded-xl bg-base-200/30">

@@ -516,77 +516,78 @@
 					description="Importante. Cambiar el nivel o grupo eliminará automáticamente todos los resultados de evaluaciones anteriores."
 				/>
 			{/if}
-			<form onsubmit={handleSubmit} autocomplete="off">
-				<fieldset class="fieldset-container">
-					<div class="form-group">
-						<label class="form-group-label" for="name">Nombre</label>
+			<form onsubmit={handleSubmit} autocomplete="off" class="mt-2">
+				<fieldset class="fieldset bg-base-200 border-base-300 rounded-box border">
+					<legend class="fieldset-legend">Información del estudiante</legend>
+
+					<div>
+						<label class="label" for="name">Nombre</label>
 						<input
 							id="name"
 							name="name"
 							type="text"
-							class="input w-full validator"
+							class="input w-full"
 							placeholder="Nombre"
 							required
 							bind:this={nameInput}
 							onblur={() => handleFillEmail()}
 						/>
 					</div>
-					<div class="form-group">
-						<label class="form-group-label" for="last_name">Apellidos</label>
+
+					<div>
+						<label class="label" for="last_name">Apellidos</label>
 						<input
 							id="last_name"
 							name="last_name"
 							type="text"
-							class="input w-full validator"
+							class="input w-full"
 							placeholder="Apellidos"
 							required
 							bind:this={lastNameInput}
 						/>
 					</div>
-					<div class="form-group">
-						<label class="form-group-label" for="phone">Teléfono</label>
+
+					<div>
+						<label class="label" for="phone">Teléfono</label>
 						<input
 							id="phone"
 							name="phone"
 							type="text"
-							class="input w-full validator"
+							class="input w-full"
 							placeholder="Teléfono"
 							bind:this={phoneInput}
 						/>
 					</div>
-					<div class="form-group">
-						<label class="form-group-label" for="email">Email</label>
+
+					<div>
+						<label class="label" for="email">Email</label>
 						<input
 							id="email"
 							name="email"
 							type="email"
-							class="input w-full validator"
+							class="input w-full"
 							placeholder="Email"
 							required
 							bind:this={emailInput}
 						/>
 					</div>
-					<div class="form-group">
-						<label class="form-group-label" for="level">Nivel</label>
-						<select
-							id="level"
-							name="level"
-							class="select w-full validator"
-							required
-							bind:this={levelSelect}
-						>
+
+					<div>
+						<label class="label" for="level">Nivel</label>
+						<select id="level" name="level" class="select w-full" required bind:this={levelSelect}>
 							<option value="">Selecciona un nivel</option>
 							{#each data.levels as level (level.code)}
 								<option value={level.code}>{level.name}</option>
 							{/each}
 						</select>
 					</div>
-					<div class="form-group">
-						<label class="form-group-label" for="group_name">Grupo</label>
+
+					<div>
+						<label class="label" for="group_name">Grupo</label>
 						<select
 							id="group_name"
 							name="group_name"
-							class="select w-full validator"
+							class="select w-full"
 							required
 							bind:this={groupSelect}
 						>
@@ -596,20 +597,21 @@
 							{/each}
 						</select>
 					</div>
-					<div class="form-group">
-						<label class="form-group-label" for="roll_code">Código de Matrícula</label>
+
+					<div class="md:col-span-2">
+						<label class="label" for="roll_code">Código de Matrícula</label>
 						<input
 							id="roll_code"
 							name="roll_code"
 							type="text"
-							class="input w-full validator"
+							class="input w-full"
 							placeholder="4 dígitos (ej: 0001)"
 							required
 							maxlength="4"
 							pattern="\d*"
 							bind:this={rollCodeInput}
 						/>
-						<small class="form-group-hint">Ingrese 4 dígitos (ej: 0001, 1234)</small>
+						<small class="input-hint">Ingrese 4 dígitos (ej: 0001, 1234)</small>
 					</div>
 				</fieldset>
 				{#if message}

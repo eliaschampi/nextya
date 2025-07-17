@@ -5,7 +5,6 @@
 
 <div class="flex flex-col items-center justify-center min-h-screen p-4">
 	<Background
-		zIndex="z-[-2]"
 		enableAnimation={false}
 		enableInteraction={true}
 		opacity={0.1}
