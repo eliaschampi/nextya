@@ -50,25 +50,28 @@
 	</title>
 </svelte:head>
 
-<div class="drawer lg:drawer-open h-screen overflow-hidden">
+<div class="drawer lg:drawer-open h-screen overflow-hidden bg-base-100">
 	<input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
 
-	<div class="drawer-content flex flex-col h-screen overflow-y-auto">
-		<nav class="navbar bg-base-200 shadow-sm px-4 h-16 sticky top-0 z-30">
-			<label for="drawer-toggle" class="drawer-button lg:hidden">
+	<div class="drawer-content flex flex-col h-screen">
+		<!-- Modern Floating Navbar -->
+		<nav
+			class="navbar bg-base-100/80 backdrop-blur-md border-b border-base-300/50 px-6 h-16 sticky top-0 z-30"
+		>
+			<label for="drawer-toggle" class="drawer-button lg:hidden btn btn-ghost btn-sm btn-circle">
 				<Menu class="w-5 h-5" />
 			</label>
-			<div class="flex-1 flex items-center">
-				<a href="/" class="btn btn-ghost btn-sm" aria-label="home">
+			<div class="flex-1 flex items-center gap-4">
+				<a href="/" class="btn btn-ghost btn-sm hover:bg-primary/10" aria-label="home">
 					<House class="w-5 h-5" />
 				</a>
-				<div class="text-base font-medium">{page.data.title ?? 'Inicio'}</div>
+				<div class="text-lg font-semibold text-base-content/90">{page.data.title ?? 'Inicio'}</div>
 			</div>
 			<!-- Navbar Actions -->
-			<div class="flex items-center gap-2">
+			<div class="flex items-center gap-3">
 				<!-- Theme Toggle -->
 				<button
-					class="btn btn-ghost btn-sm btn-circle"
+					class="btn btn-ghost btn-sm btn-circle hover:bg-primary/10 transition-colors"
 					onclick={toggleTheme}
 					aria-label="toggle theme"
 				>
@@ -85,44 +88,63 @@
 						<div
 							tabindex="0"
 							role="button"
-							class="flex items-center gap-1.5 btn btn-ghost btn-sm px-2"
+							class="flex items-center gap-2 btn btn-ghost btn-sm px-3 hover:bg-primary/10 transition-colors"
 						>
 							<div class="avatar">
-								<div class="w-6 rounded-full ring ring-primary ring-offset-base-100 ring-offset-1">
+								<div
+									class="w-7 rounded-full ring-2 ring-primary/20 ring-offset-2 ring-offset-base-100"
+								>
 									{#if userData.photo_url}
 										<img
 											src={`/${userData.photo_url}`}
 											alt={`Avatar de ${userData.name} ${userData.last_name}`}
-											class="mask mask-squircle"
+											class="rounded-full"
 										/>
 									{:else}
 										<div
-											class="flex items-center justify-center h-full bg-primary text-primary-content mask mask-squircle"
+											class="flex items-center justify-center h-full bg-gradient-to-br from-primary to-primary/80 text-primary-content rounded-full"
 										>
-											<span class="text-xs font-semibold">
+											<span class="text-xs font-bold">
 												{getInitials(userData.name || '', userData.last_name || '')}
 											</span>
 										</div>
 									{/if}
 								</div>
 							</div>
-							<ChevronDown class="h-3.5 w-3.5 opacity-70" />
+							<ChevronDown class="h-4 w-4 opacity-60 transition-transform" />
 						</div>
 						<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 						<ul
 							tabindex="0"
-							class="dropdown-content menu bg-base-200 rounded-box shadow w-52 mt-2 p-2 z-50"
+							class="dropdown-content menu bg-base-100 border border-base-300/50 rounded-xl shadow-xl w-56 mt-3 p-3 z-50 backdrop-blur-md"
 						>
-							<li class="menu-title pt-0 pb-2">
-								<span class="font-medium">{userData.name} {userData.last_name}</span>
+							<li class="menu-title pt-0 pb-3 border-b border-base-300/30">
+								<span class="font-semibold text-base-content/90"
+									>{userData.name} {userData.last_name}</span
+								>
 							</li>
 							<li>
-								<a href="/profile" class="flex gap-2"><UserCog class="h-4 w-4" />Mi perfil</a>
+								<a
+									href="/profile"
+									class="flex gap-3 py-2.5 hover:bg-primary/10 rounded-lg transition-colors"
+								>
+									<UserCog class="h-4 w-4" />Mi perfil
+								</a>
 							</li>
-							<li><a href="/config" class="flex gap-2"><Bird class="h-4 w-4" />Sistema</a></li>
-							<li class="mt-1 pt-1 border-t border-base-300">
+							<li>
+								<a
+									href="/config"
+									class="flex gap-3 py-2.5 hover:bg-primary/10 rounded-lg transition-colors"
+								>
+									<Bird class="h-4 w-4" />Sistema
+								</a>
+							</li>
+							<li class="mt-2 pt-2 border-t border-base-300/30">
 								<form action="/api/logout" method="POST">
-									<button type="submit" class="w-full flex gap-2 text-error">
+									<button
+										type="submit"
+										class="w-full flex gap-3 py-2.5 text-error hover:bg-error/10 rounded-lg transition-colors"
+									>
 										<LogOut class="h-4 w-4" />Cerrar sesión
 									</button>
 								</form>
@@ -132,140 +154,256 @@
 				{/if}
 			</div>
 		</nav>
-		<main class="flex-1 p-6">
-			<Background zIndex="z-[-2]" />
-			{@render children()}
+		<main class="flex-1 p-6 overflow-y-auto">
+			<Background
+				zIndex="z-[-2]"
+				enableAnimation={true}
+				enableInteraction={true}
+				opacity={0.06}
+				maxOpacity={0.2}
+				gridSpacing={40}
+				nodeSize={1.2}
+				animationSpeed={0.0008}
+				sigma={160}
+			/>
+			<div class="max-w-7xl mx-auto">
+				{@render children()}
+			</div>
 		</main>
 	</div>
 
-	<div class="drawer-side shadow z-40">
+	<div class="drawer-side z-40">
 		<!-- Clicking this label closes the sidebar on mobile -->
 		<label for="drawer-toggle" aria-label="Close sidebar" class="drawer-overlay"></label>
-		<aside class="bg-base-200 text-base-content h-screen w-72 flex flex-col overflow-y-auto">
-			<LogoHead />
-			<div class="p-3 flex-1 overflow-y-auto">
-				<ul class="menu rounded-box w-full space-y-1.5">
-					<li>
-						<a href="/" class="flex gap-2.5 py-2.5">
-							<House class="h-4 w-4" />
-							<span>Inicio</span>
-						</a>
-					</li>
+		<aside
+			class="bg-base-100/95 backdrop-blur-xl border-r border-base-300/50 text-base-content h-screen w-80 flex flex-col overflow-hidden"
+		>
+			<!-- Logo Section -->
+			<div class="p-6 border-b border-base-300/30">
+				<div class="w-32 mx-auto">
+					<LogoHead />
+				</div>
+			</div>
 
-					<!-- Dashboards -->
-					<li class="menu-title pt-2">
-						<span>Dashboards</span>
-					</li>
+			<!-- Navigation -->
+			<div class="flex-1 overflow-y-auto p-4 space-y-2">
+				<!-- Quick Access -->
+				<div class="mb-6">
+					<a
+						href="/"
+						class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-all duration-200 group"
+					>
+						<House class="h-5 w-5 group-hover:scale-110 transition-transform" />
+						<span class="font-medium">Inicio</span>
+					</a>
+				</div>
 
-					<li>
-						<details>
-							<summary class="flex gap-2.5 py-2">
-								<ChartArea class="h-4 w-4" />
-								<span>Reportes</span>
+				<!-- Dashboards Section -->
+				<div class="space-y-2">
+					<div class="px-4 py-2">
+						<h3 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">
+							Dashboards
+						</h3>
+					</div>
+
+					<div class="space-y-1">
+						<details class="group">
+							<summary
+								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-200/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
+							>
+								<ChartArea class="h-5 w-5 text-base-content/70" />
+								<span class="font-medium flex-1">Reportes</span>
+								<ChevronDown
+									class="h-4 w-4 text-base-content/50 transition-transform group-open:rotate-180"
+								/>
 							</summary>
-							<ul class="pl-4">
-								<li><a href="/dashboard">General</a></li>
-								<li><a href="/dashboard/course">Cursos</a></li>
-								<li><a href="/dashboard/student">Estudiantes</a></li>
-								<li><a href="/dashboard/eval">Evaluaciones</a></li>
-							</ul>
+							<div class="mt-2 ml-4 space-y-1">
+								<a
+									href="/dashboard"
+									class="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-primary/10 text-base-content/80 hover:text-primary transition-colors"
+								>
+									<div class="w-2 h-2 rounded-full bg-current opacity-50"></div>
+									<span>General</span>
+								</a>
+								<a
+									href="/dashboard/course"
+									class="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-primary/10 text-base-content/80 hover:text-primary transition-colors"
+								>
+									<div class="w-2 h-2 rounded-full bg-current opacity-50"></div>
+									<span>Cursos</span>
+								</a>
+								<a
+									href="/dashboard/student"
+									class="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-primary/10 text-base-content/80 hover:text-primary transition-colors"
+								>
+									<div class="w-2 h-2 rounded-full bg-current opacity-50"></div>
+									<span>Estudiantes</span>
+								</a>
+								<a
+									href="/dashboard/eval"
+									class="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-primary/10 text-base-content/80 hover:text-primary transition-colors"
+								>
+									<div class="w-2 h-2 rounded-full bg-current opacity-50"></div>
+									<span>Evaluaciones</span>
+								</a>
+							</div>
 						</details>
-					</li>
+					</div>
+				</div>
 
-					<!-- Sección Académica -->
-					<li class="menu-title pt-2">
-						<span>Académico</span>
-					</li>
+				<!-- Academic Section -->
+				<div class="space-y-2">
+					<div class="px-4 py-2">
+						<h3 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">
+							Académico
+						</h3>
+					</div>
 
-					<!-- Estructura -->
-					<li>
-						<details>
-							<summary class="flex gap-2.5 py-2">
-								<Settings class="h-4 w-4" />
-								<span>Estructura</span>
+					<div class="space-y-1">
+						<!-- Estructura -->
+						<details class="group">
+							<summary
+								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-200/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
+							>
+								<Settings class="h-5 w-5 text-base-content/70" />
+								<span class="font-medium flex-1">Estructura</span>
+								<ChevronDown
+									class="h-4 w-4 text-base-content/50 transition-transform group-open:rotate-180"
+								/>
 							</summary>
-							<ul class="pl-4">
-								<li><a href="/levels">Niveles</a></li>
-								<li><a href="/courses">Cursos</a></li>
-							</ul>
+							<div class="mt-2 ml-4 space-y-1">
+								<a
+									href="/levels"
+									class="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-primary/10 text-base-content/80 hover:text-primary transition-colors"
+								>
+									<div class="w-2 h-2 rounded-full bg-current opacity-50"></div>
+									<span>Niveles</span>
+								</a>
+								<a
+									href="/courses"
+									class="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-primary/10 text-base-content/80 hover:text-primary transition-colors"
+								>
+									<div class="w-2 h-2 rounded-full bg-current opacity-50"></div>
+									<span>Cursos</span>
+								</a>
+							</div>
 						</details>
-					</li>
 
-					<!-- Estudiantes -->
-					<li>
-						<details>
-							<summary class="flex gap-2.5 py-2">
-								<UserRound class="h-4 w-4" />
-								<span>Estudiantes</span>
+						<!-- Estudiantes -->
+						<details class="group">
+							<summary
+								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-200/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
+							>
+								<UserRound class="h-5 w-5 text-base-content/70" />
+								<span class="font-medium flex-1">Estudiantes</span>
+								<ChevronDown
+									class="h-4 w-4 text-base-content/50 transition-transform group-open:rotate-180"
+								/>
 							</summary>
-							<ul class="pl-4">
-								<li><a href="/student">Gestionar</a></li>
-								<li><a href="/impcsv">Importar</a></li>
-								<li><a href="/eval/student">Resultados</a></li>
-							</ul>
+							<div class="mt-2 ml-4 space-y-1">
+								<a
+									href="/student"
+									class="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-primary/10 text-base-content/80 hover:text-primary transition-colors"
+								>
+									<div class="w-2 h-2 rounded-full bg-current opacity-50"></div>
+									<span>Gestionar</span>
+								</a>
+								<a
+									href="/impcsv"
+									class="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-primary/10 text-base-content/80 hover:text-primary transition-colors"
+								>
+									<div class="w-2 h-2 rounded-full bg-current opacity-50"></div>
+									<span>Importar</span>
+								</a>
+								<a
+									href="/eval/student"
+									class="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-primary/10 text-base-content/80 hover:text-primary transition-colors"
+								>
+									<div class="w-2 h-2 rounded-full bg-current opacity-50"></div>
+									<span>Resultados</span>
+								</a>
+							</div>
 						</details>
-					</li>
 
-					<!-- Evaluaciones -->
-					<li>
-						<details>
-							<summary class="flex gap-2.5 py-2">
-								<FolderPen class="h-4 w-4" />
-								<span>Evaluaciones</span>
+						<!-- Evaluaciones -->
+						<details class="group">
+							<summary
+								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-200/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
+							>
+								<FolderPen class="h-5 w-5 text-base-content/70" />
+								<span class="font-medium flex-1">Evaluaciones</span>
+								<ChevronDown
+									class="h-4 w-4 text-base-content/50 transition-transform group-open:rotate-180"
+								/>
 							</summary>
-							<ul class="pl-4">
-								<li><a href="/eval">Registrar</a></li>
-								<li><a href="/eval/check">Procesar</a></li>
-							</ul>
+							<div class="mt-2 ml-4 space-y-1">
+								<a
+									href="/eval"
+									class="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-primary/10 text-base-content/80 hover:text-primary transition-colors"
+								>
+									<div class="w-2 h-2 rounded-full bg-current opacity-50"></div>
+									<span>Registrar</span>
+								</a>
+								<a
+									href="/eval/check"
+									class="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-primary/10 text-base-content/80 hover:text-primary transition-colors"
+								>
+									<div class="w-2 h-2 rounded-full bg-current opacity-50"></div>
+									<span>Procesar</span>
+								</a>
+							</div>
 						</details>
-					</li>
 
-					<!-- Resultados -->
-					<li>
-						<a href="/result" class="flex gap-2.5 py-2.5">
-							<FileText class="h-4 w-4" />
-							<span>Resultados</span>
+						<!-- Resultados -->
+						<a
+							href="/result"
+							class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-200/50 text-base-content/80 hover:text-primary transition-all duration-200 group"
+						>
+							<FileText class="h-5 w-5 group-hover:scale-110 transition-transform" />
+							<span class="font-medium">Resultados</span>
 						</a>
-					</li>
+					</div>
+				</div>
 
-					<!-- Administración -->
-					<li class="menu-title pt-2">
-						<span>Administración</span>
-					</li>
+				<!-- Administration Section -->
+				<div class="space-y-2">
+					<div class="px-4 py-2">
+						<h3 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">
+							Administración
+						</h3>
+					</div>
 
-					<li>
-						<a href="/users" class="flex gap-2.5 py-2.5">
-							<UserCog class="h-4 w-4" />
-							<span>Usuarios</span>
+					<div class="space-y-1">
+						<a
+							href="/users"
+							class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-200/50 text-base-content/80 hover:text-primary transition-all duration-200 group"
+						>
+							<UserCog class="h-5 w-5 group-hover:scale-110 transition-transform" />
+							<span class="font-medium">Usuarios</span>
 						</a>
-					</li>
-
-					<li>
-						<a href="/config" class="flex gap-2.5 py-2.5">
-							<Bird class="h-4 w-4" />
-							<span>Configuración</span>
-						</a>
-					</li>
-				</ul>
+					</div>
+				</div>
 			</div>
 
 			<!-- Mobile user profile section -->
 			{#if page.data.user}
-				<div class="border-t border-base-300 p-3">
-					<div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-base-100">
+				<div class="border-t border-base-300/30 p-4 lg:hidden">
+					<div class="flex items-center gap-4 px-4 py-3 rounded-xl bg-base-200/30">
 						<div class="avatar">
-							<div class="w-9 rounded-full ring ring-primary ring-offset-base-100 ring-offset-1">
+							<div
+								class="w-10 rounded-full ring-2 ring-primary/20 ring-offset-2 ring-offset-base-100"
+							>
 								{#if userData.photo_url}
 									<img
 										src={`/${userData.photo_url}`}
 										alt={`Avatar de ${userData.name} ${userData.last_name}`}
-										class="mask mask-squircle"
+										class="rounded-full"
 									/>
 								{:else}
 									<div
-										class="flex items-center justify-center h-full bg-primary text-primary-content mask mask-squircle"
+										class="flex items-center justify-center h-full bg-gradient-to-br from-primary to-primary/80 text-primary-content rounded-full"
 									>
-										<span class="font-semibold">
+										<span class="font-bold text-sm">
 											{getInitials(userData.name || '', userData.last_name || '')}
 										</span>
 									</div>
@@ -273,19 +411,23 @@
 							</div>
 						</div>
 						<div class="flex-1 min-w-0">
-							<a href="/profile">
-								<p class="text-sm font-medium truncate">
+							<a href="/profile" class="block">
+								<p class="font-semibold text-base-content truncate">
 									{userData.name}
 									{userData.last_name}
 								</p>
-								<p class="text-xs flex items-center">
-									<span class="w-1.5 h-1.5 bg-success rounded-full mr-1"></span>
+								<p class="text-sm text-base-content/60 flex items-center">
+									<span class="w-2 h-2 bg-success rounded-full mr-2"></span>
 									<span>En línea</span>
 								</p>
 							</a>
 						</div>
-						<form action="/api/logout" method="POST" class="ml-auto">
-							<button type="submit" class="btn btn-ghost btn-xs" aria-label="logout">
+						<form action="/api/logout" method="POST">
+							<button
+								type="submit"
+								class="btn btn-ghost btn-sm btn-circle hover:bg-error/10 hover:text-error transition-colors"
+								aria-label="logout"
+							>
 								<LogOut class="h-4 w-4" />
 							</button>
 						</form>

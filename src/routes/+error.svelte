@@ -4,7 +4,16 @@
 </script>
 
 <div class="flex flex-col items-center justify-center min-h-screen p-4">
-	<Background zIndex="z-[-2]" />
+	<Background
+		zIndex="z-[-2]"
+		enableAnimation={false}
+		enableInteraction={true}
+		opacity={0.1}
+		maxOpacity={0.3}
+		gridSpacing={50}
+		nodeSize={1.2}
+		sigma={150}
+	/>
 	<div class="card w-full max-w-md bg-base-200 shadow">
 		<div class="card-body">
 			<h1 class="text-5xl font-bold text-center">

@@ -266,20 +266,73 @@
 	font-size: 0.875rem;
 }
 
-/* Simple animations */
+/* Modern animations and transitions */
 .animate-fade-in {
 	animation: fadeIn 0.3s ease-in-out;
 }
 
-dialog.modal .modal-box {
-	border: 1px solid var(--color-base-300);
+.animate-slide-in {
+	animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.animate-scale-in {
+	animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Enhanced modal styling */
+dialog.modal .modal-box {
+	border: 1px solid var(--color-base-300);
+	backdrop-filter: blur(8px);
+	background: color-mix(in oklch, var(--color-base-100) 95%, transparent);
+}
+
+/* Smooth scrollbar styling */
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background: color-mix(in oklch, var(--color-base-content) 20%, transparent);
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: color-mix(in oklch, var(--color-base-content) 30%, transparent);
+}
+
+/* Keyframe animations */
 @keyframes fadeIn {
 	from {
 		opacity: 0;
 	}
 	to {
 		opacity: 1;
+	}
+}
+
+@keyframes slideIn {
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes scaleIn {
+	from {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
 	}
 }
