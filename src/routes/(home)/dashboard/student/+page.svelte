@@ -18,13 +18,13 @@
 	// as we're using a student search instead
 
 	// Import the types we need
-	import type { StudentRegister, StudentResult } from '$lib/types';
+	import type { StudentRegister, ResultItem } from '$lib/types';
 
 	// Store state
 	let storeState = $state({
 		selectedStudent: null as Students | null,
 		registers: [] as StudentRegister[],
-		results: [] as StudentResult[],
+		results: [] as ResultItem[],
 		selectedRegister: null as string | null,
 		isLoading: false
 	});

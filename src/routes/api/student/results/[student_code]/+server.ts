@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
-import type { StudentResultsResponse, StudentResult } from '$lib/types';
+import type { StudentResultsResponse, ResultItem } from '$lib/types';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const { student_code } = params;
@@ -56,44 +56,26 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		// Transform results to ensure all required fields are non-null
 		const results = rawResults.map((result) => {
 			// Extract known fields with proper type handling
-			const transformedResult: StudentResult = {
+			const transformedResult: ResultItem = {
 				result_code: String(result.result_code || ''),
 				register_code: String(result.register_code || ''),
 				eval_code: String(result.eval_code || ''),
 				eval_name: String(result.eval_name || ''),
-				eval_date: String(result.eval_date || ''),
+				eval_date: result.eval_date?.toISOString() || '',
 				roll_code: String(result.roll_code || ''),
 				correct_count: Number(result.correct_count || 0),
 				incorrect_count: Number(result.incorrect_count || 0),
 				blank_count: Number(result.blank_count || 0),
-				score: Number(result.score || 0)
+				score: Number(result.score || 0),
+				calculated_at: result.calculated_at?.toISOString() || '',
+				student_code: String(result.student_code || ''),
+				name: String(result.name || ''),
+				last_name: String(result.last_name || ''),
+				level_code: String(result.level_code || ''),
+				level_name: String(result.level_name || ''),
+				group_name: String(result.group_name || ''),
+				section_code: result.section_code
 			};
-
-			// Add optional fields if they exist with proper type casting
-			if ('calculated_at' in result) {
-				transformedResult.calculated_at = result.calculated_at as string | null;
-			}
-			if ('student_code' in result) {
-				transformedResult.student_code = result.student_code as string | null;
-			}
-			if ('student_name' in result) {
-				transformedResult.student_name = result.student_name as string | null;
-			}
-			if ('student_last_name' in result) {
-				transformedResult.student_last_name = result.student_last_name as string | null;
-			}
-			if ('level_code' in result) {
-				transformedResult.level_code = result.level_code as string | null;
-			}
-			if ('level_name' in result) {
-				transformedResult.level_name = result.level_name as string | null;
-			}
-			if ('group_name' in result) {
-				transformedResult.group_name = result.group_name as string | null;
-			}
-			if ('section_code' in result) {
-				transformedResult.section_code = result.section_code as string | null;
-			}
 
 			return transformedResult;
 		});

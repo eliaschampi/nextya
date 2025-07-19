@@ -2,7 +2,7 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { User, X, Search, ListChecks, SortAsc, SortDesc, FileDown } from 'lucide-svelte';
-	import type { Students, StudentRegister, StudentResult, SortOrder } from '$lib/types';
+	import type { Students, StudentRegister, ResultItem, SortOrder } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
 	import { onDestroy } from 'svelte';
 	import { formatDate } from '$lib/utils/formatDate';
@@ -21,7 +21,7 @@
 	let storeState = $state({
 		selectedStudent: null as Students | null,
 		registers: [] as StudentRegister[],
-		results: [] as StudentResult[],
+		results: [] as ResultItem[],
 		selectedRegister: null as string | null,
 		isLoading: false
 	});
@@ -43,14 +43,14 @@
 	// Computed values
 	let filteredByRegister = $derived(
 		storeState.results.filter(
-			(r: StudentResult) =>
+			(r: ResultItem) =>
 				!storeState.selectedRegister || r.register_code === storeState.selectedRegister
 		)
 	);
 
 	// Filter by search query
 	let filteredResults = $derived(
-		filteredByRegister.filter((result: StudentResult) => {
+		filteredByRegister.filter((result: ResultItem) => {
 			if (!resultsSearchQuery.trim()) return true;
 
 			const query = resultsSearchQuery.toLowerCase();
@@ -79,7 +79,7 @@
 	let canViewDetails = $derived(can('eval_results:read'));
 
 	// Define table columns
-	const resultColumns: TableColumn<StudentResult>[] = [
+	const resultColumns: TableColumn<ResultItem>[] = [
 		{ label: 'Fecha', render: dateCell },
 		{ key: 'eval_name', label: 'Evaluación', class: 'font-medium' },
 		{ label: 'Preguntas', class: 'text-center', render: questionsCell },
@@ -159,7 +159,7 @@
 
 	// The filterByRegister function is now handled by the StudentCard component
 
-	function viewResultDetails(result: StudentResult) {
+	function viewResultDetails(result: ResultItem) {
 		// Store current state in sessionStorage for better back navigation
 		try {
 			if (storeState.selectedStudent) {
@@ -245,21 +245,21 @@
 </script>
 
 <!-- Define snippets for custom cells -->
-{#snippet dateCell(row: StudentResult)}
+{#snippet dateCell(row: ResultItem)}
 	{formatDate(row.eval_date)}
 {/snippet}
 
-{#snippet questionsCell(row: StudentResult)}
+{#snippet questionsCell(row: ResultItem)}
 	{row.correct_count + row.incorrect_count + row.blank_count}
 {/snippet}
 
-{#snippet scoreCell(row: StudentResult)}
+{#snippet scoreCell(row: ResultItem)}
 	<span class="badge badge-lg {row.score >= 10.5 ? 'badge-success' : 'badge-error'}">
 		{row.score.toFixed(2)}
 	</span>
 {/snippet}
 
-{#snippet actionsCell(row: StudentResult)}
+{#snippet actionsCell(row: ResultItem)}
 	<button
 		class="btn btn-sm btn-primary btn-outline {canViewDetails ? '' : 'btn-disabled'}"
 		onclick={() => viewResultDetails(row)}

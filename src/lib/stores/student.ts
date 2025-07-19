@@ -1,12 +1,12 @@
 // src/lib/stores/student.ts
 import { writable, derived, get } from 'svelte/store';
-import type { Students, StudentRegister, StudentResult } from '$lib/types';
+import type { Students, StudentRegister, ResultItem } from '$lib/types';
 import { showToast } from './Toast';
 
 type StudentStoreState = {
 	selectedStudent: Students | null;
 	registers: StudentRegister[];
-	results: StudentResult[];
+	results: ResultItem[];
 	selectedRegister: string | null;
 	isLoading: boolean;
 };
