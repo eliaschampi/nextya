@@ -169,7 +169,7 @@ export async function fetchEvaluationResults(db: Database, evalCode: string) {
 			.execute();
 
 		// Transform to match ResultItem interface
-		return results.map(result => ({
+		return results.map((result) => ({
 			...result,
 			score: Number(result.score || 0),
 			calculated_at: result.calculated_at?.toISOString() || '',
