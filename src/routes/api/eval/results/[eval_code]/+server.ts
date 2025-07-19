@@ -1,3 +1,4 @@
+import { fetchEvaluationResults } from '$lib/csvProcessor';
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
 
@@ -10,14 +11,8 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	try {
 		// Use the student_register_results view directly with eval_code filter
-		const data = await locals.db
-			.selectFrom('student_register_results')
-			.selectAll()
-			.where('eval_code', '=', eval_code)
-			.orderBy('score', 'desc')
-			.execute();
-
-		return json(data);
+		const data = await fetchEvaluationResults(locals.db, eval_code);
+		return json(data || []);
 	} catch (error) {
 		console.error('Error al obtener resultados de evaluación:', error);
 		return json({ error: 'Error al obtener resultados de evaluación' }, { status: 500 });

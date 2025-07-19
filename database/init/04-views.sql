@@ -51,4 +51,4 @@ FROM
   JOIN public.levels l ON r.level_code = l.code
   JOIN public.evals e ON er.eval_code = e.code
 WHERE
-  er.section_code IS NULL; -- Only include general results (not section-specific)
+  er.section_code IS NULL;

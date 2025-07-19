@@ -131,6 +131,8 @@ export interface ResultItem {
 	name: string;
 	last_name: string;
 	level_name: string;
+	eval_name: string;
+	eval_date: string;
 }
 
 export interface SelectForDelete {
