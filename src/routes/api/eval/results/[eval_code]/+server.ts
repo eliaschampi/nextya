@@ -1,6 +1,5 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
-import { sql } from 'kysely';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const { eval_code } = params;
@@ -10,13 +9,14 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	}
 
 	try {
-		// Use PostgreSQL function to get the results
+		// Use the student_register_results view directly with eval_code filter
 		const data = await locals.db
-			.selectFrom(sql`get_register_eval_results(${eval_code})`.as('results'))
+			.selectFrom('student_register_results')
 			.selectAll()
+			.where('eval_code', '=', eval_code)
+			.orderBy('score', 'desc')
 			.execute();
 
-		// Los resultados ya vienen en el formato correcto desde la función RPC
 		return json(data);
 	} catch (error) {
 		console.error('Error al obtener resultados de evaluación:', error);

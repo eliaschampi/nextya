@@ -17,7 +17,6 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres;
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO postgres;
 
 -- Grant execute on specific functions
-GRANT EXECUTE ON FUNCTION public.get_register_eval_results (TEXT) TO postgres;
 GRANT EXECUTE ON FUNCTION public.upsert_eval_results (uuid, uuid, JSONB, JSONB, JSONB) TO postgres;
 GRANT EXECUTE ON FUNCTION public.timestamp_updater () TO postgres;
 GRANT EXECUTE ON FUNCTION public.import_student_register (TEXT, TEXT, TEXT, TEXT, UUID, TEXT, TEXT, UUID) TO postgres;

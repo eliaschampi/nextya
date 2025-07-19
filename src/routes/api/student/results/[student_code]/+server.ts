@@ -41,39 +41,16 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			return json({ error: 'No se encontraron registros para este estudiante' }, { status: 404 });
 		}
 
-		// Get all results for this student's registers by joining tables
+		// Get all results for this student using the student_register_results view
 		const rawResults = await locals.db
-			.selectFrom('eval_results')
-			.innerJoin('registers', 'registers.code', 'eval_results.register_code')
-			.innerJoin('evals', 'evals.code', 'eval_results.eval_code')
-			.innerJoin('students', 'students.code', 'registers.student_code')
-			.innerJoin('levels', 'levels.code', 'registers.level_code')
-			.select([
-				'eval_results.code as result_code',
-				'eval_results.register_code',
-				'eval_results.eval_code',
-				'eval_results.correct_count',
-				'eval_results.incorrect_count',
-				'eval_results.blank_count',
-				'eval_results.score',
-				'eval_results.calculated_at',
-				'evals.name as eval_name',
-				'evals.eval_date',
-				'registers.roll_code',
-				'registers.group_name',
-				'registers.level_code',
-				'students.code as student_code',
-				'students.name as student_name',
-				'students.last_name as student_last_name',
-				'levels.name as level_name',
-				'eval_results.section_code'
-			])
+			.selectFrom('student_register_results')
+			.selectAll()
 			.where(
-				'eval_results.register_code',
+				'register_code',
 				'in',
 				registers.map((r) => r.code)
 			)
-			.orderBy('evals.eval_date', 'desc')
+			.orderBy('eval_date', 'desc')
 			.execute();
 
 		// Transform results to ensure all required fields are non-null

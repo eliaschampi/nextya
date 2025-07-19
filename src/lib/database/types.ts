@@ -147,17 +147,18 @@ export interface StudentRegisterResults {
 	eval_code: string | null;
 	eval_date: Timestamp | null;
 	eval_name: string | null;
+	group_name: string | null;
 	incorrect_count: number | null;
+	last_name: string | null;
 	level_code: string | null;
 	level_name: string | null;
+	name: string | null;
 	register_code: string | null;
-	register_group_name: string | null;
 	result_code: string | null;
 	roll_code: string | null;
 	score: Numeric | null;
+	section_code: string | null;
 	student_code: string | null;
-	student_last_name: string | null;
-	student_name: string | null;
 }
 
 export interface StudentRegisters {

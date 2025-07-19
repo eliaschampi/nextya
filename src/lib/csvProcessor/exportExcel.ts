@@ -1,7 +1,6 @@
 // src/lib/csvProcessor/exportExcel.ts
 import { writeToString } from 'fast-csv';
 import type { Database } from '$lib/database';
-import { sql } from 'kysely';
 import type { ExportDataRow } from './types';
 import type { ResultItem } from '$lib/types';
 
@@ -162,11 +161,20 @@ export async function fetchEvaluationData(
  */
 export async function fetchEvaluationResults(db: Database, evalCode: string) {
 	try {
-		const result = await sql`
-			SELECT * FROM get_register_eval_results(${evalCode})
-		`.execute(db);
+		const results = await db
+			.selectFrom('student_register_results')
+			.selectAll()
+			.where('eval_code', '=', evalCode)
+			.orderBy('score', 'desc')
+			.execute();
 
-		return result.rows as ResultItem[];
+		// Transform to match ResultItem interface
+		return results.map(result => ({
+			...result,
+			score: Number(result.score || 0),
+			calculated_at: result.calculated_at?.toISOString() || '',
+			eval_date: result.eval_date?.toISOString() || ''
+		})) as ResultItem[];
 	} catch {
 		return null;
 	}
