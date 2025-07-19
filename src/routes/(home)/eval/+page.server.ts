@@ -1,6 +1,6 @@
 import { getLevels } from '$lib/data/levels';
 import { getCourses } from '$lib/data/courses';
-import type { Levels } from '$lib/types';
+import type { Courses, Levels } from '$lib/types';
 import { hasEvalQuestions } from '$lib/data/question';
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
@@ -12,10 +12,12 @@ import type { DB } from '$lib/database/types';
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user?.code;
 	let levels: Levels[] = [];
-	if (userId) {
-		levels = await getLevels(locals.db, userId);
+	let courses: Courses[] = [];
+	if (!((await locals.can('evals:read')) || !(await locals.can('evals:create'))) || !userId) {
+		return { levels: [], courses: [], title: 'Exámenes' };
 	}
-	const courses = await getCourses(locals.db);
+	levels = await getLevels(locals.db, userId);
+	courses = await getCourses(locals.db);
 	return { levels, courses, title: 'Exámenes' };
 };
 

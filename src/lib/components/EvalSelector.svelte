@@ -87,7 +87,7 @@
 		</div>
 		<div class="space-y-4">
 			<div>
-				<label class="label font-semibold flex items-center gap-2">
+				<label class="font-semibold flex items-center gap-2">
 					<BookOpen class="w-5 h-5 text-secondary" /> Nivel Académico
 				</label>
 				<select
@@ -109,7 +109,7 @@
 					</div>
 				{:else}
 					<div class="mb-4">
-						<label class="label font-semibold flex items-center gap-2">
+						<label class="font-semibold flex items-center gap-2">
 							<Search class="w-5 h-5 text-secondary" /> Buscar Evaluación
 						</label>
 						<input

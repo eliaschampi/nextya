@@ -218,7 +218,7 @@
 
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
 					<div>
-						<label class="label" for="level-select">
+						<label for="level-select">
 							<span class="label-text font-medium">Nivel</span>
 						</label>
 						<select id="level-select" class="select select-bordered w-full" bind:value={levelCode}>
@@ -230,7 +230,7 @@
 					</div>
 
 					<div>
-						<label class="label" for="file-input">
+						<label for="file-input">
 							<span class="label-text font-medium">Archivo CSV</span>
 						</label>
 						<input

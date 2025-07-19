@@ -6,7 +6,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const userCode = locals.user?.code;
 	let levels: Levels[] = [];
 
-	if (userCode) {
+	if (userCode && (await locals.can('dashboard:general'))) {
 		levels = await getLevels(locals.db, userCode);
 	}
 

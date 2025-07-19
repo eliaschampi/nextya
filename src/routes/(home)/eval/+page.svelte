@@ -345,7 +345,7 @@
 	class="bg-base-200 rounded-xl mb-6 shadow-sm p-4 flex items-center justify-between flex-wrap gap-4"
 >
 	<div class="flex items-center gap-4 flex-wrap">
-		<label class="label font-semibold text-primary flex items-center">
+		<label class="font-semibold text-primary flex items-center">
 			<BookOpen class="w-5 h-5 mr-2" /> Selecciona un Nivel
 		</label>
 		<select
@@ -437,7 +437,7 @@
 			>
 				<legend class="px-2 font-semibold text-primary text-sm">Información del Examen</legend>
 				<div>
-					<label class="label font-medium text-sm pb-1" for="name">Nombre</label>
+					<label class="font-medium text-sm pb-1" for="name">Nombre</label>
 					<input
 						id="name"
 						name="name"
@@ -449,7 +449,7 @@
 					/>
 				</div>
 				<div>
-					<label class="label font-medium text-sm pb-1" for="date">Fecha</label>
+					<label class="font-medium text-sm pb-1" for="date">Fecha</label>
 					<input
 						id="date"
 						name="date"
@@ -461,7 +461,7 @@
 					/>
 				</div>
 				<div>
-					<label class="label font-medium text-sm pb-1" for="level">Nivel</label>
+					<label class="font-medium text-sm pb-1" for="level">Nivel</label>
 					<select
 						id="level"
 						name="level"
@@ -476,7 +476,7 @@
 					</select>
 				</div>
 				<div>
-					<label class="label font-medium text-sm pb-1" for="group_name">Grupo</label>
+					<label class="font-medium text-sm pb-1" for="group_name">Grupo</label>
 					<select
 						id="group_name"
 						name="group_name"
@@ -596,7 +596,7 @@
 
 				<!-- Add Section Select -->
 				<div class="mt-4 pt-4 border-t border-base-300">
-					<label for="add-course-select" class="label font-medium text-sm pb-1">
+					<label for="add-course-select" class="font-medium text-sm pb-1">
 						Agregar Curso a Secciones
 					</label>
 					<select

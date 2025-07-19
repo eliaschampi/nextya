@@ -521,7 +521,7 @@
 					<legend class="fieldset-legend">Información del estudiante</legend>
 
 					<div>
-						<label class="label" for="name">Nombre</label>
+						<label for="name">Nombre</label>
 						<input
 							id="name"
 							name="name"
@@ -535,7 +535,7 @@
 					</div>
 
 					<div>
-						<label class="label" for="last_name">Apellidos</label>
+						<label for="last_name">Apellidos</label>
 						<input
 							id="last_name"
 							name="last_name"
@@ -548,7 +548,7 @@
 					</div>
 
 					<div>
-						<label class="label" for="phone">Teléfono</label>
+						<label for="phone">Teléfono</label>
 						<input
 							id="phone"
 							name="phone"
@@ -560,7 +560,7 @@
 					</div>
 
 					<div>
-						<label class="label" for="email">Email</label>
+						<label for="email">Email</label>
 						<input
 							id="email"
 							name="email"
@@ -573,7 +573,7 @@
 					</div>
 
 					<div>
-						<label class="label" for="level">Nivel</label>
+						<label for="level">Nivel</label>
 						<select id="level" name="level" class="select w-full" required bind:this={levelSelect}>
 							<option value="">Selecciona un nivel</option>
 							{#each data.levels as level (level.code)}
@@ -583,7 +583,7 @@
 					</div>
 
 					<div>
-						<label class="label" for="group_name">Grupo</label>
+						<label for="group_name">Grupo</label>
 						<select
 							id="group_name"
 							name="group_name"
@@ -599,7 +599,7 @@
 					</div>
 
 					<div class="md:col-span-2">
-						<label class="label" for="roll_code">Código de Matrícula</label>
+						<label for="roll_code">Código de Matrícula</label>
 						<input
 							id="roll_code"
 							name="roll_code"
@@ -643,7 +643,7 @@
 			<legend class="text-emphasis px-2">Opciones de eliminación</legend>
 			<div class="flex flex-col gap-2">
 				{#if selectForDelete}
-					<label class="label cursor-pointer justify-start gap-2">
+					<label class="cursor-pointer justify-start gap-2">
 						<input
 							type="radio"
 							name="delete-option"
@@ -653,7 +653,7 @@
 						/>
 						<span class="label-text">Eliminar solo el registro de matricula</span>
 					</label>
-					<label class="label cursor-pointer justify-start gap-2">
+					<label class="cursor-pointer justify-start gap-2">
 						<input
 							type="radio"
 							name="delete-option"

@@ -212,7 +212,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
 		description: 'Estadísticas de estudiantes'
 	},
 	{
-		key: 'dashboard:evaluations',
+		key: 'dashboard:evals',
 		label: 'Dashboard evaluaciones',
 		category: 'Dashboards',
 		description: 'Estadísticas de evaluaciones'

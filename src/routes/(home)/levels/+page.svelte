@@ -218,7 +218,7 @@
 					maxlength={20}
 				/>
 				<div class="mt-2">
-					<label class="label font-medium" for="abr">Modalidad</label>
+					<label class="font-medium" for="abr">Modalidad</label>
 					<select id="abr" name="abr" class="select w-full validator" required>
 						<option value="">Selecciona una modalidad</option>
 						{#each modalities as abr (abr)}
@@ -229,7 +229,7 @@
 
 				<!-- Gestión de usuarios -->
 				<div class="mt-4">
-					<label class="label font-medium" for="users">Usuarios</label>
+					<label class="font-medium" for="users">Usuarios</label>
 					<div class="flex gap-2">
 						<select
 							id="users"
