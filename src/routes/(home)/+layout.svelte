@@ -171,7 +171,7 @@
 			class="bg-base-300/80 backdrop-blur-md border-r border-base-300 text-base-content h-screen w-72 flex flex-col overflow-hidden"
 		>
 			<div class="p-6 border-b border-base-300/30">
-				<div class="w-32 mx-auto">
+				<div class="mx-auto">
 					<LogoHead />
 				</div>
 			</div>

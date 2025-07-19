@@ -59,7 +59,7 @@ CREATE TABLE public.students (
   code UUID NOT NULL DEFAULT gen_random_uuid (),
   name VARCHAR(100) NOT NULL,
   last_name VARCHAR(150) NOT NULL,
-  email VARCHAR(100) NOT NULL,
+  email VARCHAR(100) NULL,
   phone VARCHAR(100) NULL,
   user_code UUID NOT NULL,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
