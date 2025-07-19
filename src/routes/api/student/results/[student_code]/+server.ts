@@ -53,32 +53,13 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			.orderBy('eval_date', 'desc')
 			.execute();
 
-		// Transform results to ensure all required fields are non-null
-		const results = rawResults.map((result) => {
-			// Extract known fields with proper type handling
-			const transformedResult: ResultItem = {
-				result_code: String(result.result_code || ''),
-				register_code: String(result.register_code || ''),
-				eval_code: String(result.eval_code || ''),
-				eval_name: String(result.eval_name || ''),
-				eval_date: result.eval_date?.toISOString() || '',
-				roll_code: String(result.roll_code || ''),
-				correct_count: Number(result.correct_count || 0),
-				incorrect_count: Number(result.incorrect_count || 0),
-				blank_count: Number(result.blank_count || 0),
-				score: Number(result.score || 0),
-				calculated_at: result.calculated_at?.toISOString() || '',
-				student_code: String(result.student_code || ''),
-				name: String(result.name || ''),
-				last_name: String(result.last_name || ''),
-				level_code: String(result.level_code || ''),
-				level_name: String(result.level_name || ''),
-				group_name: String(result.group_name || ''),
-				section_code: result.section_code
-			};
-
-			return transformedResult;
-		});
+		// Transform to match ResultItem interface (same approach as CSV processor)
+		const results = rawResults.map((result) => ({
+			...result,
+			score: Number(result.score || 0),
+			calculated_at: result.calculated_at?.toISOString() || '',
+			eval_date: result.eval_date?.toISOString() || ''
+		})) as ResultItem[];
 
 		const response: StudentResultsResponse = {
 			student: {

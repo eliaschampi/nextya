@@ -4,7 +4,6 @@
 	import { User, X, Search, ListChecks, SortAsc, SortDesc, FileDown } from 'lucide-svelte';
 	import type { Students, StudentRegister, ResultItem, SortOrder } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
-	import { onDestroy } from 'svelte';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { goto } from '$app/navigation';
 
@@ -76,7 +75,7 @@
 	}>();
 
 	// Permissions - using Svelte 5 reactive approach
-	let canViewDetails = $derived(can('eval_results:read'));
+	let canViewDetails = $derived(can('results:read'));
 
 	// Define table columns
 	const resultColumns: TableColumn<ResultItem>[] = [
@@ -238,10 +237,6 @@
 			showToast('No se pudieron exportar las evaluaciones', 'danger');
 		}
 	}
-
-	onDestroy(() => {
-		// Clean up any remaining resources
-	});
 </script>
 
 <!-- Define snippets for custom cells -->
