@@ -33,6 +33,8 @@
 		return unsubscribe;
 	});
 
+	let canExportResults = $derived(can('results:export'));
+
 	// Local state for pagination and search
 	let sortOrder = $state<SortOrder>('desc');
 	let currentPage = $state(1);
@@ -73,9 +75,6 @@
 			studentCode: string | null;
 		};
 	}>();
-
-	// Permissions - using Svelte 5 reactive approach
-	let canViewDetails = $derived(can('results:read'));
 
 	// Define table columns
 	const resultColumns: TableColumn<ResultItem>[] = [
@@ -188,7 +187,7 @@
 
 	// Exportar resultados a Excel
 	async function exportToExcel() {
-		if (!storeState.selectedStudent) return;
+		if (!storeState.selectedStudent || !canExportResults) return;
 
 		try {
 			showToast('Preparando exportación...', 'info');
@@ -256,11 +255,10 @@
 
 {#snippet actionsCell(row: ResultItem)}
 	<button
-		class="btn btn-sm btn-primary btn-outline {canViewDetails ? '' : 'btn-disabled'}"
+		class="btn btn-sm btn-primary btn-outline"
 		onclick={() => viewResultDetails(row)}
 		title="Ver detalles"
 		aria-label="Ver detalles del resultado"
-		disabled={!canViewDetails}
 	>
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
@@ -273,12 +271,8 @@
 			stroke-linecap="round"
 			stroke-linejoin="round"
 			class="lucide lucide-eye w-4 h-4 mr-1"
-			><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle
-				cx="12"
-				cy="12"
-				r="3"
-			/></svg
-		>
+			><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" />
+		</svg>
 		Ver
 	</button>
 {/snippet}
@@ -343,7 +337,7 @@
 								class="btn btn-sm btn-success btn-outline"
 								onclick={exportToExcel}
 								title="Exportar a Excel"
-								disabled={filteredByRegister.length === 0}
+								disabled={filteredByRegister.length === 0 || !canExportResults}
 							>
 								<FileDown size={16} class="mr-1" />
 								Excel

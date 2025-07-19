@@ -45,9 +45,8 @@
 	let sortOrder = $state<'asc' | 'desc'>('desc'); // Default sort by highest score
 	let searchQuery = $state('');
 
-	// Permissions - using Svelte 5 reactive approach
-	let canViewDetails = $derived(can('results:read'));
 	let canDeleteResults = $derived(can('results:delete'));
+	let canExportResults = $derived(can('results:export'));
 
 	// Delete state
 	let deleteModalOpen = $state(false);
@@ -247,7 +246,7 @@
 	}
 
 	async function exportToExcel() {
-		if (!storeState.selectedEval) return;
+		if (!storeState.selectedEval || !canExportResults) return;
 
 		try {
 			showToast('Preparando exportación...', 'info');
@@ -296,6 +295,7 @@
 
 	// Delete functions
 	function openDeleteModal(result: ResultItem | null = null) {
+		if (!canDeleteResults) return;
 		resultToDelete = result;
 		deleteAllMode = result === null;
 		deleteModalOpen = true;
@@ -408,11 +408,10 @@
 {#snippet actionsCell(row: ResultItem)}
 	<div class="flex gap-2 justify-center">
 		<button
-			class="btn btn-sm btn-primary btn-outline {canViewDetails ? '' : 'btn-disabled'}"
+			class="btn btn-sm btn-primary btn-outline"
 			onclick={() => viewStudentDetails(row)}
 			title="Ver detalles"
 			aria-label="Ver detalles del resultado"
-			disabled={!canViewDetails}
 		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -425,15 +424,11 @@
 				stroke-linecap="round"
 				stroke-linejoin="round"
 				class="lucide lucide-eye w-4 h-4"
-				><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle
-					cx="12"
-					cy="12"
-					r="3"
-				/></svg
-			>
+				><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" />
+			</svg>
 		</button>
 		<button
-			class="btn btn-sm btn-error btn-outline {canDeleteResults ? '' : 'btn-disabled'}"
+			class="btn btn-sm btn-error btn-outline"
 			onclick={() => openDeleteModal(row)}
 			title="Eliminar resultado"
 			aria-label="Eliminar resultado"
@@ -500,7 +495,7 @@
 							class="btn btn-sm btn-success btn-outline"
 							onclick={exportToExcel}
 							title="Exportar a Excel"
-							disabled={filteredResults.length === 0}
+							disabled={filteredResults.length === 0 || !canExportResults}
 						>
 							<FileDown size={16} class="mr-1" />
 							Excel

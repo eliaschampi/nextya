@@ -3,8 +3,11 @@ import { formatEvaluationResult } from '$lib/utils';
 import type { PageServerLoad } from '../../$types';
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
+	if (!(await locals.can('results:read'))) {
+		throw error(403, 'Acceso no autorizado');
+	}
+
 	const { answer_code } = params as { answer_code: string };
-	// Get the 'from' parameter to know where to go back to
 	const fromPage = url.searchParams.get('from');
 
 	if (!answer_code) {

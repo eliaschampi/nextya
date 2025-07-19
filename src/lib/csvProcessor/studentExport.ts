@@ -20,7 +20,7 @@ export async function fetchStudentEvalReports(
 			eval_name: string;
 			eval_code: string;
 			eval_date: string;
-			general_score: number;
+			general_score: string; // NUMERIC comes as string from database
 			register_code: string;
 			result_code: string;
 			course_scores: string | Record<string, number>;
@@ -36,6 +36,7 @@ export async function fetchStudentEvalReports(
 			eval_code: String(item.eval_code),
 			register_code: String(item.register_code),
 			result_code: String(item.result_code),
+			general_score: Number(item.general_score || 0),
 			course_scores:
 				typeof item.course_scores === 'string' ? JSON.parse(item.course_scores) : item.course_scores
 		}));

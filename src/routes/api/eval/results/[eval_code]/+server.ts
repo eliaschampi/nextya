@@ -5,8 +5,8 @@ import { json } from '@sveltejs/kit';
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const { eval_code } = params;
 
-	if (!eval_code) {
-		return json({ error: 'Código de evaluación no proporcionado' }, { status: 400 });
+	if (!eval_code || !(await locals.can('results:read'))) {
+		return json([]);
 	}
 
 	try {

@@ -5,8 +5,8 @@ import type { StudentResultsResponse, ResultItem } from '$lib/types';
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const { student_code } = params;
 
-	if (!student_code) {
-		return json({ error: 'Código de estudiante no proporcionado' }, { status: 400 });
+	if (!student_code || !(await locals.can('results:read'))) {
+		return json([]);
 	}
 
 	try {
