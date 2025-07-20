@@ -4,7 +4,6 @@ import type {
 	EvalChartData,
 	GroupChartData,
 	AnswerDistribution,
-	StudentPerformance,
 	LevelDashboardData,
 	GroupDashboardData
 } from '$lib/types/dashboard';
@@ -63,16 +62,13 @@ export async function getGroupDashboardData(
 
 		// Process the returned data
 		const dashboardData: GroupDashboardData = {
-			scoresByEval: [],
-			studentPerformance: []
+			scoresByEval: []
 		};
 
 		// Extract data from the response
 		result.rows.forEach((item) => {
 			if (item.data_type === 'scoresByEval' && item.json_data) {
 				dashboardData.scoresByEval = item.json_data as EvalChartData[];
-			} else if (item.data_type === 'studentPerformance' && item.json_data) {
-				dashboardData.studentPerformance = item.json_data as StudentPerformance[];
 			}
 		});
 

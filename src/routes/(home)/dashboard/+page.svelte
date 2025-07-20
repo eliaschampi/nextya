@@ -3,7 +3,7 @@
 	import { Chart } from 'chart.js/auto';
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast.js';
-	import { Settings, ChartBar, ChartPie, Activity, Trophy } from 'lucide-svelte';
+	import { Settings, ChartBar, ChartPie, Activity } from 'lucide-svelte';
 	import type { Levels } from '$lib/types';
 	import type { LevelDashboardData, GroupDashboardData } from '$lib/types/dashboard';
 
@@ -30,7 +30,6 @@
 	let scoresByEvalChart: Chart | null = $state(null);
 	let scoresByGroupChart: Chart | null = $state(null);
 	let correctVsIncorrectChart: Chart | null = $state(null);
-	let studentPerformanceChart: Chart | null = $state(null);
 
 	// Colors for charts
 	const chartColors = {
@@ -51,8 +50,6 @@
 	);
 
 	const scoresByEvalData = $derived(groupData?.scoresByEval || []);
-
-	const studentPerformanceData = $derived(groupData?.studentPerformance || []);
 
 	// Track chart data changes and render charts when data is available
 	let shouldRenderLevelCharts = $derived(levelData !== null && !isLoadingLevel);
@@ -176,11 +173,11 @@
 	}
 
 	/**
-	 * Render group charts (scoresByEval and studentPerformance)
+	 * Render group charts (scoresByEval only)
 	 */
 	function renderGroupCharts() {
-		// Use Promise.all to render charts in parallel
-		Promise.all([renderScoresByEvalChart(), renderStudentPerformanceChart()]).catch((error) => {
+		// Only render scores by eval chart
+		renderScoresByEvalChart().catch((error) => {
 			console.error('Error rendering group charts:', error);
 		});
 	}
@@ -207,11 +204,6 @@
 		if (scoresByEvalChart) {
 			scoresByEvalChart.destroy();
 			scoresByEvalChart = null;
-		}
-
-		if (studentPerformanceChart) {
-			studentPerformanceChart.destroy();
-			studentPerformanceChart = null;
 		}
 	}
 
@@ -391,66 +383,6 @@
 				resolve();
 			} catch (error) {
 				console.error('Error rendering correct vs incorrect chart:', error);
-				reject(error);
-			}
-		});
-	}
-
-	/**
-	 * Render student performance chart
-	 * Shows top 10 students by average score
-	 */
-	function renderStudentPerformanceChart() {
-		if (!studentPerformanceData || studentPerformanceData.length === 0) {
-			return Promise.resolve();
-		}
-
-		return new Promise<void>((resolve, reject) => {
-			const ctx = document.getElementById('studentPerformanceChart') as HTMLCanvasElement;
-			if (!ctx) {
-				resolve();
-				return;
-			}
-
-			try {
-				const labels = studentPerformanceData.map((item) => item.name);
-				const values = studentPerformanceData.map((item) => item.averageScore);
-
-				studentPerformanceChart = new Chart(ctx, {
-					type: 'bar',
-					data: {
-						labels,
-						datasets: [
-							{
-								label: 'Promedio de Puntaje',
-								data: values,
-								backgroundColor: chartColors.tertiary,
-								borderColor: chartColors.tertiary,
-								borderWidth: 1
-							}
-						]
-					},
-					options: {
-						indexAxis: 'y',
-						responsive: true,
-						maintainAspectRatio: false,
-						scales: {
-							x: {
-								beginAtZero: true,
-								max: 20
-							}
-						},
-						plugins: {
-							title: {
-								display: true,
-								text: 'Top 10 Estudiantes por Rendimiento'
-							}
-						}
-					}
-				});
-				resolve();
-			} catch (error) {
-				console.error('Error rendering student performance chart:', error);
 				reject(error);
 			}
 		});
@@ -659,28 +591,6 @@
 							<div class="divider my-0"></div>
 							<div class="h-64 relative mt-2">
 								<canvas id="scoresByEvalChart"></canvas>
-							</div>
-						</div>
-					</div>
-				{/if}
-
-				<!-- Student Performance Chart -->
-				{#if groupData.studentPerformance && groupData.studentPerformance.length > 0}
-					<div
-						class="card bg-gradient-to-br from-warning/10 to-warning/5 border border-warning/20 rounded-xl overflow-hidden"
-					>
-						<div class="card-body p-5">
-							<div class="flex items-center gap-3 mb-3">
-								<div
-									class="w-8 h-8 flex items-center justify-center rounded-lg bg-warning/15 text-warning"
-								>
-									<Trophy class="h-5 w-5" />
-								</div>
-								<h3 class="text-lg font-medium">Top 10 Estudiantes</h3>
-							</div>
-							<div class="divider my-0"></div>
-							<div class="h-64 relative mt-2">
-								<canvas id="studentPerformanceChart"></canvas>
 							</div>
 						</div>
 					</div>

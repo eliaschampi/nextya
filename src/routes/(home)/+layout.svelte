@@ -217,6 +217,13 @@
 									<span>General</span>
 								</a>
 								<a
+									href="/dashboard/ranking"
+									class="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-primary/10 text-base-content/80 hover:text-primary transition-colors"
+								>
+									<div class="w-2 h-2 rounded-full bg-current opacity-50"></div>
+									<span>Ranking</span>
+								</a>
+								<a
 									href="/dashboard/course"
 									class="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-primary/10 text-base-content/80 hover:text-primary transition-colors"
 								>

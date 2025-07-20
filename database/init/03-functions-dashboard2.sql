@@ -112,7 +112,6 @@ RETURNS TABLE (data_type TEXT, json_data JSONB)
 LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
     v_scores_by_eval JSONB;
-    v_student_performance JSONB;
 BEGIN
     -- Get scores by eval data
     WITH eval_scores AS (
@@ -142,41 +141,9 @@ BEGIN
     FROM
         eval_scores es;
 
-    -- Get student performance data (top 10)
-    WITH student_scores AS (
-        SELECT
-            s.name || ' ' || s.last_name AS student_name,
-            ROUND(AVG(er.score)::numeric, 2) AS avg_score
-        FROM
-            public.eval_results er
-            JOIN public.registers r ON er.register_code = r.code
-            JOIN public.students s ON r.student_code = s.code
-        WHERE
-            r.level_code = p_level_code::UUID
-            AND r.group_name = p_group_name
-            AND er.section_code IS NULL
-        GROUP BY
-            s.code, s.name, s.last_name
-        ORDER BY
-            avg_score DESC
-        LIMIT 10
-    )
-    SELECT
-        jsonb_agg(
-            jsonb_build_object(
-                'name', ss.student_name,
-                'averageScore', ss.avg_score
-            )
-            ORDER BY ss.avg_score DESC
-        ) INTO v_student_performance
-    FROM
-        student_scores ss;
-
     -- Return the data
     RETURN QUERY
-    SELECT 'scoresByEval', COALESCE(v_scores_by_eval, '[]'::jsonb)
-    UNION ALL
-    SELECT 'studentPerformance', COALESCE(v_student_performance, '[]'::jsonb);
+    SELECT 'scoresByEval', COALESCE(v_scores_by_eval, '[]'::jsonb);
 END;
 $$;
 

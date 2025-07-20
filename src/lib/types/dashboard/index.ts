@@ -28,14 +28,6 @@ export interface AnswerDistribution {
 }
 
 /**
- * Represents student performance data
- */
-export interface StudentPerformance {
-	name: string;
-	averageScore: number;
-}
-
-/**
  * Represents level dashboard data
  */
 export interface LevelDashboardData {
@@ -48,7 +40,6 @@ export interface LevelDashboardData {
  */
 export interface GroupDashboardData {
 	scoresByEval: EvalChartData[];
-	studentPerformance: StudentPerformance[];
 }
 
 /**
