@@ -5,18 +5,6 @@
 
 import type { ColumnType } from 'kysely';
 
-export type EntityEnum =
-	| 'courses'
-	| 'eval_answers'
-	| 'eval_questions'
-	| 'eval_results'
-	| 'eval_sections'
-	| 'evals'
-	| 'levels'
-	| 'registers'
-	| 'students'
-	| 'users';
-
 export type Generated<T> =
 	T extends ColumnType<infer S, infer I, infer U>
 		? ColumnType<S, I | undefined, U>
@@ -126,7 +114,7 @@ export interface Permissions {
 	action: string;
 	code: Generated<string>;
 	created_at: Generated<Timestamp>;
-	entity: EntityEnum;
+	entity: string;
 	user_code: string;
 }
 
@@ -178,7 +166,7 @@ export interface StudentRegisters {
 export interface Students {
 	code: Generated<string>;
 	created_at: Generated<Timestamp | null>;
-	email: string;
+	email: string | null;
 	last_name: string;
 	name: string;
 	phone: string | null;

@@ -24,7 +24,7 @@ export function createDatabase(config: {
 		dialect: new PostgresDialect({ pool }),
 		log: (event) => {
 			if (dev && event.level === 'query') {
-				console.log('SQL:', event.query.sql);
+				// console.log('SQL:', event.query.sql);
 				console.log('Parameters:', event.query.parameters);
 			}
 		}
