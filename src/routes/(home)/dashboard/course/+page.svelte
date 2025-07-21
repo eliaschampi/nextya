@@ -550,8 +550,8 @@
 			</div>
 		</div>
 	{:else}
-		<!-- Charts Grid -->
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+		<!-- Charts Section -->
+		<div class="space-y-6">
 			<!-- Course Scores Chart -->
 			<div
 				class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden"
