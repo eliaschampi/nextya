@@ -33,8 +33,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	// Get ranking data with filters
 	const students: StudentRanking[] = await getStudentRanking(locals.db, {
-		level_code: selectedLevel || undefined,
-		group_name: selectedGroup || undefined
+		level_code: selectedLevel || '',
+		group_name: selectedGroup || ''
 	});
 
 	return {

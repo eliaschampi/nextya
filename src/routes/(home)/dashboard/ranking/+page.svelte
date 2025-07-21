@@ -80,7 +80,7 @@
 		bind:value={selectedLevelCode}
 		onchange={handleLevelChange}
 	>
-		<option value="">Todos los niveles</option>
+		<option value="">Selecciona un nivel</option>
 		{#each data.levels as level (level.code)}
 			<option value={level.code}>{level.name}</option>
 		{/each}
@@ -92,7 +92,7 @@
 		onchange={handleGroupChange}
 		disabled={!selectedLevelCode || data.availableGroups.length === 0}
 	>
-		<option value="">Todos los grupos</option>
+		<option value="">Selecciona un grupo</option>
 		{#each data.availableGroups as group (group)}
 			<option value={group}>Grupo {group}</option>
 		{/each}
@@ -180,13 +180,9 @@
 	<div class="card card-gradient-neutral rounded-xl">
 		<div class="card-body text-center py-12">
 			<Trophy class="w-16 h-16 text-base-content/30 mx-auto mb-4" />
-			<h3 class="text-xl font-semibold mb-2">Sin datos de ranking</h3>
+			<h3 class="text-xl font-semibold mb-2">Sin estudiantes</h3>
 			<p class="text-base-content/70 max-w-md mx-auto">
-				{#if selectedLevelCode || selectedGroupName}
-					No se encontraron estudiantes con los filtros seleccionados.
-				{:else}
-					No hay estudiantes registrados en el sistema.
-				{/if}
+				Selecciona un nivel y grupo para ver el ranking de estudiantes.
 			</p>
 		</div>
 	</div>

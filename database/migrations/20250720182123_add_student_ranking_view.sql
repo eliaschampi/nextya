@@ -2,10 +2,10 @@
 -- Created: 2025-07-20T18:21:23.138Z
 -- Purpose: Create view and function for student ranking table
 
--- Create function to get student ranking with filters
+-- Create function to get student ranking with filters (both required)
 CREATE OR REPLACE FUNCTION public.get_student_ranking(
-    p_level_code UUID DEFAULT NULL,
-    p_group_name CHAR(1) DEFAULT NULL
+    p_level_code UUID,
+    p_group_name CHAR(1)
 )
 RETURNS TABLE (
     roll_code CHAR(4),
@@ -15,6 +15,11 @@ RETURNS TABLE (
     total_evaluations INTEGER
 ) LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
+    -- Return empty if either parameter is NULL
+    IF p_level_code IS NULL OR p_group_name IS NULL THEN
+        RETURN;
+    END IF;
+
     RETURN QUERY
     SELECT
         r.roll_code,
@@ -27,8 +32,8 @@ BEGIN
         JOIN public.registers r ON s.code = r.student_code
         LEFT JOIN public.eval_results er ON r.code = er.register_code AND er.section_code IS NULL
     WHERE
-        (p_level_code IS NULL OR r.level_code = p_level_code)
-        AND (p_group_name IS NULL OR r.group_name = p_group_name)
+        r.level_code = p_level_code
+        AND r.group_name = p_group_name
     GROUP BY
         s.code, s.name, s.last_name, r.roll_code
     ORDER BY
@@ -36,7 +41,7 @@ BEGIN
 END;
 $$;
 
--- Create view for default ranking (all students)
+-- Create view for default ranking (requires parameters, returns empty by default)
 CREATE OR REPLACE VIEW public.student_ranking AS
 SELECT
     roll_code,
@@ -44,7 +49,7 @@ SELECT
     last_name,
     average_score,
     total_evaluations
-FROM public.get_student_ranking();
+FROM public.get_student_ranking(NULL, NULL);
 
 -- Add indexes for optimal performance
 CREATE INDEX IF NOT EXISTS idx_eval_results_register_section_ranking

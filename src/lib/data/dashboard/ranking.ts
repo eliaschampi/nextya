@@ -3,7 +3,7 @@ import type { Database } from '$lib/database';
 import type { StudentRanking, RankingFilters } from '$lib/types/dashboard/ranking';
 
 /**
- * Get student ranking with optional filters
+ * Get student ranking with required filters
  */
 export async function getStudentRanking(
 	db: Database,
@@ -12,10 +12,15 @@ export async function getStudentRanking(
 	try {
 		const { level_code, group_name } = filters;
 
+		// Return empty array if either parameter is missing
+		if (!level_code || !group_name) {
+			return [];
+		}
+
 		const result = await sql<StudentRanking>`
 			SELECT * FROM get_student_ranking(
-				${level_code ? sql`${level_code}::UUID` : sql`NULL`},
-				${group_name ? sql`${group_name}::CHAR(1)` : sql`NULL`}
+				${level_code}::UUID,
+				${group_name}::CHAR(1)
 			)
 		`.execute(db);
 
