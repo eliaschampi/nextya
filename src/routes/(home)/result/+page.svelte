@@ -12,7 +12,8 @@
 		SortDesc,
 		FileDown,
 		Trash2,
-		AlertTriangle
+		AlertTriangle,
+		ChevronDown
 	} from 'lucide-svelte';
 	import type { EvalWithSections, ResultItem } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
@@ -293,6 +294,57 @@
 		}
 	}
 
+	async function exportToExcelDetailed() {
+		if (!storeState.selectedEval || !canExportResults) return;
+
+		try {
+			showToast('Preparando exportación detallada...', 'info');
+
+			// Use the browser's fetch API to download the file
+			const response = await fetch(
+				`/api/impcsv/export-detailed?eval_code=${storeState.selectedEval.code}`,
+				{
+					method: 'GET'
+				}
+			);
+
+			if (!response.ok) {
+				throw new Error('Error al exportar resultados detallados');
+			}
+
+			// Get the filename from the Content-Disposition header or use a default
+			const contentDisposition = response.headers.get('Content-Disposition');
+			let filename = 'resultados_detallado.csv';
+
+			if (contentDisposition) {
+				const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+				if (filenameMatch && filenameMatch[1]) {
+					filename = filenameMatch[1];
+				}
+			}
+
+			// Convert the response to a blob
+			const blob = await response.blob();
+
+			// Create a download link and trigger the download
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+
+			// Clean up
+			URL.revokeObjectURL(url);
+			document.body.removeChild(a);
+
+			showToast('Resultados detallados exportados correctamente', 'success');
+		} catch (error) {
+			console.error('Error exportando resultados detallados:', error);
+			showToast('No se pudieron exportar los resultados detallados', 'danger');
+		}
+	}
+
 	// Delete functions
 	function openDeleteModal(result: ResultItem | null = null) {
 		if (!canDeleteResults) return;
@@ -491,15 +543,32 @@
 								<SortAsc size={16} />
 							{/if}
 						</button>
-						<button
-							class="btn btn-sm btn-success btn-outline"
-							onclick={exportToExcel}
-							title="Exportar a Excel"
-							disabled={filteredResults.length === 0 || !canExportResults}
-						>
-							<FileDown size={16} class="mr-1" />
-							Excel
-						</button>
+						<!-- Export dropdown -->
+						<details class="dropdown dropdown-end">
+							<summary
+								class="btn btn-sm btn-success btn-outline"
+								class:btn-disabled={filteredResults.length === 0 || !canExportResults}
+								title="Exportar a Excel"
+							>
+								<FileDown size={16} class="mr-1" />
+								Excel
+								<ChevronDown size={14} />
+							</summary>
+							<ul class="dropdown-content menu bg-base-100 rounded-box z-[1] w-44 p-2 shadow">
+								<li>
+									<button onclick={exportToExcel}>
+										<FileDown size={16} />
+										General
+									</button>
+								</li>
+								<li>
+									<button onclick={exportToExcelDetailed}>
+										<FileDown size={16} />
+										Detallado
+									</button>
+								</li>
+							</ul>
+						</details>
 						<button
 							class="btn btn-sm btn-error btn-outline"
 							onclick={() => openDeleteModal()}
