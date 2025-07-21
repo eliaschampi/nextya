@@ -128,6 +128,14 @@ export interface Registers {
 	user_code: string;
 }
 
+export interface StudentRanking {
+	average_score: Numeric | null;
+	last_name: string | null;
+	name: string | null;
+	roll_code: string | null;
+	total_evaluations: number | null;
+}
+
 export interface StudentRegisterResults {
 	blank_count: number | null;
 	calculated_at: Timestamp | null;
@@ -200,6 +208,7 @@ export interface DB {
 	migrations: Migrations;
 	permissions: Permissions;
 	registers: Registers;
+	student_ranking: StudentRanking;
 	student_register_results: StudentRegisterResults;
 	student_registers: StudentRegisters;
 	students: Students;
