@@ -573,29 +573,27 @@
 	{#if selectedGroupName}
 		<h2 class="text-xl font-semibold mb-4">Datos del Grupo {selectedGroupName}</h2>
 		{#if groupData}
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-				<!-- Scores by Evaluation Chart -->
-				{#if groupData.scoresByEval && groupData.scoresByEval.length > 0}
-					<div
-						class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden"
-					>
-						<div class="card-body p-5">
-							<div class="flex items-center gap-3 mb-3">
-								<div
-									class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/15 text-primary"
-								>
-									<Activity class="h-5 w-5" />
-								</div>
-								<h3 class="text-lg font-medium">Evolución de Puntajes</h3>
+			<!-- Scores by Evaluation Chart - Full Width -->
+			{#if groupData.scoresByEval && groupData.scoresByEval.length > 0}
+				<div
+					class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden mb-6"
+				>
+					<div class="card-body p-5">
+						<div class="flex items-center gap-3 mb-3">
+							<div
+								class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/15 text-primary"
+							>
+								<Activity class="h-5 w-5" />
 							</div>
-							<div class="divider my-0"></div>
-							<div class="h-64 relative mt-2">
-								<canvas id="scoresByEvalChart"></canvas>
-							</div>
+							<h3 class="text-lg font-medium">Evolución de Puntajes</h3>
+						</div>
+						<div class="divider my-0"></div>
+						<div class="h-80 relative mt-2">
+							<canvas id="scoresByEvalChart"></canvas>
 						</div>
 					</div>
-				{/if}
-			</div>
+				</div>
+			{/if}
 		{:else if isLoadingGroup}
 			<div class="flex justify-center items-center h-32 bg-base-200 rounded-xl p-4">
 				<div class="loading loading-spinner loading-md text-primary"></div>
