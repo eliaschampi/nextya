@@ -28,6 +28,7 @@
 	import type { ApiOmrBatchResponse, ApiOmrBatchRequest } from '$lib/types/api';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { SvelteMap } from 'svelte/reactivity';
 	import { evaluationStore } from '$lib/stores/evaluation';
 
 	interface ValidationError {
@@ -143,7 +144,7 @@
 		if (isProcessingBatch) return [];
 
 		const errors: ValidationError[] = [];
-		const rollCodeMap = new Map<string, string[]>();
+		const rollCodeMap = new SvelteMap<string, string[]>();
 
 		for (const entry of fileEntries) {
 			if (entry.status === 'pending' && !entry.formatValid) {

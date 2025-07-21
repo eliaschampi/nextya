@@ -2,6 +2,7 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { Trophy, SortAsc, SortDesc } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import type { Levels } from '$lib/types';
 	import type { StudentRanking } from '$lib/types/dashboard/ranking';
 
@@ -43,7 +44,7 @@
 
 	// Handle level change
 	function handleLevelChange() {
-		const params = new URLSearchParams();
+		const params = new SvelteURLSearchParams();
 		if (selectedLevelCode) {
 			params.set('level', selectedLevelCode);
 		}
@@ -55,7 +56,7 @@
 
 	// Handle group change
 	function handleGroupChange() {
-		const params = new URLSearchParams();
+		const params = new SvelteURLSearchParams();
 		if (selectedLevelCode) {
 			params.set('level', selectedLevelCode);
 		}
