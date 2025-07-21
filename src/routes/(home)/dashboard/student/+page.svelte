@@ -14,9 +14,6 @@
 	import StudentCard from '$lib/components/StudentCard.svelte';
 	import StudentSearchModal from '$lib/components/StudentSearchModal.svelte';
 
-	// We don't need to use the props in this component
-	// as we're using a student search instead
-
 	// Import the types we need
 	import type { StudentRegister, ResultItem } from '$lib/types';
 
@@ -74,8 +71,10 @@
 				callbacks: {
 					label: function (context: { dataset: { label?: string }; label?: string; raw: unknown }) {
 						const label = context.dataset.label || context.label || '';
-						const value = context.raw as number;
-						return value !== null ? `${label}: ${value.toFixed(2)}` : `${label}: Sin datos`;
+						const value = context.raw;
+						return value !== null && typeof value === 'number'
+							? `${label}: ${value.toFixed(2)}`
+							: `${label}: Sin datos`;
 					}
 				}
 			}
@@ -85,7 +84,10 @@
 	// Derived values for chart data
 	const scoreEvolutionChartData = $derived(prepareScoreEvolutionData(scoreEvolutionData));
 	const courseScoresChartData = $derived(prepareCourseScoresData(courseScoresData));
-	const courseEvolutionChartData = $derived(prepareCourseEvolutionData(courseEvolutionData));
+	// Course evolution data depends on both courseEvolutionData AND selectedCourseForEvolution
+	const courseEvolutionChartData = $derived(
+		prepareCourseEvolutionData(courseEvolutionData, selectedCourseForEvolution)
+	);
 
 	// Track chart data changes and render charts when data is available
 	const shouldRenderScoreEvolutionChart = $derived(
@@ -114,6 +116,46 @@
 	$effect(() => {
 		if (shouldRenderCourseEvolutionChart) {
 			renderCourseEvolutionChart();
+		}
+	});
+
+	// Update available courses when course evolution data changes
+	$effect(() => {
+		if (
+			courseEvolutionData &&
+			Array.isArray(courseEvolutionData) &&
+			courseEvolutionData.length > 0
+		) {
+			const courseGroups = courseEvolutionData.reduce(
+				(acc, item) => {
+					const courseName = item.course_name || 'Sin nombre';
+					if (!acc[courseName]) acc[courseName] = [];
+					acc[courseName].push(item);
+					return acc;
+				},
+				{} as Record<string, StudentCourseEvolution[]>
+			);
+
+			const courseNames = Object.keys(courseGroups);
+
+			// Only update availableCourses if different
+			if (JSON.stringify(availableCourses) !== JSON.stringify(courseNames)) {
+				availableCourses = courseNames;
+			}
+		} else {
+			// Reset when no data
+			if (availableCourses.length > 0) {
+				availableCourses = [];
+			}
+		}
+	});
+
+	// Separate effect for initial course selection to avoid loops
+	$effect(() => {
+		if (availableCourses.length > 0 && !selectedCourseForEvolution) {
+			selectedCourseForEvolution = availableCourses[0];
+		} else if (availableCourses.length === 0 && selectedCourseForEvolution !== null) {
+			selectedCourseForEvolution = null;
 		}
 	});
 
@@ -300,7 +342,10 @@
 	/**
 	 * Prepare data for course evolution chart
 	 */
-	function prepareCourseEvolutionData(data: StudentCourseEvolution[] | null) {
+	function prepareCourseEvolutionData(
+		data: StudentCourseEvolution[] | null,
+		selectedCourse: string | null
+	) {
 		const emptyData = { labels: [], datasets: [] };
 		const validation = validateChartData(data, emptyData);
 		if (validation) return validation;
@@ -317,17 +362,14 @@
 				{} as Record<string, StudentCourseEvolution[]>
 			);
 
-			// Update available courses and set initial selection
+			// Get course names (don't mutate state here)
 			const courseNames = Object.keys(courseGroups);
-			availableCourses = courseNames;
-			if (!selectedCourseForEvolution && courseNames.length > 0) {
-				selectedCourseForEvolution = courseNames[0];
-			}
 
 			// Get courses to show and unique evaluations
-			const coursesToShow = selectedCourseForEvolution
-				? [selectedCourseForEvolution]
-				: courseNames.slice(0, 1);
+			const coursesToShow =
+				selectedCourse && courseNames.includes(selectedCourse)
+					? [selectedCourse]
+					: courseNames.slice(0, 1);
 			const uniqueEvals = Array.from(
 				new Set(
 					[...data!]
@@ -342,7 +384,7 @@
 				const courseData = courseGroups[courseName] || [];
 				const dataPoints = uniqueEvals.map((evalName) => {
 					const evalData = courseData.find((item) => item.eval_name === evalName);
-					return evalData ? evalData.score : null;
+					return evalData && typeof evalData.score === 'number' ? evalData.score : null;
 				});
 
 				return {
@@ -357,7 +399,10 @@
 				};
 			});
 
-			return { labels: uniqueEvals, datasets };
+			return {
+				labels: uniqueEvals,
+				datasets
+			};
 		} catch (error) {
 			console.error('Error processing course evolution data:', error);
 			return emptyData;
