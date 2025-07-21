@@ -14,15 +14,9 @@
 	import StudentCard from '$lib/components/StudentCard.svelte';
 	import StudentSearchModal from '$lib/components/StudentSearchModal.svelte';
 
-	// Import the types we need
-	import type { StudentRegister, ResultItem } from '$lib/types';
-
 	// Store state
 	let storeState = $state({
 		selectedStudent: null as Students | null,
-		registers: [] as StudentRegister[],
-		results: [] as ResultItem[],
-		selectedRegister: null as string | null,
 		isLoading: false
 	});
 
@@ -84,7 +78,6 @@
 	// Derived values for chart data
 	const scoreEvolutionChartData = $derived(prepareScoreEvolutionData(scoreEvolutionData));
 	const courseScoresChartData = $derived(prepareCourseScoresData(courseScoresData));
-	// Course evolution data depends on both courseEvolutionData AND selectedCourseForEvolution
 	const courseEvolutionChartData = $derived(
 		prepareCourseEvolutionData(courseEvolutionData, selectedCourseForEvolution)
 	);
@@ -142,20 +135,25 @@
 			if (JSON.stringify(availableCourses) !== JSON.stringify(courseNames)) {
 				availableCourses = courseNames;
 			}
+
+			// Reset selected if not in available or initial setup
+			if (selectedCourseForEvolution === null && availableCourses.length > 0) {
+				selectedCourseForEvolution = ''; // '' represents "all"
+			} else if (
+				selectedCourseForEvolution &&
+				selectedCourseForEvolution !== '' &&
+				!availableCourses.includes(selectedCourseForEvolution)
+			) {
+				selectedCourseForEvolution = '';
+			}
 		} else {
 			// Reset when no data
 			if (availableCourses.length > 0) {
 				availableCourses = [];
 			}
-		}
-	});
-
-	// Separate effect for initial course selection to avoid loops
-	$effect(() => {
-		if (availableCourses.length > 0 && !selectedCourseForEvolution) {
-			selectedCourseForEvolution = availableCourses[0];
-		} else if (availableCourses.length === 0 && selectedCourseForEvolution !== null) {
-			selectedCourseForEvolution = null;
+			if (selectedCourseForEvolution !== null) {
+				selectedCourseForEvolution = null;
+			}
 		}
 	});
 
@@ -240,18 +238,6 @@
 	}
 
 	/**
-	 * Change the selected course for evolution chart
-	 * @param courseName Course name to select
-	 */
-	function selectCourseForEvolution(courseName: string) {
-		selectedCourseForEvolution = courseName;
-		// Re-render the chart with new data
-		if (shouldRenderCourseEvolutionChart) {
-			renderCourseEvolutionChart();
-		}
-	}
-
-	/**
 	 * Load dashboard data for a student
 	 * @param studentCode Student code to load data for
 	 */
@@ -312,7 +298,7 @@
 
 			return {
 				labels: sortedData.map((item) => item.eval_name || 'Sin nombre'),
-				values: sortedData.map((item) => item.score || 0)
+				values: sortedData.map((item) => (item.score != null ? Number(item.score) : 0))
 			};
 		} catch (error) {
 			console.error('Error processing score evolution data:', error);
@@ -331,7 +317,7 @@
 		try {
 			return {
 				labels: data!.map((item) => item.course_name || 'Sin nombre'),
-				values: data!.map((item) => item.average_score || 0)
+				values: data!.map((item) => (item.average_score != null ? Number(item.average_score) : 0))
 			};
 		} catch (error) {
 			console.error('Error processing course scores data:', error);
@@ -362,27 +348,29 @@
 				{} as Record<string, StudentCourseEvolution[]>
 			);
 
-			// Get course names (don't mutate state here)
+			// Get course names
 			const courseNames = Object.keys(courseGroups);
 
-			// Get courses to show and unique evaluations
-			const coursesToShow =
-				selectedCourse && courseNames.includes(selectedCourse)
-					? [selectedCourse]
-					: courseNames.slice(0, 1);
+			// Determine courses to show
+			let coursesToShow: string[];
+			if (!selectedCourse || selectedCourse === '') {
+				coursesToShow = courseNames;
+			} else if (courseNames.includes(selectedCourse)) {
+				coursesToShow = [selectedCourse];
+			} else {
+				coursesToShow = [];
+			}
 
 			// If no courses to show, return empty data
 			if (coursesToShow.length === 0) {
 				return emptyData;
 			}
 
-			const uniqueEvals = Array.from(
-				new Set(
-					[...data!]
-						.sort((a, b) => new Date(a.eval_date).getTime() - new Date(b.eval_date).getTime())
-						.map((item) => item.eval_name)
-				)
+			// Get unique evaluations in chronological order
+			const sortedData = [...data!].sort(
+				(a, b) => new Date(a.eval_date).getTime() - new Date(b.eval_date).getTime()
 			);
+			const uniqueEvals = Array.from(new Set(sortedData.map((item) => item.eval_name)));
 
 			// Create datasets
 			const allColors = getAllChartColors();
@@ -390,7 +378,7 @@
 				const courseData = courseGroups[courseName] || [];
 				const dataPoints = uniqueEvals.map((evalName) => {
 					const evalData = courseData.find((item) => item.eval_name === evalName);
-					return evalData && typeof evalData.score === 'number' ? evalData.score : null;
+					return evalData && evalData.score != null ? Number(evalData.score) : null;
 				});
 
 				return {
@@ -653,9 +641,8 @@
 							<select
 								class="select select-sm select-bordered bg-base-100"
 								bind:value={selectedCourseForEvolution}
-								onchange={() =>
-									selectCourseForEvolution(selectedCourseForEvolution || availableCourses[0])}
 							>
+								<option value="">Todos</option>
 								{#each availableCourses as course (course)}
 									<option value={course}>{course}</option>
 								{/each}
