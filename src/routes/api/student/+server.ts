@@ -1,16 +1,10 @@
-/**
- * STUDENT SEARCH API - Modern Clean Architecture
- *
- * ARCHITECTURE PRINCIPLE: Direct Kysely database access for simplicity and consistency
- */
-
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
 	const searchQuery = url.searchParams.get('search');
 
-	if (!searchQuery) {
+	if (!searchQuery || !(await locals.can('students:read'))) {
 		return json([]);
 	}
 

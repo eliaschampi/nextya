@@ -33,7 +33,7 @@
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
 				<div class="flex justify-between py-1 border-b border-base-300/50">
 					<span class="text-base-content/70">Versión</span>
-					<span class="font-medium">1.0.1</span>
+					<span class="font-medium">1.5.0</span>
 				</div>
 				<div class="flex justify-between py-1 border-b border-base-300/50">
 					<span class="text-base-content/70">Framework</span>

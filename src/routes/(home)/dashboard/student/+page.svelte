@@ -43,6 +43,8 @@
 	let scoreEvolutionData = $state<StudentScoreEvolution[] | null>(null);
 	let courseScoresData = $state<StudentCourseScore[] | null>(null);
 	let courseEvolutionData = $state<StudentCourseEvolution[] | null>(null);
+	let selectedCourseForEvolution = $state<string | null>(null);
+	let availableCourses = $state<string[]>([]);
 
 	// Chart references
 	let scoreEvolutionChart: Chart | null = $state(null);
@@ -54,7 +56,30 @@
 		primary: 'rgba(100, 220, 150, 0.8)',
 		secondary: 'rgba(54, 162, 235, 0.8)',
 		tertiary: 'rgba(255, 206, 86, 0.8)',
-		quaternary: 'rgba(255, 99, 132, 0.8)'
+		quaternary: 'rgba(255, 99, 132, 0.8)',
+		extended: [
+			'rgba(153, 102, 255, 0.8)',
+			'rgba(255, 159, 64, 0.8)',
+			'rgba(75, 192, 192, 0.8)',
+			'rgba(201, 203, 207, 0.8)'
+		]
+	};
+
+	// Common chart options
+	const baseChartOptions = {
+		responsive: true,
+		maintainAspectRatio: false,
+		plugins: {
+			tooltip: {
+				callbacks: {
+					label: function (context: { dataset: { label?: string }; label?: string; raw: unknown }) {
+						const label = context.dataset.label || context.label || '';
+						const value = context.raw as number;
+						return value !== null ? `${label}: ${value.toFixed(2)}` : `${label}: Sin datos`;
+					}
+				}
+			}
+		}
 	};
 
 	// Derived values for chart data
@@ -117,20 +142,49 @@
 			courseScoresChart.destroy();
 			courseScoresChart = null;
 		}
+		if (courseEvolutionChart) {
+			courseEvolutionChart.destroy();
+			courseEvolutionChart = null;
+		}
+	}
+
+	// Helper functions
+	const openStudentSearchModal = () => (studentSearchModalOpen = true);
+	const closeStudentSearchModal = () => (studentSearchModalOpen = false);
+
+	/**
+	 * Validates and returns empty chart data structure
+	 */
+	function validateChartData<T, R>(data: T[] | null, emptyStructure: R): R | null {
+		if (!data || !Array.isArray(data) || !data.length) {
+			return emptyStructure;
+		}
+		return null; // Valid data
 	}
 
 	/**
-	 * Open student search modal
+	 * Handles API response errors consistently
 	 */
-	function openStudentSearchModal() {
-		studentSearchModalOpen = true;
+	async function handleApiResponse(response: Response, errorMessage: string) {
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			const message = errorData.error || errorMessage;
+			throw new Error(message);
+		}
+		return response.json();
 	}
 
 	/**
-	 * Close student search modal
+	 * Gets all chart colors including extended palette
 	 */
-	function closeStudentSearchModal() {
-		studentSearchModalOpen = false;
+	function getAllChartColors() {
+		return [
+			chartColors.primary,
+			chartColors.secondary,
+			chartColors.tertiary,
+			chartColors.quaternary,
+			...chartColors.extended
+		];
 	}
 
 	/**
@@ -144,6 +198,18 @@
 	}
 
 	/**
+	 * Change the selected course for evolution chart
+	 * @param courseName Course name to select
+	 */
+	function selectCourseForEvolution(courseName: string) {
+		selectedCourseForEvolution = courseName;
+		// Re-render the chart with new data
+		if (shouldRenderCourseEvolutionChart) {
+			renderCourseEvolutionChart();
+		}
+	}
+
+	/**
 	 * Load dashboard data for a student
 	 * @param studentCode Student code to load data for
 	 */
@@ -151,8 +217,12 @@
 		dashboardLoading = true;
 		destroyCharts();
 
+		// Reset course selection state
+		selectedCourseForEvolution = null;
+		availableCourses = [];
+
 		try {
-			// Load score evolution, course scores, and course evolution in parallel
+			// Load all data in parallel
 			const [scoreEvolutionResponse, courseScoresResponse, courseEvolutionResponse] =
 				await Promise.all([
 					fetch(`/api/dashboard/student/scores/${studentCode}`),
@@ -160,31 +230,12 @@
 					fetch(`/api/dashboard/student/course-evolution/${studentCode}`)
 				]);
 
-			// Handle score evolution response
-			if (!scoreEvolutionResponse.ok) {
-				const errorData = await scoreEvolutionResponse.json().catch(() => ({}));
-				const errorMessage = errorData.error || 'Error al cargar datos de evolución de puntajes';
-				throw new Error(errorMessage);
-			}
-
-			// Handle course scores response
-			if (!courseScoresResponse.ok) {
-				const errorData = await courseScoresResponse.json().catch(() => ({}));
-				const errorMessage = errorData.error || 'Error al cargar datos de cursos';
-				throw new Error(errorMessage);
-			}
-
-			// Handle course evolution response
-			if (!courseEvolutionResponse.ok) {
-				const errorData = await courseEvolutionResponse.json().catch(() => ({}));
-				const errorMessage = errorData.error || 'Error al cargar datos de evolución por curso';
-				throw new Error(errorMessage);
-			}
-
-			// Parse response data
-			const scoreEvolution = await scoreEvolutionResponse.json();
-			const courseScores = await courseScoresResponse.json();
-			const courseEvolution = await courseEvolutionResponse.json();
+			// Handle all responses using helper function
+			const [scoreEvolution, courseScores, courseEvolution] = await Promise.all([
+				handleApiResponse(scoreEvolutionResponse, 'Error al cargar datos de evolución de puntajes'),
+				handleApiResponse(courseScoresResponse, 'Error al cargar datos de cursos'),
+				handleApiResponse(courseEvolutionResponse, 'Error al cargar datos de evolución por curso')
+			]);
 
 			// Update state with response data
 			scoreEvolutionData = scoreEvolution;
@@ -206,17 +257,14 @@
 
 	/**
 	 * Prepare data for score evolution chart
-	 * @param data Score evolution data
-	 * @returns Formatted data for chart
 	 */
 	function prepareScoreEvolutionData(data: StudentScoreEvolution[] | null) {
-		if (!data || !Array.isArray(data) || !data.length) {
-			return { labels: [], values: [] };
-		}
+		const emptyData = { labels: [], values: [] };
+		const validation = validateChartData(data, emptyData);
+		if (validation) return validation;
 
 		try {
-			// Sort data by date
-			const sortedData = [...data].sort(
+			const sortedData = [...data!].sort(
 				(a, b) => new Date(a.eval_date).getTime() - new Date(b.eval_date).getTime()
 			);
 
@@ -226,84 +274,82 @@
 			};
 		} catch (error) {
 			console.error('Error processing score evolution data:', error);
-			return { labels: [], values: [] };
+			return emptyData;
 		}
 	}
 
 	/**
 	 * Prepare data for course scores chart
-	 * @param data Course scores data
-	 * @returns Formatted data for chart
 	 */
 	function prepareCourseScoresData(data: StudentCourseScore[] | null) {
-		if (!data || !Array.isArray(data) || !data.length) {
-			return { labels: [], values: [] };
-		}
+		const emptyData = { labels: [], values: [] };
+		const validation = validateChartData(data, emptyData);
+		if (validation) return validation;
 
 		try {
 			return {
-				labels: data.map((item) => item.course_name || 'Sin nombre'),
-				values: data.map((item) => item.average_score || 0)
+				labels: data!.map((item) => item.course_name || 'Sin nombre'),
+				values: data!.map((item) => item.average_score || 0)
 			};
 		} catch (error) {
 			console.error('Error processing course scores data:', error);
-			return { labels: [], values: [] };
+			return emptyData;
 		}
 	}
 
 	/**
 	 * Prepare data for course evolution chart
-	 * @param data Course evolution data
-	 * @returns Formatted data for chart
 	 */
 	function prepareCourseEvolutionData(data: StudentCourseEvolution[] | null) {
-		if (!data || !Array.isArray(data) || !data.length) {
-			return { labels: [], datasets: [] };
-		}
+		const emptyData = { labels: [], datasets: [] };
+		const validation = validateChartData(data, emptyData);
+		if (validation) return validation;
 
 		try {
 			// Group data by course
-			const courseGroups = data.reduce(
+			const courseGroups = data!.reduce(
 				(acc, item) => {
 					const courseName = item.course_name || 'Sin nombre';
-					if (!acc[courseName]) {
-						acc[courseName] = [];
-					}
+					if (!acc[courseName]) acc[courseName] = [];
 					acc[courseName].push(item);
 					return acc;
 				},
 				{} as Record<string, StudentCourseEvolution[]>
 			);
 
-			// Get all unique evaluation names sorted by date
-			const allEvals = [...data].sort(
-				(a, b) => new Date(a.eval_date).getTime() - new Date(b.eval_date).getTime()
-			);
-			const uniqueEvals = Array.from(new Set(allEvals.map((item) => item.eval_name)));
-
-			// Create datasets for each course
+			// Update available courses and set initial selection
 			const courseNames = Object.keys(courseGroups);
-			const datasets = courseNames.map((courseName, index) => {
-				const courseData = courseGroups[courseName];
+			availableCourses = courseNames;
+			if (!selectedCourseForEvolution && courseNames.length > 0) {
+				selectedCourseForEvolution = courseNames[0];
+			}
+
+			// Get courses to show and unique evaluations
+			const coursesToShow = selectedCourseForEvolution
+				? [selectedCourseForEvolution]
+				: courseNames.slice(0, 1);
+			const uniqueEvals = Array.from(
+				new Set(
+					[...data!]
+						.sort((a, b) => new Date(a.eval_date).getTime() - new Date(b.eval_date).getTime())
+						.map((item) => item.eval_name)
+				)
+			);
+
+			// Create datasets
+			const allColors = getAllChartColors();
+			const datasets = coursesToShow.map((courseName, index) => {
+				const courseData = courseGroups[courseName] || [];
 				const dataPoints = uniqueEvals.map((evalName) => {
 					const evalData = courseData.find((item) => item.eval_name === evalName);
 					return evalData ? evalData.score : null;
 				});
 
-				const colors = [
-					chartColors.primary,
-					chartColors.secondary,
-					chartColors.tertiary,
-					chartColors.quaternary,
-					'rgba(153, 102, 255, 0.8)',
-					'rgba(255, 159, 64, 0.8)'
-				];
-
 				return {
 					label: courseName,
 					data: dataPoints,
-					borderColor: colors[index % colors.length],
-					backgroundColor: colors[index % colors.length].replace('0.8', '0.1'),
+					borderColor: allColors[index % allColors.length],
+					backgroundColor: allColors[index % allColors.length].replace('0.8', '0.1'),
 					borderWidth: 2,
 					fill: false,
 					tension: 0.4,
@@ -311,13 +357,10 @@
 				};
 			});
 
-			return {
-				labels: uniqueEvals,
-				datasets
-			};
+			return { labels: uniqueEvals, datasets };
 		} catch (error) {
 			console.error('Error processing course evolution data:', error);
-			return { labels: [], datasets: [] };
+			return emptyData;
 		}
 	}
 
@@ -327,12 +370,10 @@
 	function renderScoreEvolutionChart() {
 		if (!scoreEvolutionChartData.labels.length) return;
 
-		// Ensure DOM is ready before rendering
 		setTimeout(() => {
 			const ctx = document.getElementById('scoreEvolutionChart') as HTMLCanvasElement;
 			if (!ctx) return;
 
-			// Destroy existing chart if it exists
 			if (scoreEvolutionChart) scoreEvolutionChart.destroy();
 
 			scoreEvolutionChart = new Chart(ctx, {
@@ -352,36 +393,14 @@
 					]
 				},
 				options: {
-					responsive: true,
-					maintainAspectRatio: false,
+					...baseChartOptions,
 					plugins: {
-						legend: {
-							display: false
-						},
-						tooltip: {
-							callbacks: {
-								label: function (context) {
-									const value = context.raw as number;
-									return `Puntaje: ${value.toFixed(2)}`;
-								}
-							}
-						}
+						...baseChartOptions.plugins,
+						legend: { display: false }
 					},
 					scales: {
-						x: {
-							title: {
-								display: true,
-								text: 'Evaluaciones'
-							}
-						},
-						y: {
-							beginAtZero: true,
-							max: 20,
-							title: {
-								display: true,
-								text: 'Puntaje'
-							}
-						}
+						x: { title: { display: true, text: 'Evaluaciones' } },
+						y: { beginAtZero: true, max: 20, title: { display: true, text: 'Puntaje' } }
 					}
 				}
 			});
@@ -394,12 +413,10 @@
 	function renderCourseScoresChart() {
 		if (!courseScoresChartData.labels.length) return;
 
-		// Ensure DOM is ready before rendering
 		setTimeout(() => {
 			const ctx = document.getElementById('courseScoresChart') as HTMLCanvasElement;
 			if (!ctx) return;
 
-			// Destroy existing chart if it exists
 			if (courseScoresChart) courseScoresChart.destroy();
 
 			courseScoresChart = new Chart(ctx, {
@@ -410,40 +427,18 @@
 						{
 							label: 'Promedio de Puntajes',
 							data: courseScoresChartData.values,
-							backgroundColor: [
-								chartColors.primary,
-								chartColors.secondary,
-								chartColors.tertiary,
-								chartColors.quaternary,
-								'rgba(153, 102, 255, 0.8)',
-								'rgba(255, 159, 64, 0.8)',
-								'rgba(75, 192, 192, 0.8)',
-								'rgba(201, 203, 207, 0.8)'
-							],
+							backgroundColor: getAllChartColors(),
 							borderWidth: 1
 						}
 					]
 				},
 				options: {
-					responsive: true,
-					maintainAspectRatio: false,
+					...baseChartOptions,
 					plugins: {
+						...baseChartOptions.plugins,
 						legend: {
-							position: 'right',
-							labels: {
-								font: {
-									size: 12
-								}
-							}
-						},
-						tooltip: {
-							callbacks: {
-								label: function (context) {
-									const label = context.label || '';
-									const value = context.raw as number;
-									return `${label}: ${value.toFixed(2)}`;
-								}
-							}
+							position: 'right' as const,
+							labels: { font: { size: 12 } }
 						}
 					}
 				}
@@ -458,12 +453,10 @@
 		if (!courseEvolutionChartData.labels.length || !courseEvolutionChartData.datasets.length)
 			return;
 
-		// Ensure DOM is ready before rendering
 		setTimeout(() => {
 			const ctx = document.getElementById('courseEvolutionChart') as HTMLCanvasElement;
 			if (!ctx) return;
 
-			// Destroy existing chart if it exists
 			if (courseEvolutionChart) courseEvolutionChart.destroy();
 
 			courseEvolutionChart = new Chart(ctx, {
@@ -473,38 +466,14 @@
 					datasets: courseEvolutionChartData.datasets
 				},
 				options: {
-					responsive: true,
-					maintainAspectRatio: false,
+					...baseChartOptions,
 					plugins: {
-						legend: {
-							display: true,
-							position: 'top'
-						},
-						tooltip: {
-							callbacks: {
-								label: function (context) {
-									const label = context.dataset.label || '';
-									const value = context.raw as number;
-									return value !== null ? `${label}: ${value.toFixed(2)}` : `${label}: Sin datos`;
-								}
-							}
-						}
+						...baseChartOptions.plugins,
+						legend: { display: true, position: 'top' as const }
 					},
 					scales: {
-						x: {
-							title: {
-								display: true,
-								text: 'Evaluaciones'
-							}
-						},
-						y: {
-							beginAtZero: true,
-							max: 20,
-							title: {
-								display: true,
-								text: 'Puntaje'
-							}
-						}
+						x: { title: { display: true, text: 'Evaluaciones' } },
+						y: { beginAtZero: true, max: 20, title: { display: true, text: 'Puntaje' } }
 					}
 				}
 			});
@@ -555,7 +524,7 @@
 		<StudentCard className="mb-6" />
 
 		<!-- Dashboard Content -->
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
 			<!-- Score Evolution Chart -->
 			<div
 				class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden"
@@ -611,13 +580,15 @@
 					{/if}
 				</div>
 			</div>
+		</div>
 
-			<!-- Course Evolution Chart -->
-			<div
-				class="card bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/20 rounded-xl overflow-hidden"
-			>
-				<div class="card-body p-5">
-					<div class="flex items-center gap-3 mb-3">
+		<!-- Course Evolution Chart - Full Width -->
+		<div
+			class="card bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/20 rounded-xl overflow-hidden"
+		>
+			<div class="card-body p-5">
+				<div class="flex items-center justify-between mb-3">
+					<div class="flex items-center gap-3">
 						<div
 							class="w-8 h-8 flex items-center justify-center rounded-lg bg-accent/15 text-accent"
 						>
@@ -625,19 +596,34 @@
 						</div>
 						<h3 class="text-lg font-medium">Evolución por Curso</h3>
 					</div>
-					<div class="divider my-0"></div>
-					{#if !courseEvolutionData || courseEvolutionData.length === 0}
-						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
-							<div class="text-4xl mb-4">📈</div>
-							<p class="text-lg font-medium">No hay datos disponibles</p>
-							<p class="text-sm mt-2">No se encontraron datos de evolución por curso</p>
-						</div>
-					{:else}
-						<div class="h-80 relative mt-2">
-							<canvas id="courseEvolutionChart"></canvas>
+					{#if availableCourses.length > 1}
+						<div class="flex items-center gap-2">
+							<span class="text-sm text-base-content/70">Curso:</span>
+							<select
+								class="select select-sm select-bordered bg-base-100"
+								bind:value={selectedCourseForEvolution}
+								onchange={() =>
+									selectCourseForEvolution(selectedCourseForEvolution || availableCourses[0])}
+							>
+								{#each availableCourses as course (course)}
+									<option value={course}>{course}</option>
+								{/each}
+							</select>
 						</div>
 					{/if}
 				</div>
+				<div class="divider my-0"></div>
+				{#if !courseEvolutionData || courseEvolutionData.length === 0}
+					<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
+						<div class="text-4xl mb-4">📈</div>
+						<p class="text-lg font-medium">No hay datos disponibles</p>
+						<p class="text-sm mt-2">No se encontraron datos de evolución por curso</p>
+					</div>
+				{:else}
+					<div class="h-80 relative mt-2">
+						<canvas id="courseEvolutionChart"></canvas>
+					</div>
+				{/if}
 			</div>
 		</div>
 	{/if}

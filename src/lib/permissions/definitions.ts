@@ -217,6 +217,12 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
 		category: 'Dashboards',
 		description: 'Estadísticas de evaluaciones'
 	},
+	{
+		key: 'dashboard:ranking',
+		label: 'Dashboard ranking',
+		category: 'Dashboards',
+		description: 'Ranking de estudiantes'
+	},
 
 	// Sistema
 	{

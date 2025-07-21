@@ -8,7 +8,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const userCode = locals.user?.code;
 
 	// Check permissions
-	if (!userCode || !(await locals.can('dashboard:students'))) {
+	if (!userCode || !(await locals.can('dashboard:ranking'))) {
 		return {
 			levels: [],
 			students: [],

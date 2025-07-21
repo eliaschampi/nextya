@@ -117,9 +117,10 @@
 							class="dropdown-content menu bg-base-100 border border-base-300 w-56 mt-3 p-3 z-50 backdrop-blur-md overflow-hidden"
 						>
 							<li class="menu-title pt-0 pb-3 border-b border-base-300/30">
-								<span class="font-semibold text-base-content/90"
-									>{userData.name} {userData.last_name}</span
-								>
+								<span class="font-semibold text-base-content/90">
+									{userData.name}
+									{userData.last_name}
+								</span>
 							</li>
 							<li>
 								<a href="/profile" class="flex gap-3 py-2.5 hover:bg-primary/10 rounded-lg">

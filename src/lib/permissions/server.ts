@@ -63,6 +63,7 @@ export async function getUserPermissions(db: Database, userCode: string): Promis
 				'dashboard:courses',
 				'dashboard:students',
 				'dashboard:evals',
+				'dashboard:ranking',
 				// System
 				'system:config'
 			];
