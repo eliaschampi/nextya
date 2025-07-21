@@ -370,6 +370,12 @@
 				selectedCourse && courseNames.includes(selectedCourse)
 					? [selectedCourse]
 					: courseNames.slice(0, 1);
+
+			// If no courses to show, return empty data
+			if (coursesToShow.length === 0) {
+				return emptyData;
+			}
+
 			const uniqueEvals = Array.from(
 				new Set(
 					[...data!]
