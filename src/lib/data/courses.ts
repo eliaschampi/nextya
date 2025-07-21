@@ -1,78 +1,85 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Course } from '$lib/types';
+/**
+ * COURSES DATA LAYER - Modern Clean Architecture
+ *
+ * ARCHITECTURE PRINCIPLE: Use locals.db to avoid duplicate instances
+ */
 
-export async function getCourses(supabase: SupabaseClient) {
-	const { data: courses, error } = await supabase
-		.from('courses')
-		.select('*')
-		.order('order', { ascending: true });
-	return error ? [] : courses;
+import type { Courses } from '$lib/types';
+import type { Database } from '$lib/database';
+
+/**
+ * Get all courses ordered by display order
+ */
+export async function getCourses(db: Database): Promise<Courses[]> {
+	try {
+		return await db.selectFrom('courses').selectAll().orderBy('order', 'asc').execute();
+	} catch (error) {
+		console.error('Error fetching courses:', error);
+		return [];
+	}
 }
 
 /**
- * Updates the order of a course
- * @param supabase Supabase client
- * @param courseCode Course code to update
- * @param newOrder New order value
- * @returns True if successful, false otherwise
+ * Update course order
  */
 export async function updateCourseOrder(
-	supabase: SupabaseClient,
+	db: Database,
 	courseCode: string,
 	newOrder: number
 ): Promise<boolean> {
-	const { error } = await supabase
-		.from('courses')
-		.update({ order: newOrder })
-		.eq('code', courseCode);
+	try {
+		const result = await db
+			.updateTable('courses')
+			.set({ order: newOrder })
+			.where('code', '=', courseCode)
+			.execute();
 
-	return !error;
+		return result.length > 0;
+	} catch (error) {
+		console.error('Error updating course order:', error);
+		return false;
+	}
 }
 
 /**
- * Reorders courses when moving a course up or down
- * @param supabase Supabase client
- * @param courses List of all courses
- * @param courseCode Course code to move
- * @param direction 'up' or 'down'
- * @returns True if successful, false otherwise
+ * Reorder course (move up/down)
  */
 export async function reorderCourse(
-	supabase: SupabaseClient,
-	courses: Course[],
+	db: Database,
+	courses: Courses[],
 	courseCode: string,
 	direction: 'up' | 'down'
 ): Promise<boolean> {
-	// Find the current course and its index
-	const currentIndex = courses.findIndex((c) => c.code === courseCode);
-	if (currentIndex === -1) return false;
+	try {
+		// Find the current course
+		const currentCourse = courses.find((c) => c.code === courseCode);
+		if (!currentCourse) return false;
 
-	// Calculate target index based on direction
-	const targetIndex =
-		direction === 'up'
-			? Math.max(0, currentIndex - 1)
-			: Math.min(courses.length - 1, currentIndex + 1);
+		// Find the target course to swap with
+		const currentIndex = courses.findIndex((c) => c.code === courseCode);
+		const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
 
-	// If already at the top/bottom, do nothing
-	if (targetIndex === currentIndex) return true;
+		if (targetIndex < 0 || targetIndex >= courses.length) return false;
 
-	// Get the course to swap with
-	const targetCourse = courses[targetIndex];
-	const currentCourse = courses[currentIndex];
+		const targetCourse = courses[targetIndex];
 
-	// Swap orders
-	const currentOrder = currentCourse.order;
-	const targetOrder = targetCourse.order;
+		// Swap the order values
+		await Promise.all([
+			db
+				.updateTable('courses')
+				.set({ order: targetCourse.order })
+				.where('code', '=', courseCode)
+				.execute(),
+			db
+				.updateTable('courses')
+				.set({ order: currentCourse.order })
+				.where('code', '=', targetCourse.code)
+				.execute()
+		]);
 
-	// Update both courses
-	const updates = [
-		supabase.from('courses').update({ order: targetOrder }).eq('code', currentCourse.code),
-		supabase.from('courses').update({ order: currentOrder }).eq('code', targetCourse.code)
-	];
-
-	// Execute all updates
-	const results = await Promise.all(updates);
-
-	// Check if any errors occurred
-	return !results.some((result) => result.error);
+		return true;
+	} catch (error) {
+		console.error('Error reordering course:', error);
+		return false;
+	}
 }

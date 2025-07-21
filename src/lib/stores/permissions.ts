@@ -1,143 +1,145 @@
-// src/lib/stores/permission.ts
-import { writable, derived, type Readable, get } from 'svelte/store';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '../../database.types';
-import { browser } from '$app/environment';
+/**
+ * UNIFIED PERMISSION SYSTEM - SVELTE 5 EDITION
+ * Modern, efficient, SSR-safe approach - fetch ONCE, store in reactive state
+ *
+ * ARCHITECTURE:
+ * - Permissions loaded ONCE per session from +layout.server.ts
+ * - Stored in context-based approach compatible with SSR
+ * - No SSR issues, no module-level subscriptions
+ * - Clean, minimalist, solid approach with modern patterns
+ */
 
-// Define the permission structure
-type Permission = {
-	code: string;
-	user_code: string;
-	entity: string;
-	user_action: string;
-};
+import { getContext, setContext } from 'svelte';
 
-type PermissionCheck = {
-	entity: string;
-	action: 'read' | 'create' | 'update' | 'delete';
-};
+// ============================================================================
+// TYPES - Clean and minimal
+// ============================================================================
 
-// Cache key for localStorage
-const PERMISSIONS_CACHE_KEY = 'nextya_permissions_cache';
-const PERMISSIONS_CACHE_EXPIRY_KEY = 'nextya_permissions_cache_expiry';
-const CACHE_TTL = 1000 * 60 * 30; // 30 minutes in milliseconds
+export type PermissionKey = string; // Format: 'entity:action' (e.g., 'users:read')
 
-const createPermissionsStore = () => {
-	const permissions = writable<Permission[]>([]);
-	const currentUserCode = writable<string | null>(null);
-	let isLoading = false;
-	let lastFetchTime = 0;
+// ============================================================================
+// CONTEXT KEY - Context-based approach
+// ============================================================================
 
-	// Load cached permissions on initialization if in browser
-	if (browser) {
-		try {
-			const cachedPermissions = localStorage.getItem(PERMISSIONS_CACHE_KEY);
-			const cacheExpiry = localStorage.getItem(PERMISSIONS_CACHE_EXPIRY_KEY);
+const PERMISSIONS_CONTEXT_KEY = Symbol('permissions');
 
-			if (cachedPermissions && cacheExpiry) {
-				const expiryTime = parseInt(cacheExpiry, 10);
-				const now = Date.now();
+// ============================================================================
+// PERMISSION STORE CLASS - Simple and efficient
+// ============================================================================
 
-				// Only use cache if it's not expired
-				if (now < expiryTime) {
-					const parsedPermissions = JSON.parse(cachedPermissions);
-					const userCode = parsedPermissions.userCode;
+class PermissionStore {
+	private permissions: PermissionKey[] = [];
 
-					if (userCode && parsedPermissions.data) {
-						permissions.set(parsedPermissions.data);
-						currentUserCode.set(userCode);
-						lastFetchTime = now;
-					}
-				} else {
-					// Clear expired cache
-					localStorage.removeItem(PERMISSIONS_CACHE_KEY);
-					localStorage.removeItem(PERMISSIONS_CACHE_EXPIRY_KEY);
-				}
-			}
-		} catch (error) {
-			console.error('Error loading cached permissions:', error);
-			// Clear potentially corrupted cache
-			localStorage.removeItem(PERMISSIONS_CACHE_KEY);
-			localStorage.removeItem(PERMISSIONS_CACHE_EXPIRY_KEY);
-		}
+	constructor(initialPermissions: PermissionKey[] = []) {
+		this.permissions = initialPermissions;
 	}
 
-	const fetchPermissions = async (supabase: SupabaseClient<Database>, userCode: string) => {
-		// Skip if already loading
-		if (isLoading) return;
+	// Core permission checking methods
+	can(permissionKey: PermissionKey): boolean {
+		return this.permissions.includes(permissionKey);
+	}
 
-		// Skip if same user and recently fetched (within last 5 minutes)
-		const currentCode = get(currentUserCode);
-		const now = Date.now();
-		if (currentCode === userCode && now - lastFetchTime < 300000) return;
+	canAny(...permissionKeys: PermissionKey[]): boolean {
+		return permissionKeys.some((key) => this.permissions.includes(key));
+	}
 
-		isLoading = true;
+	canAll(...permissionKeys: PermissionKey[]): boolean {
+		return permissionKeys.every((key) => this.permissions.includes(key));
+	}
 
-		try {
-			const { data, error } = await supabase
-				.from('permissions')
-				.select('*')
-				.eq('user_code', userCode);
+	// State management methods
+	updatePermissions(permissions: PermissionKey[]): void {
+		this.permissions = permissions;
+	}
 
-			if (error) throw error;
+	clearPermissions(): void {
+		this.permissions = [];
+	}
 
-			// Update stores
-			currentUserCode.set(userCode);
-			permissions.set(data || []);
-			lastFetchTime = now;
+	// Getter for all permissions
+	getPermissions(): PermissionKey[] {
+		return [...this.permissions];
+	}
+}
 
-			// Cache permissions in browser
-			if (browser) {
-				try {
-					const cacheData = {
-						userCode,
-						data: data || [],
-						timestamp: now
-					};
-					localStorage.setItem(PERMISSIONS_CACHE_KEY, JSON.stringify(cacheData));
-					localStorage.setItem(PERMISSIONS_CACHE_EXPIRY_KEY, (now + CACHE_TTL).toString());
-				} catch (error) {
-					console.error('Error caching permissions:', error);
-				}
-			}
-		} catch (error) {
-			console.error('Error fetching permissions:', error);
-			permissions.set([]);
-			currentUserCode.set(null);
-			// Clear cache on error
-			if (browser) {
-				localStorage.removeItem(PERMISSIONS_CACHE_KEY);
-				localStorage.removeItem(PERMISSIONS_CACHE_EXPIRY_KEY);
-			}
-		} finally {
-			isLoading = false;
-		}
-	};
+// ============================================================================
+// CONTEXT FUNCTIONS - Initialize and access permissions
+// ============================================================================
 
-	const clearPermissions = () => {
-		permissions.set([]);
-		currentUserCode.set(null);
+/**
+ * Initialize permissions context (call this in your root layout)
+ * @param initialPermissions - Permissions from page data
+ */
+export function initializePermissions(initialPermissions: PermissionKey[] = []): PermissionStore {
+	const store = new PermissionStore(initialPermissions);
+	setContext(PERMISSIONS_CONTEXT_KEY, store);
+	return store;
+}
 
-		// Clear cache in browser
-		if (browser) {
-			localStorage.removeItem(PERMISSIONS_CACHE_KEY);
-			localStorage.removeItem(PERMISSIONS_CACHE_EXPIRY_KEY);
-		}
-	};
+/**
+ * Get permissions store from context
+ * @returns PermissionStore instance
+ */
+export function getPermissionStore(): PermissionStore {
+	const store = getContext<PermissionStore>(PERMISSIONS_CONTEXT_KEY);
+	if (!store) {
+		throw new Error(
+			'Permission store not found. Make sure to call initializePermissions() in your root layout.'
+		);
+	}
+	return store;
+}
 
-	const has = (check: PermissionCheck): Readable<boolean> => {
-		return derived(permissions, ($permissions) => {
-			if (!$permissions.length) return false;
-			return $permissions.some((p) => p.entity === check.entity && p.user_action === check.action);
-		});
-	};
+// ============================================================================
+// CONVENIENCE FUNCTIONS - Direct access to permission checks
+// ============================================================================
 
-	return {
-		permissions: { subscribe: permissions.subscribe },
-		fetchPermissions,
-		clearPermissions,
-		has
-	};
-};
+/**
+ * Check if user has a specific permission
+ * @param permissionKey - Permission in format 'entity:action'
+ * @returns boolean - Permission state
+ */
+export function can(permissionKey: PermissionKey): boolean {
+	return getPermissionStore().can(permissionKey);
+}
 
-export const permissionsStore = createPermissionsStore();
+/**
+ * Check if user has ANY of the specified permissions
+ * @param permissionKeys - Array of permission keys
+ * @returns boolean - True if user has at least one permission
+ */
+export function canAny(...permissionKeys: PermissionKey[]): boolean {
+	return getPermissionStore().canAny(...permissionKeys);
+}
+
+/**
+ * Check if user has ALL of the specified permissions
+ * @param permissionKeys - Array of permission keys
+ * @returns boolean - True if user has all permissions
+ */
+export function canAll(...permissionKeys: PermissionKey[]): boolean {
+	return getPermissionStore().canAll(...permissionKeys);
+}
+
+/**
+ * Get all user permissions
+ * @returns PermissionKey[] - Array of permission keys
+ */
+export function getPermissions(): PermissionKey[] {
+	return getPermissionStore().getPermissions();
+}
+
+/**
+ * Update permissions (for admin operations like PermissionsModal)
+ * @param permissions - New permission keys array
+ */
+export function updatePermissions(permissions: PermissionKey[]): void {
+	getPermissionStore().updatePermissions(permissions);
+}
+
+/**
+ * Clear all permissions (for logout)
+ */
+export function clearPermissions(): void {
+	getPermissionStore().clearPermissions();
+}

@@ -15,8 +15,7 @@
 	} from 'lucide-svelte';
 	import { PAPER_FORMATS, processImageWithCanvas } from '$lib/utils/imageUtils';
 	import type { ApiOmrErrorData } from '$lib/types/api';
-	import type { FileStatus } from '$lib/types/app';
-
+	import type { FileStatus } from '$lib/types';
 	// Props
 	const {
 		imageUrl = '',

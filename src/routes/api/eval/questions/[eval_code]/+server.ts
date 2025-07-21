@@ -10,42 +10,20 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		const evalCode = params.eval_code;
 
 		if (!evalCode) {
-			return json(
-				{
-					status: 'error',
-					message: 'Código de evaluación no proporcionado'
-				},
-				{ status: 400 }
-			);
+			return json({ error: 'Código de evaluación no proporcionado' }, { status: 400 });
 		}
 
 		// Get questions for this evaluation
-		const { data: questionsData, error: questionsError } = await locals.supabase
-			.from('eval_questions')
-			.select('*')
-			.eq('eval_code', evalCode)
-			.order('order_in_eval');
+		const questionsData = await locals.db
+			.selectFrom('eval_questions')
+			.selectAll()
+			.where('eval_code', '=', evalCode)
+			.orderBy('order_in_eval', 'asc')
+			.execute();
 
-		if (questionsError) {
-			console.error('Error fetching questions:', questionsError);
-			return json(
-				{
-					status: 'error',
-					message: 'Error al obtener preguntas de la evaluación'
-				},
-				{ status: 500 }
-			);
-		}
-
-		return json(questionsData || []);
+		return json(questionsData);
 	} catch (error) {
 		console.error('Error in questions API:', error);
-		return json(
-			{
-				status: 'error',
-				message: error instanceof Error ? error.message : 'Unknown error occurred'
-			},
-			{ status: 500 }
-		);
+		return json({ error: 'Error interno del servidor' }, { status: 500 });
 	}
 };

@@ -10,8 +10,8 @@
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getInitials } from '$lib/utils/initialName';
 	import { formatDate } from '$lib/utils/formatDate';
-	import type { User } from '@supabase/supabase-js';
-	import { permissionsStore } from '$lib/stores/permissions';
+	import type { Users } from '$lib/types';
+	import { can } from '$lib/stores/permissions';
 	import { page } from '$app/state';
 
 	// Estados y referencias
@@ -21,11 +21,11 @@
 	let isEditing = $state(false);
 	let message = $state('');
 	let passwordMessage = $state('');
-	let selectedUser = $state<User | null>(null);
+	let selectedUser = $state<Users | null>(null);
 	let showPermissionsModal = $state(false);
 	let selectedAvatar = $state('avatar.svg');
 	const passwordPattern = '^(?=.*[A-Z])(?=.*\\d).{8,}$';
-	const { data } = $props<{ data: { users: User[] } }>();
+	const { data } = $props<{ data: { users: Users[] } }>();
 
 	// Available avatars
 	const avatars = [
@@ -36,22 +36,29 @@
 		{ src: 'man2.svg', label: 'Man 2' }
 	];
 
-	// permissions
-	const canRead = permissionsStore.has({ entity: 'users', action: 'read' });
+	// permissions - using Svelte 5 reactive approach
+	let canCreate = $derived(can('users:create'));
+	let canDelete = $derived(can('users:delete'));
+	let canUpdate = $derived(can('users:update'));
+	let canManagePermissions = $derived(can('users:manage_permissions'));
+
 	const mySelf = (userId: string) => {
-		return userId === page.data.user?.id;
+		return userId === page.data.user?.code;
 	};
 
 	function openCreateModal() {
+		if (!canCreate) {
+			return;
+		}
 		isEditing = false;
 		selectedAvatar = 'avatar.svg';
 		modal?.showModal();
 	}
 
-	function openEditModal(user: User) {
+	function openEditModal(user: Users) {
 		isEditing = true;
 		selectedUser = user;
-		selectedAvatar = user.user_metadata?.photo_url || 'avatar.svg';
+		selectedAvatar = user.photo_url || 'avatar.svg';
 		modal?.showModal();
 
 		const nameInput = modal?.querySelector<HTMLInputElement>('#name');
@@ -59,24 +66,24 @@
 		const emailInput = modal?.querySelector<HTMLInputElement>('#email');
 		const passwordInput = modal?.querySelector<HTMLInputElement>('#password');
 
-		if (nameInput) nameInput.value = user.user_metadata?.name || '';
-		if (lastnameInput) lastnameInput.value = user.user_metadata?.last_name || '';
+		if (nameInput) nameInput.value = user.name || '';
+		if (lastnameInput) lastnameInput.value = user.last_name || '';
 		if (emailInput) emailInput.value = user.email || '';
 		if (passwordInput) passwordInput.value = '';
 	}
 
-	function openDeleteConfirmModal(user: User) {
+	function openDeleteConfirmModal(user: Users) {
 		selectedUser = user;
 		confirmModal?.showModal();
 	}
 
-	function openPasswordModal(user: User) {
+	function openPasswordModal(user: Users) {
 		selectedUser = user;
 		passwordMessage = '';
 		passwordModal?.showModal();
 	}
 
-	function openPermissionsModal(user: User) {
+	function openPermissionsModal(user: Users) {
 		selectedUser = user;
 		showPermissionsModal = true;
 	}
@@ -148,7 +155,7 @@
 		dataToSend.append('photo_url', selectedAvatar);
 
 		if (isEditing) {
-			dataToSend.append('user_id', selectedUser?.id || '');
+			dataToSend.append('user_id', selectedUser?.code || '');
 		}
 
 		if (!validateForm(dataToSend)) return;
@@ -176,11 +183,10 @@
 	// Manejar actualización de contraseña
 	async function handlePasswordUpdate(event: Event) {
 		event.preventDefault();
-		if (!selectedUser) return;
-
+		if (!selectedUser || !canDelete) return;
 		const formElement = event.currentTarget as HTMLFormElement;
 		const dataToSend = new FormData(formElement);
-		dataToSend.append('user_id', selectedUser.id);
+		dataToSend.append('user_id', selectedUser.code);
 
 		if (!validatePasswordForm(dataToSend)) return;
 
@@ -220,7 +226,7 @@
 		if (!selectedUser) return;
 
 		const dataToSend = new FormData();
-		dataToSend.append('user_id', selectedUser.id);
+		dataToSend.append('user_id', selectedUser.code);
 
 		try {
 			const response = await fetch('?/delete', { method: 'POST', body: dataToSend });
@@ -240,13 +246,13 @@
 </script>
 
 <PageTitle title="Usuarios" description="Lista de usuarios disponibles en la aplicación.">
-	{#if $canRead}
-		<button class="btn btn-primary" onclick={openCreateModal}>Agregar Usuario</button>
-	{/if}
+	<button class="btn btn-primary" onclick={openCreateModal} disabled={!canCreate}
+		>Agregar Usuario
+	</button>
 </PageTitle>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
-	{#each data.users as user (user.id)}
+	{#each data.users as user (user.code)}
 		{@render userCard(user)}
 	{/each}
 </div>
@@ -341,8 +347,8 @@
 	<div class="modal-box">
 		<h3 class="text-lg font-bold">Confirmar eliminación</h3>
 		<p class="py-4">
-			¿Estás seguro de eliminar a "{selectedUser?.user_metadata?.name}
-			{selectedUser?.user_metadata?.last_name}"?
+			¿Estás seguro de eliminar a "{selectedUser?.name}
+			{selectedUser?.last_name}"?
 		</p>
 		<div class="modal-action flex justify-center gap-2">
 			<button class="btn" onclick={() => confirmModal?.close()}>Cancelar</button>
@@ -357,8 +363,8 @@
 		<form onsubmit={handlePasswordUpdate} autocomplete="off">
 			<h3 class="text-lg font-bold">Cambiar contraseña</h3>
 			<p class="text-sm text-base-content/70 mb-4">
-				Establece una nueva contraseña para {selectedUser?.user_metadata?.name}
-				{selectedUser?.user_metadata?.last_name}
+				Establece una nueva contraseña para {selectedUser?.name}
+				{selectedUser?.last_name}
 			</p>
 			<fieldset class="fieldset bg-base-200 border border-base-300 p-4 rounded-box">
 				<label class="fieldset-legend" for="new_password">Nueva contraseña</label>
@@ -410,12 +416,12 @@
 	/>
 {/if}
 
-{#snippet userCard(user: User)}
+{#snippet userCard(user: Users)}
 	<div
 		class="card bg-gradient-to-br from-base-200 to-base-100 shadow duration-300 border border-base-300/30 rounded-xl overflow-hidden"
 	>
 		<div class="card-body p-6 space-y-4">
-			{#if $canRead}
+			{#if canManagePermissions && canDelete}
 				<div class="absolute top-4 right-4 dropdown dropdown-end">
 					<div tabindex="0" role="button" class="cursor-pointer">
 						<EllipsisVertical class="w-4 h-4" />
@@ -436,16 +442,16 @@
 					<div
 						class="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-r from-primary/20 to-secondary/20 flex items-center justify-center ring-2 ring-offset-2 ring-offset-base-100 ring-primary/50"
 					>
-						{#if user.user_metadata?.photo_url}
+						{#if user.photo_url}
 							<img
-								src={user.user_metadata.photo_url}
+								src={user.photo_url}
 								alt="User profile"
 								class="object-cover w-full h-full"
 								loading="lazy"
 							/>
 						{:else}
 							<span class="text-xl font-bold text-primary">
-								{getInitials(user.user_metadata?.name, user.user_metadata?.last_name)}
+								{getInitials(user.name || '', user.last_name || '')}
 							</span>
 						{/if}
 					</div>
@@ -457,8 +463,8 @@
 
 				<div class="flex-1 min-w-0">
 					<h2 class="text-xl font-bold text-base-content truncate">
-						{user.user_metadata?.name}
-						{user.user_metadata?.last_name}
+						{user.name}
+						{user.last_name}
 					</h2>
 					<p class="text-sm text-base-content/70 truncate">{user.email}</p>
 				</div>
@@ -486,13 +492,13 @@
 							d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
 						></path>
 					</svg>
-					<span>Ultimo Login: {formatDate(user.last_sign_in_at || '')}</span>
+					<span>Ultimo Login: {formatDate(user.last_login || '')}</span>
 				</li>
 			</ul>
 
 			<!-- Action buttons with subtle hover effects -->
 			<div class="flex justify-end gap-2 pt-2">
-				{#if mySelf(user.id) || $canRead}
+				{#if mySelf(user.code) || canUpdate}
 					<button class="btn btn-sm btn-soft btn-primary" onclick={() => openEditModal(user)}>
 						<Pencil class="w-4 h-4" />
 					</button>

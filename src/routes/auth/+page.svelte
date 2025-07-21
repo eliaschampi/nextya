@@ -38,7 +38,7 @@
 		>
 			<!-- Email Input -->
 			<div in:fly={{ y: 10, duration: 300, delay: 200 }} class="form-control">
-				<label for="email" class="label">
+				<label for="email">
 					<span class="label-text">Correo electrónico</span>
 				</label>
 				<label
@@ -59,7 +59,7 @@
 
 			<!-- Password Input -->
 			<div in:fly={{ y: 10, duration: 300, delay: 300 }} class="form-control">
-				<label for="password" class="label">
+				<label for="password">
 					<span class="label-text">Contraseña</span>
 				</label>
 				<label

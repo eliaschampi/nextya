@@ -1,89 +1,63 @@
-import { createServerClient } from '@supabase/ssr';
 import { type Handle, redirect } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { getSession } from '$lib/auth/session';
+import { dbInstance } from '$lib/config/server';
+import { getUserPermissions, hasPermission } from '$lib/permissions/server';
 
-// Configuración del cliente de Supabase
-const supabaseHandle: Handle = async ({ event, resolve }) => {
-	// Crear el cliente de Supabase para SSR
-	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-		cookies: {
-			getAll: () => event.cookies.getAll(),
-			setAll: (cookies) =>
-				cookies.forEach(({ name, value, options }) =>
-					event.cookies.set(name, value, { ...options, path: '/' })
-				)
-		}
-	});
+// Create database instance with environment variables (server-only)
 
-	// Método para obtener la sesión (rápido, pero inseguro para datos críticos)
-	event.locals.getSession = async () => {
-		const {
-			data: { session },
-			error
-		} = await event.locals.supabase.auth.getSession();
-		return error ? { session: null } : { session };
-	};
-
-	// Método para obtener el usuario autenticado (más lento, pero seguro)
-	event.locals.getUser = async () => {
-		const {
-			data: { user },
-			error
-		} = await event.locals.supabase.auth.getUser();
-		return error ? { user: null } : { user };
-	};
-
-	/**
-	 * Unlike `supabase.auth.getSession()`, which returns the session _without_
-	 * validating the JWT, this function also calls `getUser()` to validate the
-	 * JWT before returning the session.
-	 */
-	event.locals.safeGetSession = async () => {
-		const {
-			data: { session }
-		} = await event.locals.supabase.auth.getSession();
-		if (!session) {
-			return { session: null, user: null };
-		}
-
-		const {
-			data: { user },
-			error
-		} = await event.locals.supabase.auth.getUser();
-		if (error) {
-			// JWT validation has failed
-			return { session: null, user: null };
-		}
-
-		return { session, user };
-	};
-
-	// Almacenar las cookies para usarlas en otros lugares
-	event.locals.cookies = event.cookies.getAll();
-
-	// Resolver la petición, filtrando encabezados específicos
-	return resolve(event, {
-		filterSerializedResponseHeaders: (name) =>
-			name === 'content-range' || name === 'x-supabase-api-version'
-	});
+// Database handle - attach database instance to locals
+const databaseHandle: Handle = async ({ event, resolve }) => {
+	event.locals.db = dbInstance;
+	return resolve(event);
 };
 
-// Guardia de autenticación
-const authGuard: Handle = async ({ event, resolve }) => {
-	const { session, user } = await event.locals.safeGetSession();
+// Authentication handle - get session and user from cookies
+const authHandle: Handle = async ({ event, resolve }) => {
+	const session = await getSession(dbInstance, event.cookies);
 	event.locals.session = session;
-	event.locals.user = user;
+	event.locals.user = session?.user ?? null;
 
-	if (!event.locals.session && event.url.pathname !== '/auth') {
+	// Get user permissions ONCE per session and store in locals
+	// This avoids multiple database calls per request
+	if (event.locals.user?.code) {
+		event.locals.userPermissions = await getUserPermissions(
+			event.locals.db,
+			event.locals.user.code
+		);
+	} else {
+		event.locals.userPermissions = [];
+	}
+
+	// Simple permission checker using cached permissions
+	event.locals.can = async (permissionKey: string): Promise<boolean> => {
+		return hasPermission(event.locals.userPermissions || [], permissionKey);
+	};
+
+	return resolve(event);
+};
+
+// Auth guard - redirect based on authentication state
+const authGuard: Handle = async ({ event, resolve }) => {
+	const isAuthPage = event.url.pathname.startsWith('/auth');
+	const isApiRoute = event.url.pathname.startsWith('/api');
+
+	// Skip auth guard for API routes (they handle auth internally)
+	if (isApiRoute) {
+		return resolve(event);
+	}
+
+	// Redirect to auth if not authenticated and not on auth page
+	if (!event.locals.user && !isAuthPage) {
 		throw redirect(303, '/auth');
 	}
 
-	if (event.locals.session && event.url.pathname === '/auth') {
+	// Redirect to dashboard if authenticated and on auth page
+	if (event.locals.user && isAuthPage) {
 		throw redirect(303, '/');
 	}
 
 	return resolve(event);
 };
 
-export const handle: Handle = sequence(supabaseHandle, authGuard);
+export const handle: Handle = sequence(databaseHandle, authHandle, authGuard);

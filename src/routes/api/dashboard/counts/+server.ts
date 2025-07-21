@@ -1,5 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
+import { sql } from 'kysely';
 
 /**
  * GET endpoint for dashboard counts
@@ -7,43 +8,39 @@ import { json } from '@sveltejs/kit';
  */
 export const GET: RequestHandler = async ({ locals }) => {
 	try {
-		// Run queries in parallel for better performance
-		const [studentsResponse, evalsResponse, levelsResponse, coursesResponse] = await Promise.all([
+		// Run queries in parallel for better performance using Kysely
+		const [studentsCount, evalsCount, levelsCount, coursesCount] = await Promise.all([
 			// Get student count
-			locals.supabase.from('students').select('code', { count: 'exact', head: true }),
+			locals.db
+				.selectFrom('students')
+				.select(sql<number>`count(*)`.as('count'))
+				.executeTakeFirst(),
 
 			// Get evaluations count
-			locals.supabase.from('evals').select('code', { count: 'exact', head: true }),
+			locals.db
+				.selectFrom('evals')
+				.select(sql<number>`count(*)`.as('count'))
+				.executeTakeFirst(),
 
 			// Get levels count
-			locals.supabase.from('levels').select('code', { count: 'exact', head: true }),
+			locals.db
+				.selectFrom('levels')
+				.select(sql<number>`count(*)`.as('count'))
+				.executeTakeFirst(),
 
 			// Get courses count
-			locals.supabase.from('courses').select('code', { count: 'exact', head: true })
+			locals.db
+				.selectFrom('courses')
+				.select(sql<number>`count(*)`.as('count'))
+				.executeTakeFirst()
 		]);
-
-		// Check for errors
-		if (
-			studentsResponse.error ||
-			evalsResponse.error ||
-			levelsResponse.error ||
-			coursesResponse.error
-		) {
-			console.error('Error fetching counts:', {
-				students: studentsResponse.error,
-				evals: evalsResponse.error,
-				levels: levelsResponse.error,
-				courses: coursesResponse.error
-			});
-			return json({ error: 'Error al obtener conteos' }, { status: 500 });
-		}
 
 		// Return counts
 		return json({
-			students: studentsResponse.count || 0,
-			evals: evalsResponse.count || 0,
-			levels: levelsResponse.count || 0,
-			courses: coursesResponse.count || 0
+			students: Number(studentsCount?.count) || 0,
+			evals: Number(evalsCount?.count) || 0,
+			levels: Number(levelsCount?.count) || 0,
+			courses: Number(coursesCount?.count) || 0
 		});
 	} catch (error) {
 		console.error('Error in dashboard counts endpoint:', error);

@@ -11,8 +11,8 @@ import type {
 	OmrBatchItem
 } from '$lib/types/api';
 import { createErrorResult as createOmrErrorResultObject } from '$lib/omrProcessor/error';
-import type { EvalQuestion, EvalSection } from '$lib/types';
-import { fetchQuestions } from '$lib/data/question';
+import type { EvalSections } from '$lib/types';
+import { fetchQuestions, type TransformedEvalQuestion } from '$lib/data/question';
 
 const DEBUG_OMR = false;
 
@@ -93,8 +93,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	let evalCode: string;
 	let evalGroupName: string;
 	let evalLevelCode: string;
-	let questions: EvalQuestion[] | null = null;
-	let sections: EvalSection[] | null = null;
+	let questions: TransformedEvalQuestion[] | null = null;
+	let sections: EvalSections[] | null = null;
 
 	try {
 		const body = await request.json();
@@ -142,14 +142,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	// 1. Obtener preguntas y secciones (una sola vez para todos los items)
 	if (!questions?.length) {
-		questions = await fetchQuestions(evalCode, locals.supabase);
+		questions = await fetchQuestions(locals.db, evalCode);
 		if (!questions?.length) {
 			return createValidationError('Sin preguntas disponibles', 500);
 		}
 	}
 
 	if (!sections?.length) {
-		sections = await fetchSections(evalCode, locals.supabase);
+		sections = await fetchSections(locals.db, evalCode);
 		if (!sections?.length) {
 			return createValidationError('Sin cursos disponibles', 500);
 		}
@@ -220,7 +220,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 			// 4. Obtener Información del Registro del Estudiante
 			const registerInfo = await fetchRegisterByRollCode(
-				locals.supabase,
+				locals.db,
 				finalRollCode,
 				evalGroupName,
 				evalLevelCode

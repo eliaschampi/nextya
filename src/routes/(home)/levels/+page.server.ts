@@ -4,8 +4,16 @@ import { fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ locals, depends }) => {
 	depends('levels:load');
-	const { data, error } = await locals.supabase.from('levels').select('*');
-	return { levels: error ? [] : data, title: 'Niveles' };
+
+	if (!(await locals.can('levels:read'))) {
+		return { levels: [], title: 'Niveles' };
+	}
+	try {
+		const levels = await locals.db.selectFrom('levels').selectAll().execute();
+		return { levels, title: 'Niveles' };
+	} catch {
+		return { levels: [], title: 'Niveles' };
+	}
 };
 
 export const actions: Actions = {
@@ -14,18 +22,22 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const name = formData.get('name') as string;
 		const abr = formData.get('abr') as string;
-		// Make sure userId is available, otherwise return an error
-		const userId = locals.session?.user.id;
-		if (!userId) return fail(401, { error: 'User not authenticated' });
 
 		// Get selected users from form data
 		const selectedUsers = formData.getAll('selectedUsers') as string[];
-		// Ensure current user is included in the users array
-		const users = [...new Set([userId, ...selectedUsers])];
 
-		const { error } = await locals.supabase.from('levels').insert({ name, abr, users });
-		if (error) return fail(400, { error: error.message });
-		return { success: true };
+		// Validate that users were selected
+		if (selectedUsers.length === 0) {
+			return fail(400, { error: 'Debe seleccionar al menos un usuario' });
+		}
+
+		try {
+			await locals.db.insertInto('levels').values({ name, abr, users: selectedUsers }).execute();
+			return { success: true };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Error creando nivel';
+			return fail(400, { error: message });
+		}
 	},
 
 	// update level
@@ -37,17 +49,24 @@ export const actions: Actions = {
 
 		// Get selected users from form data
 		const selectedUsers = formData.getAll('selectedUsers') as string[];
-		// Ensure current user is included in the users array if they're the one updating
-		const userId = locals.session?.user.id;
-		const users = userId ? [...new Set([userId, ...selectedUsers])] : selectedUsers;
 
-		const { error } = await locals.supabase
-			.from('levels')
-			.update({ name, abr, users })
-			.eq('code', levelCode);
-		if (error) return fail(400, { error: error.message });
+		// Validate that users were selected
+		if (selectedUsers.length === 0) {
+			return fail(400, { error: 'Debe seleccionar al menos un usuario' });
+		}
 
-		return { success: true };
+		try {
+			await locals.db
+				.updateTable('levels')
+				.set({ name, abr, users: selectedUsers })
+				.where('code', '=', levelCode)
+				.execute();
+
+			return { success: true };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Error actualizando nivel';
+			return fail(400, { error: message });
+		}
 	},
 
 	// delete level
@@ -55,9 +74,13 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const levelCode = formData.get('code') as string;
 
-		const { error } = await locals.supabase.from('levels').delete().eq('code', levelCode);
-		if (error) return fail(400, { error: error.message });
+		try {
+			await locals.db.deleteFrom('levels').where('code', '=', levelCode).execute();
 
-		return { success: true };
+			return { success: true };
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Error eliminando nivel';
+			return fail(400, { error: message });
+		}
 	}
 };

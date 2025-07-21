@@ -1,47 +1,49 @@
 // src/lib/csvProcessor/studentExport.ts
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '$lib/database';
+import { sql } from 'kysely';
 import type { StudentEvalReport, StudentExportRow } from '$lib/types';
 import { generateExcelCsv, createCsvResponse } from './exportExcel';
 
 /**
- * Obtiene los datos de evaluaciones de un estudiante desde Supabase
+ * Obtiene los datos de evaluaciones de un estudiante desde la base de datos
  *
- * @param supabase - Cliente de Supabase
  * @param studentCode - Código del estudiante
  * @returns Datos de evaluaciones del estudiante o null si hay error
  */
 export async function fetchStudentEvalReports(
-	supabase: SupabaseClient,
+	db: Database,
 	studentCode: string
 ): Promise<StudentEvalReport[] | null> {
-	const { data, error } = await supabase.rpc('get_student_eval_report', {
-		p_student_code: studentCode
-	});
-
-	if (error) {
-		console.error('Error fetching student evaluation reports:', error);
-		return null;
-	}
-
-	// Transform the data to ensure all fields have the correct types
-	return data.map(
-		(item: {
+	try {
+		// Call the optimized SQL function using raw SQL
+		const result = await sql<{
 			eval_name: string;
 			eval_code: string;
 			eval_date: string;
-			general_score: number;
+			general_score: string; // NUMERIC comes as string from database
 			register_code: string;
 			result_code: string;
 			course_scores: string | Record<string, number>;
-		}) => ({
+		}>`SELECT * FROM get_student_eval_report(${studentCode})`.execute(db);
+
+		if (!result.rows || result.rows.length === 0) {
+			return null;
+		}
+
+		// Transform the data to ensure all fields have the correct types
+		return result.rows.map((item) => ({
 			...item,
 			eval_code: String(item.eval_code),
 			register_code: String(item.register_code),
 			result_code: String(item.result_code),
+			general_score: Number(item.general_score || 0),
 			course_scores:
 				typeof item.course_scores === 'string' ? JSON.parse(item.course_scores) : item.course_scores
-		})
-	);
+		}));
+	} catch (error) {
+		console.error('Error fetching student evaluation reports:', error);
+		return null;
+	}
 }
 
 /**
@@ -139,20 +141,19 @@ export function createStudentExportFilename(studentName: string, studentLastName
 /**
  * Proceso completo de exportación de evaluaciones de estudiante a CSV
  *
- * @param supabase - Cliente de Supabase
  * @param studentCode - Código del estudiante
  * @param studentName - Nombre del estudiante
  * @param studentLastName - Apellido del estudiante
  * @returns Objeto Response con el CSV o null si hay error
  */
 export async function exportStudentEvaluationsToCsv(
-	supabase: SupabaseClient,
+	db: Database,
 	studentCode: string,
 	studentName: string,
 	studentLastName: string
 ): Promise<Response | null> {
 	// Obtener datos de evaluaciones del estudiante
-	const reportsData = await fetchStudentEvalReports(supabase, studentCode);
+	const reportsData = await fetchStudentEvalReports(db, studentCode);
 	if (!reportsData || reportsData.length === 0) return null;
 
 	// Formatear datos para exportación

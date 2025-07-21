@@ -5,7 +5,7 @@
 	import { showToast } from '$lib/stores/Toast.js';
 	import { User, Activity, ChartPie } from 'lucide-svelte';
 	import type {
-		Student,
+		Students,
 		StudentScoreEvolution,
 		StudentCourseScore,
 		StudentCourseEvolution
@@ -18,13 +18,13 @@
 	// as we're using a student search instead
 
 	// Import the types we need
-	import type { StudentRegister, StudentResult } from '$lib/types';
+	import type { StudentRegister, ResultItem } from '$lib/types';
 
 	// Store state
 	let storeState = $state({
-		selectedStudent: null as Student | null,
+		selectedStudent: null as Students | null,
 		registers: [] as StudentRegister[],
-		results: [] as StudentResult[],
+		results: [] as ResultItem[],
 		selectedRegister: null as string | null,
 		isLoading: false
 	});
@@ -137,7 +137,7 @@
 	 * Select a student and load their dashboard data
 	 * @param student Student to select
 	 */
-	function selectStudent(student: Student) {
+	function selectStudent(student: Students) {
 		// Use the store to select the student
 		studentStore.selectStudent(student, 'dashboard-student-page');
 		loadStudentDashboardData(student.code);

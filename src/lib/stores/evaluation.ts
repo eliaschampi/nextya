@@ -95,7 +95,7 @@ function createEvaluationStore() {
 			// If we have an eval code, find and select that evaluation
 			if (evalCode) {
 				const state = get({ subscribe });
-				const evalItem = state.availableEvals.find((e) => e.code === evalCode);
+				const evalItem = state.availableEvals.find((e) => String(e.code) === evalCode);
 				if (evalItem) {
 					this.setSelectedEval(evalItem);
 				}

@@ -1,12 +1,12 @@
 // src/lib/stores/student.ts
 import { writable, derived, get } from 'svelte/store';
-import type { Student, StudentRegister, StudentResult } from '$lib/types';
+import type { Students, StudentRegister, ResultItem } from '$lib/types';
 import { showToast } from './Toast';
 
 type StudentStoreState = {
-	selectedStudent: Student | null;
+	selectedStudent: Students | null;
 	registers: StudentRegister[];
-	results: StudentResult[];
+	results: ResultItem[];
 	selectedRegister: string | null;
 	isLoading: boolean;
 };
@@ -30,7 +30,7 @@ function createStudentStore() {
 		/**
 		 * Set the selected student and load their data
 		 */
-		async selectStudent(student: Student, pageId: string) {
+		async selectStudent(student: Students, pageId: string) {
 			// First update the store with the selected student
 			update((state) => ({
 				...state,

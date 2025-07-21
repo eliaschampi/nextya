@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { X, Check, AlertCircle, ListChecks, FileText, Table2 } from 'lucide-svelte';
 	import type { ApiOmrSuccessData, StudentAnswer } from '$lib/types/api';
-	import type { EvalQuestion } from '$lib/types';
+	import type { EvalQuestions } from '$lib/types';
 	import Message from './Message.svelte';
 
 	type Props = {
 		result: ApiOmrSuccessData | null;
-		questions: EvalQuestion[]; // Pasar las preguntas para mapear nombres de sección, etc.
+		questions: EvalQuestions[]; // Pasar las preguntas para mapear nombres de sección, etc.
 		open?: boolean;
 		title?: string;
 		onClose?: () => void;

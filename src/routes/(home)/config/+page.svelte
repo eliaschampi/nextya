@@ -63,17 +63,6 @@
 				<h2 class="text-xl font-semibold">Tema</h2>
 			</div>
 
-			<div class="bg-base-200/50 p-4 rounded-lg">
-				<p class="text-sm flex items-start gap-2">
-					<InfoIcon class="w-4 h-4 mt-0.5 flex-shrink-0" />
-					<span>
-						Personaliza la apariencia de la aplicación seleccionando un tema que se adapte a tus
-						preferencias. El tema se adaptará automáticamente a tus preferencias, pero puedes
-						cambiarlo en cualquier momento con el botón de arriba o desde el menú superior.
-					</span>
-				</p>
-			</div>
-
 			<div class="flex flex-col gap-6">
 				<!-- Tema actual -->
 				<div class="flex items-center justify-between bg-base-200 p-4 rounded-lg">

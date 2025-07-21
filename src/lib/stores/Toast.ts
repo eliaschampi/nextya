@@ -13,10 +13,6 @@ const TOAST_LIFETIME = 5000;
 // Límite máximo de toasts simultáneos
 const MAX_TOASTS = 5;
 
-/**
- * Muestra un toast nuevo y programa su remoción automática.
- * Limita el número máximo de toasts visibles simultáneamente.
- */
 export function showToast(title: string, type: ToastType) {
 	const id = ++toastId;
 	const newToast: ToastState = { id, title, type };
@@ -39,9 +35,6 @@ export function showToast(title: string, type: ToastType) {
 	}, TOAST_LIFETIME);
 }
 
-/**
- * Remueve el toast con el id dado y limpia su timeout.
- */
 export function removeToast(id: number) {
 	if (timeouts[id]) {
 		clearTimeout(timeouts[id]);
@@ -50,10 +43,6 @@ export function removeToast(id: number) {
 	toasts.update((prev) => prev.filter((toast) => toast.id !== id));
 }
 
-/**
- * Limpia todos los toasts y sus timeouts.
- * Útil para llamar en onDestroy de componentes críticos.
- */
 export function clearAllToasts() {
 	// Limpiar todos los timeouts
 	Object.keys(timeouts).forEach((id) => {

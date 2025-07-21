@@ -1,25 +1,22 @@
+import { fetchEvaluationResults } from '$lib/csvProcessor';
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const { eval_code } = params;
 
-	if (!eval_code) {
-		return json({ error: 'Código de evaluación no proporcionado' }, { status: 400 });
+	if (!eval_code || !(await locals.can('results:read'))) {
+		return json([]);
 	}
 
-	// Usar la función RPC para obtener los resultados
-	const { data, error } = await locals.supabase.rpc('get_register_eval_results', {
-		p_eval_code: eval_code
-	});
-
-	if (error) {
+	try {
+		// Use the student_register_results view directly with eval_code filter
+		const data = await fetchEvaluationResults(locals.db, eval_code);
+		return json(data || []);
+	} catch (error) {
 		console.error('Error al obtener resultados de evaluación:', error);
-		return json({ error: 'Error al obtener resultados' }, { status: 500 });
+		return json({ error: 'Error al obtener resultados de evaluación' }, { status: 500 });
 	}
-
-	// Los resultados ya vienen en el formato correcto desde la función RPC
-	return json(data);
 };
 
 /**
@@ -41,36 +38,24 @@ export const DELETE: RequestHandler = async ({ params, request, locals }) => {
 		// If resultIds is empty, it means delete all results for this eval
 		if (resultIds.length === 0) {
 			// Delete all results for this evaluation
-			const { error: deleteAllError } = await locals.supabase
-				.from('eval_results')
-				.delete()
-				.eq('eval_code', eval_code);
-
-			if (deleteAllError) {
-				console.error('Error eliminando todos los resultados:', deleteAllError);
-				return json({ error: 'Error al eliminar todos los resultados' }, { status: 500 });
-			}
+			await locals.db.deleteFrom('eval_results').where('eval_code', '=', eval_code).execute();
 
 			return json({ success: true, message: 'Todos los resultados eliminados correctamente' });
 		} else {
 			// Delete specific results
-			const { error: deleteError } = await locals.supabase
-				.from('eval_results')
-				.delete()
-				.in('code', resultIds)
-				.eq('eval_code', eval_code);
-
-			if (deleteError) {
-				console.error('Error eliminando resultados específicos:', deleteError);
-				return json({ error: 'Error al eliminar los resultados seleccionados' }, { status: 500 });
-			}
+			await locals.db
+				.deleteFrom('eval_results')
+				.where('code', 'in', resultIds)
+				.where('eval_code', '=', eval_code)
+				.execute();
 
 			return json({
 				success: true,
 				message: `${resultIds.length} resultado(s) eliminado(s) correctamente`
 			});
 		}
-	} catch {
-		return json({ error: 'Error interno del servidor' }, { status: 500 });
+	} catch (error) {
+		console.error('Error deleting evaluation results:', error);
+		return json({ error: 'Error interno del servidor al eliminar resultados' }, { status: 500 });
 	}
 };

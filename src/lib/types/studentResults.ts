@@ -16,45 +16,6 @@ export interface StudentRegister {
 }
 
 /**
- * Represents a student evaluation result
- */
-export interface StudentResult {
-	// Primary identifiers
-	result_code: string;
-	register_code: string;
-	eval_code: string;
-
-	// Evaluation information
-	eval_name: string;
-	eval_date: string;
-
-	// Student registration information
-	roll_code: string;
-
-	// Score information
-	correct_count: number;
-	incorrect_count: number;
-	blank_count: number;
-	score: number;
-
-	// Additional fields that might be present in the database
-	calculated_at?: string | null;
-
-	// Student information
-	student_code?: string | null;
-	student_name?: string | null;
-	student_last_name?: string | null;
-
-	// Level and group information
-	level_code?: string | null;
-	level_name?: string | null;
-	group_name?: string | null;
-
-	// Section information
-	section_code?: string | null;
-}
-
-/**
  * Represents a student answer to a question
  * This is a more detailed version of StudentAnswer from api.ts
  */
@@ -71,7 +32,7 @@ export interface StudentQuestionAnswer {
 	section_code: string | null;
 	section_name?: string | null;
 
-	// Question metadata
+	// Question data
 	order_in_eval: number; // Make required for consistency
 	correct_key: string; // Make required for consistency
 	score_percent?: number;
@@ -144,7 +105,7 @@ export interface StudentResultsResponse {
 		last_name: string;
 	};
 	registers: StudentRegister[];
-	results: StudentResult[];
+	results: import('./core').ResultItem[];
 }
 
 /**

@@ -10,14 +10,13 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	try {
 		// Get student information
-		const { data: student, error: studentError } = await locals.supabase
-			.from('students')
-			.select('name, last_name, email')
-			.eq('code', student_code)
-			.single();
+		const student = await locals.db
+			.selectFrom('students')
+			.select(['name', 'last_name', 'email'])
+			.where('code', '=', student_code)
+			.executeTakeFirst();
 
-		if (studentError) {
-			console.error('Error fetching student:', studentError);
+		if (!student) {
 			return json({ error: 'Estudiante no encontrado' }, { status: 404 });
 		}
 

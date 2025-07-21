@@ -2,139 +2,138 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { importCsv, createNameKey, CsvProcessorErrorCode } from '$lib/csvProcessor';
 import type { ImportResult, StudentRegisterData } from '$lib/csvProcessor';
-import { ApiErrorCode, createApiError, type ApiResponse } from '$lib/types/apiError';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Kysely, ExpressionBuilder } from 'kysely';
+import type { DB } from '$lib/database/types';
 
 /**
  * Checks for duplicates in the database and moves them from validRows to omittedRows
  * @param result - The import result to modify
  * @param levelCode - The level code to check against
- * @param supabase - The Supabase client
+ * @param db - The database instance
  */
 async function checkDatabaseDuplicates(
 	result: ImportResult,
 	levelCode: string,
-	supabase: SupabaseClient
+	db: Kysely<DB>
 ): Promise<void> {
 	if (result.validRows.length === 0) return;
 
-	// 1. Check for duplicate roll_codes in the database
-	const rollCodesToCheck = result.validRows.map((row) => row.roll_code);
+	try {
+		// 1. Check for duplicate roll_codes in the database
+		const rollCodesToCheck = result.validRows.map((row) => row.roll_code);
 
-	const { data: existingRollCodes, error: rollCodeError } = await supabase
-		.from('registers')
-		.select('roll_code')
-		.eq('level_code', levelCode)
-		.in('roll_code', rollCodesToCheck);
+		const existingRollCodes = await db
+			.selectFrom('registers')
+			.select('roll_code')
+			.where('level_code', '=', levelCode)
+			.where('roll_code', 'in', rollCodesToCheck)
+			.execute();
 
-	if (rollCodeError) {
-		console.error('Error checking roll codes:', rollCodeError);
-		return;
-	}
-
-	// Create a set of existing roll codes for efficient lookup
-	const existingRollCodeSet = new Set(existingRollCodes?.map((r) => r.roll_code) || []);
-
-	// 2. Check for duplicate students by name + last_name
-	// Create a map of name keys for efficient lookup
-	const nameKeyMap = new Map<string, number>(); // nameKey -> index in validRows
-	result.validRows.forEach((row, index) => {
-		const nameKey = createNameKey(row.name, row.last_name);
-		nameKeyMap.set(nameKey, index);
-	});
-
-	// Get all unique name+lastname pairs for the query
-	const nameLastNamePairs = Array.from(nameKeyMap.keys()).map((key) => {
-		const [name, lastName] = key.split('||');
-		return { name, last_name: lastName };
-	});
-
-	// Query for existing students with the same name+last_name
-	const { data: existingStudents, error: studentError } = await supabase
-		.from('students')
-		.select('name, last_name')
-		.or(
-			nameLastNamePairs
-				.map((pair) => `and(name.ilike.${pair.name},last_name.ilike.${pair.last_name})`)
-				.join(',')
+		// Create a set of existing roll codes for efficient lookup
+		const existingRollCodeSet = new Set(
+			existingRollCodes?.map((r: { roll_code: string }) => r.roll_code) || []
 		);
 
-	if (studentError) {
-		console.error('Error checking students:', studentError);
-		return;
-	}
+		// 2. Check for duplicate students by name + last_name
+		// Create a map of name keys for efficient lookup
+		const nameKeyMap = new Map<string, number>(); // nameKey -> index in validRows
+		result.validRows.forEach((row, index) => {
+			const nameKey = createNameKey(row.name, row.last_name);
+			nameKeyMap.set(nameKey, index);
+		});
 
-	// Create a set of existing name keys for efficient lookup
-	const existingNameKeySet = new Set(
-		existingStudents?.map((s) => createNameKey(s.name, s.last_name)) || []
-	);
+		// Get all unique name+lastname pairs for the query
+		const nameLastNamePairs = Array.from(nameKeyMap.keys()).map((key) => {
+			const [name, lastName] = key.split('||');
+			return { name, lastName };
+		});
 
-	// 3. Move duplicates from validRows to omittedRows
-	// We need to process in reverse order to avoid index shifting when removing items
-	const rowsToMove: {
-		row: StudentRegisterData;
-		reason: string;
-		code: CsvProcessorErrorCode;
-		rowNumber: number;
-	}[] = [];
+		// Query for existing students with the same name+last_name
+		const existingStudents = await db
+			.selectFrom('students')
+			.select(['name', 'last_name'])
+			.where((eb: ExpressionBuilder<DB, 'students'>) => {
+				const conditions = nameLastNamePairs.map((pair) =>
+					eb.and([eb('name', 'ilike', pair.name), eb('last_name', 'ilike', pair.lastName)])
+				);
+				return eb.or(conditions);
+			})
+			.execute();
 
-	result.validRows.forEach((row, index) => {
-		// Check for duplicate roll_code in database
-		if (existingRollCodeSet.has(row.roll_code)) {
-			rowsToMove.push({
-				row,
-				reason: `Código '${row.roll_code}' ya existe en la base de datos.`,
-				code: CsvProcessorErrorCode.DUPLICATE_ROLL_CODE,
-				rowNumber: index + 1 // Assuming 1-based row numbers
-			});
-			return;
-		}
-
-		// Check for duplicate name+last_name in database
-		const nameKey = createNameKey(row.name, row.last_name);
-		if (existingNameKeySet.has(nameKey)) {
-			rowsToMove.push({
-				row,
-				reason: `Estudiante '${row.name} ${row.last_name}' ya existe en la base de datos.`,
-				code: CsvProcessorErrorCode.DUPLICATE_NAME,
-				rowNumber: index + 1
-			});
-			return;
-		}
-	});
-
-	// Remove duplicates from validRows and add to omittedRows
-	// Sort by index in descending order to avoid index shifting
-	rowsToMove.sort((a, b) => b.rowNumber - a.rowNumber);
-
-	for (const item of rowsToMove) {
-		// Find the index in the current validRows array (may have changed due to removals)
-		const currentIndex = result.validRows.findIndex(
-			(row) =>
-				row.roll_code === item.row.roll_code &&
-				row.name === item.row.name &&
-				row.last_name === item.row.last_name
+		// Create a set of existing name keys for efficient lookup
+		const existingNameKeySet = new Set(
+			existingStudents?.map((s) => createNameKey(s.name, s.last_name)) || []
 		);
 
-		if (currentIndex !== -1) {
-			// Remove from validRows
-			result.validRows.splice(currentIndex, 1);
+		// 3. Move duplicates from validRows to omittedRows
+		// We need to process in reverse order to avoid index shifting when removing items
+		const rowsToMove: {
+			row: StudentRegisterData;
+			reason: string;
+			code: CsvProcessorErrorCode;
+			rowNumber: number;
+		}[] = [];
 
-			// Add to omittedRows
-			result.omittedRows.push({
-				row: {
-					name: item.row.name,
-					last_name: item.row.last_name,
-					phone: item.row.phone || undefined,
-					email: item.row.email || undefined,
-					group_name: item.row.group_name,
-					roll_code: item.row.roll_code
-				},
-				rowNumber: item.rowNumber,
-				reason: item.reason,
-				code: item.code
-			});
+		result.validRows.forEach((row, index) => {
+			// Check for duplicate roll_code in database
+			if (existingRollCodeSet.has(row.roll_code)) {
+				rowsToMove.push({
+					row,
+					reason: `Código '${row.roll_code}' ya existe en la base de datos.`,
+					code: CsvProcessorErrorCode.DUPLICATE_ROLL_CODE,
+					rowNumber: index + 1 // Assuming 1-based row numbers
+				});
+				return;
+			}
+
+			// Check for duplicate name+last_name in database
+			const nameKey = createNameKey(row.name, row.last_name);
+			if (existingNameKeySet.has(nameKey)) {
+				rowsToMove.push({
+					row,
+					reason: `Estudiante '${row.name} ${row.last_name}' ya existe en la base de datos.`,
+					code: CsvProcessorErrorCode.DUPLICATE_NAME,
+					rowNumber: index + 1
+				});
+				return;
+			}
+		});
+
+		// Remove duplicates from validRows and add to omittedRows
+		// Sort by index in descending order to avoid index shifting
+		rowsToMove.sort((a, b) => b.rowNumber - a.rowNumber);
+
+		for (const item of rowsToMove) {
+			// Find the index in the current validRows array (may have changed due to removals)
+			const currentIndex = result.validRows.findIndex(
+				(row) =>
+					row.roll_code === item.row.roll_code &&
+					row.name === item.row.name &&
+					row.last_name === item.row.last_name
+			);
+
+			if (currentIndex !== -1) {
+				// Remove from validRows
+				result.validRows.splice(currentIndex, 1);
+
+				// Add to omittedRows
+				result.omittedRows.push({
+					row: {
+						name: item.row.name,
+						last_name: item.row.last_name,
+						phone: item.row.phone || undefined,
+						email: item.row.email || undefined,
+						group_name: item.row.group_name,
+						roll_code: item.row.roll_code
+					},
+					rowNumber: item.rowNumber,
+					reason: item.reason,
+					code: item.code
+				});
+			}
 		}
+	} catch (error) {
+		console.error('Error checking database duplicates:', error);
 	}
 }
 
@@ -152,37 +151,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		// Validate inputs
 		if (!file) {
-			return json(
-				{
-					success: false,
-					error: createApiError(
-						ApiErrorCode.CSV_MISSING_FILE,
-						'No se ha proporcionado un archivo CSV'
-					)
-				},
-				{ status: 400 }
-			);
+			return json({ error: 'No se ha proporcionado un archivo CSV' }, { status: 400 });
 		}
 
 		if (!levelCode) {
-			return json(
-				{
-					success: false,
-					error: createApiError(ApiErrorCode.CSV_MISSING_LEVEL, 'No se ha proporcionado un nivel')
-				},
-				{ status: 400 }
-			);
+			return json({ error: 'No se ha proporcionado un nivel' }, { status: 400 });
 		}
 
 		// Check if file is empty
 		if (file.size === 0) {
-			return json(
-				{
-					success: false,
-					error: createApiError(ApiErrorCode.CSV_EMPTY_ERROR, 'El archivo CSV está vacío')
-				},
-				{ status: 400 }
-			);
+			return json({ error: 'El archivo CSV está vacío' }, { status: 400 });
 		}
 
 		// Leer el archivo como texto
@@ -193,7 +171,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		// Check for duplicates in the database
 		if (result.validRows.length > 0) {
-			await checkDatabaseDuplicates(result, levelCode, locals.supabase);
+			await checkDatabaseDuplicates(result, levelCode, locals.db);
 		}
 
 		// Calculate summary statistics for better UI feedback
@@ -213,46 +191,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					successRate
 				}
 			}
-		} as ApiResponse<
-			ImportResult & {
-				level_code: string;
-				summary: {
-					totalProcessed: number;
-					validCount: number;
-					omittedCount: number;
-					successRate: number;
-				};
-			}
-		>);
+		});
 	} catch (error) {
 		console.error('Error processing CSV:', error);
-		const message = error instanceof Error ? error.message : 'Error desconocido';
-
-		// Determine more specific error codes based on error message
-		let errorCode = ApiErrorCode.UNKNOWN_ERROR;
-		let status = 500;
-
-		if (error instanceof Error) {
-			if (error.message.includes('parsear CSV')) {
-				errorCode = ApiErrorCode.CSV_PARSE_ERROR;
-				status = 400; // Bad request for parsing errors
-			} else if (error.message.includes('formato')) {
-				errorCode = ApiErrorCode.CSV_FORMAT_ERROR;
-				status = 400;
-			} else if (error.message.includes('codificación')) {
-				errorCode = ApiErrorCode.CSV_ENCODING_ERROR;
-				status = 400;
-			}
-		}
-
-		return json(
-			{
-				success: false,
-				error: createApiError(errorCode, `Error al procesar el archivo CSV: ${message}`, {
-					originalError: error instanceof Error ? error.name : 'UnknownError'
-				})
-			} as ApiResponse<never>,
-			{ status }
-		);
+		return json({ error: 'Error al procesar el archivo CSV' }, { status: 500 });
 	}
 };

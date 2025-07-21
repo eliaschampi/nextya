@@ -1,216 +1,223 @@
 import { getLevels } from '$lib/data/levels';
 import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
-import { studentSchema } from '$lib/schemas/student';
+import { validateStudent } from '$lib/schemas/student';
+import type { DB } from '$lib/types';
+import type { Kysely } from 'kysely';
+
+// Reusable eval deletion function
+async function deleteEvals(db: Kysely<DB>, registerCode: string) {
+	await db.deleteFrom('eval_answers').where('register_code', '=', registerCode).execute();
+	await db.deleteFrom('eval_results').where('register_code', '=', registerCode).execute();
+}
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const userId = locals.session?.user.id;
-	let levels = [];
-	if (userId) {
-		levels = await getLevels(locals.supabase, userId);
-	}
-	return { levels, title: 'Estudiantes' };
+	const userId = locals.user?.code;
+	return { levels: userId ? await getLevels(locals.db, userId) : [], title: 'Estudiantes' };
 };
 
 export const actions: Actions = {
-	create: async ({ request, locals }) => {
+	upsert: async ({ request, locals }) => {
 		const formData = await request.formData();
-		const name = formData.get('name') as string;
-		const last_name = formData.get('last_name') as string;
-		const phone = formData.get('phone') as string | null;
-		const email = formData.get('email') as string;
-		const level_code = formData.get('level') as string;
-		const group_name = formData.get('group_name') as string;
-		const roll_code = formData.get('roll_code') as string;
-		const user_code = locals.session?.user.id;
-
-		if (!user_code) return fail(401, { error: 'User not authenticated' });
-
-		// Validate data with Zod schema
-		const result = studentSchema.safeParse({
-			name,
-			last_name,
-			phone,
-			email,
-			level_code,
-			group_name,
-			roll_code
-		});
-
-		if (!result.success) {
-			const firstError = result.error.errors[0];
-			return fail(400, {
-				error: firstError.message || 'Validation error',
-				errors: result.error.format()
-			});
-		}
-
+		const data = {
+			name: formData.get('name') as string,
+			last_name: formData.get('last_name') as string,
+			phone: formData.get('phone') as string | null,
+			email: formData.get('email') as string,
+			level_code: formData.get('level') as string,
+			group_name: formData.get('group_name') as string,
+			roll_code: formData.get('roll_code') as string
+		};
 		const existing_student_code = formData.get('code') as string | null;
+		const user_code = locals.user?.code;
 
-		// If we have an existing student code, we're updating an existing student
-		if (existing_student_code) {
-			// Update student data
-			const { error: studentError } = await locals.supabase
-				.from('students')
-				.update({ name, last_name, phone, email })
-				.eq('code', existing_student_code);
+		if (!user_code) return fail(401, { error: 'Usuario no autenticado' });
 
-			if (studentError) return fail(400, { error: studentError.message });
+		validateStudent(data);
 
-			// Check if student already has a register for this level
-			const { data: existingRegister, error: registerCheckError } = await locals.supabase
-				.from('registers')
-				.select('code')
-				.eq('student_code', existing_student_code)
-				.eq('level_code', level_code)
-				.single();
+		try {
+			await locals.db.transaction().execute(async (trx) => {
+				if (existing_student_code) {
+					// Update student
+					await trx
+						.updateTable('students')
+						.set({
+							name: data.name,
+							last_name: data.last_name,
+							phone: data.phone,
+							email: data.email,
+							user_code
+						})
+						.where('code', '=', existing_student_code)
+						.execute();
 
-			if (registerCheckError && registerCheckError.code !== 'PGRST116') {
-				return fail(400, { error: registerCheckError.message });
-			}
+					// Check for existing register for this level
+					const existingRegister = await trx
+						.selectFrom('registers')
+						.select(['code', 'group_name', 'level_code'])
+						.where('student_code', '=', existing_student_code)
+						.where('level_code', '=', data.level_code)
+						.executeTakeFirst();
 
-			if (existingRegister) {
-				// Update existing register
-				const { error: registerError } = await locals.supabase
-					.from('registers')
-					.update({ group_name, level_code, roll_code })
-					.eq('code', existingRegister.code);
+					if (existingRegister) {
+						// Check for changes and delete evals if needed
+						const isGroupChanging = existingRegister.group_name !== data.group_name;
+						if (isGroupChanging) await deleteEvals(trx, existingRegister.code);
 
-				if (registerError) return fail(400, { error: registerError.message });
-			} else {
-				// Create new register
-				const { error: registerError } = await locals.supabase.from('registers').insert({
-					student_code: existing_student_code,
-					level_code,
-					group_name,
-					user_code,
-					roll_code
-				});
+						// Update register
+						await trx
+							.updateTable('registers')
+							.set({
+								group_name: data.group_name,
+								level_code: data.level_code,
+								roll_code: data.roll_code
+							})
+							.where('code', '=', existingRegister.code)
+							.execute();
+					} else {
+						// Create new register
+						await trx
+							.insertInto('registers')
+							.values({ ...data, student_code: existing_student_code, user_code })
+							.execute();
+					}
+				} else {
+					// Create new student and register
+					const student = await trx
+						.insertInto('students')
+						.values({
+							name: data.name,
+							last_name: data.last_name,
+							phone: data.phone,
+							email: data.email,
+							user_code
+						})
+						.returning('code')
+						.executeTakeFirstOrThrow();
 
-				if (registerError) return fail(400, { error: registerError.message });
-			}
-
+					await trx
+						.insertInto('registers')
+						.values({
+							student_code: student.code,
+							level_code: data.level_code,
+							group_name: data.group_name,
+							roll_code: data.roll_code,
+							user_code
+						})
+						.execute();
+				}
+			});
 			return { type: 'success' };
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : 'Error en upsert de estudiante/registro';
+			return fail(400, { error: message });
 		}
-
-		// Create new student
-		const { data: student, error: studentError } = await locals.supabase
-			.from('students')
-			.insert({ name, last_name, phone, email, user_code })
-			.select('code')
-			.single();
-
-		if (studentError || !student) {
-			return fail(400, { error: studentError?.message || 'Error creating student' });
-		}
-
-		// Create new register
-		const { error: registerError } = await locals.supabase.from('registers').insert({
-			student_code: student.code,
-			level_code,
-			group_name,
-			user_code,
-			roll_code
-		});
-
-		if (registerError) return fail(400, { error: registerError.message });
-
-		return { type: 'success' };
 	},
 
 	update: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const code = formData.get('code') as string;
-		const name = formData.get('name') as string;
-		const last_name = formData.get('last_name') as string;
-		const phone = formData.get('phone') as string | null;
-		const email = formData.get('email') as string;
-		const level_code = formData.get('level') as string;
-		const group_name = formData.get('group_name') as string;
-		const roll_code = formData.get('roll_code') as string;
+		const data = {
+			name: formData.get('name') as string,
+			last_name: formData.get('last_name') as string,
+			phone: formData.get('phone') as string | null,
+			email: formData.get('email') as string,
+			level_code: formData.get('level') as string,
+			group_name: formData.get('group_name') as string,
+			roll_code: formData.get('roll_code') as string
+		};
 
-		const result = studentSchema.safeParse({
-			name,
-			last_name,
-			phone,
-			email,
-			level_code,
-			group_name,
-			roll_code
-		});
+		validateStudent(data);
 
-		if (!result.success) {
-			const firstError = result.error.errors[0];
-			return fail(400, {
-				error: firstError.message || 'Validation error',
-				errors: result.error.format()
+		try {
+			await locals.db.transaction().execute(async (trx) => {
+				// Get latest register
+				const currentRegister = await trx
+					.selectFrom('registers')
+					.select(['code', 'group_name', 'level_code'])
+					.where('student_code', '=', code)
+					.orderBy('created_at', 'desc')
+					.executeTakeFirst();
+
+				if (!currentRegister) throw new Error('No se encontró registro para el estudiante');
+
+				// Check for changes and delete evals if needed
+				const isGroupChanging = currentRegister.group_name !== data.group_name;
+				const isLevelChanging = currentRegister.level_code !== data.level_code;
+				if (isGroupChanging || isLevelChanging) await deleteEvals(trx, currentRegister.code);
+
+				// Update student
+				await trx
+					.updateTable('students')
+					.set({
+						name: data.name,
+						last_name: data.last_name,
+						phone: data.phone,
+						email: data.email
+					})
+					.where('code', '=', code)
+					.execute();
+
+				// Update only this register
+				await trx
+					.updateTable('registers')
+					.set({
+						level_code: data.level_code,
+						group_name: data.group_name,
+						roll_code: data.roll_code
+					})
+					.where('code', '=', currentRegister.code)
+					.execute();
 			});
+			return { type: 'success' };
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : 'Error actualizando estudiante/registro';
+			return fail(400, { error: message });
 		}
-
-		// Get current register to check for group/level change
-		const { data: currentRegister, error: currentRegisterError } = await locals.supabase
-			.from('registers')
-			.select('group_name, level_code, code')
-			.eq('student_code', code)
-			.order('created_at', { ascending: false })
-			.limit(1)
-			.single();
-
-		if (currentRegisterError) return fail(400, { error: currentRegisterError.message });
-
-		// Check if group or level is changing
-		const isGroupChanging = currentRegister.group_name !== group_name;
-		const isLevelChanging = currentRegister.level_code !== level_code;
-
-		// If group/level is changing, automatically delete evaluation data
-		if (isGroupChanging || isLevelChanging) {
-			// Delete eval_answers first (they reference eval_questions)
-			await locals.supabase.from('eval_answers').delete().eq('register_code', currentRegister.code);
-
-			// Delete eval_results (they reference evals and eval_sections)
-			await locals.supabase.from('eval_results').delete().eq('register_code', currentRegister.code);
-		}
-
-		const { error: studentError } = await locals.supabase
-			.from('students')
-			.update({ name, last_name, phone, email })
-			.eq('code', code);
-
-		if (studentError) return fail(400, { error: studentError.message });
-
-		const { error: registerError } = await locals.supabase
-			.from('registers')
-			.update({ level_code, group_name, roll_code })
-			.eq('student_code', code)
-			.order('created_at', { ascending: false })
-			.limit(1);
-
-		if (registerError) return fail(400, { error: registerError.message });
-
-		return { type: 'success' };
 	},
 
 	delete: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const code = formData.get('code') as string;
 		const register_code = formData.get('register_code') as string;
-		const affect_student = formData.get('mode') as 'all' | 'only_register';
-		const { error: registerError } = await locals.supabase
-			.from('registers')
-			.delete()
-			.eq('code', register_code);
+		const mode = formData.get('mode') as 'all' | 'only_register';
 
-		if (registerError) return fail(400, { error: registerError.message });
+		try {
+			await locals.db.transaction().execute(async (trx) => {
+				if (mode === 'all') {
+					// Delete all evals and registers for student, then student
+					const registerCodes = await trx
+						.selectFrom('registers')
+						.select('code')
+						.where('student_code', '=', code)
+						.execute()
+						.then((rows) => rows.map((r) => r.code));
 
-		if (affect_student === 'all') {
-			const { error: studentError } = await locals.supabase
-				.from('students')
-				.delete()
-				.eq('code', code);
-
-			if (studentError) return fail(400, { error: studentError.message });
+					if (registerCodes.length > 0) {
+						await trx
+							.deleteFrom('eval_answers')
+							.where('register_code', 'in', registerCodes)
+							.execute();
+						await trx
+							.deleteFrom('eval_results')
+							.where('register_code', 'in', registerCodes)
+							.execute();
+						await trx.deleteFrom('registers').where('code', 'in', registerCodes).execute();
+					}
+					await trx.deleteFrom('students').where('code', '=', code).execute();
+				} else {
+					// Delete only this register and its evals
+					await deleteEvals(trx, register_code);
+					await trx.deleteFrom('registers').where('code', '=', register_code).execute();
+				}
+			});
+			return { type: 'success' };
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : 'Error eliminando estudiante/registro';
+			return fail(400, { error: message });
 		}
-
-		return { type: 'success' };
 	}
 };

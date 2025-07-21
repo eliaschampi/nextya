@@ -4,26 +4,22 @@ import { json } from '@sveltejs/kit';
 export const GET: RequestHandler = async ({ locals }) => {
 	try {
 		// Get counts of registers grouped by level with level name
-		const { data, error } = await locals.supabase
-			.from('registers')
-			.select('level_code, levels!inner(name)')
-			.order('level_code');
+		const data = await locals.db
+			.selectFrom('registers')
+			.innerJoin('levels', 'levels.code', 'registers.level_code')
+			.select(['registers.level_code', 'levels.name as level_name'])
+			.orderBy('registers.level_code', 'asc')
+			.execute();
 
-		if (error) {
-			return json({ error: 'Error al obtener datos de registros por nivel' }, { status: 500 });
-		}
-
-		if (!data || !Array.isArray(data) || data.length === 0) {
+		if (!data || data.length === 0) {
 			return json([]);
 		}
 
 		// Process data to count registers by level
 		const levelCounts = data.reduce(
 			(acc: Record<string, { name: string; count: number }>, item) => {
-				if (!item || !item.level_code) return acc;
-
 				const levelCode = item.level_code;
-				const levelName = item.levels?.name || 'Desconocido';
+				const levelName = item.level_name || 'Desconocido';
 
 				if (!acc[levelCode]) {
 					acc[levelCode] = { name: levelName, count: 0 };
@@ -41,7 +37,11 @@ export const GET: RequestHandler = async ({ locals }) => {
 			count: level.count
 		}));
 		return json(result);
-	} catch {
-		return json({ error: 'Error interno del servidor' }, { status: 500 });
+	} catch (error) {
+		console.error('Error fetching registers by level:', error);
+		return json(
+			{ error: 'Error interno del servidor al obtener registros por nivel' },
+			{ status: 500 }
+		);
 	}
 };

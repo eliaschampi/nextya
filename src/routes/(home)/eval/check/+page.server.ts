@@ -1,11 +1,14 @@
-import { fail } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import type { OptimizedResultPayload } from '$lib/types/api';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { getLevels } from '$lib/data/levels';
+import { sql } from 'kysely';
+import type { Kysely } from 'kysely';
+import type { DB } from '$lib/database/types';
+import type { Levels } from '$lib/types';
 
 /**
- * Empaqueta un resultado individual para el RPC de Supabase
+ * Empaqueta un resultado individual para el RPC
  */
 function buildRpcPayload(evalCode: string, result: OptimizedResultPayload['results'][0]) {
 	const answers = result.answers.map((a) => ({
@@ -43,14 +46,23 @@ function buildRpcPayload(evalCode: string, result: OptimizedResultPayload['resul
  * Guarda todos los resultados en paralelo usando Promise.allSettled
  */
 async function saveAllResults(
-	supabase: SupabaseClient,
+	db: Kysely<DB>,
 	payload: OptimizedResultPayload
 ): Promise<{ successCount: number; errors: string[] }> {
-	const tasks = payload.results.map((r) => {
+	const tasks = payload.results.map(async (r) => {
 		const rpcPayload = buildRpcPayload(payload.eval_code, r);
-		return supabase.rpc('upsert_eval_results', rpcPayload).then(({ error }) => {
-			if (error) throw new Error(`${r.roll_code}: ${error.message}`);
-		});
+		try {
+			await sql`SELECT upsert_eval_results(
+				${rpcPayload.p_eval_code},
+				${rpcPayload.p_register_code},
+				${JSON.stringify(rpcPayload.p_answers)},
+				${JSON.stringify(rpcPayload.p_general_result)},
+				${JSON.stringify(rpcPayload.p_section_results)}
+			)`.execute(db);
+		} catch (error: unknown) {
+			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+			throw new Error(`${r.roll_code}: ${errorMessage}`);
+		}
 	});
 
 	const settled = await Promise.allSettled(tasks);
@@ -69,11 +81,14 @@ async function saveAllResults(
 }
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const userId = locals.session?.user.id;
-	let levels = [];
+	if (!(await locals.can('evals:process'))) {
+		throw error(403, 'Acceso no autorizado');
+	}
+	const userId = locals.user?.code;
+	let levels: Levels[] = [];
 
 	if (userId) {
-		levels = await getLevels(locals.supabase, userId);
+		levels = await getLevels(locals.db, userId);
 	}
 
 	return {
@@ -106,7 +121,7 @@ export const actions: Actions = {
 			return fail(400, { message: 'No hay resultados válidos para guardar.' });
 		}
 
-		const { successCount, errors } = await saveAllResults(locals.supabase, payload);
+		const { successCount, errors } = await saveAllResults(locals.db, payload);
 
 		if (errors.length) {
 			return fail(500, {

@@ -5,7 +5,8 @@ import {
 	type StudentRegisterData,
 	type CommitResult
 } from '$lib/csvProcessor';
-import { ApiErrorCode, createApiError, type ApiResponse } from '$lib/types/apiError';
+// Removed ApiError imports for consistent error handling
+import { sql } from 'kysely';
 
 // Constants for batch processing
 const BATCH_SIZE = 100; // Process 100 records at a time for better performance
@@ -56,13 +57,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		// --- Input Validation ---
 		if (!levelCode) {
-			return json(
-				{
-					success: false,
-					error: createApiError(ApiErrorCode.VALIDATION_ERROR, 'Nivel no proporcionado o inválido')
-				},
-				{ status: 400 }
-			);
+			return json({ error: 'Nivel no proporcionado o inválido' }, { status: 400 });
 		}
 
 		// Filter ensure validRows is an array of actual StudentRegisterData objects
@@ -76,27 +71,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		);
 
 		if (validRows.length === 0) {
-			return json(
-				{
-					success: false,
-					error: createApiError(
-						ApiErrorCode.CSV_NO_VALID_ROWS,
-						'No hay datos válidos para importar'
-					)
-				},
-				{ status: 400 }
-			);
+			return json({ error: 'No hay datos válidos para importar' }, { status: 400 });
 		}
 
-		const user_code = locals.session?.user.id;
+		const user_code = locals.user?.code;
 		if (!user_code) {
-			return json(
-				{
-					success: false,
-					error: createApiError(ApiErrorCode.UNAUTHORIZED, 'Usuario no autenticado')
-				},
-				{ status: 401 }
-			);
+			return json({ error: 'Usuario no autenticado' }, { status: 401 });
 		}
 
 		// --- Results Tracking ---
@@ -115,46 +95,40 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			const batchPromises = batch.map(async (row) => {
 				try {
 					// At this point levelCode is guaranteed to be defined due to earlier validation
-					const { error: rpcError } = await locals.supabase.rpc('import_student_register', {
-						p_name: row.name,
-						p_last_name: row.last_name,
-						p_phone: row.phone || '',
-						p_email: row.email || '',
-						p_level_code: levelCode as string,
-						p_group_name: row.group_name,
-						p_roll_code: row.roll_code,
-						p_user_code: user_code
-					});
-
-					if (rpcError) {
-						// Check for specific error patterns
-						for (const pattern of ERROR_PATTERNS) {
-							if (rpcError.message.includes(pattern.pattern)) {
-								return {
-									success: false,
-									row,
-									error: pattern.getMessage(row),
-									code: pattern.code
-								};
-							}
-						}
-
-						// Generic error for other RPC issues
-						return {
-							success: false,
-							row,
-							error: `Error al procesar: ${rpcError.message}`,
-							code: CsvProcessorErrorCode.UNEXPECTED_ERROR
-						};
-					}
+					await sql`
+						SELECT import_student_register(
+							${row.name},
+							${row.last_name},
+							${row.phone || ''},
+							${row.email || ''},
+							${levelCode as string}::uuid,
+							${row.group_name},
+							${row.roll_code},
+							${user_code}::uuid
+						)
+					`.execute(locals.db);
 
 					return { success: true, row };
 				} catch (error) {
 					const message = error instanceof Error ? error.message : String(error);
+
+					// Check for specific error patterns
+					for (const pattern of ERROR_PATTERNS) {
+						if (message.includes(pattern.pattern)) {
+							return {
+								success: false,
+								row,
+								error: pattern.getMessage(row),
+								code: pattern.code
+							};
+						}
+					}
+
+					// Generic error for other database issues
 					return {
 						success: false,
 						row,
-						error: `Error inesperado: ${message}`,
+						error: `Error al procesar: ${message}`,
 						code: CsvProcessorErrorCode.UNEXPECTED_ERROR
 					};
 				}
@@ -207,34 +181,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({
 			success: true,
 			data: results
-		} as ApiResponse<CommitResult>);
-	} catch (error: unknown) {
-		// --- Enhanced Error Handling ---
+		});
+	} catch (error) {
 		console.error(`Error committing CSV data:`, error);
-
-		let status = 500;
-		let errorCode = ApiErrorCode.UNKNOWN_ERROR;
-		let message = 'Error interno del servidor durante la importación.';
-
-		if (error instanceof SyntaxError) {
-			message = 'Error en el formato de la solicitud.';
-			status = 400; // Bad Request
-			errorCode = ApiErrorCode.REQUEST_FORMAT_ERROR;
-		} else if (error instanceof Error) {
-			message = error.message.startsWith('Error: ') ? error.message.substring(7) : error.message;
-
-			// Determine more specific error codes based on error message
-			if (message.includes('verificar matrículas') || message.includes('verificar estudiantes')) {
-				errorCode = ApiErrorCode.DB_QUERY_ERROR;
-			}
-		}
-
-		return json(
-			{
-				success: false,
-				error: createApiError(errorCode, message)
-			} as ApiResponse<never>,
-			{ status }
-		);
+		return json({ error: 'Error interno del servidor durante la importación' }, { status: 500 });
 	}
 };

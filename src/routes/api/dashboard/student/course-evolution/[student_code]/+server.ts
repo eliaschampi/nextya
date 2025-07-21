@@ -1,6 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
-import { getStudentCourseEvolution } from '$lib/data/studentDashboard';
+import { getStudentCourseEvolution } from '$lib/data/dashboard/student';
 
 /**
  * GET endpoint for student course evolution data
@@ -14,7 +14,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	}
 
 	try {
-		const data = await getStudentCourseEvolution(locals.supabase, student_code);
+		const data = await getStudentCourseEvolution(locals.db, student_code);
 
 		if (!data) {
 			return json(

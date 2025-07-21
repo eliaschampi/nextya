@@ -5,27 +5,28 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
-	import type { Level, SimpleUser } from '$lib/types';
+	import type { Levels, SimpleUser } from '$lib/types';
 	import { EllipsisVertical, Plus, Minus } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getModalityTypes } from '$lib/data/modality';
-	import { permissionsStore } from '$lib/stores/permissions';
+	import { can } from '$lib/stores/permissions';
 
 	// Estados y referencias
 	let modal: HTMLDialogElement | null = $state(null);
 	let confirmModal: HTMLDialogElement | null = $state(null);
 	let isEditing = $state(false);
 	let message = $state('');
-	let selectedLevel = $state<Level | null>(null);
+	let selectedLevel = $state<Levels | null>(null);
 	let users = $state<SimpleUser[]>([]);
 	let selectedUsers = $state<string[]>([]);
-	let selectedUserId = $state('');
+	let selecteduserCode = $state('');
 	const modalities = getModalityTypes();
 
-	const { data } = $props<{ data: { levels: Level[] } }>();
-	const canCreate = permissionsStore.has({ entity: 'levels', action: 'create' });
-	const canUpdate = permissionsStore.has({ entity: 'levels', action: 'update' });
-	const canDelete = permissionsStore.has({ entity: 'levels', action: 'delete' });
+	const { data } = $props<{ data: { levels: Levels[] } }>();
+	// Permissions - using Svelte 5 reactive approach
+	let canCreate = $derived(can('levels:create'));
+	let canUpdate = $derived(can('levels:update'));
+	let canDelete = $derived(can('levels:delete'));
 
 	async function fetchUsers() {
 		if (users.length === 0) {
@@ -36,13 +37,19 @@
 
 	// Abrir modal para crear
 	function openCreateModal() {
+		if (!canCreate) {
+			return;
+		}
 		isEditing = false;
 		modal?.showModal();
 		fetchUsers();
 	}
 
 	// Abrir modal para editar
-	function openEditModal(level: Level) {
+	function openEditModal(level: Levels) {
+		if (!canUpdate) {
+			return;
+		}
 		isEditing = true;
 		selectedLevel = level;
 		modal?.showModal();
@@ -59,7 +66,7 @@
 	}
 
 	// Abrir modal para confirmar eliminación
-	function openDeleteConfirmModal(level: Level) {
+	function openDeleteConfirmModal(level: Levels) {
 		selectedLevel = level;
 		confirmModal?.showModal();
 	}
@@ -73,6 +80,12 @@
 			message = 'Todos los campos son obligatorios';
 			return false;
 		}
+
+		if (selectedUsers.length === 0) {
+			message = 'Debe seleccionar al menos un usuario';
+			return false;
+		}
+
 		message = '';
 		return true;
 	}
@@ -113,30 +126,30 @@
 		selectedLevel = null;
 		message = '';
 		selectedUsers = [];
-		selectedUserId = '';
+		selecteduserCode = '';
 		const form = modal?.querySelector('form');
 		if (form) form.reset();
 	}
 
 	// Funciones para gestionar usuarios
 	function addUser() {
-		if (selectedUserId && !selectedUsers.includes(selectedUserId)) {
-			selectedUsers = [...selectedUsers, selectedUserId];
-			selectedUserId = '';
+		if (selecteduserCode && !selectedUsers.includes(selecteduserCode)) {
+			selectedUsers = [...selectedUsers, selecteduserCode];
+			selecteduserCode = '';
 		}
 	}
 
-	function removeUser(userId: string) {
-		selectedUsers = selectedUsers.filter((id) => id !== userId);
+	function removeUser(userCode: string) {
+		selectedUsers = selectedUsers.filter((code) => code !== userCode);
 	}
 
-	function getUserName(userId: string) {
-		const user = users.find((u) => u.id === userId);
-		return user ? `${user.name} ${user.last_name}` : userId;
+	function getUserName(userCode: string) {
+		const user = users.find((u) => u.code === userCode);
+		return user ? `${user.name} ${user.last_name}` : 'Usuario no disponible';
 	}
 
 	function getAvailableUsers() {
-		return users.filter((user) => !selectedUsers.includes(user.id));
+		return users.filter((user) => !selectedUsers.includes(user.code));
 	}
 
 	onMount(() => {
@@ -179,9 +192,7 @@
 	title="Niveles"
 	description="Aquí encontrarás todas las niveles disponibles en la aplicación."
 >
-	{#if $canCreate}
-		<button class="btn btn-primary" onclick={openCreateModal}>Añadir</button>
-	{/if}
+	<button class="btn btn-primary" onclick={openCreateModal} disabled={!canCreate}>Añadir</button>
 </PageTitle>
 
 <div class="space-y-4 p-4">
@@ -207,7 +218,7 @@
 					maxlength={20}
 				/>
 				<div class="mt-2">
-					<label class="label font-medium" for="abr">Modalidad</label>
+					<label class="font-medium" for="abr">Modalidad</label>
 					<select id="abr" name="abr" class="select w-full validator" required>
 						<option value="">Selecciona una modalidad</option>
 						{#each modalities as abr (abr)}
@@ -218,23 +229,23 @@
 
 				<!-- Gestión de usuarios -->
 				<div class="mt-4">
-					<label class="label font-medium" for="users">Usuarios</label>
+					<label class="font-medium" for="users">Usuarios</label>
 					<div class="flex gap-2">
 						<select
 							id="users"
-							bind:value={selectedUserId}
+							bind:value={selecteduserCode}
 							class="select select-sm flex-1 validator"
 						>
 							<option value="">Selecciona un usuario</option>
-							{#each getAvailableUsers() as user (user.id)}
-								<option value={user.id}>{user.name} {user.last_name}</option>
+							{#each getAvailableUsers() as user (user.code)}
+								<option value={user.code}>{user.name} {user.last_name}</option>
 							{/each}
 						</select>
 						<button
 							type="button"
 							class="btn btn-sm btn-primary"
 							onclick={addUser}
-							disabled={!selectedUserId}
+							disabled={!selecteduserCode}
 						>
 							<Plus class="w-4 h-4" />
 						</button>
@@ -243,14 +254,14 @@
 					<!-- Lista de usuarios seleccionados -->
 					{#if selectedUsers.length > 0}
 						<div class="mt-2 space-y-2">
-							{#each selectedUsers as userId (userId)}
+							{#each selectedUsers as userCode (userCode)}
 								<div class="flex justify-between items-center bg-base-100 p-2 rounded-md">
-									<span class="text-sm">{getUserName(userId)}</span>
-									<input type="hidden" name="selectedUsers" value={userId} />
+									<span class="text-sm">{getUserName(userCode)}</span>
+									<input type="hidden" name="selectedUsers" value={userCode} />
 									<button
 										type="button"
 										class="btn btn-xs btn-ghost text-error"
-										onclick={() => removeUser(userId)}
+										onclick={() => removeUser(userCode)}
 									>
 										<Minus class="w-3 h-3" />
 									</button>
@@ -291,7 +302,7 @@
 	</div>
 </dialog>
 
-{#snippet levelItem(item: Level)}
+{#snippet levelItem(item: Levels)}
 	<div
 		class="rounded-box bg-base-200 py-3 px-4 hover:bg-base-300 transition-colors text-left relative"
 	>
@@ -313,13 +324,13 @@
 					</div>
 					<ul class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
 						<li>
-							<button onclick={() => openEditModal(item)} disabled={!$canUpdate}>Editar</button>
+							<button onclick={() => openEditModal(item)}>Editar</button>
 						</li>
-						<li>
-							<button onclick={() => openDeleteConfirmModal(item)} disabled={!$canDelete}>
-								Eliminar
-							</button>
-						</li>
+						{#if canDelete}
+							<li>
+								<button onclick={() => openDeleteConfirmModal(item)}> Eliminar </button>
+							</li>
+						{/if}
 					</ul>
 				</div>
 			</div>

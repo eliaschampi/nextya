@@ -21,14 +21,13 @@
 		Check,
 		Image as ImageIcon
 	} from 'lucide-svelte';
-	import type { Level, EvalWithSections, EvalQuestion } from '$lib/types';
-	import type { FileEntry } from '$lib/types/app';
+	import type { Levels, EvalWithSections, EvalQuestions } from '$lib/types';
+	import type { FileEntry } from '$lib/types/core';
 	import { showToast } from '$lib/stores/Toast';
 	import { base64ToFile, validateA5Proportion } from '$lib/utils/imageUtils';
 	import type { ApiOmrBatchResponse, ApiOmrBatchRequest } from '$lib/types/api';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { permissionsStore } from '$lib/stores/permissions';
 	import { evaluationStore } from '$lib/stores/evaluation';
 
 	interface ValidationError {
@@ -39,13 +38,10 @@
 	// Props
 	const { data } = $props<{
 		data: {
-			levels: Level[];
-			serverQuestions: EvalQuestion[];
+			levels: Levels[];
+			serverQuestions: EvalQuestions[];
 		};
 	}>();
-
-	// Permissions
-	const canSaveResults = permissionsStore.has({ entity: 'eval_results', action: 'create' });
 
 	// Store state
 	let storeState = $state({
@@ -76,7 +72,7 @@
 	});
 
 	// Estado
-	let evalQuestions = $state<EvalQuestion[]>(data.serverQuestions || []);
+	let evalQuestions = $state<EvalQuestions[]>(data.serverQuestions || []);
 	let fileEntries = $state<FileEntry[]>([]);
 	let selectedFileId = $state<string | null>(null);
 	let isProcessingBatch = $state(false);
@@ -698,7 +694,7 @@
 	{#if storeState.selectedEval}
 		<EvalHeader
 			evaluation={storeState.selectedEval}
-			level={data.levels.find((l: Level) => l.code === storeState.selectedEval?.level_code)}
+			level={data.levels.find((l: Levels) => l.code === storeState.selectedEval?.level_code)}
 		>
 			<EvalDetails evaluation={storeState.selectedEval} />
 		</EvalHeader>
@@ -726,7 +722,7 @@
 
 					{#if pendingFilesCount > 0}
 						<button
-							class="btn btn-info btn-sm {isProcessingBatch ? 'btn-disabled' : ''}"
+							class="btn btn-info btn-sm"
 							onclick={processAllPendingFiles}
 							disabled={!canProcess || isProcessingBatch || isSavingBatch}
 						>
@@ -760,7 +756,7 @@
 							type="hidden"
 							name="resultsToSave"
 							value={JSON.stringify({
-								eval_code: storeState.selectedEval && storeState.selectedEval.code,
+								eval_code: storeState.selectedEval?.code || '',
 								results: fileEntries
 									.filter((e) => e.status === 'success' && !!e.result?.register_code && !e.saved)
 									.map((e) => ({
@@ -774,7 +770,7 @@
 						<button
 							type="submit"
 							class="btn btn-success btn-soft btn-sm"
-							disabled={!canSave || isSavingBatch || !$canSaveResults}
+							disabled={!canSave || isSavingBatch}
 						>
 							{#if isSavingBatch}
 								<Loader2 class="animate-spin mr-1" size={16} /> Guardando...
@@ -799,16 +795,16 @@
 						</button>
 					</div>
 					<progress
-						class="progress progress-primary w-full h-3"
+						class="progress progress-primary w-full h-3 rounded-full"
 						value={batchState.progress.processed}
 						max={batchState.progress.total}
 					></progress>
 					<div class="flex justify-between items-center text-xs opacity-70 mt-2">
-						<span>
+						<span class="font-medium">
 							{batchState.progress.processed} de {batchState.progress.total} archivos
 						</span>
 						<div class="flex items-center gap-2">
-							<span class="font-medium">
+							<span class="font-medium tabular-nums">
 								{Math.round(
 									(batchState.progress.processed / batchState.progress.total) * 100 || 0
 								)}%
@@ -837,19 +833,19 @@
 				<header class="flex items-center justify-between mb-4 gap-4 flex-wrap">
 					<h3 class="font-bold">Hojas de Respuestas</h3>
 					<div class="flex items-center gap-2 flex-wrap">
-						<span class="badge badge-ghost gap-1.5">
+						<span class="badge badge-ghost gap-1.5 font-medium">
 							<Upload size={12} />
 							{fileEntries.length} Total
 						</span>
-						<span class="badge badge-success badge-outline gap-1.5">
+						<span class="badge badge-success badge-outline gap-1.5 font-medium">
 							<Check size={12} />
 							{successFilesCount} OK
 						</span>
-						<span class="badge badge-error badge-outline gap-1.5">
+						<span class="badge badge-error badge-outline gap-1.5 font-medium">
 							<X size={12} />
 							{errorFilesCount} Error
 						</span>
-						<span class="badge badge-info badge-outline gap-1.5">
+						<span class="badge badge-info badge-outline gap-1.5 font-medium">
 							<Save size={12} />
 							{fileEntries.filter((e) => e.saved).length} Guardado
 						</span>
@@ -891,10 +887,10 @@
 					{/if}
 				{:else}
 					<div
-						class="flex-grow flex flex-col items-center justify-center p-8 text-center bg-base-100/50 rounded-lg border border-base-300/30"
+						class="flex-grow flex flex-col items-center justify-center p-8 text-center bg-base-100/50 rounded-lg border border-base-300/30 transition-all duration-200 hover:bg-base-100/70"
 					>
-						<Upload size={48} class="text-primary/50 mb-4" />
-						<p class="text-base-content/70 mb-2">No hay hojas cargadas</p>
+						<Upload size={48} class="text-primary/50 mb-4 transition-colors duration-200" />
+						<p class="text-base-content/70 mb-2 font-medium">No hay hojas cargadas</p>
 						<p class="text-sm text-base-content/50 mb-4">
 							Selecciona una evaluación y añade imágenes para procesar.
 						</p>

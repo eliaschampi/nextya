@@ -2,6 +2,8 @@
  * Types for the reusable Table component
  */
 
+import type { Snippet } from 'svelte';
+
 /**
  * Represents a column in a table
  * @template T - The type of data in each row
@@ -24,5 +26,5 @@ export interface TableColumn<T> {
 	 * @param row - The row data
 	 * @returns The content to render in the cell (string or other value)
 	 */
-	cell?: (row: T) => string | number | boolean | null | undefined | Record<string, unknown>;
+	render?: Snippet<[T]>;
 }

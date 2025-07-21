@@ -1,6 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
-import { getCourseScores } from '$lib/data/courseDashboard';
+import { getCourseScores } from '$lib/data/dashboard/course';
 
 /**
  * GET endpoint for course scores data
@@ -20,7 +20,7 @@ export const GET: RequestHandler = async ({ params, url, locals }) => {
 	}
 
 	try {
-		const data = await getCourseScores(locals.supabase, level_code, groupName);
+		const data = await getCourseScores(locals.db, level_code, groupName);
 
 		if (!data) {
 			return json({ error: 'No se pudieron obtener datos de cursos' }, { status: 500 });

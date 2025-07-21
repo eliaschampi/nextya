@@ -1,6 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
-import { getLevelDashboardData } from '$lib/data/dashboard';
+import { getLevelDashboardData } from '$lib/data/dashboard/general';
 
 /**
  * GET endpoint for level dashboard data
@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	try {
 		// Get level dashboard data from the dedicated module
-		const dashboardData = await getLevelDashboardData(locals.supabase, level_code);
+		const dashboardData = await getLevelDashboardData(locals.db, level_code);
 
 		if (!dashboardData) {
 			return json({ error: 'No se pudieron obtener datos del dashboard' }, { status: 500 });

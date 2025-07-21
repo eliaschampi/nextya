@@ -1,11 +1,12 @@
 import { getLevels } from '$lib/data/levels';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 
 export const GET: RequestHandler = async ({ locals }) => {
-	const userId = locals.session?.user.id;
-	let levels = [];
-	if (userId) {
-		levels = await getLevels(locals.supabase, userId);
+	if (!locals.user) {
+		return json({ error: 'No Autorizado' }, { status: 401 });
 	}
-	return new Response(JSON.stringify({ levels }));
+
+	const levels = await getLevels(locals.db, locals.user.code);
+	return json({ levels });
 };

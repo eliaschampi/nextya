@@ -4,31 +4,34 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
-	import type { Course } from '$lib/types';
+	import type { Courses } from '$lib/types';
 	import { EllipsisVertical, ChevronUp, ChevronDown } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
-	import { permissionsStore } from '$lib/stores/permissions';
+	import { can } from '$lib/stores/permissions';
 
 	// Estados y referencias
 	let modal: HTMLDialogElement | null = $state(null);
 	let confirmModal: HTMLDialogElement | null = $state(null);
 	let isEditing = $state(false);
 	let message = $state('');
-	let selectedcourse = $state<Course | null>(null);
+	let selectedcourse = $state<Courses | null>(null);
 	let isReordering = $state(false);
 
-	const { data } = $props<{ data: { courses: Course[] } }>();
+	const { data } = $props<{ data: { courses: Courses[] } }>();
 
-	const canCreate = permissionsStore.has({ entity: 'courses', action: 'create' });
-	const canUpdate = permissionsStore.has({ entity: 'courses', action: 'update' });
-	const canDelete = permissionsStore.has({ entity: 'courses', action: 'delete' });
+	// Permissions - using Svelte 5 reactive approach
+	let canCreate = $derived(can('courses:create'));
+	let canUpdate = $derived(can('courses:update'));
+	let canDelete = $derived(can('courses:delete'));
 
 	function openCreateModal() {
+		if (!canCreate) return;
 		isEditing = false;
 		modal?.showModal();
 	}
 
-	function openEditModal(course: Course) {
+	function openEditModal(course: Courses) {
+		if (!canUpdate) return;
 		isEditing = true;
 		selectedcourse = course;
 		modal?.showModal();
@@ -37,7 +40,7 @@
 		if (nameInput) nameInput.value = course.name || '';
 	}
 
-	function openDeleteConfirmModal(course: Course) {
+	function openDeleteConfirmModal(course: Courses) {
 		selectedcourse = course;
 		confirmModal?.showModal();
 	}
@@ -128,7 +131,7 @@
 	}
 
 	// Manejar reordenamiento
-	async function handleReorder(course: Course, direction: 'up' | 'down') {
+	async function handleReorder(course: Courses, direction: 'up' | 'down') {
 		if (isReordering) return;
 
 		isReordering = true;
@@ -157,9 +160,7 @@
 </script>
 
 <PageTitle title="Cursos" description="Aquí puedes ver y gestionar los cursos disponibles">
-	{#if $canCreate}
-		<button class="btn btn-primary" onclick={openCreateModal}>Añadir</button>
-	{/if}
+	<button class="btn btn-primary" onclick={openCreateModal} disabled={!canCreate}>Añadir</button>
 </PageTitle>
 
 <div class="space-y-4 p-4">
@@ -211,7 +212,7 @@
 	</div>
 </dialog>
 
-{#snippet courseItem(item: Course)}
+{#snippet courseItem(item: Courses)}
 	<div
 		class="rounded-box bg-base-200 py-3 px-4 hover:bg-base-300 transition-colors text-left relative"
 	>
@@ -220,7 +221,7 @@
 				<div class="font-medium text-base-content">{item.name}</div>
 			</div>
 			<div class="flex items-center gap-2">
-				{#if $canUpdate}
+				{#if canUpdate}
 					<div class="flex flex-col">
 						<button
 							type="button"
@@ -248,13 +249,13 @@
 					</button>
 					<ul class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
 						<li>
-							<button onclick={() => openEditModal(item)} disabled={!$canUpdate}>Editar</button>
+							<button onclick={() => openEditModal(item)}>Editar</button>
 						</li>
-						<li>
-							<button onclick={() => openDeleteConfirmModal(item)} disabled={!$canDelete}>
-								Eliminar
-							</button>
-						</li>
+						{#if canDelete}
+							<li>
+								<button onclick={() => openDeleteConfirmModal(item)}> Eliminar </button>
+							</li>
+						{/if}
 					</ul>
 				</div>
 			</div>

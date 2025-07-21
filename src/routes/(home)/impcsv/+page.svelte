@@ -6,7 +6,6 @@
 	import { showToast } from '$lib/stores/Toast';
 	import type { ToastType } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
-	import { permissionsStore } from '$lib/stores/permissions';
 
 	// Props from server
 	const { data } = $props<{
@@ -19,9 +18,6 @@
 	let loading = $state(false);
 	let committing = $state(false);
 	let showFileInput = $state(true);
-
-	// Permissions
-	const canSaveImport = permissionsStore.has({ entity: 'students', action: 'create' });
 
 	// Data
 	let file = $state<File | null>(null);
@@ -174,85 +170,95 @@
 		{ key: 'last_name', label: 'Apellidos' },
 		{ key: 'roll_code', label: 'Código', class: 'font-mono' },
 		{ key: 'group_name', label: 'Grupo' },
-		{
-			key: 'email',
-			label: 'Email',
-			class: 'text-xs',
-			cell: (row: StudentRegisterData) => row.email || '-'
-		}
+		{ label: 'Email', class: 'text-xs', render: emailCell }
 	];
 
 	// Define table columns for omitted rows
 	const omittedRowsColumns: TableColumn<OmittedRowDetail>[] = [
 		{ key: 'rowNumber', label: 'Fila', class: 'font-mono' },
-		{
-			label: 'Nombre',
-			cell: (row: OmittedRowDetail) => row.row.name || '-'
-		},
-		{
-			label: 'Apellidos',
-			cell: (row: OmittedRowDetail) => row.row.last_name || '-'
-		},
-		{
-			label: 'Código',
-			class: 'font-mono',
-			cell: (row: OmittedRowDetail) => row.row.roll_code || '-'
-		},
+		{ label: 'Nombre', render: nameCell },
+		{ label: 'Apellidos', render: lastNameCell },
+		{ label: 'Código', class: 'font-mono', render: rollCodeCell },
 		{ key: 'reason', label: 'Razón', class: 'text-error text-xs' }
 	];
 </script>
+
+<!-- Define snippets for custom cells -->
+{#snippet emailCell(row: StudentRegisterData)}
+	{row.email || '-'}
+{/snippet}
+
+{#snippet nameCell(row: OmittedRowDetail)}
+	{row.row.name || '-'}
+{/snippet}
+
+{#snippet lastNameCell(row: OmittedRowDetail)}
+	{row.row.last_name || '-'}
+{/snippet}
+
+{#snippet rollCodeCell(row: OmittedRowDetail)}
+	{row.row.roll_code || '-'}
+{/snippet}
 
 <PageTitle
 	title="Importación CSV"
 	description="Importa estudiantes y matrículas desde un archivo CSV"
 >
-	<span></span>
+	<div></div>
 </PageTitle>
 
-<div class="container mx-auto px-4 py-6">
+<main class="flex flex-col h-full gap-6 p-4">
 	{#if showFileInput}
-		<div
-			class="card bg-gradient-to-br from-base-200 to-base-100 shadow border border-base-300/30 rounded-xl mb-6"
-		>
+		<div class="card bg-base-200/80 shadow overflow-hidden">
 			<div class="card-body p-6">
-				<h2 class="card-title mb-4 flex items-center">
-					<FileText size={20} class="mr-2 text-primary" />
+				<h2 class="card-title text-primary mb-6">
+					<FileText size={20} />
 					Importar Estudiantes desde CSV
 				</h2>
-				<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border p-4">
-					<label class="label" for="level-select"> Nivel </label>
-					<select id="level-select" class="select select-bordered" bind:value={levelCode}>
-						<option value="" disabled selected>Selecciona un nivel</option>
-						{#each data.levels as level (level.code)}
-							<option value={level.code}>{level.name}</option>
-						{/each}
-					</select>
-					<label class="label mt-4" for="file-input"> Archivo CSV </label>
-					<input
-						type="file"
-						id="file-input"
-						accept=".csv,.txt"
-						class="file-input file-input-bordered w-full"
-						onchange={handleFileChange}
-					/>
-					<div class="text-xs text-info mt-2">
-						El archivo debe tener las columnas: name, last_name, phone, email, group_name, roll_code
+
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+					<div>
+						<label for="level-select">
+							<span class="label-text font-medium">Nivel</span>
+						</label>
+						<select id="level-select" class="select select-bordered w-full" bind:value={levelCode}>
+							<option value="" disabled selected>Selecciona un nivel</option>
+							{#each data.levels as level (level.code)}
+								<option value={level.code}>{level.name}</option>
+							{/each}
+						</select>
 					</div>
-				</fieldset>
 
-				<div class="form-control mb-6"></div>
+					<div>
+						<label for="file-input">
+							<span class="label-text font-medium">Archivo CSV</span>
+						</label>
+						<input
+							type="file"
+							id="file-input"
+							accept=".csv,.txt"
+							class="file-input file-input-bordered w-full"
+							onchange={handleFileChange}
+						/>
+					</div>
+				</div>
 
-				<div class="card-actions justify-end">
+				<div class="text-xs text-info mb-6">
+					Columnas requeridas: name, last_name, phone, email, group_name, roll_code. Separador por
+					coma (,)
+				</div>
+
+				<div class="flex justify-end">
 					<button
 						class="btn btn-primary"
 						onclick={processFile}
-						disabled={loading || !file || !levelCode || !$canSaveImport}
+						disabled={loading || !file || !levelCode}
 					>
 						{#if loading}
-							<span class="loading loading-spinner loading-sm mr-2"></span>
+							<span class="loading loading-spinner loading-sm"></span>
 							Procesando...
 						{:else}
-							<Upload size={16} class="mr-2" />
+							<Upload size={16} />
 							Procesar Archivo
 						{/if}
 					</button>
@@ -260,46 +266,46 @@
 			</div>
 		</div>
 	{:else}
-		<div class="flex justify-between mb-4">
-			<div>
-				<h3 class="text-lg font-medium">
-					Archivo: <span class="font-bold">{file?.name}</span>
-				</h3>
-				<p class="text-sm opacity-70">
-					Nivel: <span class="font-medium">{levelName}</span>
-				</p>
-			</div>
-			<div class="flex gap-2">
-				<button
-					class="btn btn-primary"
-					onclick={commitData}
-					disabled={committing ||
-						validRows.length === 0 ||
-						commitResults !== null ||
-						!$canSaveImport}
-				>
-					{#if committing}
-						<span class="loading loading-spinner loading-sm mr-2"></span>
-						Guardando...
-					{:else}
-						<Save size={16} class="mr-2" />
-						Guardar Datos
-					{/if}
-				</button>
-				<button class="btn btn-outline" onclick={resetForm}>
-					<Upload size={16} class="mr-2" />
-					Nuevo Archivo
-				</button>
+		<!-- File Info Header -->
+		<div class="card bg-base-200/80 shadow overflow-hidden">
+			<div class="card-body p-4 border-b border-base-300/30">
+				<div class="flex justify-between items-center">
+					<div>
+						<h3 class="text-lg font-semibold text-primary">
+							{file?.name}
+						</h3>
+						<p class="text-sm text-base-content/70">
+							Nivel: {levelName}
+						</p>
+					</div>
+					<div class="flex gap-2">
+						<button
+							class="btn btn-primary"
+							onclick={commitData}
+							disabled={committing || validRows.length === 0 || commitResults !== null}
+						>
+							{#if committing}
+								<span class="loading loading-spinner loading-sm"></span>
+								Guardando...
+							{:else}
+								<Save size={16} />
+								Guardar Datos
+							{/if}
+						</button>
+						<button class="btn btn-outline" onclick={resetForm}>
+							<Upload size={16} />
+							Nuevo Archivo
+						</button>
+					</div>
+				</div>
 			</div>
 		</div>
 
 		{#if importSummary}
-			<div
-				class="card bg-gradient-to-br from-base-200 to-base-100 shadow border border-base-300/30 rounded-xl mb-6"
-			>
+			<div class="card bg-base-200/80 shadow overflow-hidden">
 				<div class="card-body p-4">
-					<h3 class="card-title mb-2">
-						<FileText size={20} class="mr-2 text-primary" />
+					<h3 class="card-title text-primary mb-4">
+						<FileText size={20} />
 						Resumen de Procesamiento
 					</h3>
 					<div class="stats stats-vertical lg:stats-horizontal shadow w-full">
@@ -325,16 +331,13 @@
 		{/if}
 
 		{#if commitResults}
-			<div
-				class="card bg-gradient-to-br from-base-200 to-base-100 shadow border border-base-300/30 rounded-xl mb-6"
-			>
-				<div class="card-body p-6">
-					<h3 class="card-title text-success mb-2">
-						<Check size={20} class="mr-2" />
+			<div class="card bg-base-200/80 shadow overflow-hidden">
+				<div class="card-body p-4">
+					<h3 class="card-title text-success mb-4">
+						<Check size={20} />
 						Importación Completada
 					</h3>
 
-					<!-- Results Summary -->
 					<div class="stats stats-vertical lg:stats-horizontal shadow w-full">
 						<div class="stat">
 							<div class="stat-title">Registros Insertados</div>
@@ -353,46 +356,41 @@
 						</div>
 					</div>
 
-					<!-- Results Details -->
 					{#if commitResults.errors.length > 0 || commitResults.duplicates.length > 0}
 						<div class="alert alert-warning mt-4">
-							<div>
-								<AlertCircle size={20} class="mr-2" />
-								<span>
-									Se encontraron {commitResults.errors.length + commitResults.duplicates.length} problemas
-									durante la importación.
-									{#if commitResults.errors.length > 0}
-										{commitResults.errors.length} errores.
-									{/if}
-									{#if commitResults.duplicates.length > 0}
-										{commitResults.duplicates.length} duplicados.
-									{/if}
-								</span>
-							</div>
+							<AlertCircle size={20} />
+							<span>
+								Se encontraron {commitResults.errors.length + commitResults.duplicates.length} problemas
+								durante la importación.
+								{#if commitResults.errors.length > 0}
+									{commitResults.errors.length} errores.
+								{/if}
+								{#if commitResults.duplicates.length > 0}
+									{commitResults.duplicates.length} duplicados.
+								{/if}
+							</span>
 						</div>
 					{/if}
 				</div>
 			</div>
 		{/if}
 
-		<!-- Consolidated Data Table -->
-		<div
-			class="card bg-gradient-to-br from-base-200 to-base-100 shadow border border-base-300/30 rounded-xl"
-		>
+		<!-- Data Table -->
+		<div class="card bg-base-200/80 shadow overflow-hidden">
 			<div class="card-body p-4">
 				<div class="tabs tabs-boxed mb-4">
 					<button
 						class="tab {activeTab === 'valid' ? 'tab-active' : ''}"
 						onclick={() => (activeTab = 'valid')}
 					>
-						<Check size={16} class="mr-1 text-success" />
+						<Check size={16} class="text-success" />
 						Válidos ({validRows.length})
 					</button>
 					<button
 						class="tab {activeTab === 'omitted' ? 'tab-active' : ''}"
 						onclick={() => (activeTab = 'omitted')}
 					>
-						<AlertCircle size={16} class="mr-1 text-warning" />
+						<AlertCircle size={16} class="text-warning" />
 						Omitidos ({omittedRows.length})
 					</button>
 				</div>
@@ -400,14 +398,8 @@
 				<div class="overflow-x-auto max-h-96">
 					{#if activeTab === 'valid'}
 						<Table
-							columns={validRowsColumns as unknown as {
-								key?: string;
-								label: string;
-								headerClass?: string;
-								class?: string;
-								cell?: (row: unknown) => unknown;
-							}[]}
-							rows={validRows as unknown[]}
+							columns={validRowsColumns}
+							rows={validRows}
 							striped={true}
 							hover={true}
 							bordered={true}
@@ -416,14 +408,8 @@
 						/>
 					{:else if activeTab === 'omitted'}
 						<Table
-							columns={omittedRowsColumns as unknown as {
-								key?: string;
-								label: string;
-								headerClass?: string;
-								class?: string;
-								cell?: (row: unknown) => unknown;
-							}[]}
-							rows={omittedRows as unknown[]}
+							columns={omittedRowsColumns}
+							rows={omittedRows}
 							striped={true}
 							hover={true}
 							bordered={true}
@@ -435,4 +421,4 @@
 			</div>
 		</div>
 	{/if}
-</div>
+</main>

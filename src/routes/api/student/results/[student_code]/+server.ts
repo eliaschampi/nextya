@@ -1,97 +1,65 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
-import type { StudentResultsResponse, StudentResult } from '$lib/types';
+import type { StudentResultsResponse, ResultItem } from '$lib/types';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const { student_code } = params;
 
-	if (!student_code) {
-		return json({ error: 'Código de estudiante no proporcionado' }, { status: 400 });
+	if (!student_code || !(await locals.can('results:read'))) {
+		return json([]);
 	}
 
 	try {
 		// Get student information first
-		const { data: student, error: studentError } = await locals.supabase
-			.from('students')
-			.select('name, last_name')
-			.eq('code', student_code)
-			.single();
+		const student = await locals.db
+			.selectFrom('students')
+			.select(['name', 'last_name'])
+			.where('code', '=', student_code)
+			.executeTakeFirst();
 
-		if (studentError) {
-			console.error('Error fetching student:', studentError);
+		if (!student) {
+			console.error('Student not found:', student_code);
 			return json({ error: 'Estudiante no encontrado' }, { status: 404 });
 		}
 
 		// Get all registers for this student
-		const { data: registers, error: registersError } = await locals.supabase
-			.from('registers')
-			.select('code, level_code, group_name, roll_code, levels(name)')
-			.eq('student_code', student_code);
+		const registers = await locals.db
+			.selectFrom('registers')
+			.innerJoin('levels', 'levels.code', 'registers.level_code')
+			.select([
+				'registers.code',
+				'registers.level_code',
+				'registers.group_name',
+				'registers.roll_code',
+				'levels.name as level_name'
+			])
+			.where('registers.student_code', '=', student_code)
+			.execute();
 
-		if (registersError) {
-			console.error('Error fetching registers:', registersError);
-			return json({ error: 'Error al obtener registros' }, { status: 500 });
+		if (!registers || registers.length === 0) {
+			console.error('No registers found for student:', student_code);
+			return json({ error: 'No se encontraron registros para este estudiante' }, { status: 404 });
 		}
 
-		// Get all results for this student's registers
-		const { data: rawResults, error: resultsError } = await locals.supabase
-			.from('student_register_results')
-			.select('*')
-			.in(
+		// Get all results for this student using the student_register_results view
+		const rawResults = await locals.db
+			.selectFrom('student_register_results')
+			.selectAll()
+			.where(
 				'register_code',
+				'in',
 				registers.map((r) => r.code)
 			)
-			.order('eval_date', { ascending: false });
+			.orderBy('eval_date', 'desc')
+			.execute();
 
-		if (resultsError) {
-			console.error('Error fetching results:', resultsError);
-			return json({ error: 'Error al obtener resultados' }, { status: 500 });
-		}
-
-		// Transform results to ensure all required fields are non-null
-		const results = rawResults.map((result) => {
-			// Extract known fields with proper type handling
-			const transformedResult: StudentResult = {
-				result_code: String(result.result_code || ''),
-				register_code: String(result.register_code || ''),
-				eval_code: String(result.eval_code || ''),
-				eval_name: String(result.eval_name || ''),
-				eval_date: String(result.eval_date || ''),
-				roll_code: String(result.roll_code || ''),
-				correct_count: Number(result.correct_count || 0),
-				incorrect_count: Number(result.incorrect_count || 0),
-				blank_count: Number(result.blank_count || 0),
-				score: Number(result.score || 0)
-			};
-
-			// Add optional fields if they exist with proper type casting
-			if ('calculated_at' in result) {
-				transformedResult.calculated_at = result.calculated_at as string | null;
-			}
-			if ('student_code' in result) {
-				transformedResult.student_code = result.student_code as string | null;
-			}
-			if ('student_name' in result) {
-				transformedResult.student_name = result.student_name as string | null;
-			}
-			if ('student_last_name' in result) {
-				transformedResult.student_last_name = result.student_last_name as string | null;
-			}
-			if ('level_code' in result) {
-				transformedResult.level_code = result.level_code as string | null;
-			}
-			if ('level_name' in result) {
-				transformedResult.level_name = result.level_name as string | null;
-			}
-			if ('group_name' in result) {
-				transformedResult.group_name = result.group_name as string | null;
-			}
-			if ('section_code' in result) {
-				transformedResult.section_code = result.section_code as string | null;
-			}
-
-			return transformedResult;
-		});
+		// Transform to match ResultItem interface (same approach as CSV processor)
+		const results = rawResults.map((result) => ({
+			...result,
+			score: Number(result.score || 0),
+			calculated_at: result.calculated_at?.toISOString() || '',
+			eval_date: result.eval_date?.toISOString() || ''
+		})) as ResultItem[];
 
 		const response: StudentResultsResponse = {
 			student: {
@@ -99,13 +67,21 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 				name: student.name,
 				last_name: student.last_name
 			},
-			registers,
+			registers: registers.map((register) => ({
+				code: register.code,
+				level_code: register.level_code,
+				group_name: register.group_name,
+				roll_code: register.roll_code,
+				levels: {
+					name: register.level_name
+				}
+			})),
 			results
 		};
 
 		return json(response);
 	} catch (error) {
-		console.error('Unexpected error:', error);
-		return json({ error: 'Error interno del servidor' }, { status: 500 });
+		const message = error instanceof Error ? error.message : 'Error desconocido';
+		return json({ error: message }, { status: 500 });
 	}
 };

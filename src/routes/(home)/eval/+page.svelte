@@ -2,10 +2,8 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import Table from '$lib/components/Table.svelte';
 	import { showToast } from '$lib/stores/Toast';
-	import type { Level, Course, FormSection, EvalWithSections } from '$lib/types';
+	import type { Levels, Courses, FormSection, EvalWithSections } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
-	// Define EventListener type
-	type EventListener = (event: Event) => void;
 	import {
 		ClipboardEdit,
 		Trash2,
@@ -19,15 +17,15 @@
 	} from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
-	import { permissionsStore } from '$lib/stores/permissions';
-	import { onMount } from 'svelte';
+	import { can } from '$lib/stores/permissions';
 
 	let modal: HTMLDialogElement | null = null;
 	let confirmModal: HTMLDialogElement | null = null;
 
-	const canCreate = permissionsStore.has({ entity: 'evals', action: 'create' });
-	const canUpdate = permissionsStore.has({ entity: 'evals', action: 'update' });
-	const canDelete = permissionsStore.has({ entity: 'evals', action: 'delete' });
+	// Permissions - using Svelte 5 reactive approach
+	let canCreate = $derived(can('evals:create'));
+	let canUpdate = $derived(can('evals:update'));
+	let canDelete = $derived(can('evals:delete'));
 
 	const DEFAULT_QUESTIONS_PER_SECTION = 10;
 	const MAX_TOTAL_QUESTIONS = 80;
@@ -61,11 +59,12 @@
 		})
 	);
 
-	const { data } = $props<{ data: { levels: Level[]; courses: Course[] } }>();
+	const { data } = $props<{ data: { levels: Levels[]; courses: Courses[] } }>();
 
 	let availableCoursesForAdd = $derived(
 		data.courses.filter(
-			(course: Course) => !formState.sections.some((section) => section.course_code === course.code)
+			(course: Courses) =>
+				!formState.sections.some((section) => section.course_code === course.code)
 		)
 	);
 
@@ -83,6 +82,7 @@
 	}
 
 	function openCreateModal() {
+		if (!canCreate) return;
 		formState.selectedCode = null;
 		formState.sections = [];
 		formState.name = '';
@@ -95,10 +95,15 @@
 	}
 
 	function openEditModal(item: EvalWithSections) {
+		if (!canUpdate) return;
 		formState.selectedCode = item.code;
 		formState.name = item.name || '';
 		formState.level_code = item.level_code || '';
-		formState.eval_date = item.eval_date ? item.eval_date.substring(0, 10) : '';
+		formState.eval_date = item.eval_date
+			? item.eval_date instanceof Date
+				? item.eval_date.toISOString().substring(0, 10)
+				: String(item.eval_date).substring(0, 10)
+			: '';
 		formState.group_name = item.group_name || '';
 		formState.sections = item.eval_sections.map((s) => ({
 			course_code: s.course_code,
@@ -112,12 +117,13 @@
 	}
 
 	function openDeleteConfirmModal(evalItem: EvalWithSections) {
+		if (!canDelete) return;
 		formState.selectForDelete = { code: evalItem.code, name: evalItem.name };
 		confirmModal?.showModal();
 	}
 
-	function findCourseByCode(code: string): Course | undefined {
-		return data.courses.find((c: Course) => c.code === code);
+	function findCourseByCode(code: string): Courses | undefined {
+		return data.courses.find((c: Courses) => c.code === code);
 	}
 
 	function addSectionTrigger() {
@@ -230,133 +236,116 @@
 
 	// Define table columns for evaluations
 	const evalColumns: TableColumn<EvalWithSections>[] = [
-		{
-			key: 'name',
-			label: 'Nombre',
-			class: 'py-4 px-6 font-bold opacity-70 whitespace-nowrap'
-		},
-		{
-			key: 'levels.name',
-			label: 'Nivel',
-			class: 'py-4 px-6',
-			cell: (row: EvalWithSections) => `
-				<span class="badge badge-primary badge-outline flex items-center gap-1 whitespace-nowrap">
-					${row.levels?.name || 'N/A'}
-				</span>
-			`
-		},
-		{
-			key: 'group_name',
-			label: 'Grupo',
-			class: 'py-4 px-6',
-			cell: (row: EvalWithSections) => row.group_name || 'N/A'
-		},
-		{
-			key: 'eval_date',
-			label: 'Fecha',
-			class: 'py-4 px-6',
-			cell: (row: EvalWithSections) => `
-				<div class="flex items-center gap-1 text-sm text-gray-500">
-					${formatDate(row.eval_date)}
-				</div>
-			`
-		},
-		{
-			label: 'Claves',
-			class: 'py-4 px-6',
-			cell: (row: EvalWithSections) => `
-				<a
-					href="/eval/keys/${row.code}"
-					class="badge badge-soft flex items-center gap-1 whitespace-nowrap"
-					aria-label="Gestionar preguntas"
-				>
-					<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-key w-3 h-3"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-					${row.eval_sections?.length || 0} Cursos
-				</a>
-			`
-		},
-		{
-			label: 'Acciones',
-			class: 'py-4 px-6',
-			cell: (row: EvalWithSections) => {
-				// Create SVG icons for the buttons
-				const editIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-edit w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
-
-				const trashIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`;
-
-				return `
-					<div class="flex gap-2">
-						<button
-							class="btn btn-xs sm:btn-sm btn-primary btn-soft ${!$canUpdate ? 'btn-disabled' : ''}"
-							onclick="document.dispatchEvent(new CustomEvent('eval-edit', {detail: '${row.code}'}))"
-							title="Editar examen"
-							aria-label="Editar examen ${row.name}"
-							${!$canUpdate ? 'disabled' : ''}
-						>
-							${editIcon}
-						</button>
-						<button
-							class="btn btn-xs sm:btn-sm btn-error btn-soft ${!$canDelete ? 'btn-disabled' : ''}"
-							onclick="document.dispatchEvent(new CustomEvent('eval-delete', {detail: '${row.code}'}))"
-							title="Eliminar examen"
-							aria-label="Eliminar examen ${row.name}"
-							${!$canDelete ? 'disabled' : ''}
-						>
-							${trashIcon}
-						</button>
-					</div>
-				`;
-			}
-		}
+		{ key: 'name', label: 'Nombre', class: 'py-4 px-6 font-bold opacity-70 whitespace-nowrap' },
+		{ label: 'Nivel', class: 'py-4 px-6', render: levelCell },
+		{ key: 'group_name', label: 'Grupo', class: 'py-4 px-6' },
+		{ label: 'Fecha', class: 'py-4 px-6', render: dateCell },
+		{ label: 'Claves', class: 'py-4 px-6', render: keysCell },
+		{ label: 'Acciones', class: 'py-4 px-6', render: actionsCell }
 	];
-
-	// Event handlers for custom events from table
-	function setupTableEventListeners() {
-		const handleEvalEdit = (event: CustomEvent) => {
-			const evalCode = event.detail;
-			const evalItem = formState.evals.find((e) => e.code === evalCode);
-			if (evalItem) {
-				openEditModal(evalItem);
-			}
-		};
-
-		const handleEvalDelete = (event: CustomEvent) => {
-			const evalCode = event.detail;
-			const evalItem = formState.evals.find((e) => e.code === evalCode);
-			if (evalItem) {
-				openDeleteConfirmModal(evalItem);
-			}
-		};
-
-		document.addEventListener('eval-edit', handleEvalEdit as EventListener);
-		document.addEventListener('eval-delete', handleEvalDelete as EventListener);
-
-		return () => {
-			document.removeEventListener('eval-edit', handleEvalEdit as EventListener);
-			document.removeEventListener('eval-delete', handleEvalDelete as EventListener);
-		};
-	}
-
-	onMount(() => {
-		const cleanup = setupTableEventListeners();
-		return () => cleanup();
-	});
 </script>
 
-<PageTitle title="Exámenes" description="Gestión de evaluaciones por nivel y grupo">
-	{#if $canCreate}
-		<button class="btn btn-primary gap-2" onclick={openCreateModal}>
-			<Plus class="w-4 h-4" />
-			Nuevo Examen
+<!-- Define snippets for custom cells -->
+{#snippet levelCell(row: EvalWithSections)}
+	<span class="badge badge-primary badge-outline flex items-center gap-1 whitespace-nowrap">
+		{row.levels?.name || 'N/A'}
+	</span>
+{/snippet}
+
+{#snippet dateCell(row: EvalWithSections)}
+	<div class="flex items-center gap-1 text-sm text-gray-500">
+		{formatDate(row.eval_date)}
+	</div>
+{/snippet}
+
+{#snippet keysCell(row: EvalWithSections)}
+	<a
+		href="/eval/keys/{row.code}"
+		class="badge badge-soft flex items-center gap-1 whitespace-nowrap"
+		aria-label="Gestionar preguntas"
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="12"
+			height="12"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			class="lucide lucide-key w-3 h-3"
+			><path
+				d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"
+			/></svg
+		>
+		{row.eval_sections?.length || 0} Cursos
+	</a>
+{/snippet}
+
+{#snippet actionsCell(row: EvalWithSections)}
+	<div class="flex gap-2">
+		<button
+			class="btn btn-xs sm:btn-sm btn-primary btn-soft"
+			onclick={() => openEditModal(row)}
+			title="Editar examen"
+			aria-label="Editar examen {row.name}"
+			disabled={!canUpdate}
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="16"
+				height="16"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="lucide lucide-edit w-4 h-4"
+				><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+				<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+			</svg>
 		</button>
-	{/if}
+		<button
+			class="btn btn-xs sm:btn-sm btn-error btn-soft"
+			onclick={() => openDeleteConfirmModal(row)}
+			title="Eliminar examen"
+			aria-label="Eliminar examen {row.name}"
+			disabled={!canDelete}
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="16"
+				height="16"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="lucide lucide-trash-2 w-4 h-4"
+				><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path
+					d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
+				/>
+				<line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" />
+			</svg>
+		</button>
+	</div>
+{/snippet}
+
+<PageTitle title="Exámenes" description="Gestión de evaluaciones por nivel y grupo">
+	<button class="btn btn-primary gap-2" onclick={openCreateModal} disabled={!canCreate}>
+		<Plus class="w-4 h-4" />
+		Nuevo Examen
+	</button>
 </PageTitle>
 
 <div
 	class="bg-base-200 rounded-xl mb-6 shadow-sm p-4 flex items-center justify-between flex-wrap gap-4"
 >
 	<div class="flex items-center gap-4 flex-wrap">
-		<label class="label font-semibold text-primary flex items-center">
+		<label class="font-semibold text-primary flex items-center">
 			<BookOpen class="w-5 h-5 mr-2" /> Selecciona un Nivel
 		</label>
 		<select
@@ -394,14 +383,8 @@
 		<div class="card-body p-2 overflow-x-auto">
 			{#if filteredEvals.length > 0}
 				<Table
-					columns={evalColumns as unknown as {
-						key?: string;
-						label: string;
-						headerClass?: string;
-						class?: string;
-						cell?: (row: unknown) => unknown;
-					}[]}
-					rows={filteredEvals as unknown[]}
+					columns={evalColumns}
+					rows={filteredEvals}
 					striped={true}
 					hover={true}
 					bordered={true}
@@ -454,7 +437,7 @@
 			>
 				<legend class="px-2 font-semibold text-primary text-sm">Información del Examen</legend>
 				<div>
-					<label class="label font-medium text-sm pb-1" for="name">Nombre</label>
+					<label class="font-medium text-sm pb-1" for="name">Nombre</label>
 					<input
 						id="name"
 						name="name"
@@ -466,7 +449,7 @@
 					/>
 				</div>
 				<div>
-					<label class="label font-medium text-sm pb-1" for="date">Fecha</label>
+					<label class="font-medium text-sm pb-1" for="date">Fecha</label>
 					<input
 						id="date"
 						name="date"
@@ -478,7 +461,7 @@
 					/>
 				</div>
 				<div>
-					<label class="label font-medium text-sm pb-1" for="level">Nivel</label>
+					<label class="font-medium text-sm pb-1" for="level">Nivel</label>
 					<select
 						id="level"
 						name="level"
@@ -493,7 +476,7 @@
 					</select>
 				</div>
 				<div>
-					<label class="label font-medium text-sm pb-1" for="group_name">Grupo</label>
+					<label class="font-medium text-sm pb-1" for="group_name">Grupo</label>
 					<select
 						id="group_name"
 						name="group_name"
@@ -613,7 +596,7 @@
 
 				<!-- Add Section Select -->
 				<div class="mt-4 pt-4 border-t border-base-300">
-					<label for="add-course-select" class="label font-medium text-sm pb-1">
+					<label for="add-course-select" class="font-medium text-sm pb-1">
 						Agregar Curso a Secciones
 					</label>
 					<select

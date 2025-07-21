@@ -4,12 +4,12 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast.js';
 	import { Settings, ChartPie, Activity, RefreshCw } from 'lucide-svelte';
-	import type { Level, CourseScore, EvalScore, CourseChartData, EvalChartData } from '$lib/types';
+	import type { Levels, CourseScore, EvalScore, CourseChartData, EvalChartData } from '$lib/types';
 
 	// Props from server
 	const { data } = $props<{
 		data: {
-			levels: Level[];
+			levels: Levels[];
 			title: string;
 		};
 	}>();
@@ -550,8 +550,8 @@
 			</div>
 		</div>
 	{:else}
-		<!-- Charts Grid -->
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+		<!-- Charts Section -->
+		<div class="space-y-6">
 			<!-- Course Scores Chart -->
 			<div
 				class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden"

@@ -22,3 +22,27 @@ export interface StudentExportRow {
 	'Nota General': number;
 	[key: string]: string | number; // Dynamic course columns
 }
+
+/**
+ * Represents a detailed evaluation result row from the database
+ */
+export interface EvalDetailedResult {
+	roll_code: string;
+	name: string;
+	last_name: string;
+	group_name: string;
+	general_score: number;
+	course_scores: Record<string, number>;
+}
+
+/**
+ * Represents a row in the Excel export for detailed evaluation results
+ */
+export interface EvalDetailedExportRow {
+	Código: string;
+	Nombre: string;
+	Apellidos: string;
+	Grupo: string;
+	'Nota General': number;
+	[key: string]: string | number; // Dynamic course columns
+}

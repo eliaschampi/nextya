@@ -1,26 +1,18 @@
-import type { Session, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
-import type { Database } from './database.types';
+import type { Database } from '$lib/database';
+import type { Session, User } from '$lib/auth/session';
 
 declare global {
 	namespace App {
 		interface Locals {
-			supabase: SupabaseClient<Database>;
-			getSession: () => Promise<{
-				session: Session | null;
-			}>;
-			getUser: () => Promise<{
-				user: SupabaseUser | null;
-			}>;
-			safeGetSession: () => Promise<{ session: Session | null; user: SupabaseUser | null }>;
+			db: Database;
+			user: User | null;
 			session: Session | null;
-			user: SupabaseUser | null;
-			cookies: { name: string; value: string }[];
-			title?: string;
+			userPermissions: string[];
+			can: (permissionKey: string) => Promise<boolean>;
 		}
 		interface PageData {
+			user: User | null;
 			session: Session | null;
-			user: SupabaseUser | null;
-			title?: string;
 		}
 	}
 }

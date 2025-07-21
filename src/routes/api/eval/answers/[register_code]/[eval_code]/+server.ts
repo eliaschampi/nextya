@@ -12,35 +12,27 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	try {
 		// Obtener las respuestas del estudiante
-		const { data, error } = await locals.supabase
-			.from('eval_answers')
-			.select(
-				`
-				question_code,
-				student_answer,
-				eval_questions!inner(
-					code,
-					eval_code,
-					section_code,
-					order_in_eval,
-					correct_key
-				)
-			`
-			)
-			.eq('register_code', register_code)
-			.eq('eval_questions.eval_code', eval_code);
-
-		if (error) {
-			console.error('Error al obtener respuestas:', error);
-			return json({ error: 'Error al obtener respuestas' }, { status: 500 });
-		}
+		const data = await locals.db
+			.selectFrom('eval_answers')
+			.innerJoin('eval_questions', 'eval_questions.code', 'eval_answers.question_code')
+			.select([
+				'eval_answers.question_code',
+				'eval_answers.student_answer',
+				'eval_questions.code as question_code_full',
+				'eval_questions.eval_code',
+				'eval_questions.section_code',
+				'eval_questions.order_in_eval',
+				'eval_questions.correct_key'
+			])
+			.where('eval_answers.register_code', '=', register_code)
+			.where('eval_questions.eval_code', '=', eval_code)
+			.execute();
 
 		// Transformar los datos al formato esperado
 		const answers: StudentAnswer[] = data.map((item) => {
-			const question = item.eval_questions;
 			const isBlank = item.student_answer === null;
 			const isMultiple = item.student_answer === 'error_multiple';
-			const isCorrect = !isBlank && !isMultiple && item.student_answer === question.correct_key;
+			const isCorrect = !isBlank && !isMultiple && item.student_answer === item.correct_key;
 
 			// Validar que student_answer sea un valor válido para AnswerValue
 			let studentAnswer: AnswerValue = null;
@@ -51,15 +43,15 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			}
 
 			return {
-				question_code: question.code,
+				question_code: item.question_code,
 				student_answer: studentAnswer,
-				order_in_eval: question.order_in_eval,
-				correct_key: question.correct_key,
+				order_in_eval: item.order_in_eval,
+				correct_key: item.correct_key,
 				score_percent: isCorrect ? 100 : 0,
 				is_correct: isCorrect,
 				is_blank: isBlank,
 				is_multiple: isMultiple,
-				section_code: question.section_code
+				section_code: item.section_code
 			};
 		});
 
@@ -69,9 +61,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		return json(answers);
 	} catch (error) {
 		console.error('Error en API de respuestas:', error);
-		return json(
-			{ error: error instanceof Error ? error.message : 'Error desconocido' },
-			{ status: 500 }
-		);
+		return json({ error: 'Error interno del servidor' }, { status: 500 });
 	}
 };

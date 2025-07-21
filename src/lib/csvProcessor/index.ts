@@ -20,6 +20,15 @@ export {
 	createStudentExportFilename,
 	exportStudentEvaluationsToCsv
 } from './studentExport';
+
+// Evaluation detailed export functions
+export {
+	fetchEvalDetailedResults,
+	formatEvalDetailedForExport,
+	getEvalDetailedHeaders,
+	createEvalDetailedExportFilename,
+	exportEvalDetailedToCsv
+} from './evalDetailedExport';
 export { CsvProcessorErrorCode } from './types';
 
 export type {
@@ -33,3 +42,11 @@ export type {
 	CommitErrorDetail,
 	ExistingStudentDetail
 } from './types';
+
+// Export types from studentExport
+export type {
+	StudentEvalReport,
+	StudentExportRow,
+	EvalDetailedResult,
+	EvalDetailedExportRow
+} from '$lib/types/studentExport';

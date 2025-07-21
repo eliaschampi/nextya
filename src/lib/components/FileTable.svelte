@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { FileEntry } from '$lib/types/app';
+	import type { FileEntry } from '$lib/types';
 	import { Play, X, Loader2, Eye, Edit, Check, AlertCircle } from 'lucide-svelte';
 
 	type Props = {

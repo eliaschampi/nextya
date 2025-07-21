@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { X, School, BookOpen, Search } from 'lucide-svelte';
-	import type { Level, EvalWithSections } from '$lib/types';
+	import type { Levels, EvalWithSections } from '$lib/types';
 	import { formatDate } from '$lib/utils/formatDate';
 	import { onMount } from 'svelte';
 
 	type Props = {
-		levels: Level[];
+		levels: Levels[];
 		availableEvals: EvalWithSections[];
 		selectedEval: EvalWithSections | null;
 		selectedLevelCode: string;
@@ -87,7 +87,7 @@
 		</div>
 		<div class="space-y-4">
 			<div>
-				<label class="label font-semibold flex items-center gap-2">
+				<label class="font-semibold flex items-center gap-2">
 					<BookOpen class="w-5 h-5 text-secondary" /> Nivel Académico
 				</label>
 				<select
@@ -109,7 +109,7 @@
 					</div>
 				{:else}
 					<div class="mb-4">
-						<label class="label font-semibold flex items-center gap-2">
+						<label class="font-semibold flex items-center gap-2">
 							<Search class="w-5 h-5 text-secondary" /> Buscar Evaluación
 						</label>
 						<input
@@ -136,7 +136,9 @@
 										<td class="text-center">
 											<span class="badge badge-ghost badge-sm">{item.group_name}</span>
 										</td>
-										<td class="text-center text-xs opacity-70">{formatDate(item.eval_date)}</td>
+										<td class="text-center text-xs opacity-70"
+											>{formatDate(String(item.eval_date))}</td
+										>
 										<td class="text-center">
 											<button
 												class="btn btn-primary btn-xs"

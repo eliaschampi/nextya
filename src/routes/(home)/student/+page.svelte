@@ -6,14 +6,12 @@
 	import Pagination from '$lib/components/Pagination.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount } from 'svelte';
-	import type { Level, RegisterStudent, SelectForDelete, Student } from '$lib/types';
+	import type { Levels, RegisterStudent, SelectForDelete, Students } from '$lib/types';
 	import type { TableColumn } from '$lib/types/table';
-	// Define EventListener type
-	type EventListener = (event: Event) => void;
-	import { Search, UserPlus } from 'lucide-svelte';
+	import { Search, UserPlus, Pencil, Trash2, Book } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { formatDate } from '$lib/utils/formatDate';
-	import { permissionsStore } from '$lib/stores/permissions';
+	import { can } from '$lib/stores/permissions';
 
 	let modal: HTMLDialogElement | null = $state(null);
 	let confirmModal: HTMLDialogElement | null = $state(null);
@@ -21,8 +19,9 @@
 	let message = $state('');
 	let selectedCode = $state<string | null>(null);
 	let selectForDelete = $state<SelectForDelete | null>(null);
-	let searchQuery = $state('');
-	let searchResults = $state<Student[]>([]);
+	let mainSearchQuery = $state('');
+	let modalSearchQuery = $state('');
+	let searchResults = $state<Students[]>([]);
 	let activeTab = $state<'search' | 'new'>('search');
 	let selectedLevelCode = $state('');
 	let selectedGroup = $state('');
@@ -39,9 +38,9 @@
 	// Filtered students based on search query
 	const filteredStudents = $derived(
 		students.filter((student) => {
-			if (!searchQuery.trim()) return true;
+			if (!mainSearchQuery.trim()) return true;
 
-			const query = searchQuery.toLowerCase();
+			const query = mainSearchQuery.toLowerCase();
 			return (
 				student.name?.toLowerCase().includes(query) ||
 				student.last_name?.toLowerCase().includes(query) ||
@@ -73,142 +72,32 @@
 	let groupSelect: HTMLSelectElement | null = $state(null);
 	let rollCodeInput: HTMLInputElement | null = $state(null);
 
-	const canCreate = permissionsStore.has({ entity: 'students', action: 'create' });
-	const canUpdate = permissionsStore.has({ entity: 'students', action: 'update' });
-	const canDelete = permissionsStore.has({ entity: 'students', action: 'delete' });
+	// Permissions - using Svelte 5 reactive approach
+	let canCreate = $derived(can('students:create'));
+	let canUpdate = $derived(can('students:update'));
+	let canDelete = $derived(can('students:delete'));
 
-	const { data } = $props<{ data: { levels: Level[] } }>();
+	const { data } = $props<{ data: { levels: Levels[] } }>();
 	const groupOptions = ['A', 'B', 'C', 'D'];
 
-	// Define table columns
+	// Define studentColumns as a static array (not reactive)
 	const studentColumns: TableColumn<RegisterStudent>[] = [
 		{ key: 'roll_code', label: 'Código', class: 'text-accent font-medium' },
 		{ key: 'name', label: 'Nombre', class: 'font-medium' },
 		{ key: 'last_name', label: 'Apellido' },
-		{
-			key: 'phone',
-			label: 'Teléfono',
-			class: 'text-center',
-			cell: (row: RegisterStudent) => row.phone || 'N/A'
-		},
-		{
-			key: 'level',
-			label: 'Nivel',
-			class: 'text-center',
-			cell: (row: RegisterStudent) =>
-				`<span class="badge badge-primary badge-outline">${row.level}</span>`
-		},
-		{
-			key: 'group_name',
-			label: 'Grupo',
-			class: 'text-center',
-			cell: (row: RegisterStudent) => `<span class="badge badge-secondary">${row.group_name}</span>`
-		},
-		{
-			key: 'created_at',
-			label: 'Fecha de registro',
-			class: 'text-sm text-gray-500',
-			cell: (row: RegisterStudent) => formatDate(row.created_at)
-		},
-		{
-			label: 'Acciones',
-			headerClass: 'text-center',
-			cell: (row: RegisterStudent) => {
-				// Create SVG icons for the buttons
-				const pencilIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil w-4 h-4"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>`;
-
-				const trashIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2 w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`;
-
-				const bookIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book w-4 h-4"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>`;
-
-				return `
-					<div class="flex gap-2 justify-center">
-						<button
-							class="btn btn-sm btn-primary btn-outline ${!$canUpdate ? 'btn-disabled' : ''}"
-							onclick="document.dispatchEvent(new CustomEvent('student-edit', {detail: '${row.student_code}'}))"
-							aria-label="Editar estudiante"
-							${!$canUpdate ? 'disabled' : ''}
-						>
-							${pencilIcon}
-						</button>
-						<button
-							class="btn btn-sm btn-error btn-outline ${!$canDelete ? 'btn-disabled' : ''}"
-							onclick="document.dispatchEvent(new CustomEvent('student-delete', {detail: '${row.student_code}'}))"
-							aria-label="Eliminar estudiante"
-							${!$canDelete ? 'disabled' : ''}
-						>
-							${trashIcon}
-						</button>
-						<button
-							class="btn btn-sm btn-secondary btn-outline"
-							onclick="document.dispatchEvent(new CustomEvent('student-registers', {detail: '${row.student_code}'}))"
-							aria-label="Ver matrículas"
-						>
-							${bookIcon}
-						</button>
-					</div>
-				`;
-			}
-		}
+		{ label: 'Teléfono', class: 'text-center', render: phoneCell },
+		{ label: 'Nivel', class: 'text-center', render: levelCell },
+		{ label: 'Grupo', class: 'text-center', render: groupCell },
+		{ label: 'Fecha de registro', render: createdCell },
+		{ label: 'Acciones', headerClass: 'text-center', render: actions }
 	];
 
-	// Event handlers for custom events from table
-	function setupTableEventListeners() {
-		const handleStudentEdit = (event: CustomEvent) => {
-			const studentCode = event.detail;
-			const student = students.find((s) => s.student_code === studentCode);
-			if (student) {
-				openEditModal(student);
-			}
-		};
-
-		const handleStudentDelete = (event: CustomEvent) => {
-			const studentCode = event.detail;
-			const student = students.find((s) => s.student_code === studentCode);
-			if (student) {
-				openDeleteConfirmModal(student);
-			}
-		};
-
-		const handleViewRegisters = (event: CustomEvent) => {
-			const studentCode = event.detail;
-			const student = students.find((s) => s.student_code === studentCode);
-			if (student) {
-				openRegistersModal(student);
-			}
-		};
-
-		document.addEventListener('student-edit', handleStudentEdit as EventListener);
-		document.addEventListener('student-delete', handleStudentDelete as EventListener);
-		document.addEventListener('student-registers', handleViewRegisters as EventListener);
-
-		return () => {
-			document.removeEventListener('student-edit', handleStudentEdit as EventListener);
-			document.removeEventListener('student-delete', handleStudentDelete as EventListener);
-			document.removeEventListener('student-registers', handleViewRegisters as EventListener);
-		};
-	}
-
-	function openRegistersModal(student: RegisterStudent) {
-		selectedStudentForRegisters = {
-			code: student.student_code,
-			name: `${student.name} ${student.last_name}`
-		};
-		registersModalOpen = true;
-	}
-
-	// Event listener cleanup
-	let eventCleanup: (() => void) | null = null;
-
 	onMount(() => {
-		eventCleanup = setupTableEventListeners();
-
-		// Setup modal close listener
+		// Setup modal close listener (no more event listeners for table)
 		const handleModalClose = () => resetFormOnClose();
 		modal?.addEventListener('close', handleModalClose);
 
 		return () => {
-			eventCleanup?.();
 			modal?.removeEventListener('close', handleModalClose);
 		};
 	});
@@ -224,7 +113,6 @@
 		const response = await fetch(`/api/student/${selectedLevelCode}/${selectedGroup}`);
 		if (response.ok) {
 			students = await response.json();
-			// Reset to first page when loading new students
 			currentPage = 1;
 		}
 	}
@@ -259,16 +147,16 @@
 	}
 
 	async function searchStudents() {
-		if (!searchQuery.trim()) {
+		if (!modalSearchQuery.trim()) {
 			searchResults = [];
 			return;
 		}
-		const response = await fetch(`/api/student?search=${encodeURIComponent(searchQuery)}`);
+		const response = await fetch(`/api/student?search=${encodeURIComponent(modalSearchQuery)}`);
 		if (response.ok) searchResults = await response.json();
 	}
 
-	function selectStudent(student: Student) {
-		searchQuery = '';
+	function selectStudent(student: Students) {
+		modalSearchQuery = '';
 		searchResults = [];
 		selectedCode = student.code;
 		activeTab = 'new';
@@ -293,6 +181,9 @@
 		}
 	}
 	function openCreateModal() {
+		if (!canCreate) {
+			return;
+		}
 		isEditing = false;
 		selectedCode = null;
 		activeTab = 'search';
@@ -305,6 +196,9 @@
 	}
 
 	function openEditModal(item: RegisterStudent) {
+		if (!canUpdate) {
+			return;
+		}
 		isEditing = true;
 		selectedCode = item.student_code;
 		activeTab = 'new';
@@ -322,6 +216,7 @@
 	}
 
 	function openDeleteConfirmModal(payload: RegisterStudent) {
+		if (!canDelete) return;
 		selectForDelete = {
 			code: payload.student_code,
 			register_code: payload.register_code,
@@ -329,6 +224,14 @@
 			mode: 'all'
 		};
 		confirmModal?.showModal();
+	}
+
+	function openRegistersModal(student: RegisterStudent) {
+		selectedStudentForRegisters = {
+			code: student.student_code,
+			name: `${student.name} ${student.last_name}`
+		};
+		registersModalOpen = true;
 	}
 
 	async function handleSubmit(event: Event) {
@@ -347,7 +250,7 @@
 			formData.append('code', selectedCode.toString());
 		}
 
-		const action = selectedCode ? '?/update' : '?/create';
+		const action = selectedCode ? '?/update' : '?/upsert';
 		const response = await fetch(action, { method: 'POST', body: formData });
 		const res = await response.json();
 
@@ -367,7 +270,7 @@
 	function resetFormOnClose() {
 		selectedCode = null;
 		message = '';
-		searchQuery = '';
+		modalSearchQuery = '';
 		searchResults = [];
 		if (nameInput) nameInput.value = '';
 		if (lastNameInput) lastNameInput.value = '';
@@ -377,7 +280,6 @@
 		if (groupSelect) groupSelect.value = '';
 		if (rollCodeInput) rollCodeInput.value = '';
 	}
-	// Modal close listener is now handled in the main onMount above
 
 	async function handleDelete() {
 		if (!selectForDelete) return;
@@ -399,12 +301,10 @@
 </script>
 
 <PageTitle title="Estudiantes" description="Selecciona un nivel y grupo para ver los estudiantes.">
-	{#if $canCreate}
-		<button class="btn btn-primary gap-2" onclick={openCreateModal}>
-			<UserPlus class="w-4 h-4" />
-			Registrar
-		</button>
-	{/if}
+	<button class="btn btn-primary gap-2" onclick={openCreateModal} disabled={!canCreate}>
+		<UserPlus class="w-4 h-4" />
+		Registrar
+	</button>
 </PageTitle>
 
 <div class="data-display flex flex-col sm:flex-row items-center gap-4">
@@ -447,7 +347,7 @@
 					type="text"
 					placeholder="Buscar estudiante..."
 					class="input input-bordered join-item w-full"
-					bind:value={searchQuery}
+					bind:value={mainSearchQuery}
 				/>
 				<button class="btn btn-primary join-item">
 					<Search size={18} />
@@ -457,42 +357,81 @@
 	{/if}
 </div>
 
+<!-- Define snippets for custom cells -->
+{#snippet phoneCell(row: RegisterStudent)}
+	{row.phone || 'N/A'}
+{/snippet}
+
+{#snippet levelCell(row: RegisterStudent)}
+	<span class="badge badge-primary badge-outline">{row.level}</span>
+{/snippet}
+
+{#snippet groupCell(row: RegisterStudent)}
+	<span class="badge badge-secondary">{row.group_name}</span>
+{/snippet}
+
+{#snippet createdCell(row: RegisterStudent)}
+	<span class="text-sm text-gray-500">{formatDate(row.created_at)}</span>
+{/snippet}
+
+{#snippet actions(row: RegisterStudent)}
+	<div class="flex gap-2 justify-center">
+		<button
+			class="btn btn-sm btn-primary btn-outline"
+			onclick={() => openEditModal(row)}
+			aria-label="Editar estudiante"
+			disabled={!canUpdate}
+		>
+			<Pencil class="w-4 h-4" />
+		</button>
+		<button
+			class="btn btn-sm btn-error btn-outline"
+			onclick={() => openDeleteConfirmModal(row)}
+			aria-label="Eliminar estudiante"
+			disabled={!canDelete}
+		>
+			<Trash2 class="w-4 h-4" />
+		</button>
+		<button
+			class="btn btn-sm btn-secondary btn-outline"
+			onclick={() => openRegistersModal(row)}
+			aria-label="Ver matrículas"
+		>
+			<Book class="w-4 h-4" />
+		</button>
+	</div>
+{/snippet}
+
 {#if selectedLevelCode && students.length > 0}
 	<div class="card card-gradient-neutral rounded-xl overflow-hidden">
 		<div class="card-body">
 			{#if filteredStudents.length > 0}
 				<div class="overflow-x-auto animate-fade-in">
 					<Table
-						columns={studentColumns as unknown as {
-							key?: string;
-							label: string;
-							headerClass?: string;
-							class?: string;
-							cell?: (row: unknown) => unknown;
-						}[]}
-						rows={paginatedStudents as unknown[]}
+						columns={studentColumns}
+						rows={paginatedStudents}
 						striped={true}
 						hover={true}
 						bordered={true}
 						emptyMessage="No hay estudiantes en este nivel y grupo."
 					/>
 					<div class="text-center mt-2">
-						<span class="badge badge-primary badge-outline"
-							>{paginatedStudents.length} estudiantes</span
-						>
+						<span class="badge badge-primary badge-outline">
+							{paginatedStudents.length} estudiantes
+						</span>
 					</div>
 
 					<!-- Paginación -->
 					<Pagination {currentPage} {totalPages} onPageChange={goToPage} />
 				</div>
-			{:else if searchQuery}
+			{:else if mainSearchQuery}
 				<div class="empty-state p-8 w-full max-w-md mx-auto">
 					<div class="empty-state-icon">
 						<Search size={48} />
 					</div>
 					<h3 class="empty-state-title">Sin resultados</h3>
 					<p class="empty-state-message">
-						No se encontraron estudiantes que coincidan con la búsqueda "{searchQuery}".
+						No se encontraron estudiantes que coincidan con la búsqueda "{mainSearchQuery}".
 					</p>
 				</div>
 			{/if}
@@ -539,13 +478,13 @@
 					type="text"
 					placeholder="Buscar estudiante por nombre"
 					class="input input-bordered join-item flex-1"
-					bind:value={searchQuery}
+					bind:value={modalSearchQuery}
 					onkeydown={handleKeyDown}
 				/>
 				<button
 					class="btn btn-primary join-item"
 					onclick={searchStudents}
-					disabled={!searchQuery.trim()}
+					disabled={!modalSearchQuery.trim()}
 				>
 					<Search class="w-4 h-4" />
 				</button>
@@ -577,77 +516,78 @@
 					description="Importante. Cambiar el nivel o grupo eliminará automáticamente todos los resultados de evaluaciones anteriores."
 				/>
 			{/if}
-			<form onsubmit={handleSubmit} autocomplete="off">
-				<fieldset class="fieldset-container">
-					<div class="form-group">
-						<label class="form-group-label" for="name">Nombre</label>
+			<form onsubmit={handleSubmit} autocomplete="off" class="mt-2">
+				<fieldset class="fieldset bg-base-200 border-base-300 rounded-box border">
+					<legend class="fieldset-legend">Información del estudiante</legend>
+
+					<div>
+						<label for="name">Nombre</label>
 						<input
 							id="name"
 							name="name"
 							type="text"
-							class="input w-full validator"
+							class="input w-full"
 							placeholder="Nombre"
 							required
 							bind:this={nameInput}
 							onblur={() => handleFillEmail()}
 						/>
 					</div>
-					<div class="form-group">
-						<label class="form-group-label" for="last_name">Apellidos</label>
+
+					<div>
+						<label for="last_name">Apellidos</label>
 						<input
 							id="last_name"
 							name="last_name"
 							type="text"
-							class="input w-full validator"
+							class="input w-full"
 							placeholder="Apellidos"
 							required
 							bind:this={lastNameInput}
 						/>
 					</div>
-					<div class="form-group">
-						<label class="form-group-label" for="phone">Teléfono</label>
+
+					<div>
+						<label for="phone">Teléfono</label>
 						<input
 							id="phone"
 							name="phone"
 							type="text"
-							class="input w-full validator"
+							class="input w-full"
 							placeholder="Teléfono"
 							bind:this={phoneInput}
 						/>
 					</div>
-					<div class="form-group">
-						<label class="form-group-label" for="email">Email</label>
+
+					<div>
+						<label for="email">Email</label>
 						<input
 							id="email"
 							name="email"
 							type="email"
-							class="input w-full validator"
+							class="input w-full"
 							placeholder="Email"
 							required
 							bind:this={emailInput}
 						/>
 					</div>
-					<div class="form-group">
-						<label class="form-group-label" for="level">Nivel</label>
-						<select
-							id="level"
-							name="level"
-							class="select w-full validator"
-							required
-							bind:this={levelSelect}
-						>
+
+					<div>
+						<label for="level">Nivel</label>
+						<select id="level" name="level" class="select w-full" required bind:this={levelSelect}>
 							<option value="">Selecciona un nivel</option>
 							{#each data.levels as level (level.code)}
 								<option value={level.code}>{level.name}</option>
 							{/each}
 						</select>
 					</div>
-					<div class="form-group">
-						<label class="form-group-label" for="group_name">Grupo</label>
+
+					<div>
+						<label for="group_name">Grupo</label>
 						<select
 							id="group_name"
 							name="group_name"
-							class="select w-full validator"
+							class="select w-full"
 							required
 							bind:this={groupSelect}
 						>
@@ -657,20 +597,21 @@
 							{/each}
 						</select>
 					</div>
-					<div class="form-group">
-						<label class="form-group-label" for="roll_code">Código de Matrícula</label>
+
+					<div class="md:col-span-2">
+						<label for="roll_code">Código de Matrícula</label>
 						<input
 							id="roll_code"
 							name="roll_code"
 							type="text"
-							class="input w-full validator"
+							class="input w-full"
 							placeholder="4 dígitos (ej: 0001)"
 							required
 							maxlength="4"
 							pattern="\d*"
 							bind:this={rollCodeInput}
 						/>
-						<small class="form-group-hint">Ingrese 4 dígitos (ej: 0001, 1234)</small>
+						<small class="input-hint">Ingrese 4 dígitos (ej: 0001, 1234)</small>
 					</div>
 				</fieldset>
 				{#if message}
@@ -698,11 +639,11 @@
 			type="warning"
 			description={`El estudiante "${selectForDelete?.name}" será eliminado`}
 		/>
-		<fieldset class="fieldset-container mt-4 grid-cols-1">
+		<fieldset class="fieldset mt-4 grid-cols-1">
 			<legend class="text-emphasis px-2">Opciones de eliminación</legend>
 			<div class="flex flex-col gap-2">
 				{#if selectForDelete}
-					<label class="label cursor-pointer justify-start gap-2">
+					<label class="cursor-pointer justify-start gap-2">
 						<input
 							type="radio"
 							name="delete-option"
@@ -712,7 +653,7 @@
 						/>
 						<span class="label-text">Eliminar solo el registro de matricula</span>
 					</label>
-					<label class="label cursor-pointer justify-start gap-2">
+					<label class="cursor-pointer justify-start gap-2">
 						<input
 							type="radio"
 							name="delete-option"
