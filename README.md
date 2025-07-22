@@ -1,4 +1,4 @@
-# NextYa
+# NextYa 1.5
 
 Modern educational management system with **clean code philosophy**, **minimalism approach**, and **extremely fast performance**.
 
