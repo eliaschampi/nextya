@@ -44,11 +44,12 @@ export async function getStudentCourseScores(
 
 export async function getStudentCourseEvolution(
 	db: Database,
-	studentCode: string
+	studentCode: string,
+	courseCode?: string
 ): Promise<StudentCourseEvolution[] | null> {
 	try {
 		const result = await sql<StudentCourseEvolution>`
-			SELECT * FROM get_student_course_evolution(${studentCode})
+			SELECT * FROM get_student_course_evolution_by_course(${studentCode}, ${courseCode || null})
 		`.execute(db);
 
 		if (!result.rows || !Array.isArray(result.rows)) {

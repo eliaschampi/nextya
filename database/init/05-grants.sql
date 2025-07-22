@@ -41,7 +41,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO current_user
 -- GRANT EXECUTE ON FUNCTION public.get_course_eval_scores (TEXT, TEXT, TEXT) TO current_user;
 -- GRANT EXECUTE ON FUNCTION public.get_student_score_evolution (TEXT) TO current_user;
 -- GRANT EXECUTE ON FUNCTION public.get_student_course_scores (TEXT) TO current_user;
--- GRANT EXECUTE ON FUNCTION public.get_student_course_evolution (TEXT) TO current_user;
+-- GRANT EXECUTE ON FUNCTION public.get_student_course_evolution_by_course (TEXT, TEXT) TO current_user;
 -- GRANT EXECUTE ON FUNCTION public.get_level_dashboard_data (TEXT) TO current_user;
 -- GRANT EXECUTE ON FUNCTION public.get_group_dashboard_data (TEXT, TEXT) TO current_user;
 -- GRANT EXECUTE ON FUNCTION public.get_eval_dashboard_data (TEXT) TO current_user;

@@ -4,8 +4,11 @@
 -- Additional dashboard and reporting functions
 -- =====================================================
 
--- Student course evolution function
-CREATE OR REPLACE FUNCTION public.get_student_course_evolution (p_student_code TEXT) 
+-- Student course evolution function (optimized - filters by course)
+CREATE OR REPLACE FUNCTION public.get_student_course_evolution_by_course (
+    p_student_code TEXT,
+    p_course_code TEXT DEFAULT NULL
+)
 RETURNS TABLE (
   eval_code TEXT,
   eval_name VARCHAR,
@@ -34,6 +37,7 @@ BEGIN
         WHERE
             r.student_code = p_student_code::UUID
             AND er.section_code IS NOT NULL
+            AND (p_course_code IS NULL OR es.course_code = p_course_code::UUID)
         ORDER BY
             e.eval_date ASC, c.name ASC
     )

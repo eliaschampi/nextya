@@ -35,7 +35,7 @@
 	let courseScoresData = $state<StudentCourseScore[] | null>(null);
 	let courseEvolutionData = $state<StudentCourseEvolution[] | null>(null);
 	let selectedCourseForEvolution = $state<string | null>(null);
-	let availableCourses = $state<string[]>([]);
+	let availableCourses = $state<StudentCourseScore[]>([]);
 
 	// Chart references
 	let scoreEvolutionChart: Chart | null = $state(null);
@@ -78,9 +78,7 @@
 	// Derived values for chart data
 	const scoreEvolutionChartData = $derived(prepareScoreEvolutionData(scoreEvolutionData));
 	const courseScoresChartData = $derived(prepareCourseScoresData(courseScoresData));
-	const courseEvolutionChartData = $derived(
-		prepareCourseEvolutionData(courseEvolutionData, selectedCourseForEvolution)
-	);
+	const courseEvolutionChartData = $derived(prepareCourseEvolutionData(courseEvolutionData));
 
 	// Track chart data changes and render charts when data is available
 	const shouldRenderScoreEvolutionChart = $derived(
@@ -112,47 +110,22 @@
 		}
 	});
 
-	// Update available courses when course evolution data changes
+	// Handle course selection changes
 	$effect(() => {
-		if (
-			courseEvolutionData &&
-			Array.isArray(courseEvolutionData) &&
-			courseEvolutionData.length > 0
-		) {
-			const courseGroups = courseEvolutionData.reduce(
-				(acc, item) => {
-					const courseName = item.course_name || 'Sin nombre';
-					if (!acc[courseName]) acc[courseName] = [];
-					acc[courseName].push(item);
-					return acc;
-				},
-				{} as Record<string, StudentCourseEvolution[]>
+		if (selectedCourseForEvolution && storeState.selectedStudent) {
+			// Load course evolution data for the selected course
+			const selectedCourse = availableCourses.find(
+				(course) => course.course_name === selectedCourseForEvolution
 			);
-
-			const courseNames = Object.keys(courseGroups);
-
-			// Only update availableCourses if different
-			if (JSON.stringify(availableCourses) !== JSON.stringify(courseNames)) {
-				availableCourses = courseNames;
-			}
-
-			// Reset selected if not in available or initial setup
-			if (selectedCourseForEvolution === null && availableCourses.length > 0) {
-				selectedCourseForEvolution = ''; // '' represents "all"
-			} else if (
-				selectedCourseForEvolution &&
-				selectedCourseForEvolution !== '' &&
-				!availableCourses.includes(selectedCourseForEvolution)
-			) {
-				selectedCourseForEvolution = '';
+			if (selectedCourse) {
+				loadCourseEvolutionData(storeState.selectedStudent.code, selectedCourse.course_code);
 			}
 		} else {
-			// Reset when no data
-			if (availableCourses.length > 0) {
-				availableCourses = [];
-			}
-			if (selectedCourseForEvolution !== null) {
-				selectedCourseForEvolution = null;
+			// Clear course evolution data when no course is selected
+			courseEvolutionData = null;
+			if (courseEvolutionChart) {
+				courseEvolutionChart.destroy();
+				courseEvolutionChart = null;
 			}
 		}
 	});
@@ -248,27 +221,29 @@
 		// Reset course selection state
 		selectedCourseForEvolution = null;
 		availableCourses = [];
+		courseEvolutionData = null;
 
 		try {
-			// Load all data in parallel
-			const [scoreEvolutionResponse, courseScoresResponse, courseEvolutionResponse] =
-				await Promise.all([
-					fetch(`/api/dashboard/student/scores/${studentCode}`),
-					fetch(`/api/dashboard/student/courses/${studentCode}`),
-					fetch(`/api/dashboard/student/course-evolution/${studentCode}`)
-				]);
+			// Load basic data in parallel (excluding course evolution)
+			const [scoreEvolutionResponse, courseScoresResponse] = await Promise.all([
+				fetch(`/api/dashboard/student/scores/${studentCode}`),
+				fetch(`/api/dashboard/student/courses/${studentCode}`)
+			]);
 
 			// Handle all responses using helper function
-			const [scoreEvolution, courseScores, courseEvolution] = await Promise.all([
+			const [scoreEvolution, courseScores] = await Promise.all([
 				handleApiResponse(scoreEvolutionResponse, 'Error al cargar datos de evolución de puntajes'),
-				handleApiResponse(courseScoresResponse, 'Error al cargar datos de cursos'),
-				handleApiResponse(courseEvolutionResponse, 'Error al cargar datos de evolución por curso')
+				handleApiResponse(courseScoresResponse, 'Error al cargar datos de cursos')
 			]);
 
 			// Update state with response data
 			scoreEvolutionData = scoreEvolution;
 			courseScoresData = courseScores;
-			courseEvolutionData = courseEvolution;
+
+			// Set available courses from course scores data
+			if (courseScores && Array.isArray(courseScores) && courseScores.length > 0) {
+				availableCourses = courseScores;
+			}
 		} catch (error) {
 			console.error('Error loading student dashboard data:', error);
 			showToast(
@@ -278,8 +253,43 @@
 			scoreEvolutionData = null;
 			courseScoresData = null;
 			courseEvolutionData = null;
+			availableCourses = [];
 		} finally {
 			dashboardLoading = false;
+		}
+	}
+
+	/**
+	 * Load course evolution data for a specific course
+	 * @param studentCode Student code to load data for
+	 * @param courseCode Course code to filter by
+	 */
+	async function loadCourseEvolutionData(studentCode: string, courseCode: string) {
+		// Destroy existing course evolution chart
+		if (courseEvolutionChart) {
+			courseEvolutionChart.destroy();
+			courseEvolutionChart = null;
+		}
+
+		try {
+			const response = await fetch(
+				`/api/dashboard/student/course-evolution/${studentCode}?course_code=${encodeURIComponent(courseCode)}`
+			);
+
+			const data = await handleApiResponse(
+				response,
+				'Error al cargar datos de evolución por curso'
+			);
+			courseEvolutionData = data;
+		} catch (error) {
+			console.error('Error loading course evolution data:', error);
+			showToast(
+				error instanceof Error
+					? error.message
+					: 'No se pudieron cargar los datos de evolución por curso',
+				'danger'
+			);
+			courseEvolutionData = null;
 		}
 	}
 
@@ -328,16 +338,14 @@
 	/**
 	 * Prepare data for course evolution chart
 	 */
-	function prepareCourseEvolutionData(
-		data: StudentCourseEvolution[] | null,
-		selectedCourse: string | null
-	) {
+	function prepareCourseEvolutionData(data: StudentCourseEvolution[] | null) {
 		const emptyData = { labels: [], datasets: [] };
 		const validation = validateChartData(data, emptyData);
 		if (validation) return validation;
 
 		try {
-			// Group data by course
+			// Since data is already filtered by course from the backend, we just need to process it
+			// Group data by course (should only be one course now, but keeping structure for consistency)
 			const courseGroups = data!.reduce(
 				(acc, item) => {
 					const courseName = item.course_name || 'Sin nombre';
@@ -348,21 +356,10 @@
 				{} as Record<string, StudentCourseEvolution[]>
 			);
 
-			// Get course names
 			const courseNames = Object.keys(courseGroups);
 
-			// Determine courses to show
-			let coursesToShow: string[];
-			if (!selectedCourse || selectedCourse === '') {
-				coursesToShow = courseNames;
-			} else if (courseNames.includes(selectedCourse)) {
-				coursesToShow = [selectedCourse];
-			} else {
-				coursesToShow = [];
-			}
-
-			// If no courses to show, return empty data
-			if (coursesToShow.length === 0) {
+			// If no courses, return empty data
+			if (courseNames.length === 0) {
 				return emptyData;
 			}
 
@@ -374,7 +371,7 @@
 
 			// Create datasets
 			const allColors = getAllChartColors();
-			const datasets = coursesToShow.map((courseName, index) => {
+			const datasets = courseNames.map((courseName, index) => {
 				const courseData = courseGroups[courseName] || [];
 				const dataPoints = uniqueEvals.map((evalName) => {
 					const evalData = courseData.find((item) => item.eval_name === evalName);
@@ -635,31 +632,36 @@
 						</div>
 						<h3 class="text-lg font-medium">Evolución por Curso</h3>
 					</div>
-					{#if availableCourses.length > 1}
+					{#if availableCourses.length > 0}
 						<div class="flex items-center gap-2">
 							<span class="text-sm text-base-content/70">Curso:</span>
 							<select
 								class="select select-sm select-bordered bg-base-100"
 								bind:value={selectedCourseForEvolution}
 							>
-								<option value="">Todos</option>
-								{#each availableCourses as course (course)}
-									<option value={course}>{course}</option>
+								<option value="">Seleccionar curso</option>
+								{#each availableCourses as course (course.course_code)}
+									<option value={course.course_name}>{course.course_name}</option>
 								{/each}
 							</select>
 						</div>
 					{/if}
 				</div>
 				<div class="divider my-0"></div>
-				{#if !courseEvolutionData || courseEvolutionData.length === 0}
-					<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
-						<div class="text-4xl mb-4">📈</div>
-						<p class="text-lg font-medium">No hay datos disponibles</p>
-						<p class="text-sm mt-2">No se encontraron datos de evolución por curso</p>
-					</div>
-				{:else}
+				{#if courseEvolutionData && courseEvolutionData.length > 0}
 					<div class="h-80 relative mt-2">
 						<canvas id="courseEvolutionChart"></canvas>
+					</div>
+				{:else}
+					<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
+						<div class="text-4xl mb-4">📈</div>
+						{#if !selectedCourseForEvolution}
+							<p class="text-lg font-medium">Selecciona un curso</p>
+							<p class="text-sm mt-2">Elige un curso del menú desplegable para ver su evolución</p>
+						{:else}
+							<p class="text-lg font-medium">No hay datos disponibles</p>
+							<p class="text-sm mt-2">No se encontraron datos de evolución para este curso</p>
+						{/if}
 					</div>
 				{/if}
 			</div>

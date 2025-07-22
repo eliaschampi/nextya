@@ -5,16 +5,18 @@ import { getStudentCourseEvolution } from '$lib/data/dashboard/student';
 /**
  * GET endpoint for student course evolution data
  * Returns course evolution data for a specific student
+ * Optional query parameter: course_code - filters results by specific course
  */
-export const GET: RequestHandler = async ({ params, locals }) => {
+export const GET: RequestHandler = async ({ params, url, locals }) => {
 	const { student_code } = params;
+	const course_code = url.searchParams.get('course_code');
 
 	if (!student_code) {
 		return json({ error: 'Código de estudiante no proporcionado' }, { status: 400 });
 	}
 
 	try {
-		const data = await getStudentCourseEvolution(locals.db, student_code);
+		const data = await getStudentCourseEvolution(locals.db, student_code, course_code || undefined);
 
 		if (!data) {
 			return json(
