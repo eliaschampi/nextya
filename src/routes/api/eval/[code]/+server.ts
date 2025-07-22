@@ -9,6 +9,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	try {
 		// Use optimized PostgreSQL view with pre-aggregated sections
+		// Order by created_at desc to show most recent evaluations first
 		const evals = await locals.db
 			.selectFrom('evals_with_sections')
 			.select([
@@ -24,7 +25,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 				'eval_sections'
 			])
 			.where('level_code', '=', code)
-			.orderBy('eval_date', 'asc')
+			.orderBy('created_at', 'desc')
 			.execute();
 
 		// Transform the result to match expected frontend format (snake_case)

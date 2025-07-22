@@ -34,7 +34,7 @@
 	let scoreEvolutionData = $state<StudentScoreEvolution[] | null>(null);
 	let courseScoresData = $state<StudentCourseScore[] | null>(null);
 	let courseEvolutionData = $state<StudentCourseEvolution[] | null>(null);
-	let selectedCourseForEvolution = $state<string | null>(null);
+	let selectedCourseForEvolution = $state<string>('');
 	let availableCourses = $state<StudentCourseScore[]>([]);
 
 	// Chart references
@@ -42,17 +42,33 @@
 	let courseScoresChart: Chart | null = $state(null);
 	let courseEvolutionChart: Chart | null = $state(null);
 
-	// Colors for charts
+	// Enhanced colors for charts with gradients
 	const chartColors = {
-		primary: 'rgba(100, 220, 150, 0.8)',
-		secondary: 'rgba(54, 162, 235, 0.8)',
-		tertiary: 'rgba(255, 206, 86, 0.8)',
-		quaternary: 'rgba(255, 99, 132, 0.8)',
+		primary: {
+			border: 'rgba(34, 197, 94, 1)',
+			background: 'rgba(34, 197, 94, 0.1)',
+			gradient: ['rgba(34, 197, 94, 0.3)', 'rgba(34, 197, 94, 0.05)']
+		},
+		secondary: {
+			border: 'rgba(59, 130, 246, 1)',
+			background: 'rgba(59, 130, 246, 0.1)',
+			gradient: ['rgba(59, 130, 246, 0.3)', 'rgba(59, 130, 246, 0.05)']
+		},
+		tertiary: {
+			border: 'rgba(245, 158, 11, 1)',
+			background: 'rgba(245, 158, 11, 0.1)',
+			gradient: ['rgba(245, 158, 11, 0.3)', 'rgba(245, 158, 11, 0.05)']
+		},
+		quaternary: {
+			border: 'rgba(239, 68, 68, 1)',
+			background: 'rgba(239, 68, 68, 0.1)',
+			gradient: ['rgba(239, 68, 68, 0.3)', 'rgba(239, 68, 68, 0.05)']
+		},
 		extended: [
-			'rgba(153, 102, 255, 0.8)',
-			'rgba(255, 159, 64, 0.8)',
-			'rgba(75, 192, 192, 0.8)',
-			'rgba(201, 203, 207, 0.8)'
+			{ border: 'rgba(168, 85, 247, 1)', background: 'rgba(168, 85, 247, 0.1)' },
+			{ border: 'rgba(249, 115, 22, 1)', background: 'rgba(249, 115, 22, 0.1)' },
+			{ border: 'rgba(20, 184, 166, 1)', background: 'rgba(20, 184, 166, 0.1)' },
+			{ border: 'rgba(156, 163, 175, 1)', background: 'rgba(156, 163, 175, 0.1)' }
 		]
 	};
 
@@ -195,12 +211,26 @@
 	 */
 	function getAllChartColors() {
 		return [
+			chartColors.primary.border,
+			chartColors.secondary.border,
+			chartColors.tertiary.border,
+			chartColors.quaternary.border,
+			...chartColors.extended.map((color) => color.border)
+		];
+	}
+
+	/**
+	 * Gets chart color object by index
+	 */
+	function getChartColorByIndex(index: number) {
+		const colors = [
 			chartColors.primary,
 			chartColors.secondary,
 			chartColors.tertiary,
 			chartColors.quaternary,
 			...chartColors.extended
 		];
+		return colors[index % colors.length];
 	}
 
 	/**
@@ -222,7 +252,7 @@
 		destroyCharts();
 
 		// Reset course selection state
-		selectedCourseForEvolution = null;
+		selectedCourseForEvolution = '';
 		availableCourses = [];
 		courseEvolutionData = null;
 
@@ -372,8 +402,7 @@
 			);
 			const uniqueEvals = Array.from(new Set(sortedData.map((item) => item.eval_name)));
 
-			// Create datasets
-			const allColors = getAllChartColors();
+			// Create datasets with enhanced styling
 			const datasets = courseNames.map((courseName, index) => {
 				const courseData = courseGroups[courseName] || [];
 				const dataPoints = uniqueEvals.map((evalName) => {
@@ -381,15 +410,24 @@
 					return evalData && evalData.score != null ? Number(evalData.score) : null;
 				});
 
+				const colorObj = getChartColorByIndex(index);
 				return {
 					label: courseName,
 					data: dataPoints,
-					borderColor: allColors[index % allColors.length],
-					backgroundColor: allColors[index % allColors.length].replace('0.8', '0.1'),
-					borderWidth: 2,
-					fill: false,
+					borderColor: colorObj.border,
+					backgroundColor: colorObj.background,
+					borderWidth: 3,
+					fill: true,
 					tension: 0.4,
-					spanGaps: false
+					spanGaps: false,
+					pointBackgroundColor: colorObj.border,
+					pointBorderColor: '#ffffff',
+					pointBorderWidth: 2,
+					pointRadius: 4,
+					pointHoverRadius: 6,
+					pointHoverBackgroundColor: colorObj.border,
+					pointHoverBorderColor: '#ffffff',
+					pointHoverBorderWidth: 3
 				};
 			});
 
@@ -404,7 +442,7 @@
 	}
 
 	/**
-	 * Render score evolution chart
+	 * Render score evolution chart with beautiful gradient fill
 	 */
 	function renderScoreEvolutionChart() {
 		if (!scoreEvolutionChartData.labels.length) return;
@@ -415,6 +453,13 @@
 
 			if (scoreEvolutionChart) scoreEvolutionChart.destroy();
 
+			// Create gradient
+			const gradient = ctx.getContext('2d')?.createLinearGradient(0, 0, 0, 400);
+			if (gradient) {
+				gradient.addColorStop(0, chartColors.primary.gradient[0]);
+				gradient.addColorStop(1, chartColors.primary.gradient[1]);
+			}
+
 			scoreEvolutionChart = new Chart(ctx, {
 				type: 'line',
 				data: {
@@ -423,11 +468,19 @@
 						{
 							label: 'Puntaje',
 							data: scoreEvolutionChartData.values,
-							borderColor: chartColors.primary,
-							backgroundColor: 'rgba(100, 220, 150, 0.1)',
-							borderWidth: 2,
+							borderColor: chartColors.primary.border,
+							backgroundColor: gradient || chartColors.primary.background,
+							borderWidth: 3,
 							fill: true,
-							tension: 0.4
+							tension: 0.4,
+							pointBackgroundColor: chartColors.primary.border,
+							pointBorderColor: '#ffffff',
+							pointBorderWidth: 2,
+							pointRadius: 5,
+							pointHoverRadius: 7,
+							pointHoverBackgroundColor: chartColors.primary.border,
+							pointHoverBorderColor: '#ffffff',
+							pointHoverBorderWidth: 3
 						}
 					]
 				},
@@ -438,8 +491,16 @@
 						legend: { display: false }
 					},
 					scales: {
-						x: { title: { display: true, text: 'Evaluaciones' } },
-						y: { beginAtZero: true, max: 20, title: { display: true, text: 'Puntaje' } }
+						x: {
+							title: { display: true, text: 'Evaluaciones' },
+							grid: { color: 'rgba(0, 0, 0, 0.05)' }
+						},
+						y: {
+							beginAtZero: true,
+							max: 20,
+							title: { display: true, text: 'Puntaje' },
+							grid: { color: 'rgba(0, 0, 0, 0.05)' }
+						}
 					}
 				}
 			});
@@ -486,7 +547,7 @@
 	}
 
 	/**
-	 * Render course evolution chart
+	 * Render course evolution chart with enhanced styling
 	 */
 	function renderCourseEvolutionChart() {
 		if (!courseEvolutionChartData.labels.length || !courseEvolutionChartData.datasets.length)
@@ -508,11 +569,27 @@
 					...baseChartOptions,
 					plugins: {
 						...baseChartOptions.plugins,
-						legend: { display: true, position: 'top' as const }
+						legend: {
+							display: true,
+							position: 'top' as const,
+							labels: {
+								usePointStyle: true,
+								padding: 20,
+								font: { size: 12 }
+							}
+						}
 					},
 					scales: {
-						x: { title: { display: true, text: 'Evaluaciones' } },
-						y: { beginAtZero: true, max: 20, title: { display: true, text: 'Puntaje' } }
+						x: {
+							title: { display: true, text: 'Evaluaciones' },
+							grid: { color: 'rgba(0, 0, 0, 0.05)' }
+						},
+						y: {
+							beginAtZero: true,
+							max: 20,
+							title: { display: true, text: 'Puntaje' },
+							grid: { color: 'rgba(0, 0, 0, 0.05)' }
+						}
 					}
 				}
 			});
@@ -643,7 +720,7 @@
 								value={selectedCourseForEvolution}
 								onchange={handleCourseSelectionChange}
 							>
-								<option value="">Seleccionar curso</option>
+								<option value="" disabled selected>Seleccionar curso</option>
 								{#each availableCourses as course (course.course_code)}
 									<option value={course.course_name}>{course.course_name}</option>
 								{/each}
