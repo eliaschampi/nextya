@@ -6,7 +6,7 @@
 	import PermissionsModal from '$lib/components/PermissionsModal.svelte';
 	import { showToast } from '$lib/stores/Toast';
 	import { onMount, onDestroy } from 'svelte';
-	import { Pencil, Lock, EllipsisVertical } from 'lucide-svelte';
+	import { EllipsisVertical } from 'lucide-svelte';
 	import { responseMessage } from '$lib/utils/responseMessage';
 	import { getInitials } from '$lib/utils/initialName';
 	import { formatDate } from '$lib/utils/formatDate';
@@ -251,9 +251,7 @@
 	</button>
 </PageTitle>
 
-<div
-	class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 p-6"
->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
 	{#each data.users as user (user.code)}
 		{@render userCard(user)}
 	{/each}
@@ -420,38 +418,51 @@
 
 {#snippet userCard(user: Users)}
 	<div
-		class="card bg-gradient-to-br from-base-100 to-base-50 hover:from-base-200 hover:to-base-100 shadow-sm hover:shadow-md transition-all duration-300 border border-base-300/20 rounded-xl overflow-hidden group"
+		class="card bg-gradient-to-br from-base-200 to-base-100 hover:from-base-100 hover:to-base-200 transition-all duration-300 border border-base-300/50 rounded-xl overflow-hidden group"
 	>
-		<div class="card-body p-4 space-y-3">
-			{#if canManagePermissions && canDelete}
-				<div
-					class="absolute top-3 right-3 dropdown dropdown-end opacity-0 group-hover:opacity-100 transition-opacity"
+		<div class="card-body p-5 space-y-4">
+			<div
+				class="absolute top-3 right-3 dropdown dropdown-end opacity-0 group-hover:opacity-100 transition-opacity"
+			>
+				<div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle">
+					<EllipsisVertical class="w-4 h-4" />
+				</div>
+				<ul
+					class="dropdown-content menu bg-base-200 rounded-box z-10 w-48 p-2 border border-base-300/20"
 				>
-					<div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle">
-						<EllipsisVertical class="w-3 h-3" />
-					</div>
-					<ul
-						class="dropdown-content menu bg-base-100 rounded-box z-10 w-48 p-2 shadow-lg border border-base-300/20"
-					>
+					{#if canManagePermissions}
 						<li>
 							<button onclick={() => openPermissionsModal(user)} class="text-xs">
 								Gestionar Permisos
 							</button>
 						</li>
+					{/if}
+					{#if canDelete}
 						<li>
 							<button onclick={() => openDeleteConfirmModal(user)} class="text-xs text-error">
 								Eliminar
 							</button>
 						</li>
-					</ul>
-				</div>
-			{/if}
-
-			<!-- Compact header with avatar and name -->
-			<div class="flex items-center gap-3">
+					{/if}
+					{#if mySelf(user.code) || canUpdate}
+						<li>
+							<button onclick={() => openEditModal(user)} class="text-xs">
+								Actualizar Información
+							</button>
+						</li>
+						<li>
+							<button onclick={() => openPasswordModal(user)} class="text-xs">
+								Cambiar Contraseña
+							</button>
+						</li>
+					{/if}
+				</ul>
+			</div>
+			<!-- Header with avatar and name -->
+			<div class="flex items-center gap-4">
 				<div class="avatar">
 					<div
-						class="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center ring-1 ring-primary/20"
+						class="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center ring-2 ring-primary/20"
 					>
 						{#if user.photo_url}
 							<img
@@ -461,7 +472,7 @@
 								loading="lazy"
 							/>
 						{:else}
-							<span class="text-sm font-semibold text-primary">
+							<span class="text-lg font-bold text-primary">
 								{getInitials(user.name || '', user.last_name || '')}
 							</span>
 						{/if}
@@ -469,18 +480,18 @@
 				</div>
 
 				<div class="flex-1 min-w-0">
-					<h3 class="font-semibold text-base text-base-content truncate">
+					<h3 class="font-bold text-lg text-base-content">
 						{user.name}
 						{user.last_name}
 					</h3>
-					<p class="text-xs text-base-content/60 truncate">{user.email}</p>
+					<p class="text-sm text-base-content/70 truncate">{user.email}</p>
 				</div>
 			</div>
 
-			<!-- Compact stats -->
-			<div class="text-xs text-base-content/50 space-y-1">
-				<div class="flex items-center gap-1.5">
-					<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<!-- Stats -->
+			<div class="text-sm text-base-content/60 space-y-2">
+				<div class="flex items-center gap-2">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
@@ -490,8 +501,8 @@
 					</svg>
 					<span>Creado {formatDate(user.created_at)}</span>
 				</div>
-				<div class="flex items-center gap-1.5">
-					<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<div class="flex items-center gap-2">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
@@ -502,28 +513,6 @@
 					<span>Login {formatDate(user.last_login || '')}</span>
 				</div>
 			</div>
-
-			<!-- Compact action buttons -->
-			{#if mySelf(user.code) || canUpdate}
-				<div
-					class="flex justify-end gap-1 pt-1 opacity-0 group-hover:opacity-100 transition-opacity"
-				>
-					<button
-						class="btn btn-xs btn-ghost hover:btn-primary"
-						onclick={() => openEditModal(user)}
-						title="Editar usuario"
-					>
-						<Pencil class="w-3 h-3" />
-					</button>
-					<button
-						class="btn btn-xs btn-ghost hover:btn-secondary"
-						onclick={() => openPasswordModal(user)}
-						title="Cambiar contraseña"
-					>
-						<Lock class="w-3 h-3" />
-					</button>
-				</div>
-			{/if}
 		</div>
 	</div>
 {/snippet}
