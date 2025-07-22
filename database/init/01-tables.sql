@@ -29,7 +29,7 @@ CREATE TABLE public.permissions (
   action VARCHAR(100) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT permissions_pk PRIMARY KEY (code),
-  CONSTRAINT permissions_user_fk FOREIGN KEY (user_code) REFERENCES public.users (code) ON DELETE CASCADE,
+  CONSTRAINT permissions_user_fk FOREIGN KEY (user_code) REFERENCES public.users (code) ON DELETE NO ACTION,
   CONSTRAINT permissions_entity_user_action_uq UNIQUE (entity, user_code, action)
 );
 
@@ -51,7 +51,7 @@ CREATE TABLE public.courses (
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   "order" INTEGER NOT NULL DEFAULT 0,
   CONSTRAINT courses_pk PRIMARY KEY (code),
-  CONSTRAINT courses_user_fk FOREIGN KEY (user_code) REFERENCES public.users (code) ON DELETE CASCADE
+  CONSTRAINT courses_user_fk FOREIGN KEY (user_code) REFERENCES public.users (code) ON DELETE NO ACTION
 );
 
 -- Students table
@@ -65,7 +65,7 @@ CREATE TABLE public.students (
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT students_pk PRIMARY KEY (code),
-  CONSTRAINT students_user_fk FOREIGN KEY (user_code) REFERENCES public.users (code) ON DELETE CASCADE,
+  CONSTRAINT students_user_fk FOREIGN KEY (user_code) REFERENCES public.users (code) ON DELETE NO ACTION,
   CONSTRAINT students_name_lastname_uq UNIQUE (name, last_name)
 );
 
@@ -81,7 +81,7 @@ CREATE TABLE public.registers (
   CONSTRAINT registers_pk PRIMARY KEY (code),
   CONSTRAINT registers_student_fk FOREIGN KEY (student_code) REFERENCES public.students (code) ON DELETE CASCADE,
   CONSTRAINT registers_level_fk FOREIGN KEY (level_code) REFERENCES public.levels (code) ON DELETE CASCADE,
-  CONSTRAINT registers_user_fk FOREIGN KEY (user_code) REFERENCES public.users (code) ON DELETE CASCADE,
+  CONSTRAINT registers_user_fk FOREIGN KEY (user_code) REFERENCES public.users (code) ON DELETE NO ACTION,
   CONSTRAINT registers_student_level_group_uq UNIQUE (student_code, level_code, group_name),
   CONSTRAINT registers_roll_code_uq UNIQUE (level_code, roll_code),
   CONSTRAINT registers_group_ck CHECK (group_name IN ('A', 'B', 'C', 'D'))

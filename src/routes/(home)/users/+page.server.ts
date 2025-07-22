@@ -140,6 +140,47 @@ export const actions: Actions = {
 		}
 
 		try {
+			// Get super admin user (adminer@nextya.com)
+			const superAdmin = await locals.db
+				.selectFrom('users')
+				.select('code')
+				.where('is_super_admin', '=', true)
+				.executeTakeFirst();
+
+			if (!superAdmin) {
+				return fail(500, { error: 'Usuario super admin no encontrado' });
+			}
+
+			// Update all dependent tables to reassign to super admin
+			await Promise.all([
+				locals.db
+					.updateTable('permissions')
+					.set({ user_code: superAdmin.code })
+					.where('user_code', '=', userId)
+					.execute(),
+				locals.db
+					.updateTable('courses')
+					.set({ user_code: superAdmin.code })
+					.where('user_code', '=', userId)
+					.execute(),
+				locals.db
+					.updateTable('students')
+					.set({ user_code: superAdmin.code })
+					.where('user_code', '=', userId)
+					.execute(),
+				locals.db
+					.updateTable('registers')
+					.set({ user_code: superAdmin.code })
+					.where('user_code', '=', userId)
+					.execute(),
+				locals.db
+					.updateTable('evals')
+					.set({ user_code: superAdmin.code })
+					.where('user_code', '=', userId)
+					.execute()
+			]);
+
+			// Now safe to delete user
 			await locals.db.deleteFrom('users').where('code', '=', userId).execute();
 
 			return { success: true };
