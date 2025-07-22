@@ -34,7 +34,7 @@
 	let scoreEvolutionData = $state<StudentScoreEvolution[] | null>(null);
 	let courseScoresData = $state<StudentCourseScore[] | null>(null);
 	let courseEvolutionData = $state<StudentCourseEvolution[] | null>(null);
-	let selectedCourseForEvolution = $state<string>('');
+	let selectedCourseForEvolution = $state<string | null>(null);
 	let availableCourses = $state<StudentCourseScore[]>([]);
 
 	// Chart references
@@ -110,75 +110,16 @@
 		}
 	});
 
-	// Reactive loading when selected student changes
-	$effect(() => {
-		const student = storeState.selectedStudent;
+	// Handle course selection changes (using event handler instead of $effect to avoid infinite loops)
+	function handleCourseSelectionChange(event: Event) {
+		const target = event.target as HTMLSelectElement;
+		const courseName = target.value;
 
-		if (student) {
-			// Reset state synchronously
-			dashboardLoading = true;
-			destroyCharts();
-			selectedCourseForEvolution = '';
-			availableCourses = [];
-			courseEvolutionData = null;
-			scoreEvolutionData = null;
-			courseScoresData = null;
+		selectedCourseForEvolution = courseName;
 
-			// Load asynchronously
-			(async () => {
-				try {
-					const [scoreEvolutionResponse, courseScoresResponse] = await Promise.all([
-						fetch(`/api/dashboard/student/scores/${student.code}`),
-						fetch(`/api/dashboard/student/courses/${student.code}`)
-					]);
-
-					const [scoreEvolution, courseScores] = await Promise.all([
-						handleApiResponse(
-							scoreEvolutionResponse,
-							'Error al cargar datos de evolución de puntajes'
-						),
-						handleApiResponse(courseScoresResponse, 'Error al cargar datos de cursos')
-					]);
-
-					scoreEvolutionData = scoreEvolution;
-					courseScoresData = courseScores;
-
-					if (courseScores && Array.isArray(courseScores) && courseScores.length > 0) {
-						availableCourses = courseScores;
-					}
-				} catch (error) {
-					console.error('Error loading student dashboard data:', error);
-					showToast(
-						error instanceof Error
-							? error.message
-							: 'No se pudieron cargar los datos del dashboard',
-						'danger'
-					);
-					scoreEvolutionData = null;
-					courseScoresData = null;
-					availableCourses = [];
-				} finally {
-					dashboardLoading = false;
-				}
-			})();
-		} else {
-			// Reset when no student selected
-			dashboardLoading = false;
-			destroyCharts();
-			selectedCourseForEvolution = '';
-			availableCourses = [];
-			courseEvolutionData = null;
-			scoreEvolutionData = null;
-			courseScoresData = null;
-		}
-	});
-
-	// Handle course selection changes
-	$effect(() => {
-		if (selectedCourseForEvolution && storeState.selectedStudent) {
-			const selectedCourse = availableCourses.find(
-				(course) => course.course_name === selectedCourseForEvolution
-			);
+		if (courseName && storeState.selectedStudent) {
+			// Load course evolution data for the selected course
+			const selectedCourse = availableCourses.find((course) => course.course_name === courseName);
 			if (selectedCourse) {
 				loadCourseEvolutionData(storeState.selectedStudent.code, selectedCourse.course_code);
 			}
@@ -190,10 +131,16 @@
 				courseEvolutionChart = null;
 			}
 		}
-	});
+	}
 
-	// Clean up charts on unmount
+	// Initialize dashboard data if student is already selected
 	onMount(() => {
+		// Check if there's already a selected student and load dashboard data
+		if (storeState.selectedStudent) {
+			loadStudentDashboardData(storeState.selectedStudent.code);
+		}
+
+		// Clean up charts on unmount
 		return () => {
 			destroyCharts();
 		};
@@ -257,11 +204,62 @@
 	}
 
 	/**
-	 * Select a student (only update store, loading handled by effect)
+	 * Select a student and load their dashboard data
 	 * @param student Student to select
 	 */
 	function selectStudent(student: Students) {
+		// Use the store to select the student
 		studentStore.selectStudent(student, 'dashboard-student-page');
+		loadStudentDashboardData(student.code);
+	}
+
+	/**
+	 * Load dashboard data for a student
+	 * @param studentCode Student code to load data for
+	 */
+	async function loadStudentDashboardData(studentCode: string) {
+		dashboardLoading = true;
+		destroyCharts();
+
+		// Reset course selection state
+		selectedCourseForEvolution = null;
+		availableCourses = [];
+		courseEvolutionData = null;
+
+		try {
+			// Load basic data in parallel (excluding course evolution)
+			const [scoreEvolutionResponse, courseScoresResponse] = await Promise.all([
+				fetch(`/api/dashboard/student/scores/${studentCode}`),
+				fetch(`/api/dashboard/student/courses/${studentCode}`)
+			]);
+
+			// Handle all responses using helper function
+			const [scoreEvolution, courseScores] = await Promise.all([
+				handleApiResponse(scoreEvolutionResponse, 'Error al cargar datos de evolución de puntajes'),
+				handleApiResponse(courseScoresResponse, 'Error al cargar datos de cursos')
+			]);
+
+			// Update state with response data
+			scoreEvolutionData = scoreEvolution;
+			courseScoresData = courseScores;
+
+			// Set available courses from course scores data
+			if (courseScores && Array.isArray(courseScores) && courseScores.length > 0) {
+				availableCourses = courseScores;
+			}
+		} catch (error) {
+			console.error('Error loading student dashboard data:', error);
+			showToast(
+				error instanceof Error ? error.message : 'No se pudieron cargar los datos del dashboard',
+				'danger'
+			);
+			scoreEvolutionData = null;
+			courseScoresData = null;
+			courseEvolutionData = null;
+			availableCourses = [];
+		} finally {
+			dashboardLoading = false;
+		}
 	}
 
 	/**
@@ -349,16 +347,9 @@
 		if (validation) return validation;
 
 		try {
-			// Sort data by date
-			const sortedData = [...data!].sort(
-				(a, b) => new Date(a.eval_date).getTime() - new Date(b.eval_date).getTime()
-			);
-
-			// Get unique evaluations
-			const uniqueEvals = Array.from(new Set(sortedData.map((item) => item.eval_name)));
-
-			// Group by course (though API filters to one course)
-			const courseGroups = sortedData.reduce(
+			// Since data is already filtered by course from the backend, we just need to process it
+			// Group data by course (should only be one course now, but keeping structure for consistency)
+			const courseGroups = data!.reduce(
 				(acc, item) => {
 					const courseName = item.course_name || 'Sin nombre';
 					if (!acc[courseName]) acc[courseName] = [];
@@ -370,14 +361,21 @@
 
 			const courseNames = Object.keys(courseGroups);
 
+			// If no courses, return empty data
 			if (courseNames.length === 0) {
 				return emptyData;
 			}
 
+			// Get unique evaluations in chronological order
+			const sortedData = [...data!].sort(
+				(a, b) => new Date(a.eval_date).getTime() - new Date(b.eval_date).getTime()
+			);
+			const uniqueEvals = Array.from(new Set(sortedData.map((item) => item.eval_name)));
+
 			// Create datasets
 			const allColors = getAllChartColors();
 			const datasets = courseNames.map((courseName, index) => {
-				const courseData = courseGroups[courseName];
+				const courseData = courseGroups[courseName] || [];
 				const dataPoints = uniqueEvals.map((evalName) => {
 					const evalData = courseData.find((item) => item.eval_name === evalName);
 					return evalData && evalData.score != null ? Number(evalData.score) : null;
@@ -642,9 +640,10 @@
 							<span class="text-sm text-base-content/70">Curso:</span>
 							<select
 								class="select select-sm select-bordered bg-base-100"
-								bind:value={selectedCourseForEvolution}
+								value={selectedCourseForEvolution}
+								onchange={handleCourseSelectionChange}
 							>
-								<option value="" disabled selected>Seleccionar curso</option>
+								<option value="">Seleccionar curso</option>
 								{#each availableCourses as course (course.course_code)}
 									<option value={course.course_name}>{course.course_name}</option>
 								{/each}
