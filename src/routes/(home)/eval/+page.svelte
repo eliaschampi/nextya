@@ -261,7 +261,7 @@
 {#snippet keysCell(row: EvalWithSections)}
 	<a
 		href="/eval/keys/{row.code}"
-		class="badge badge-soft flex items-center gap-1 whitespace-nowrap"
+		class="badge badge-soft badge-accent flex items-center gap-1 whitespace-nowrap hover:scale-105 transition-transform"
 		aria-label="Gestionar preguntas"
 	>
 		<svg
@@ -342,7 +342,7 @@
 </PageTitle>
 
 <div
-	class="bg-base-200 rounded-xl mb-6 shadow-sm p-4 flex items-center justify-between flex-wrap gap-4"
+	class="bg-base-200 rounded-xl mb-6 shadow p-4 flex items-center justify-between flex-wrap gap-4"
 >
 	<div class="flex items-center gap-4 flex-wrap">
 		<label class="font-semibold text-primary flex items-center">
@@ -404,13 +404,13 @@
 		</div>
 	</div>
 {:else if formState.selectedLevelCode}
-	<div class="text-center py-10 opacity-60 bg-base-200 rounded-lg shadow-sm">
+	<div class="text-center py-10 opacity-60 bg-base-200 rounded-lg shadow">
 		<ClipboardList class="w-12 h-12 mx-auto mb-3 text-primary" />
 		<p>No se encontraron exámenes para este nivel.</p>
 		<p class="text-sm mt-1">Puedes crear uno usando el botón "Nuevo Examen".</p>
 	</div>
 {:else}
-	<div class="text-center py-10 opacity-60 bg-base-200 rounded-lg shadow-sm">
+	<div class="text-center py-10 opacity-60 bg-base-200 rounded-lg shadow">
 		<BookOpen class="w-12 h-12 mx-auto mb-3 text-primary" />
 		<p>Selecciona un nivel arriba para ver o gestionar sus exámenes.</p>
 	</div>
@@ -546,7 +546,7 @@
 											<div class="join">
 												<button
 													type="button"
-													class="btn btn-xs btn-primary join-item"
+													class="btn btn-dash btn-xs btn-primary join-item"
 													title="Mover arriba"
 													onclick={() => moveSection(i, 'up')}
 													disabled={i === 0}
@@ -556,7 +556,7 @@
 												</button>
 												<button
 													type="button"
-													class="btn btn-xs btn-primary join-item"
+													class="btn btn-dash btn-xs btn-primary join-item"
 													title="Mover abajo"
 													onclick={() => moveSection(i, 'down')}
 													disabled={i === formState.sections.length - 1}
@@ -569,7 +569,7 @@
 										<td>
 											<button
 												type="button"
-												class="btn btn-xs btn-error btn-ghost"
+												class="btn btn-xs btn-error btn-soft"
 												title="Eliminar sección"
 												onclick={() => removeSection(i)}
 												tabindex="-1"

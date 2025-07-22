@@ -69,7 +69,6 @@ export const actions: Actions = {
 					name,
 					last_name,
 					photo_url,
-					is_email_verified: true, // Auto-confirm for admin created users
 					is_super_admin: false
 				})
 				.execute();
@@ -181,7 +180,11 @@ export const actions: Actions = {
 			]);
 
 			// Now safe to delete user
-			await locals.db.deleteFrom('users').where('code', '=', userId).execute();
+			await locals.db
+				.deleteFrom('users')
+				.where('code', '=', userId)
+				.where('is_super_admin', '=', false)
+				.execute();
 
 			return { success: true };
 		} catch (error) {

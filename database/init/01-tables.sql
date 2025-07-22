@@ -9,7 +9,6 @@ CREATE TABLE public.users (
   code UUID NOT NULL DEFAULT gen_random_uuid (),
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   email VARCHAR(255) NOT NULL,
-  is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
   is_super_admin BOOLEAN NOT NULL DEFAULT FALSE,
   last_login TIMESTAMPTZ NULL,
   last_name VARCHAR(150) NULL,

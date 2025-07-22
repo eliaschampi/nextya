@@ -186,7 +186,6 @@ export interface Users {
 	code: Generated<string>;
 	created_at: Generated<Timestamp>;
 	email: string;
-	is_email_verified: Generated<boolean>;
 	is_super_admin: Generated<boolean>;
 	last_login: Timestamp | null;
 	last_name: string | null;

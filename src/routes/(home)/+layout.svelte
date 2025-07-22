@@ -114,7 +114,7 @@
 						<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 						<ul
 							tabindex="0"
-							class="dropdown-content menu bg-base-100 border border-base-300 w-56 mt-3 p-3 z-50 backdrop-blur-md overflow-hidden"
+							class="dropdown-content menu bg-base-200 border border-base-300 w-56 mt-3 p-3 z-50 backdrop-blur-md overflow-hidden rounded-box"
 						>
 							<li class="menu-title pt-0 pb-3 border-b border-base-300/30">
 								<span class="font-semibold text-base-content/90">
@@ -183,7 +183,7 @@
 				<div class="mb-6">
 					<a
 						href="/"
-						class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-all duration-200 group"
+						class="flex items-center gap-3 px-4 py-3 rounded-box bg-primary/10 text-primary hover:bg-primary/20 transition-all duration-200 group"
 					>
 						<House class="h-5 w-5 group-hover:scale-110 transition-transform" />
 						<span class="font-medium">Inicio</span>
@@ -201,7 +201,7 @@
 					<div class="space-y-1">
 						<details class="group">
 							<summary
-								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-100/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
+								class="flex items-center gap-3 px-4 py-3 rounded-box hover:bg-base-100/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
 							>
 								<ChartArea class="h-5 w-5 text-base-content/70" />
 								<span class="font-medium flex-1">Reportes</span>
@@ -262,7 +262,7 @@
 						<!-- Estructura -->
 						<details class="group">
 							<summary
-								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-100/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
+								class="flex items-center gap-3 px-4 py-3 rounded-box hover:bg-base-100/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
 							>
 								<Settings class="h-5 w-5 text-base-content/70" />
 								<span class="font-medium flex-1">Estructura</span>
@@ -291,7 +291,7 @@
 						<!-- Estudiantes -->
 						<details class="group">
 							<summary
-								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-100/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
+								class="flex items-center gap-3 px-4 py-3 rounded-box hover:bg-base-100/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
 							>
 								<UserRound class="h-5 w-5 text-base-content/70" />
 								<span class="font-medium flex-1">Estudiantes</span>
@@ -327,7 +327,7 @@
 						<!-- Evaluaciones -->
 						<details class="group">
 							<summary
-								class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-100/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
+								class="flex items-center gap-3 px-4 py-3 rounded-box hover:bg-base-100/50 cursor-pointer transition-all duration-200 group-open:bg-base-200/30"
 							>
 								<FolderPen class="h-5 w-5 text-base-content/70" />
 								<span class="font-medium flex-1">Evaluaciones</span>
@@ -356,7 +356,7 @@
 						<!-- Resultados -->
 						<a
 							href="/result"
-							class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-100/50 text-base-content/80 hover:text-primary transition-all duration-200 group"
+							class="flex items-center gap-3 px-4 py-3 rounded-box hover:bg-base-100/50 text-base-content/80 hover:text-primary transition-all duration-200 group"
 						>
 							<FileText class="h-5 w-5 group-hover:scale-110 transition-transform" />
 							<span class="font-medium">Resultados</span>
@@ -375,7 +375,7 @@
 					<div class="space-y-1">
 						<a
 							href="/users"
-							class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-base-100/50 text-base-content/80 hover:text-primary transition-all duration-200 group"
+							class="flex items-center gap-3 px-4 py-3 rounded-box hover:bg-base-100/50 text-base-content/80 hover:text-primary transition-all duration-200 group"
 						>
 							<UserCog class="h-5 w-5 group-hover:scale-110 transition-transform" />
 							<span class="font-medium">Usuarios</span>
@@ -386,7 +386,7 @@
 
 			{#if page.data.user}
 				<div class="border-t border-base-300/30 p-4 lg:hidden">
-					<div class="flex items-center gap-4 px-4 py-3 rounded-xl bg-base-200/30">
+					<div class="flex items-center gap-4 px-4 py-3 rounded-box bg-base-200/30">
 						<div class="avatar">
 							<div
 								class="w-10 rounded-full ring-2 ring-primary/20 ring-offset-2 ring-offset-base-100"

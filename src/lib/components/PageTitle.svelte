@@ -29,7 +29,7 @@
 	</svg>
 
 	<div
-		class="card w-full max-w-xl glass bg-base-100/50 backdrop-blur-md shadow transition-all duration-500 hover:shadow-lg"
+		class="card w-full max-w-xl glass bg-base-100/50 backdrop-blur-md shadow transition-all duration-500 hover:scale-102"
 	>
 		<div class="card-body text-center space-y-3 p-6">
 			<h1 class="text-2xl font-bold animate-fade-in-up" aria-label="Page Title">

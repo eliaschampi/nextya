@@ -1,23 +1,12 @@
 <script lang="ts">
-	// SvelteKit imports
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-
-	// Component imports
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import Message from '$lib/components/Message.svelte';
-
-	// Store imports
 	import { showToast } from '$lib/stores/Toast';
 	import { can } from '$lib/stores/permissions';
-
-	// Utility imports
 	import { responseMessage } from '$lib/utils/responseMessage';
-
-	// Type imports
 	import type { EvalQuestions, EvalSections, Evals } from '$lib/types';
-
-	// Icon imports
 	import {
 		BookOpen,
 		Save,
@@ -31,10 +20,12 @@
 		Eraser
 	} from 'lucide-svelte';
 
-	// Permissions - using Svelte 5 reactive approach
-	let canUpsert = $derived(can('keys:upsert'));
+	// Constants
+	const DEFAULT_OMITABLE = false;
+	const DEFAULT_SCORE = 1.0;
+	const ANSWER_OPTIONS = ['A', 'B', 'C', 'D', 'E'] as const;
 
-	// Props from parent
+	// Props
 	const { data } = $props<{
 		data: {
 			eval: Evals & { levels: { name: string } };
@@ -44,29 +35,31 @@
 		};
 	}>();
 
-	// Constants
-	const DEFAULT_OMITABLE = false;
-	const DEFAULT_SCORE = 1.0;
-	const ANSWER_OPTIONS = ['A', 'B', 'C', 'D', 'E'];
+	// Permissions
+	let canUpsert = $derived(can('keys:upsert'));
 
-	// UI state
+	// State
 	let activeTab = $state(0);
 	let message = $state('');
 	let isSaving = $state(false);
 	let isCreateMode = $state(false);
-
-	// Data state
 	let sectionQuestions = $state<Record<string, EvalQuestions[]>>({});
 	let sectionStarts = $state<Record<string, number>>({});
-
-	// Paste modal state
 	let pasteModal = $state<HTMLDialogElement | null>(null);
 	let pasteContent = $state('');
 	let pasteError = $state('');
 
-	// Derived values
-	let isValid = $derived(validateForm());
-	let completionPercentage = $derived(getCompletionPercentage());
+	// Derived
+	let totalQuestions = $derived(Object.values(sectionQuestions).flat().length);
+	let answeredQuestions = $derived(
+		Object.values(sectionQuestions)
+			.flat()
+			.filter((q) => q.correct_key !== '').length
+	);
+	let completionPercentage = $derived(
+		totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0
+	);
+	let isValid = $derived(answeredQuestions === totalQuestions);
 
 	// Lifecycle hooks
 	onMount(() => {
@@ -160,17 +153,6 @@
 	function getSectionQuestionIndex(globalNumber: number, sectionCode: string): number {
 		const start = sectionStarts[sectionCode] || 1;
 		return globalNumber - start + 1;
-	}
-
-	function getCompletionPercentage(): number {
-		const allQuestions = Object.values(sectionQuestions).flat();
-		const answeredCount = allQuestions.filter((q) => q.correct_key !== '').length;
-		return allQuestions.length > 0 ? (answeredCount / allQuestions.length) * 100 : 0;
-	}
-
-	function validateForm(): boolean {
-		const allSections = Object.values(sectionQuestions).flat();
-		return allSections.every((q) => q.correct_key !== '');
 	}
 
 	function getSectionCompletionStatus(sectionCode: string): { completed: number; total: number } {
@@ -296,16 +278,18 @@
 
 	function validatePasteContent(content: string): boolean {
 		// Validate that content only contains A-E characters
-		const validCharsRegex = /^[A-E]+$/;
-		if (!validCharsRegex.test(content)) {
+		if (!/^[A-E]+$/.test(content)) {
 			pasteError = 'El contenido pegado solo debe contener letras A, B, C, D o E';
 			return false;
 		}
 
-		// Validate that content length matches the total number of questions
-		const totalQuestions = Object.values(sectionQuestions).flat().length;
-		if (content.length !== totalQuestions) {
-			pasteError = `La longitud del contenido (${content.length}) no coincide con el número total de preguntas (${totalQuestions})`;
+		// Validate content length: min 1, max total questions
+		if (content.length < 1) {
+			pasteError = 'Debe ingresar al menos 1 respuesta';
+			return false;
+		}
+		if (content.length > totalQuestions) {
+			pasteError = `La longitud del contenido (${content.length}) excede el número total de preguntas (${totalQuestions})`;
 			return false;
 		}
 
@@ -313,27 +297,31 @@
 	}
 
 	function applyPastedKeys(): void {
-		if (!validatePasteContent(pasteContent)) {
-			return;
-		}
+		if (!validatePasteContent(pasteContent)) return;
 
 		// Sort all questions by their global order
 		const allQuestions = Object.values(sectionQuestions)
 			.flat()
 			.sort((a, b) => a.order_in_eval - b.order_in_eval);
 
-		// Apply the keys to each question
-		for (let i = 0; i < allQuestions.length; i++) {
+		// Apply the keys to questions up to the length of pasted content
+		const keysToApply = Math.min(pasteContent.length, allQuestions.length);
+		for (let i = 0; i < keysToApply; i++) {
 			const question = allQuestions[i];
-			const key = pasteContent[i];
-			updateQuestion(question.section_code, question, 'correct_key', key);
+			updateQuestion(question.section_code, question, 'correct_key', pasteContent[i]);
 		}
 
-		// Close the modal and show success message
+		// Close modal and show success message
 		pasteModal?.close();
 		pasteContent = '';
 		pasteError = '';
-		showToast('Claves aplicadas correctamente', 'success');
+
+		showToast(
+			keysToApply === totalQuestions
+				? 'Claves aplicadas correctamente'
+				: `${keysToApply} de ${totalQuestions} claves aplicadas`,
+			'success'
+		);
 	}
 
 	function openPasteModal(): void {
@@ -370,133 +358,122 @@
 	</a>
 </PageTitle>
 
-<!-- Progreso y Botón de Guardar -->
-<div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
-	<div class="card bg-base-200/70 flex-1 w-full sm:w-auto">
-		<div class="p-4 flex flex-col">
-			<span class="text-sm text-base-content/70">Progreso Total</span>
-			<div class="flex items-center justify-between mt-1 mb-2">
-				<span class="font-semibold text-xl">{Math.round(completionPercentage)}%</span>
-				<span class="text-xs badge badge-ghost">
-					{Object.values(sectionQuestions)
-						.flat()
-						.filter((q) => q.correct_key !== '').length} /
-					{Object.values(sectionQuestions).flat().length} preguntas
-				</span>
-			</div>
-			<div class="relative h-3 w-full bg-base-200 rounded-full overflow-hidden">
-				<div
-					class="absolute top-0 left-0 h-full rounded-full transition-all duration-700 ease-out bg-gradient-to-r from-primary to-primary/70"
-					style="width: {completionPercentage}%"
-				></div>
+<!-- Progress Header -->
+<div class="mb-6 flex flex-col lg:flex-row gap-4 items-stretch">
+	<!-- Progress Card -->
+	<div class="card bg-base-200/80 shadow border border-base-300 flex-1">
+		<div class="card-body p-4">
+			<div class="flex items-center justify-between mb-3">
+				<h3 class="text-sm font-medium text-base-content/70">Progreso Total</h3>
+				<div class="badge badge-ghost text-xs">
+					{answeredQuestions} / {totalQuestions}
+				</div>
 			</div>
 
-			<!-- Botones de Acción -->
-			<div class="flex flex-wrap gap-2 mt-3">
+			<div class="flex items-center gap-3 mb-3">
+				<span class="text-2xl font-bold text-primary">{Math.round(completionPercentage)}%</span>
+				<progress class="progress progress-primary flex-1" value={completionPercentage} max="100"
+				></progress>
+			</div>
+
+			<!-- Action Buttons -->
+			<div class="flex gap-2">
 				{#if completionPercentage === 100}
-					<button
-						type="button"
-						class="btn btn-sm btn-soft gap-1 tooltip"
-						data-tip="Copiar claves"
-						onclick={copyAllKeys}
-					>
-						<Copy size={16} />
-					</button>
+					<div class="tooltip" data-tip="Copiar todas las claves">
+						<button type="button" class="btn btn-sm btn-ghost" onclick={copyAllKeys}>
+							<Copy size={16} />
+						</button>
+					</div>
 				{/if}
 
 				{#if isCreateMode}
-					<button
-						type="button"
-						class="btn btn-sm btn-soft gap-1 tooltip"
-						data-tip="Pegar claves"
-						onclick={openPasteModal}
-					>
-						<Clipboard size={16} />
-					</button>
+					<div class="tooltip" data-tip="Pegar claves desde portapapeles">
+						<button type="button" class="btn btn-sm btn-ghost" onclick={openPasteModal}>
+							<Clipboard size={16} />
+						</button>
+					</div>
 				{/if}
 
-				<button
-					type="button"
-					class="btn btn-sm btn-outline btn-error gap-1 tooltip"
-					data-tip="Limpiar"
-					onclick={clearAllKeys}
-				>
-					<Eraser size={16} />
-				</button>
+				<div class="tooltip" data-tip="Limpiar todas las claves">
+					<button type="button" class="btn btn-sm btn-error" onclick={clearAllKeys}>
+						<Eraser size={16} />
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>
 
-	<button
-		type="submit"
-		form="keysForm"
-		class="btn btn-md {isValid ? 'btn-success' : 'btn-primary'} gap-2 w-full sm:w-auto shadow"
-		disabled={!isValid || isSaving || !canUpsert}
-	>
-		{#if isSaving}
-			<span class="loading loading-spinner loading-sm"></span>
-			Guardando...
-		{:else if isValid}
-			<Check size={18} />
-			Guardar Claves
-		{:else}
-			<Save size={18} />
-			Guardar
-		{/if}
-	</button>
+	<!-- Save Button -->
+	<div class="flex items-end">
+		<button
+			type="submit"
+			form="keysForm"
+			class="btn {isValid ? 'btn-success' : 'btn-primary'} gap-2 min-w-40"
+			disabled={!isValid || isSaving || !canUpsert}
+		>
+			{#if isSaving}
+				<span class="loading loading-spinner loading-sm"></span>
+				Guardando...
+			{:else if isValid}
+				<Check size={18} />
+				Guardar Claves
+			{:else}
+				<Save size={18} />
+				Guardar
+			{/if}
+		</button>
+	</div>
 </div>
 
-<!-- Contenido Principal -->
-<div class="card bg-base-200/90 border border-base-300 mx-auto">
-	<div class="card-body p-4 sm:p-6">
-		<form id="keysForm" class="space-y-8" onsubmit={handleSubmit}>
-			<!-- Pestañas de Secciones -->
-			<div class="rounded-lg overflow-hidden shadow-inner">
-				<div class="tabs tabs-box bg-base-300/50 p-2 flex flex-wrap md:flex-nowrap overflow-x-auto">
-					{#each data.sections as section, i (section.code)}
-						{@const status = getSectionCompletionStatus(section.code)}
-						{@const isComplete = status.completed === status.total}
-						{@const sectionStart = sectionStarts[section.code] || 1}
-						{@const sectionEnd = sectionStart + section.question_count - 1}
-						<button
-							type="button"
-							class="tab flex-shrink-0 gap-1 whitespace-nowrap
-								{activeTab === i ? 'tab-active font-medium bg-primary/10' : ''}
-								{isComplete ? 'text-success' : 'text-base-content'}"
-							onclick={() => (activeTab = i)}
-						>
-							<span>{section.course_name}</span>
-							<span class="badge badge-sm {isComplete ? 'badge-success' : 'badge-outline'}">
-								{status.completed}/{status.total}
-							</span>
-							<span class="text-xs opacity-50 hidden md:inline">({sectionStart}-{sectionEnd})</span>
-						</button>
-					{/each}
-				</div>
+<!-- Main Content -->
+<div class="card bg-base-200/60 shadow border border-base-300">
+	<div class="card-body p-0">
+		<form id="keysForm" onsubmit={handleSubmit}>
+			<!-- Section Tabs -->
+			<div class="tabs tabs-box px-4 pt-4">
+				{#each data.sections as section, i (section.code)}
+					{@const status = getSectionCompletionStatus(section.code)}
+					{@const isComplete = status.completed === status.total}
+					{@const sectionStart = sectionStarts[section.code] || 1}
+					{@const sectionEnd = sectionStart + section.question_count - 1}
+					<button
+						type="button"
+						class="tab tab-lg gap-2 {activeTab === i ? 'tab-active' : ''}"
+						onclick={() => (activeTab = i)}
+					>
+						<span class="font-medium">{section.course_name}</span>
+						<div class="badge badge-sm {isComplete ? 'badge-success' : 'badge-outline'}">
+							{status.completed}/{status.total}
+						</div>
+						<span class="text-xs opacity-60 hidden lg:inline">
+							({sectionStart}-{sectionEnd})
+						</span>
+					</button>
+				{/each}
 			</div>
 
-			<!-- Mensaje de Alerta -->
+			<!-- Alert Message -->
 			{#if message}
-				<Message type="error" description={message} />
+				<div class="px-4 pt-4">
+					<Message type="error" description={message} />
+				</div>
 			{/if}
 
-			<!-- Preguntas de la Sección Activa -->
+			<!-- Questions Section -->
 			{#each data.sections as section, i (section.code)}
 				{#if activeTab === i}
-					<div class="space-y-6 p-2">
-						<div
-							class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"
-						>
-							<h3 class="text-lg font-semibold text-primary flex items-center gap-2">
+					<div class="p-4 space-y-4">
+						<!-- Section Header -->
+						<div class="flex items-center justify-between">
+							<h3 class="text-lg font-semibold flex items-center gap-2 text-primary">
 								<BookOpen size={20} />
 								{section.course_name}
 							</h3>
-							<div class="text-sm bg-base-200 px-4 py-1.5 rounded-full shadow-sm">
-								Seleccione la respuesta correcta para cada pregunta
-							</div>
+							<div class="badge badge-soft">Seleccione la respuesta correcta</div>
 						</div>
 
-						<div class="divide-y divide-base-300">
+						<!-- Questions Grid -->
+						<div class="space-y-3">
 							{#each sectionQuestions[section.code] || [] as question (question.code)}
 								{@const localIndex = getSectionQuestionIndex(question.order_in_eval, section.code)}
 								{@const questionId = `question_${section.code}_${localIndex}`}
@@ -504,93 +481,87 @@
 								{@const scoreId = `score_${section.code}_${localIndex}`}
 								{@const hasAnswer = question.correct_key !== ''}
 
-								<div
-									class="py-3 grid grid-cols-1 md:grid-cols-6 gap-4 items-center
-									{hasAnswer ? 'bg-primary/5' : ''} rounded-lg p-3"
-								>
-									<!-- Número de Pregunta -->
-									<div class="md:col-span-1 flex items-center gap-2">
-										<div class="flex flex-col items-center">
-											<span
-												class="text-xl font-semibold
-												{hasAnswer ? 'text-success' : 'text-base-content'}"
-											>
-												{question.order_in_eval}
-											</span>
-										</div>
-										{#if hasAnswer}
-											<div class="badge badge-success ml-auto md:hidden">
-												{question.correct_key}
+								<div class="card bg-base-50 {hasAnswer ? 'ring-1 ring-success/20' : ''}">
+									<div class="card-body p-4">
+										<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+											<!-- Question Number -->
+											<div class="lg:col-span-2 flex items-center gap-3">
+												<div
+													class="w-10 h-10 rounded-full bg-base-200 flex items-center justify-center"
+												>
+													<span class="font-bold text-lg {hasAnswer ? 'text-success' : ''}">
+														{question.order_in_eval}
+													</span>
+												</div>
+												{#if hasAnswer}
+													<div class="badge badge-success lg:hidden">
+														{question.correct_key}
+													</div>
+												{/if}
 											</div>
-										{/if}
-									</div>
 
-									<!-- Opciones de Respuesta -->
-									<div class="md:col-span-3 flex flex-wrap gap-2 justify-center md:justify-start">
-										{#each ANSWER_OPTIONS as option (option)}
-											<label
-												class="flex items-center gap-2 cursor-pointer select-none p-1 rounded-full
-													{question.correct_key === option
-													? 'bg-primary text-white scale-105'
-													: 'bg-base-200 hover:bg-base-300'}"
-											>
+											<!-- Answer Options -->
+											<div class="lg:col-span-6 flex gap-2 justify-center lg:justify-start">
+												{#each ANSWER_OPTIONS as option (option)}
+													<label
+														class="flex items-center justify-center w-10 h-10 rounded-full cursor-pointer select-none
+															{question.correct_key === option
+															? 'bg-primary text-primary-content scale-105'
+															: 'bg-base-200 hover:bg-base-300 text-base-content'}"
+													>
+														<input
+															type="radio"
+															name={questionId}
+															value={option}
+															class="sr-only"
+															checked={question.correct_key === option}
+															onchange={() => handleRadioChange(section.code, question, option)}
+														/>
+														<span class="font-semibold">{option}</span>
+													</label>
+												{/each}
+											</div>
+
+											<!-- Optional Toggle -->
+											<div class="lg:col-span-2 flex justify-center">
+												<label class="label cursor-pointer gap-2">
+													<input
+														type="checkbox"
+														name={omitableId}
+														class="toggle toggle-success toggle-sm"
+														checked={question.omitable}
+														onchange={(e) =>
+															handleOmitableChange(
+																section.code,
+																question,
+																(e.target as HTMLInputElement).checked
+															)}
+													/>
+													<span class="label-text text-xs">Opcional</span>
+												</label>
+											</div>
+
+											<!-- Score Input -->
+											<div class="lg:col-span-2 flex items-center gap-2 justify-end">
+												<label for={scoreId} class="label-text text-xs">Valor:</label>
 												<input
-													type="radio"
-													name={questionId}
-													value={option}
-													class="radio radio-primary hidden"
-													checked={question.correct_key === option}
-													onchange={() => handleRadioChange(section.code, question, option)}
+													id={scoreId}
+													type="number"
+													name={scoreId}
+													min="0"
+													max="1"
+													step="0.01"
+													class="input input-sm input-bordered w-16 text-center"
+													value={question.score_percent}
+													oninput={(e) =>
+														handleScoreChange(
+															section.code,
+															question,
+															(e.target as HTMLInputElement).value
+														)}
 												/>
-												<span class="font-medium px-2">{option}</span>
-											</label>
-										{/each}
-									</div>
-
-									<!-- Opción Omitible -->
-									<div class="md:col-span-1 flex items-center justify-center">
-										<label class="swap gap-2 items-center cursor-pointer">
-											<input
-												type="checkbox"
-												name={omitableId}
-												class="swap-input"
-												checked={question.omitable}
-												onchange={(e) =>
-													handleOmitableChange(
-														section.code,
-														question,
-														(e.target as HTMLInputElement).checked
-													)}
-											/>
-											<div class="swap-on flex gap-2 items-center text-success">
-												<span class="label-text">Opcional</span>
-												<Check size={16} />
 											</div>
-											<div class="swap-off flex gap-2 items-center text-base-content/60">
-												<span class="label-text">Obligatorio</span>
-											</div>
-										</label>
-									</div>
-
-									<!-- Valor de Puntaje -->
-									<div class="md:col-span-1 flex items-center justify-end gap-2">
-										<span class="text-xs font-medium">Valor</span>
-										<input
-											type="number"
-											name={scoreId}
-											min="0"
-											max="1"
-											step="0.01"
-											placeholder="0.0-1.0"
-											class="input input-sm input-bordered w-20 text-center focus:ring-2 focus:ring-primary"
-											value={question.score_percent}
-											oninput={(e) =>
-												handleScoreChange(
-													section.code,
-													question,
-													(e.target as HTMLInputElement).value
-												)}
-										/>
+										</div>
 									</div>
 								</div>
 							{/each}
@@ -599,20 +570,25 @@
 				{/if}
 			{/each}
 
-			<!-- Botones de Navegación -->
-			<div class="pt-4 border-t border-base-300 flex justify-between">
+			<!-- Navigation -->
+			<div class="flex justify-between items-center p-4 bg-base-100">
 				<button
 					type="button"
-					class="btn btn-accent btn-sm gap-2"
+					class="btn btn-dash btn-accent gap-2"
 					disabled={activeTab === 0}
 					onclick={() => navigateTab('prev')}
 				>
 					<ChevronLeft size={18} />
 					Anterior
 				</button>
+
+				<div class="text-sm text-base-content/60">
+					Sección {activeTab + 1} de {data.sections.length}
+				</div>
+
 				<button
 					type="button"
-					class="btn btn-accent btn-sm gap-2"
+					class="btn btn-dash btn-accent gap-2"
 					disabled={activeTab === data.sections.length - 1}
 					onclick={() => navigateTab('next')}
 				>
@@ -624,48 +600,60 @@
 	</div>
 </div>
 
-<!-- Modal para pegar claves -->
+<!-- Paste Keys Modal -->
 <dialog bind:this={pasteModal} class="modal">
-	<div class="modal-box max-w-md">
-		<button
-			class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-			onclick={closePasteModal}
-		>
-			<X size={20} />
-		</button>
-		<h3 class="font-bold text-lg mb-4 flex items-center gap-2 text-primary">
-			<Clipboard size={20} />
-			Pegar Claves
-		</h3>
+	<div class="modal-box">
+		<form method="dialog">
+			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+				<X size={18} />
+			</button>
+		</form>
 
-		<div class="bg-base-200 p-4 rounded-lg mb-4">
-			<p class="text-sm">
-				Pegue las claves en formato <span class="font-mono font-medium">ABCDEABCDABCD</span>. Debe
-				contener exactamente
-				<span class="badge badge-primary">{Object.values(sectionQuestions).flat().length}</span> caracteres
-				(A-E).
-			</p>
+		<div class="flex items-center gap-3 mb-6">
+			<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+				<Clipboard size={20} class="text-primary" />
+			</div>
+			<h3 class="text-xl font-semibold">Pegar Claves</h3>
 		</div>
 
-		<div class="form-control w-full">
+		<div class="bg-base-200 p-4 rounded-lg opacity-80">
+			<div class="text-sm">
+				<p class="font-medium mb-1 text-primary">Formato esperado:</p>
+				<p>
+					Ingrese las respuestas como <code class="bg-base-100 px-1 rounded">ABCDEABCD...</code>
+				</p>
+				<i>
+					Rango: <span class="badge badge-outline badge-sm">1</span> a
+					<span class="badge badge-primary badge-sm">{totalQuestions}</span> caracteres. Las claves se
+					aplicarán secuencialmente.
+				</i>
+			</div>
+		</div>
+
+		<fieldset class="fieldset">
+			<legend class="fieldset-legend">Claves de respuesta</legend>
 			<textarea
-				class="textarea textarea-bordered h-24 font-mono w-full focus:ring-2 focus:ring-primary"
+				id="pasteInput"
+				class="textarea textarea-bordered w-full font-mono text-lg tracking-wider"
 				placeholder="ABCDEABCDABCD..."
 				bind:value={pasteContent}
 			></textarea>
-
 			{#if pasteError}
-				<div class="text-error text-sm mt-2 p-2 bg-error/10 rounded-lg">{pasteError}</div>
+				<div class="label">
+					<span class="label-text-alt text-error">{pasteError}</span>
+				</div>
 			{/if}
-		</div>
+		</fieldset>
 
-		<div class="modal-action flex justify-end gap-2 mt-6">
-			<button class="btn btn-outline" onclick={closePasteModal}>Cancelar</button>
-			<button class="btn btn-primary" onclick={applyPastedKeys} disabled={!pasteContent}>
+		<div class="modal-action">
+			<button class="btn btn-outline" onclick={closePasteModal}> Cancelar </button>
+			<button class="btn btn-primary" onclick={applyPastedKeys} disabled={!pasteContent.trim()}>
 				<Check size={18} />
-				Aplicar
+				Aplicar Claves
 			</button>
 		</div>
 	</div>
-	<form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+	<form method="dialog" class="modal-backdrop">
+		<button>cerrar</button>
+	</form>
 </dialog>

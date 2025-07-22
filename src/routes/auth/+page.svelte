@@ -25,7 +25,7 @@
 </script>
 
 <div class="w-full max-w-sm mx-auto" in:fade={{ duration: 300, delay: 150 }}>
-	<div class="card bg-gradient-to-b from-base-100/90 to-base-500/80 backdrop-blur p-4">
+	<div class="card bg-gradient-to-b from-base-100/90 to-base-200/80 backdrop-blur p-4">
 		<LogoHead />
 
 		<form
@@ -42,7 +42,7 @@
 					<span class="label-text">Correo electrónico</span>
 				</label>
 				<label
-					class="input input-bordered input-lg flex items-center gap-2 bg-base-200/50 hover:border-primary/30 focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200"
+					class="input input-bordered input-lg flex items-center gap-2 bg-base-200/50 hover:border-primary/30 focus-within:border-primary transition-all duration-200"
 				>
 					<Mail class="text-base-content/40 size-5" />
 					<input
@@ -63,7 +63,7 @@
 					<span class="label-text">Contraseña</span>
 				</label>
 				<label
-					class="input input-bordered input-lg flex items-center gap-2 bg-base-200/50 hover:border-primary/30 focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200"
+					class="input input-bordered input-lg flex items-center gap-2 bg-base-200/50 hover:border-primary/30 focus-within:border-primary transition-all duration-200"
 				>
 					<KeyRound class="text-base-content/40 size-5" />
 					<input

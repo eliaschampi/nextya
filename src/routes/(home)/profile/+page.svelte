@@ -51,7 +51,7 @@
 	// Login history with more realistic data
 	const loginHistory = $state<LoginHistoryItem[]>([
 		{
-			date: new Date(data.user?.last_sign_in_at || '').toLocaleString('es-ES'),
+			date: new Date(data.user?.last_login || '').toLocaleString('es-ES'),
 			ip: '192.168.1.1',
 			device: 'Chrome en Windows',
 			status: 'success',
@@ -119,7 +119,7 @@
 
 				<!-- Stats cards -->
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
-					<div class="stat bg-base-200/50 rounded-xl shadow-sm border border-base-300/20">
+					<div class="stat bg-base-200/50 rounded-xl shadow border border-base-300/20">
 						<div class="stat-figure text-primary">
 							<UserRound class="w-5 h-5" />
 						</div>
@@ -129,7 +129,7 @@
 						</div>
 					</div>
 
-					<div class="stat bg-base-200/50 rounded-xl shadow-sm border border-base-300/20">
+					<div class="stat bg-base-200/50 rounded-xl shadow border border-base-300/20">
 						<div class="stat-figure text-primary">
 							<Calendar class="w-5 h-5" />
 						</div>
@@ -137,7 +137,7 @@
 						<div class="stat-value text-base font-medium">{createdAt}</div>
 					</div>
 
-					<div class="stat bg-base-200/50 rounded-xl shadow-sm border border-base-300/20">
+					<div class="stat bg-base-200/50 rounded-xl shadow border border-base-300/20">
 						<div class="stat-figure text-success">
 							<BadgeCheck class="w-5 h-5" />
 						</div>
@@ -189,7 +189,7 @@
 						</div>
 					{:else}
 						<div class="w-full">
-							<ul class="divide-y divide-base-300/30 rounded-lg bg-base-100/50 shadow-sm">
+							<ul class="divide-y divide-base-300/30 rounded-lg bg-base-100/50 shadow">
 								{#each data.levels as level (level.code)}
 									<li
 										class="flex items-center justify-between py-3.5 px-4 hover:bg-base-200/50 transition-colors"

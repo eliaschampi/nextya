@@ -328,7 +328,7 @@
 				<div class="icon-container icon-container-secondary p-4 mb-4">
 					<ChartBar size={32} />
 				</div>
-				<h2 class="card-title text-xl font-semibold">Gráficos</h2>
+				<h2 class="card-title text-xl font-semibold">Cursos</h2>
 				<p class="text-sm opacity-70 mt-2">Estadísticas y análisis de rendimiento</p>
 			</div>
 		</div>

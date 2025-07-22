@@ -449,6 +449,9 @@
 
 <dialog bind:this={modal} class="modal">
 	<div class="modal-box">
+		<form method="dialog">
+			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+		</form>
 		<h3 class="text-lg font-bold mb-4">
 			{isEditing ? 'Editar' : selectedCode ? 'Registrar en nuevo nivel' : 'Registrar'} Estudiante
 		</h3>
@@ -517,9 +520,10 @@
 				/>
 			{/if}
 			<form onsubmit={handleSubmit} autocomplete="off" class="mt-2">
-				<fieldset class="fieldset bg-base-200 border-base-300 rounded-box border">
+				<fieldset
+					class="fieldset bg-base-200 border-base-300 rounded-box border grid grid-cols-1 md:grid-cols-2"
+				>
 					<legend class="fieldset-legend">Información del estudiante</legend>
-
 					<div>
 						<label for="name">Nombre</label>
 						<input
@@ -533,7 +537,6 @@
 							onblur={() => handleFillEmail()}
 						/>
 					</div>
-
 					<div>
 						<label for="last_name">Apellidos</label>
 						<input
@@ -546,7 +549,6 @@
 							bind:this={lastNameInput}
 						/>
 					</div>
-
 					<div>
 						<label for="phone">Teléfono</label>
 						<input
@@ -558,7 +560,6 @@
 							bind:this={phoneInput}
 						/>
 					</div>
-
 					<div>
 						<label for="email">Email</label>
 						<input
@@ -571,7 +572,6 @@
 							bind:this={emailInput}
 						/>
 					</div>
-
 					<div>
 						<label for="level">Nivel</label>
 						<select id="level" name="level" class="select w-full" required bind:this={levelSelect}>
@@ -581,7 +581,6 @@
 							{/each}
 						</select>
 					</div>
-
 					<div>
 						<label for="group_name">Grupo</label>
 						<select
@@ -620,9 +619,6 @@
 					</div>
 				{/if}
 				<div class="modal-action flex justify-center gap-4 mt-6">
-					<button class="btn btn-error" type="button" onclick={() => modal?.close()}>
-						Cancelar
-					</button>
 					<button class="btn btn-primary" type="submit">
 						{isEditing ? 'Actualizar' : selectedCode ? 'Registrar' : 'Guardar'}
 					</button>
