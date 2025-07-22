@@ -41,12 +41,20 @@
 				</div>
 				<div class="flex justify-between py-1 border-b border-base-300/50">
 					<span class="text-base-content/70">Desarrollador</span>
-					<span class="font-medium">Elias Champi</span>
+					<span class="font-bold">Elias Champi</span>
 				</div>
 				<div class="flex justify-between py-1 border-b border-base-300/50">
 					<span class="text-base-content/70">Última actualización</span>
-					<span class="font-medium">{new Date().toLocaleDateString('es-ES')}</span>
+					<span class="font-medium">Agosto 2025</span>
 				</div>
+			</div>
+			<div class="flex justify-between py-1">
+				<span class="text-base-content/70">Licencia</span>
+				<span class="font-medium">MIT</span>
+			</div>
+			<div class="flex justify-between py-1">
+				<span class="text-base-content/70">Derechos reservados</span>
+				<span class="font-medium">© {new Date().getFullYear()} EliasChampi</span>
 			</div>
 		</div>
 	</div>
@@ -95,9 +103,9 @@
 				<h2 class="text-xl font-semibold">Ayuda</h2>
 			</div>
 			<div class="text-center">
-				<button onclick={handleWspClick} class="btn btn-outline btn-primary gap-2">
+				<button onclick={handleWspClick} class="btn btn-soft btn-primary">
 					<MessageCircle class="w-5 h-5" />
-					Solicitar soporte
+					Contacta al Desarrollador
 				</button>
 			</div>
 		</div>

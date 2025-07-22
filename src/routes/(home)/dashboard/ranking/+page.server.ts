@@ -14,7 +14,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			students: [],
 			availableGroups: [],
 			selectedLevel: null,
-			selectedGroup: null
+			selectedGroup: null,
+			title: 'Ranking'
 		};
 	}
 
@@ -42,6 +43,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		students,
 		availableGroups,
 		selectedLevel,
-		selectedGroup
+		selectedGroup,
+		title: 'Ranking'
 	};
 };

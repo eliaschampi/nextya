@@ -16,7 +16,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	return {
 		levels,
-		title: 'Dashboard de Evaluación',
+		title: 'Gráficos de Evaluación',
 		levelCode,
 		evalCode
 	};

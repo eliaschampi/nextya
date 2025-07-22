@@ -9,9 +9,9 @@
 		House,
 		LogOut,
 		Menu,
-		Moon,
+		MoonStar,
 		Settings,
-		Sun,
+		SunDim,
 		UserCog,
 		UserRound
 	} from 'lucide-svelte';
@@ -69,18 +69,11 @@
 			</div>
 
 			<div class="flex items-center gap-3">
-				<button
-					class="btn btn-ghost btn-sm btn-circle hover:bg-primary/10 transition-colors"
-					onclick={toggleTheme}
-					aria-label="toggle theme"
-				>
-					{#if isDarkTheme}
-						<Sun class="w-5 h-5" />
-					{:else}
-						<Moon class="w-5 h-5" />
-					{/if}
-				</button>
-
+				<label class="swap swap-rotate text-warning btn btn-sm btn-circle">
+					<input type="checkbox" bind:checked={isDarkTheme} onchange={toggleTheme} />
+					<SunDim class="swap-on" />
+					<MoonStar class="swap-off" />
+				</label>
 				{#if page.data.user}
 					<div class="dropdown dropdown-end">
 						<div
@@ -124,20 +117,18 @@
 							</li>
 							<li>
 								<a href="/profile" class="flex gap-3 py-2.5 hover:bg-primary/10 rounded-lg">
-									<UserCog class="h-4 w-4" />Mi perfil
+									<UserCog class="h-4 w-4 text-info" />Mi perfil
 								</a>
 							</li>
 							<li>
 								<a href="/config" class="flex gap-3 py-2.5 hover:bg-primary/10 rounded-lg">
-									<Bird class="h-4 w-4" />Sistema
+									<Bird class="h-4 w-4 text-accent" />Acerca de
 								</a>
 							</li>
-							<li class="mt-2 pt-2 border-t border-base-300/30">
+							<div class="divider"></div>
+							<li>
 								<form action="/api/logout" method="POST">
-									<button
-										type="submit"
-										class="w-full flex gap-3 py-2.5 text-error hover:bg-error/10 rounded-lg"
-									>
+									<button type="submit" class="w-full flex gap-3 py-2.5 text-error rounded-lg">
 										<LogOut class="h-4 w-4" />Cerrar sesión
 									</button>
 								</form>
@@ -147,7 +138,6 @@
 				{/if}
 			</div>
 		</nav>
-
 		<main class="flex-1 p-6 overflow-y-auto">
 			<Background
 				enableAnimation={true}
@@ -163,6 +153,19 @@
 				{@render children()}
 			</div>
 		</main>
+
+		<!-- Footer -->
+		<footer
+			class="opacity-70 footer footer-center p-4 bg-base-200/50 text-base-content border-t border-base-300"
+		>
+			<div class="flex items-center gap-2 text-sm">
+				<a href="/config" class="link link-hover text-accent">Nextya</a>
+				<span>|</span>
+				<span class="flex items-center gap-1">
+					Desarrollado con <span class="text-error">❤️</span>
+				</span>
+			</div>
+		</footer>
 	</div>
 
 	<div class="drawer-side z-40">
@@ -176,7 +179,6 @@
 					<LogoHead />
 				</div>
 			</div>
-
 			<!-- Navigation -->
 			<div class="flex-1 overflow-y-auto p-4 space-y-2">
 				<!-- Quick Access -->
@@ -383,55 +385,6 @@
 					</div>
 				</div>
 			</div>
-
-			{#if page.data.user}
-				<div class="border-t border-base-300/30 p-4 lg:hidden">
-					<div class="flex items-center gap-4 px-4 py-3 rounded-box bg-base-200/30">
-						<div class="avatar">
-							<div
-								class="w-10 rounded-full ring-2 ring-primary/20 ring-offset-2 ring-offset-base-100"
-							>
-								{#if userData.photo_url}
-									<img
-										src={`/${userData.photo_url}`}
-										alt={`Avatar de ${userData.name} ${userData.last_name}`}
-										class="rounded-full"
-									/>
-								{:else}
-									<div
-										class="flex items-center justify-center h-full bg-gradient-to-br from-primary to-primary/80 text-primary-content rounded-full"
-									>
-										<span class="font-bold text-sm">
-											{getInitials(userData.name || '', userData.last_name || '')}
-										</span>
-									</div>
-								{/if}
-							</div>
-						</div>
-						<div class="flex-1 min-w-0">
-							<a href="/profile" class="block">
-								<p class="font-semibold text-base-content truncate">
-									{userData.name}
-									{userData.last_name}
-								</p>
-								<p class="text-sm text-base-content/60 flex items-center">
-									<span class="w-2 h-2 bg-success rounded-full mr-2"></span>
-									<span>En línea</span>
-								</p>
-							</a>
-						</div>
-						<form action="/api/logout" method="POST">
-							<button
-								type="submit"
-								class="btn btn-ghost btn-sm btn-circle hover:bg-error/10 hover:text-error transition-colors"
-								aria-label="logout"
-							>
-								<LogOut class="h-4 w-4" />
-							</button>
-						</form>
-					</div>
-				</div>
-			{/if}
 		</aside>
 	</div>
 </div>

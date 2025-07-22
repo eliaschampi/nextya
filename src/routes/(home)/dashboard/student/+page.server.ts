@@ -12,6 +12,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	return {
 		levels,
-		title: 'Dashboard de Estudiante'
+		title: 'Estudiante'
 	};
 };

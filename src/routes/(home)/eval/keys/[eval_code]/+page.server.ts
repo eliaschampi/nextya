@@ -86,7 +86,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			} as Evals & { levels: { name: string } },
 			sections,
 			existingQuestions,
-			title: `Claves - ${evalData.name}`
+			title: `Claves`
 		};
 	} catch (err) {
 		console.error('Error loading eval keys page:', err);
