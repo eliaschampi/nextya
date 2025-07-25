@@ -40,6 +40,25 @@
 		'rgba(201, 203, 207, 0.8)'
 	];
 
+	// Common chart options - consistent with other dashboards
+	const baseChartOptions = {
+		responsive: true,
+		maintainAspectRatio: false,
+		plugins: {
+			tooltip: {
+				callbacks: {
+					label: function (context: { dataset: { label?: string }; label?: string; raw: unknown }) {
+						const label = context.dataset.label || context.label || '';
+						const value = context.raw;
+						return value !== null && typeof value === 'number'
+							? `${label}: ${value.toFixed(2)}`
+							: `${label}: Sin datos`;
+					}
+				}
+			}
+		}
+	};
+
 	// Derived values for chart data
 	const courseChartData = $derived(prepareCourseChartData(courseScores));
 	const evalChartData = $derived(prepareEvalChartData(evalScores));
@@ -230,56 +249,49 @@
 	function renderCourseChart() {
 		if (!courseChartData.labels.length) return;
 
-		const ctx = document.getElementById('courseScoresChart') as HTMLCanvasElement;
-		if (!ctx) return;
+		setTimeout(() => {
+			const ctx = document.getElementById('courseScoresChart') as HTMLCanvasElement;
+			if (!ctx) return;
 
-		// Destroy existing chart if it exists
-		if (courseScoresChart) {
-			courseScoresChart.destroy();
-			courseScoresChart = null;
-		}
+			// Destroy existing chart if it exists
+			if (courseScoresChart) {
+				courseScoresChart.destroy();
+				courseScoresChart = null;
+			}
 
-		try {
-			courseScoresChart = new Chart(ctx, {
-				type: 'doughnut',
-				data: {
-					labels: courseChartData.labels,
-					datasets: [
-						{
-							label: 'Promedio de Puntajes',
-							data: courseChartData.values,
-							backgroundColor: chartColors.slice(0, courseChartData.labels.length),
-							borderWidth: 1
-						}
-					]
-				},
-				options: {
-					responsive: true,
-					maintainAspectRatio: false,
-					plugins: {
-						legend: {
-							position: 'right',
-							labels: {
-								font: {
-									size: 12
-								}
+			try {
+				courseScoresChart = new Chart(ctx, {
+					type: 'doughnut',
+					data: {
+						labels: courseChartData.labels,
+						datasets: [
+							{
+								label: 'Promedio de Puntajes',
+								data: courseChartData.values,
+								backgroundColor: chartColors.slice(0, courseChartData.labels.length),
+								borderWidth: 1
 							}
-						},
-						tooltip: {
-							callbacks: {
-								label: function (context) {
-									const label = context.label || '';
-									const value = context.raw as number;
-									return `${label}: ${value.toFixed(2)}`;
+						]
+					},
+					options: {
+						...baseChartOptions,
+						plugins: {
+							...baseChartOptions.plugins,
+							legend: {
+								position: 'right',
+								labels: {
+									font: {
+										size: 12
+									}
 								}
 							}
 						}
 					}
-				}
-			});
-		} catch (error) {
-			console.error('Error rendering course chart:', error);
-		}
+				});
+			} catch (error) {
+				console.error('Error rendering course chart:', error);
+			}
+		}, 50);
 	}
 
 	/**
@@ -288,79 +300,73 @@
 	function renderEvalChart() {
 		if (!evalChartData.labels.length) return;
 
-		const ctx = document.getElementById('evalScoresChart') as HTMLCanvasElement;
-		if (!ctx) return;
+		setTimeout(() => {
+			const ctx = document.getElementById('evalScoresChart') as HTMLCanvasElement;
+			if (!ctx) return;
 
-		// Destroy existing chart if it exists
-		if (evalScoresChart) {
-			evalScoresChart.destroy();
-			evalScoresChart = null;
-		}
+			// Destroy existing chart if it exists
+			if (evalScoresChart) {
+				evalScoresChart.destroy();
+				evalScoresChart = null;
+			}
 
-		try {
-			evalScoresChart = new Chart(ctx, {
-				type: 'line',
-				data: {
-					labels: evalChartData.labels,
-					datasets: [
-						{
-							label: 'Promedio de Puntajes',
-							data: evalChartData.values,
-							borderColor: chartColors[0],
-							backgroundColor: 'rgba(100, 220, 150, 0.1)',
-							borderWidth: 3,
-							fill: true,
-							tension: 0.4,
-							pointBackgroundColor: chartColors[0],
-							pointBorderWidth: 2,
-							pointRadius: 6,
-							pointHoverRadius: 8
-						}
-					]
-				},
-				options: {
-					responsive: true,
-					maintainAspectRatio: false,
-					interaction: {
-						intersect: false,
-						mode: 'index'
+			try {
+				evalScoresChart = new Chart(ctx, {
+					type: 'line',
+					data: {
+						labels: evalChartData.labels,
+						datasets: [
+							{
+								label: 'Promedio de Puntajes',
+								data: evalChartData.values,
+								borderColor: chartColors[0],
+								backgroundColor: 'rgba(100, 220, 150, 0.1)',
+								borderWidth: 3,
+								fill: true,
+								tension: 0.4,
+								pointBackgroundColor: chartColors[0],
+								pointBorderWidth: 2,
+								pointRadius: 6,
+								pointHoverRadius: 8
+							}
+						]
 					},
-					plugins: {
-						legend: { display: false },
-						tooltip: {
-							callbacks: {
-								label: function (context) {
-									const value = context.raw as number;
-									return `Puntaje: ${value.toFixed(2)}`;
-								}
+					options: {
+						...baseChartOptions,
+						interaction: {
+							intersect: false,
+							mode: 'index'
+						},
+						plugins: {
+							...baseChartOptions.plugins,
+							legend: { display: false }
+						},
+						scales: {
+							x: {
+								title: {
+									display: true,
+									text: 'Evaluaciones',
+									font: { weight: 'bold' }
+								},
+								grid: { display: false }
+							},
+							y: {
+								beginAtZero: true,
+								max: 20,
+								title: {
+									display: true,
+									text: 'Puntaje Promedio',
+									font: { weight: 'bold' }
+								},
+								grid: { color: 'rgba(0, 0, 0, 0.1)' }
 							}
 						}
-					},
-					scales: {
-						x: {
-							title: {
-								display: true,
-								text: 'Evaluaciones',
-								font: { weight: 'bold' }
-							},
-							grid: { display: false }
-						},
-						y: {
-							beginAtZero: true,
-							max: 20,
-							title: {
-								display: true,
-								text: 'Puntaje Promedio',
-								font: { weight: 'bold' }
-							},
-							grid: { color: 'rgba(0, 0, 0, 0.1)' }
-						}
 					}
-				}
-			});
-		} catch (error) {
-			console.error('Error rendering eval chart:', error);
-		}
+				});
+			} catch (error) {
+				console.error('Error rendering eval chart:', error);
+			}
+		}, 50);
 	}
 
 	/**
@@ -447,7 +453,7 @@
 	{/if}
 </PageTitle>
 
-<div class="container mx-auto px-0 py-6">
+<main class="container mx-auto p-4">
 	<!-- Selection Controls -->
 	<div class="card bg-base-200 border border-base-300/30 rounded-xl mb-6 overflow-hidden">
 		<div class="card-body p-5">
@@ -550,8 +556,8 @@
 			</div>
 		</div>
 	{:else}
-		<!-- Charts Section -->
-		<div class="space-y-6">
+		<!-- Dashboard Content -->
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
 			<!-- Course Scores Chart -->
 			<div
 				class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden"
@@ -563,26 +569,23 @@
 						>
 							<ChartPie class="h-5 w-5" />
 						</div>
-						<h3 class="text-lg font-medium">
-							Promedio de Puntajes por Curso - Grupo {selectedGroupName}
-						</h3>
+						<h3 class="text-lg font-medium">Puntajes por Curso</h3>
 					</div>
 					<div class="divider my-0"></div>
-
 					{#if isLoadingCourses}
-						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
 							<div class="loading loading-spinner loading-lg text-primary mb-4"></div>
 							<p class="text-lg font-medium">Cargando cursos...</p>
 							<p class="text-sm mt-2">Obteniendo datos para el grupo {selectedGroupName}</p>
 						</div>
 					{:else if !courseScores || courseScores.length === 0}
-						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
 							<div class="text-4xl mb-4">🔍</div>
 							<p class="text-lg font-medium">No hay datos disponibles</p>
 							<p class="text-sm mt-2">No se encontraron cursos para este nivel y grupo</p>
 						</div>
 					{:else}
-						<div class="h-64 relative mt-2">
+						<div class="h-80 relative mt-2">
 							<canvas id="courseScoresChart"></canvas>
 						</div>
 					{/if}
@@ -604,30 +607,29 @@
 							{#if selectedCourseCode && courseScores}
 								{#each courseScores as course (course.course_code)}
 									{#if course.course_code === selectedCourseCode}
-										Evolución de Puntajes: {course.course_name}
+										Evolución: {course.course_name}
 									{/if}
 								{/each}
 							{:else}
-								Evolución de Puntajes por Evaluación
+								Evolución de Puntajes
 							{/if}
 						</h3>
 					</div>
 					<div class="divider my-0"></div>
-
 					{#if !selectedCourseCode}
-						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
 							<div class="text-4xl mb-4">📈</div>
 							<p class="text-lg font-medium">Selecciona un curso</p>
 							<p class="text-sm mt-2">Para visualizar la evolución de puntajes</p>
 						</div>
 					{:else if isLoadingEvals}
-						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
 							<div class="loading loading-spinner loading-lg text-secondary mb-4"></div>
 							<p class="text-lg font-medium">Cargando evaluaciones...</p>
 							<p class="text-sm mt-2">Obteniendo evolución de puntajes</p>
 						</div>
 					{:else if !evalScores || evalScores.length === 0}
-						<div class="flex flex-col justify-center items-center h-64 text-base-content/70">
+						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
 							<div class="text-4xl mb-4">🔍</div>
 							<p class="text-lg font-medium">No hay datos disponibles</p>
 							<p class="text-sm mt-2">
@@ -635,7 +637,7 @@
 							</p>
 						</div>
 					{:else}
-						<div class="h-64 relative mt-2">
+						<div class="h-80 relative mt-2">
 							<canvas id="evalScoresChart"></canvas>
 						</div>
 					{/if}
@@ -643,4 +645,4 @@
 			</div>
 		</div>
 	{/if}
-</div>
+</main>

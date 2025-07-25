@@ -14,5 +14,4 @@ export * from './studentExport';
 export * from './dashboard/course';
 export * from './dashboard/student';
 export * from './dashboard/eval';
-export * from './permissions';
 export * from './table';
