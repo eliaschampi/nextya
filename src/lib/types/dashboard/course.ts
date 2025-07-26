@@ -36,3 +36,16 @@ export interface EvalChartData {
 	labels: string[];
 	values: number[];
 }
+
+/**
+ * Represents score distribution data for a course
+ */
+export interface CourseScoreDistribution {
+	approved: number; // Percentage of students with score >= 14
+	middle: number; // Percentage of students with score between 10 and 14
+	failed: number; // Percentage of students with score < 10
+	approvedCount: number;
+	middleCount: number;
+	failedCount: number;
+	totalCount: number;
+}

@@ -54,27 +54,12 @@ END;
 $$;
 
 -- Level dashboard data function
-CREATE OR REPLACE FUNCTION public.get_level_dashboard_data (p_level_code TEXT) 
-RETURNS TABLE (data_type TEXT, json_data JSONB) 
+CREATE OR REPLACE FUNCTION public.get_level_dashboard_data (p_level_code TEXT)
+RETURNS TABLE (data_type TEXT, json_data JSONB)
 LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
-    v_correct_vs_incorrect JSONB;
     v_scores_by_group JSONB;
 BEGIN
-    -- Get correct vs incorrect data
-    SELECT
-        jsonb_build_object(
-            'correct', COALESCE(SUM(er.correct_count), 0),
-            'incorrect', COALESCE(SUM(er.incorrect_count), 0),
-            'blank', COALESCE(SUM(er.blank_count), 0)
-        ) INTO v_correct_vs_incorrect
-    FROM
-        public.eval_results er
-        JOIN public.registers r ON er.register_code = r.code
-    WHERE
-        r.level_code = p_level_code::UUID
-        AND er.section_code IS NULL;
-
     -- Get scores by group data
     WITH group_scores AS (
         SELECT
@@ -104,8 +89,6 @@ BEGIN
 
     -- Return the data
     RETURN QUERY
-    SELECT 'correctVsIncorrect', v_correct_vs_incorrect
-    UNION ALL
     SELECT 'scoresByGroup', COALESCE(v_scores_by_group, '[]'::jsonb);
 END;
 $$;

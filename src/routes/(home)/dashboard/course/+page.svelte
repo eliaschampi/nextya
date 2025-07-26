@@ -3,8 +3,10 @@
 	import { Chart } from 'chart.js/auto';
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast.js';
-	import { Settings, ChartPie, Activity, RefreshCw } from 'lucide-svelte';
-	import type { Levels, CourseScore, EvalScore, CourseChartData, EvalChartData } from '$lib/types';
+	import { Settings, Activity, RefreshCw, ChartPie } from 'lucide-svelte';
+	import type { Levels, CourseScore, EvalScore, EvalChartData } from '$lib/types';
+	import type { CourseScoreDistribution } from '$lib/types/dashboard/course';
+	import { CHART_COLORS, createScoreDistributionConfig } from '$lib/utils/chartUtils';
 
 	// Props from server
 	const { data } = $props<{
@@ -20,24 +22,22 @@
 	let selectedGroupName = $state('A'); // Default to group A
 	let isLoadingCourses = $state(false);
 	let isLoadingEvals = $state(false);
+	let isLoadingDistribution = $state(false);
 	let courseScores = $state<CourseScore[] | null>(null);
 	let evalScores = $state<EvalScore[] | null>(null);
+	let scoreDistribution = $state<CourseScoreDistribution | null>(null);
 	let availableGroups = $state<string[]>(['A', 'B', 'C', 'D']);
 
 	// Chart references
-	let courseScoresChart: Chart | null = $state(null);
 	let evalScoresChart: Chart | null = $state(null);
+	let scoreDistributionByCourseChart: Chart | null = $state(null);
 
-	// Colors for charts
+	// Use shared chart colors
 	const chartColors = [
-		'rgba(100, 220, 150, 0.8)',
-		'rgba(54, 162, 235, 0.8)',
-		'rgba(255, 206, 86, 0.8)',
-		'rgba(255, 99, 132, 0.8)',
-		'rgba(153, 102, 255, 0.8)',
-		'rgba(255, 159, 64, 0.8)',
-		'rgba(75, 192, 192, 0.8)',
-		'rgba(201, 203, 207, 0.8)'
+		CHART_COLORS.primary,
+		CHART_COLORS.secondary,
+		CHART_COLORS.tertiary,
+		CHART_COLORS.quaternary
 	];
 
 	// Common chart options - consistent with other dashboards
@@ -60,23 +60,24 @@
 	};
 
 	// Derived values for chart data
-	const courseChartData = $derived(prepareCourseChartData(courseScores));
 	const evalChartData = $derived(prepareEvalChartData(evalScores));
 
 	// Track chart data changes and render charts when data is available
-	const shouldRenderCourseChart = $derived(courseScores !== null && !isLoadingCourses);
 	const shouldRenderEvalChart = $derived(
 		evalScores !== null && !isLoadingEvals && selectedCourseCode !== ''
+	);
+	const shouldRenderDistributionChart = $derived(
+		scoreDistribution !== null && !isLoadingDistribution && selectedCourseCode !== ''
 	);
 
 	// Render charts manually when data is loaded - safer than $effect
 	async function updateChartsIfNeeded() {
 		await tick(); // Wait for DOM updates
-		if (shouldRenderCourseChart) {
-			renderCourseChart();
-		}
 		if (shouldRenderEvalChart) {
 			renderEvalChart();
+		}
+		if (shouldRenderDistributionChart) {
+			renderScoreDistributionChart();
 		}
 	}
 
@@ -88,16 +89,16 @@
 	});
 
 	/**
-	 * Destroys both charts to prevent memory leaks
+	 * Destroys charts to prevent memory leaks
 	 */
 	function destroyCharts() {
-		if (courseScoresChart) {
-			courseScoresChart.destroy();
-			courseScoresChart = null;
-		}
 		if (evalScoresChart) {
 			evalScoresChart.destroy();
 			evalScoresChart = null;
+		}
+		if (scoreDistributionByCourseChart) {
+			scoreDistributionByCourseChart.destroy();
+			scoreDistributionByCourseChart = null;
 		}
 	}
 
@@ -108,6 +109,7 @@
 		selectedCourseCode = '';
 		courseScores = null;
 		evalScores = null;
+		scoreDistribution = null;
 		destroyCharts();
 	}
 
@@ -206,21 +208,53 @@
 	}
 
 	/**
-	 * Prepare data for course scores chart
+	 * Load score distribution data from API
 	 */
-	function prepareCourseChartData(data: CourseScore[] | null): CourseChartData {
-		if (!data || !Array.isArray(data) || !data.length) {
-			return { labels: [], values: [] };
+	async function loadScoreDistributionData(
+		levelCode: string,
+		courseCode: string,
+		groupName: string
+	) {
+		if (!levelCode || !courseCode || !groupName || isLoadingDistribution) return;
+
+		isLoadingDistribution = true;
+		scoreDistribution = null;
+
+		if (scoreDistributionByCourseChart) {
+			scoreDistributionByCourseChart.destroy();
+			scoreDistributionByCourseChart = null;
 		}
 
 		try {
-			return {
-				labels: data.map((item) => item.course_name || 'Sin nombre'),
-				values: data.map((item) => item.average_score || 0)
-			};
+			const url = `/api/dashboard/course/distribution/${levelCode}/${courseCode}?group_name=${encodeURIComponent(groupName)}`;
+			const response = await fetch(url);
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || 'Error al cargar distribución de puntajes');
+			}
+
+			const data = await response.json();
+
+			// Check if we have valid data
+			if (!data || typeof data !== 'object') {
+				showToast('Formato de datos inválido', 'danger');
+				scoreDistribution = null;
+				return;
+			}
+
+			scoreDistribution = data;
+			// Trigger chart update after data is set
+			updateChartsIfNeeded();
 		} catch (error) {
-			console.error('Error processing course scores data:', error);
-			return { labels: [], values: [] };
+			console.error('Error loading score distribution data:', error);
+			showToast(
+				error instanceof Error ? error.message : 'No se pudieron cargar los datos de distribución',
+				'danger'
+			);
+			scoreDistribution = null;
+		} finally {
+			isLoadingDistribution = false;
 		}
 	}
 
@@ -241,57 +275,6 @@
 			console.error('Error processing eval scores data:', error);
 			return { labels: [], values: [] };
 		}
-	}
-
-	/**
-	 * Render course scores chart
-	 */
-	function renderCourseChart() {
-		if (!courseChartData.labels.length) return;
-
-		setTimeout(() => {
-			const ctx = document.getElementById('courseScoresChart') as HTMLCanvasElement;
-			if (!ctx) return;
-
-			// Destroy existing chart if it exists
-			if (courseScoresChart) {
-				courseScoresChart.destroy();
-				courseScoresChart = null;
-			}
-
-			try {
-				courseScoresChart = new Chart(ctx, {
-					type: 'doughnut',
-					data: {
-						labels: courseChartData.labels,
-						datasets: [
-							{
-								label: 'Promedio de Puntajes',
-								data: courseChartData.values,
-								backgroundColor: chartColors.slice(0, courseChartData.labels.length),
-								borderWidth: 1
-							}
-						]
-					},
-					options: {
-						...baseChartOptions,
-						plugins: {
-							...baseChartOptions.plugins,
-							legend: {
-								position: 'right',
-								labels: {
-									font: {
-										size: 12
-									}
-								}
-							}
-						}
-					}
-				});
-			} catch (error) {
-				console.error('Error rendering course chart:', error);
-			}
-		}, 50);
 	}
 
 	/**
@@ -370,6 +353,36 @@
 	}
 
 	/**
+	 * Render score distribution chart
+	 */
+	function renderScoreDistributionChart() {
+		if (!scoreDistribution || scoreDistribution.totalCount === 0) return;
+
+		setTimeout(() => {
+			const ctx = document.getElementById('scoreDistributionByCourseChart') as HTMLCanvasElement;
+			if (!ctx || !scoreDistribution) return;
+
+			// Destroy existing chart if it exists
+			if (scoreDistributionByCourseChart) {
+				scoreDistributionByCourseChart.destroy();
+				scoreDistributionByCourseChart = null;
+			}
+
+			try {
+				const config = createScoreDistributionConfig({
+					approved: scoreDistribution.approved,
+					middle: scoreDistribution.middle,
+					failed: scoreDistribution.failed
+				});
+
+				scoreDistributionByCourseChart = new Chart(ctx, config);
+			} catch (error) {
+				console.error('Error rendering score distribution chart:', error);
+			}
+		}, 50);
+	}
+
+	/**
 	 * Handle level selection change
 	 */
 	function handleLevelChange(event: Event) {
@@ -392,16 +405,22 @@
 		const target = event.target as HTMLSelectElement;
 		selectedCourseCode = target.value;
 
-		// Clear eval data
+		// Clear eval and distribution data
 		evalScores = null;
+		scoreDistribution = null;
 		if (evalScoresChart) {
 			evalScoresChart.destroy();
 			evalScoresChart = null;
 		}
+		if (scoreDistributionByCourseChart) {
+			scoreDistributionByCourseChart.destroy();
+			scoreDistributionByCourseChart = null;
+		}
 
-		// Load eval data only if course is selected
+		// Load data only if course is selected
 		if (selectedCourseCode) {
 			loadEvalScoresData(selectedLevelCode, selectedCourseCode, selectedGroupName);
+			loadScoreDistributionData(selectedLevelCode, selectedCourseCode, selectedGroupName);
 		}
 	}
 
@@ -430,6 +449,7 @@
 		}
 		if (selectedCourseCode) {
 			loadEvalScoresData(selectedLevelCode, selectedCourseCode, selectedGroupName);
+			loadScoreDistributionData(selectedLevelCode, selectedCourseCode, selectedGroupName);
 		}
 	}
 </script>
@@ -543,7 +563,7 @@
 				<div
 					class="w-20 h-20 mx-auto bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4"
 				>
-					<ChartPie class="w-10 h-10" />
+					<Activity class="w-10 h-10" />
 				</div>
 				<h2 class="text-2xl font-semibold">Dashboard de Cursos</h2>
 				<p class="text-base-content/70 text-lg mt-2 max-w-md mx-auto">
@@ -558,40 +578,6 @@
 	{:else}
 		<!-- Dashboard Content -->
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-			<!-- Course Scores Chart -->
-			<div
-				class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden"
-			>
-				<div class="card-body p-5">
-					<div class="flex items-center gap-3 mb-3">
-						<div
-							class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/15 text-primary"
-						>
-							<ChartPie class="h-5 w-5" />
-						</div>
-						<h3 class="text-lg font-medium">Puntajes por Curso</h3>
-					</div>
-					<div class="divider my-0"></div>
-					{#if isLoadingCourses}
-						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
-							<div class="loading loading-spinner loading-lg text-primary mb-4"></div>
-							<p class="text-lg font-medium">Cargando cursos...</p>
-							<p class="text-sm mt-2">Obteniendo datos para el grupo {selectedGroupName}</p>
-						</div>
-					{:else if !courseScores || courseScores.length === 0}
-						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
-							<div class="text-4xl mb-4">🔍</div>
-							<p class="text-lg font-medium">No hay datos disponibles</p>
-							<p class="text-sm mt-2">No se encontraron cursos para este nivel y grupo</p>
-						</div>
-					{:else}
-						<div class="h-80 relative mt-2">
-							<canvas id="courseScoresChart"></canvas>
-						</div>
-					{/if}
-				</div>
-			</div>
-
 			<!-- Eval Scores Chart -->
 			<div
 				class="card bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-xl overflow-hidden"
@@ -643,6 +629,54 @@
 					{/if}
 				</div>
 			</div>
+
+			<!-- Score Distribution Chart -->
+			{#if selectedCourseCode}
+				<div
+					class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden"
+				>
+					<div class="card-body p-5">
+						<div class="flex items-center gap-3 mb-3">
+							<div
+								class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/15 text-primary"
+							>
+								<ChartPie class="h-5 w-5" />
+							</div>
+							<h3 class="text-lg font-medium">
+								{#if courseScores}
+									{#each courseScores as course (course.course_code)}
+										{#if course.course_code === selectedCourseCode}
+											Distribución: {course.course_name}
+										{/if}
+									{/each}
+								{:else}
+									Distribución de Notas
+								{/if}
+							</h3>
+						</div>
+						<div class="divider my-0"></div>
+						{#if isLoadingDistribution}
+							<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
+								<div class="loading loading-spinner loading-lg text-primary mb-4"></div>
+								<p class="text-lg font-medium">Cargando distribución...</p>
+								<p class="text-sm mt-2">Analizando puntajes del curso</p>
+							</div>
+						{:else if !scoreDistribution || scoreDistribution.totalCount === 0}
+							<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
+								<div class="text-4xl mb-4">📊</div>
+								<p class="text-lg font-medium">No hay datos disponibles</p>
+								<p class="text-sm mt-2">
+									No se encontraron puntajes para este curso en el grupo {selectedGroupName}
+								</p>
+							</div>
+						{:else}
+							<div class="h-80 relative mt-2">
+								<canvas id="scoreDistributionByCourseChart"></canvas>
+							</div>
+						{/if}
+					</div>
+				</div>
+			{/if}
 		</div>
 	{/if}
 </main>

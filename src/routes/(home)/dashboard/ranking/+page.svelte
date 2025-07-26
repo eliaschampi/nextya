@@ -1,10 +1,12 @@
 <script lang="ts">
 	import PageTitle from '$lib/components/PageTitle.svelte';
+	import Table from '$lib/components/Table.svelte';
 	import { Trophy, SortAsc, SortDesc } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import type { Levels } from '$lib/types';
 	import type { StudentRanking } from '$lib/types/dashboard/ranking';
+	import type { TableColumn } from '$lib/types/table';
 
 	// Props from server
 	const { data } = $props<{
@@ -20,26 +22,22 @@
 	// Local state
 	let selectedLevelCode = $state(data.selectedLevel || '');
 	let selectedGroupName = $state(data.selectedGroup || '');
+	let sortField = $state<'average_score' | 'total_evaluations'>('average_score');
 	let sortDirection = $state<'asc' | 'desc'>('desc');
 
-	// Sorted students (only by average_score)
-	const sortedStudents = $derived.by(() => {
-		const students = [...data.students];
-		return students.sort((a, b) => {
-			const aVal = Number(a.average_score) || 0;
-			const bVal = Number(b.average_score) || 0;
-
-			if (sortDirection === 'desc') {
-				return bVal - aVal;
-			} else {
-				return aVal - bVal;
-			}
-		});
-	});
-
-	// Toggle sort direction
+	// Toggle sort direction for current field
 	function toggleSortOrder() {
 		sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
+	}
+
+	// Set sort field and direction
+	function setSortField(field: 'average_score' | 'total_evaluations') {
+		if (sortField === field) {
+			toggleSortOrder();
+		} else {
+			sortField = field;
+			sortDirection = 'desc';
+		}
 	}
 
 	// Handle level change
@@ -65,7 +63,72 @@
 		}
 		goto(`/dashboard/ranking?${params.toString()}`);
 	}
+
+	// Add ranking position to students for table display with sorting
+	const studentsWithRanking = $derived.by(() => {
+		// Sort students by selected field and direction
+		const sorted = [...data.students].sort((a, b) => {
+			let aVal: number, bVal: number;
+
+			if (sortField === 'average_score') {
+				aVal = Number(a.average_score) || 0;
+				bVal = Number(b.average_score) || 0;
+			} else {
+				aVal = Number(a.total_evaluations) || 0;
+				bVal = Number(b.total_evaluations) || 0;
+			}
+
+			if (sortDirection === 'desc') {
+				return bVal - aVal;
+			} else {
+				return aVal - bVal;
+			}
+		});
+
+		// Add ranking position to each student
+		return sorted.map((student, index) => ({
+			...student,
+			ranking_position: index + 1
+		}));
+	});
+
+	// Define table columns for ranking
+	const rankingColumns: TableColumn<StudentRanking & { ranking_position: number }>[] = [
+		{ label: '#', headerClass: 'text-center w-16', render: rankingCell },
+		{ key: 'roll_code', label: 'Código', class: 'text-accent font-medium' },
+		{ key: 'name', label: 'Nombre', class: 'font-medium' },
+		{ key: 'last_name', label: 'Apellido', class: 'font-medium' },
+		{ key: 'total_evaluations', label: 'Evaluaciones', class: 'text-center' },
+		{ label: 'Promedio', class: 'text-center font-bold text-primary', render: averageCell }
+	];
 </script>
+
+<!-- Define snippets for custom cells -->
+{#snippet rankingCell(row: StudentRanking & { ranking_position: number })}
+	<div class="flex items-center justify-center">
+		{#if row.ranking_position === 1}
+			<Trophy class="w-5 h-5 text-yellow-500" />
+		{:else if row.ranking_position === 2}
+			<div
+				class="w-5 h-5 rounded-full bg-gray-400 text-white text-xs flex items-center justify-center font-bold"
+			>
+				2
+			</div>
+		{:else if row.ranking_position === 3}
+			<div
+				class="w-5 h-5 rounded-full bg-amber-600 text-white text-xs flex items-center justify-center font-bold"
+			>
+				3
+			</div>
+		{:else}
+			<span class="font-bold text-base-content/70">{row.ranking_position}</span>
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet averageCell(row: StudentRanking)}
+	{Number(row.average_score).toFixed(2)}
+{/snippet}
 
 <PageTitle
 	title="Ranking de Estudiantes"
@@ -109,71 +172,63 @@
 					<Trophy class="w-6 h-6 text-primary" />
 					<h3 class="text-xl font-semibold">Ranking de Estudiantes</h3>
 				</div>
-				<button
-					class="btn btn-sm btn-primary btn-outline"
-					onclick={toggleSortOrder}
-					title={sortDirection === 'desc'
-						? 'Ordenar por promedio menor'
-						: 'Ordenar por promedio mayor'}
-				>
-					<span class="mr-1">Promedio</span>
-					{#if sortDirection === 'desc'}
-						<SortDesc size={16} />
-					{:else}
-						<SortAsc size={16} />
-					{/if}
-				</button>
+				<details class="dropdown dropdown-end">
+					<summary class="btn btn-sm btn-primary btn-outline">
+						<span class="mr-1">
+							{sortField === 'average_score' ? 'Promedio' : 'Evaluaciones'}
+						</span>
+						{#if sortDirection === 'desc'}
+							<SortDesc size={16} />
+						{:else}
+							<SortAsc size={16} />
+						{/if}
+					</summary>
+					<ul
+						class="menu dropdown-content bg-base-100 rounded-box z-[1] w-52 p-2 shadow-lg border border-base-300"
+					>
+						<li>
+							<button
+								class="flex justify-between {sortField === 'average_score' ? 'active' : ''}"
+								onclick={() => setSortField('average_score')}
+							>
+								<span>Promedio</span>
+								{#if sortField === 'average_score'}
+									{#if sortDirection === 'desc'}
+										<SortDesc size={16} />
+									{:else}
+										<SortAsc size={16} />
+									{/if}
+								{/if}
+							</button>
+						</li>
+						<li>
+							<button
+								class="flex justify-between {sortField === 'total_evaluations' ? 'active' : ''}"
+								onclick={() => setSortField('total_evaluations')}
+							>
+								<span>Evaluaciones</span>
+								{#if sortField === 'total_evaluations'}
+									{#if sortDirection === 'desc'}
+										<SortDesc size={16} />
+									{:else}
+										<SortAsc size={16} />
+									{/if}
+								{/if}
+							</button>
+						</li>
+					</ul>
+				</details>
 			</div>
 
 			<div class="overflow-x-auto animate-fade-in">
-				<table
-					class="table table-sm table-zebra w-full hover bg-base-100/50 border border-base-300/30"
-				>
-					<thead class="bg-base-200/70">
-						<tr>
-							<th class="text-center w-16">#</th>
-							<th>Código</th>
-							<th>Nombre</th>
-							<th>Apellido</th>
-							<th class="text-center">Evaluaciones</th>
-							<th class="text-center">Promedio</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each sortedStudents as student, index (student.roll_code)}
-							<tr class="hover">
-								<td class="text-center">
-									<div class="flex items-center justify-center">
-										{#if index + 1 === 1}
-											<Trophy class="w-5 h-5 text-yellow-500" />
-										{:else if index + 1 === 2}
-											<div
-												class="w-5 h-5 rounded-full bg-gray-400 text-white text-xs flex items-center justify-center font-bold"
-											>
-												2
-											</div>
-										{:else if index + 1 === 3}
-											<div
-												class="w-5 h-5 rounded-full bg-amber-600 text-white text-xs flex items-center justify-center font-bold"
-											>
-												3
-											</div>
-										{:else}
-											<span class="font-bold text-base-content/70">{index + 1}</span>
-										{/if}
-									</div>
-								</td>
-								<td class="text-accent font-medium">{student.roll_code}</td>
-								<td class="font-medium">{student.name}</td>
-								<td class="font-medium">{student.last_name}</td>
-								<td class="text-center">{student.total_evaluations}</td>
-								<td class="text-center font-bold text-primary"
-									>{Number(student.average_score).toFixed(2)}</td
-								>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+				<Table
+					columns={rankingColumns}
+					rows={studentsWithRanking}
+					striped={true}
+					hover={true}
+					bordered={true}
+					emptyMessage="No hay estudiantes en este nivel y grupo."
+				/>
 			</div>
 		</div>
 	</div>

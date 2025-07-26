@@ -13,6 +13,7 @@
 	import { studentStore } from '$lib/stores/student';
 	import StudentCard from '$lib/components/StudentCard.svelte';
 	import StudentSearchModal from '$lib/components/StudentSearchModal.svelte';
+	import { CHART_COLORS } from '$lib/utils/chartUtils';
 
 	// Store state
 	let storeState = $state({
@@ -42,27 +43,39 @@
 	let courseScoresChart: Chart | null = $state(null);
 	let courseEvolutionChart: Chart | null = $state(null);
 
-	// Enhanced colors for charts with gradients
+	// Enhanced colors for charts with gradients - based on shared colors
 	const chartColors = {
 		primary: {
-			border: 'rgba(34, 197, 94, 1)',
-			background: 'rgba(34, 197, 94, 0.1)',
-			gradient: ['rgba(34, 197, 94, 0.3)', 'rgba(34, 197, 94, 0.05)']
+			border: CHART_COLORS.primary.replace('0.8', '1'),
+			background: CHART_COLORS.primary.replace('0.8', '0.1'),
+			gradient: [
+				CHART_COLORS.primary.replace('0.8', '0.3'),
+				CHART_COLORS.primary.replace('0.8', '0.05')
+			]
 		},
 		secondary: {
-			border: 'rgba(59, 130, 246, 1)',
-			background: 'rgba(59, 130, 246, 0.1)',
-			gradient: ['rgba(59, 130, 246, 0.3)', 'rgba(59, 130, 246, 0.05)']
+			border: CHART_COLORS.secondary.replace('0.8', '1'),
+			background: CHART_COLORS.secondary.replace('0.8', '0.1'),
+			gradient: [
+				CHART_COLORS.secondary.replace('0.8', '0.3'),
+				CHART_COLORS.secondary.replace('0.8', '0.05')
+			]
 		},
 		tertiary: {
-			border: 'rgba(245, 158, 11, 1)',
-			background: 'rgba(245, 158, 11, 0.1)',
-			gradient: ['rgba(245, 158, 11, 0.3)', 'rgba(245, 158, 11, 0.05)']
+			border: CHART_COLORS.tertiary.replace('0.8', '1'),
+			background: CHART_COLORS.tertiary.replace('0.8', '0.1'),
+			gradient: [
+				CHART_COLORS.tertiary.replace('0.8', '0.3'),
+				CHART_COLORS.tertiary.replace('0.8', '0.05')
+			]
 		},
 		quaternary: {
-			border: 'rgba(239, 68, 68, 1)',
-			background: 'rgba(239, 68, 68, 0.1)',
-			gradient: ['rgba(239, 68, 68, 0.3)', 'rgba(239, 68, 68, 0.05)']
+			border: CHART_COLORS.quaternary.replace('0.8', '1'),
+			background: CHART_COLORS.quaternary.replace('0.8', '0.1'),
+			gradient: [
+				CHART_COLORS.quaternary.replace('0.8', '0.3'),
+				CHART_COLORS.quaternary.replace('0.8', '0.05')
+			]
 		},
 		extended: [
 			{ border: 'rgba(168, 85, 247, 1)', background: 'rgba(168, 85, 247, 0.1)' },

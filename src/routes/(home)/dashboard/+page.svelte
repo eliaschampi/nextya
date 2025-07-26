@@ -4,8 +4,9 @@
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import { showToast } from '$lib/stores/Toast.js';
 	import { Settings, ChartBar, ChartPie, Activity } from 'lucide-svelte';
-	import type { Levels } from '$lib/types';
+	import type { Levels, CourseScore, CourseChartData } from '$lib/types';
 	import type { LevelDashboardData, GroupDashboardData } from '$lib/types/dashboard';
+	import { CHART_COLORS } from '$lib/utils/chartUtils';
 
 	// Props from server
 	const { data } = $props<{
@@ -20,8 +21,10 @@
 	let selectedGroupName = $state('');
 	let isLoadingLevel = $state(false);
 	let isLoadingGroup = $state(false);
+	let isLoadingCourses = $state(false);
 	let levelData = $state<LevelDashboardData | null>(null);
 	let groupData = $state<GroupDashboardData | null>(null);
+	let courseScores = $state<CourseScore[] | null>(null);
 
 	// Grupos disponibles (A, B, C, D)
 	const availableGroups = ['A', 'B', 'C', 'D'];
@@ -29,31 +32,26 @@
 	// Chart references
 	let scoresByEvalChart: Chart | null = $state(null);
 	let scoresByGroupChart: Chart | null = $state(null);
-	let correctVsIncorrectChart: Chart | null = $state(null);
+	let courseScoresChart: Chart | null = $state(null);
 
-	// Colors for charts
+	// Use shared chart colors
 	const chartColors = {
-		primary: 'rgba(100, 220, 150, 0.8)',
-		secondary: 'rgba(54, 162, 235, 0.8)',
-		tertiary: 'rgba(255, 206, 86, 0.8)',
-		quaternary: 'rgba(255, 99, 132, 0.8)',
-		correct: 'rgba(75, 192, 192, 0.8)',
-		incorrect: 'rgba(255, 99, 132, 0.8)',
-		blank: 'rgba(201, 203, 207, 0.8)'
+		primary: CHART_COLORS.primary,
+		secondary: CHART_COLORS.secondary,
+		tertiary: CHART_COLORS.tertiary,
+		quaternary: CHART_COLORS.quaternary
 	};
 
 	// Derived values for chart data
 	const scoresByGroupData = $derived(levelData?.scoresByGroup || []);
-
-	const correctVsIncorrectData = $derived(
-		levelData?.correctVsIncorrect || { correct: 0, incorrect: 0, blank: 0 }
-	);
+	const courseChartData = $derived(prepareCourseChartData(courseScores));
 
 	const scoresByEvalData = $derived(groupData?.scoresByEval || []);
 
 	// Track chart data changes and render charts when data is available
 	let shouldRenderLevelCharts = $derived(levelData !== null && !isLoadingLevel);
 	let shouldRenderGroupCharts = $derived(groupData !== null && !isLoadingGroup);
+	let shouldRenderCourseChart = $derived(courseScores !== null && !isLoadingCourses);
 
 	$effect(() => {
 		if (shouldRenderLevelCharts) {
@@ -71,6 +69,15 @@
 			setTimeout(() => {
 				destroyGroupCharts();
 				renderGroupCharts();
+			}, 100); // Small delay to ensure DOM is ready
+		}
+	});
+
+	$effect(() => {
+		if (shouldRenderCourseChart) {
+			// Ensure DOM is ready before rendering charts
+			setTimeout(() => {
+				renderCourseChart();
 			}, 100); // Small delay to ensure DOM is ready
 		}
 	});
@@ -163,11 +170,77 @@
 	}
 
 	/**
-	 * Render level charts (scoresByGroup and correctVsIncorrect)
+	 * Load course scores data from API
+	 */
+	async function loadCourseScoresData(levelCode: string, groupName: string) {
+		if (!levelCode || !groupName || isLoadingCourses) return;
+
+		isLoadingCourses = true;
+		courseScores = null;
+
+		if (courseScoresChart) {
+			courseScoresChart.destroy();
+			courseScoresChart = null;
+		}
+
+		try {
+			const response = await fetch(
+				`/api/dashboard/course/scores/${levelCode}?group_name=${groupName}`
+			);
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || 'Error al cargar datos de cursos');
+			}
+
+			const data = await response.json();
+
+			// Check if we have valid data
+			if (!data || !Array.isArray(data)) {
+				showToast('Formato de datos inválido', 'danger');
+				courseScores = null;
+				return;
+			}
+
+			// Set new data
+			courseScores = data;
+		} catch (error) {
+			console.error('Error loading course scores data:', error);
+			showToast(
+				error instanceof Error ? error.message : 'No se pudieron cargar los datos de cursos',
+				'danger'
+			);
+			courseScores = null;
+		} finally {
+			isLoadingCourses = false;
+		}
+	}
+
+	/**
+	 * Prepare data for course scores chart
+	 */
+	function prepareCourseChartData(data: CourseScore[] | null): CourseChartData {
+		if (!data || !Array.isArray(data) || !data.length) {
+			return { labels: [], values: [] };
+		}
+
+		try {
+			return {
+				labels: data.map((item) => item.course_name || 'Sin nombre'),
+				values: data.map((item) => item.average_score || 0)
+			};
+		} catch (error) {
+			console.error('Error processing course scores data:', error);
+			return { labels: [], values: [] };
+		}
+	}
+
+	/**
+	 * Render level charts (scoresByGroup only)
 	 */
 	function renderLevelCharts() {
-		// Use Promise.all to render charts in parallel
-		Promise.all([renderScoresByGroupChart(), renderCorrectVsIncorrectChart()]).catch((error) => {
+		// Render scores by group chart
+		renderScoresByGroupChart().catch((error) => {
 			console.error('Error rendering level charts:', error);
 		});
 	}
@@ -189,11 +262,6 @@
 		if (scoresByGroupChart) {
 			scoresByGroupChart.destroy();
 			scoresByGroupChart = null;
-		}
-
-		if (correctVsIncorrectChart) {
-			correctVsIncorrectChart.destroy();
-			correctVsIncorrectChart = null;
 		}
 	}
 
@@ -335,36 +403,42 @@
 	}
 
 	/**
-	 * Render correct vs incorrect chart
-	 * Shows distribution of correct, incorrect, and blank answers
+	 * Render course scores chart
 	 */
-	function renderCorrectVsIncorrectChart() {
-		if (!correctVsIncorrectData) {
-			return Promise.resolve();
-		}
+	function renderCourseChart() {
+		if (!courseChartData.labels.length) return;
 
-		return new Promise<void>((resolve, reject) => {
-			const ctx = document.getElementById('correctVsIncorrectChart') as HTMLCanvasElement;
-			if (!ctx) {
-				resolve();
-				return;
+		setTimeout(() => {
+			const ctx = document.getElementById('courseScoresChart') as HTMLCanvasElement;
+			if (!ctx) return;
+
+			// Destroy existing chart if it exists
+			if (courseScoresChart) {
+				courseScoresChart.destroy();
+				courseScoresChart = null;
 			}
 
 			try {
-				const values = [
-					correctVsIncorrectData.correct,
-					correctVsIncorrectData.incorrect,
-					correctVsIncorrectData.blank
+				// Generate colors for each course
+				const colors = [
+					chartColors.primary,
+					chartColors.secondary,
+					chartColors.tertiary,
+					chartColors.quaternary
 				];
+				const backgroundColors = courseChartData.labels.map(
+					(_, index) => colors[index % colors.length]
+				);
 
-				correctVsIncorrectChart = new Chart(ctx, {
+				courseScoresChart = new Chart(ctx, {
 					type: 'doughnut',
 					data: {
-						labels: ['Correctas', 'Incorrectas', 'En blanco'],
+						labels: courseChartData.labels,
 						datasets: [
 							{
-								data: values,
-								backgroundColor: [chartColors.correct, chartColors.incorrect, chartColors.blank],
+								label: 'Promedio de Puntajes',
+								data: courseChartData.values,
+								backgroundColor: backgroundColors,
 								borderWidth: 1
 							}
 						]
@@ -375,17 +449,23 @@
 						plugins: {
 							title: {
 								display: true,
-								text: 'Distribución de Respuestas'
+								text: 'Puntajes por Curso'
+							},
+							legend: {
+								position: 'right',
+								labels: {
+									font: {
+										size: 12
+									}
+								}
 							}
 						}
 					}
 				});
-				resolve();
 			} catch (error) {
-				console.error('Error rendering correct vs incorrect chart:', error);
-				reject(error);
+				console.error('Error rendering course chart:', error);
 			}
-		});
+		}, 50);
 	}
 </script>
 
@@ -396,7 +476,10 @@
 				class="btn btn-primary btn-sm"
 				onclick={() => {
 					loadLevelDashboardData(selectedLevelCode);
-					if (selectedGroupName) loadGroupDashboardData(selectedLevelCode, selectedGroupName);
+					if (selectedGroupName) {
+						loadGroupDashboardData(selectedLevelCode, selectedGroupName);
+						loadCourseScoresData(selectedLevelCode, selectedGroupName);
+					}
 				}}
 				disabled={isLoadingLevel || isLoadingGroup}
 			>
@@ -469,6 +552,7 @@
 							onchange={() => {
 								if (selectedGroupName) {
 									loadGroupDashboardData(selectedLevelCode, selectedGroupName);
+									loadCourseScoresData(selectedLevelCode, selectedGroupName);
 								}
 							}}
 						>
@@ -531,30 +615,59 @@
 							<h3 class="text-lg font-medium">Puntajes por Grupo</h3>
 						</div>
 						<div class="divider my-0"></div>
-						<div class="h-64 relative mt-2">
+						<div class="h-80 relative mt-2">
 							<canvas id="scoresByGroupChart"></canvas>
 						</div>
 					</div>
 				</div>
 			{/if}
 
-			<!-- Correct vs Incorrect Chart -->
-			{#if levelData.correctVsIncorrect}
+			<!-- Course Scores Chart -->
+			{#if selectedGroupName && courseScores && courseScores.length > 0}
 				<div
-					class="card bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/20 rounded-xl overflow-hidden"
+					class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden"
 				>
 					<div class="card-body p-5">
 						<div class="flex items-center gap-3 mb-3">
 							<div
-								class="w-8 h-8 flex items-center justify-center rounded-lg bg-accent/15 text-accent"
+								class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/15 text-primary"
 							>
 								<ChartPie class="h-5 w-5" />
 							</div>
-							<h3 class="text-lg font-medium">Distribución de Respuestas</h3>
+							<h3 class="text-lg font-medium">Puntajes por Curso - Grupo {selectedGroupName}</h3>
 						</div>
 						<div class="divider my-0"></div>
-						<div class="h-64 relative mt-2">
-							<canvas id="correctVsIncorrectChart"></canvas>
+						{#if isLoadingCourses}
+							<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
+								<div class="loading loading-spinner loading-lg text-primary mb-4"></div>
+								<p class="text-lg font-medium">Cargando cursos...</p>
+								<p class="text-sm mt-2">Obteniendo datos para el grupo {selectedGroupName}</p>
+							</div>
+						{:else}
+							<div class="h-80 relative mt-2">
+								<canvas id="courseScoresChart"></canvas>
+							</div>
+						{/if}
+					</div>
+				</div>
+			{:else if selectedGroupName && isLoadingCourses}
+				<div
+					class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden"
+				>
+					<div class="card-body p-5">
+						<div class="flex items-center gap-3 mb-3">
+							<div
+								class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary/15 text-primary"
+							>
+								<ChartPie class="h-5 w-5" />
+							</div>
+							<h3 class="text-lg font-medium">Puntajes por Curso - Grupo {selectedGroupName}</h3>
+						</div>
+						<div class="divider my-0"></div>
+						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
+							<div class="loading loading-spinner loading-lg text-primary mb-4"></div>
+							<p class="text-lg font-medium">Cargando cursos...</p>
+							<p class="text-sm mt-2">Obteniendo datos para el grupo {selectedGroupName}</p>
 						</div>
 					</div>
 				</div>
@@ -572,6 +685,7 @@
 	<!-- Group Data Section -->
 	{#if selectedGroupName}
 		<h2 class="text-xl font-semibold mb-4">Datos del Grupo {selectedGroupName}</h2>
+
 		{#if groupData}
 			<!-- Scores by Evaluation Chart - Full Width -->
 			{#if groupData.scoresByEval && groupData.scoresByEval.length > 0}

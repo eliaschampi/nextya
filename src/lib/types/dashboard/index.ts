@@ -19,20 +19,10 @@ export interface GroupChartData {
 }
 
 /**
- * Represents answer distribution data
- */
-export interface AnswerDistribution {
-	correct: number;
-	incorrect: number;
-	blank: number;
-}
-
-/**
  * Represents level dashboard data
  */
 export interface LevelDashboardData {
 	scoresByGroup: GroupChartData[];
-	correctVsIncorrect: AnswerDistribution;
 }
 
 /**

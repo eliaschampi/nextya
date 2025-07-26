@@ -3,7 +3,6 @@ import type { Database } from '$lib/database';
 import type {
 	EvalChartData,
 	GroupChartData,
-	AnswerDistribution,
 	LevelDashboardData,
 	GroupDashboardData
 } from '$lib/types/dashboard';
@@ -25,15 +24,12 @@ export async function getLevelDashboardData(
 
 		// Process the returned data
 		const dashboardData: LevelDashboardData = {
-			scoresByGroup: [],
-			correctVsIncorrect: { correct: 0, incorrect: 0, blank: 0 }
+			scoresByGroup: []
 		};
 
 		// Extract data from the response
 		result.rows.forEach((item) => {
-			if (item.data_type === 'correctVsIncorrect' && item.json_data) {
-				dashboardData.correctVsIncorrect = item.json_data as AnswerDistribution;
-			} else if (item.data_type === 'scoresByGroup' && item.json_data) {
+			if (item.data_type === 'scoresByGroup' && item.json_data) {
 				dashboardData.scoresByGroup = item.json_data as GroupChartData[];
 			}
 		});

@@ -7,6 +7,7 @@
 	import { School, ChartPie, Activity, CircleDot } from 'lucide-svelte';
 	import type { Levels, EvalWithSections } from '$lib/types';
 	import type { EvalDashboardData, QuestionStat } from '$lib/types/dashboard/eval';
+	import { CHART_COLORS, createScoreDistributionConfig } from '$lib/utils/chartUtils';
 	import { goto } from '$app/navigation';
 	import { evaluationStore } from '$lib/stores/evaluation';
 
@@ -52,15 +53,15 @@
 	let questionsChart: Chart | null = $state(null);
 	let scoreDistributionChart: Chart | null = $state(null);
 
-	// Colors for charts
+	// Use shared chart colors
 	const chartColors = {
-		primary: 'rgba(100, 220, 150, 0.8)',
-		secondary: 'rgba(54, 162, 235, 0.8)',
-		tertiary: 'rgba(255, 206, 86, 0.8)',
-		quaternary: 'rgba(255, 99, 132, 0.8)',
-		correct: 'rgba(75, 192, 192, 0.8)',
-		incorrect: 'rgba(255, 99, 132, 0.8)',
-		middle: 'rgba(255, 206, 86, 0.8)'
+		primary: CHART_COLORS.primary,
+		secondary: CHART_COLORS.secondary,
+		tertiary: CHART_COLORS.tertiary,
+		quaternary: CHART_COLORS.quaternary,
+		correct: CHART_COLORS.approved,
+		incorrect: CHART_COLORS.failed,
+		middle: CHART_COLORS.middle
 	};
 
 	// Track chart data changes and render charts when data is available
@@ -270,38 +271,9 @@
 
 			try {
 				const { approved, middle, failed } = dashboardData.scoreDistribution;
+				const config = createScoreDistributionConfig({ approved, middle, failed });
 
-				scoreDistributionChart = new Chart(ctx, {
-					type: 'doughnut',
-					data: {
-						labels: ['Aprobados (≥14)', 'Regulares (10-14)', 'Desaprobados (<10)'],
-						datasets: [
-							{
-								data: [approved, middle, failed],
-								backgroundColor: [chartColors.primary, chartColors.middle, chartColors.incorrect],
-								borderWidth: 1
-							}
-						]
-					},
-					options: {
-						responsive: true,
-						maintainAspectRatio: false,
-						plugins: {
-							title: {
-								display: true,
-								text: 'Distribución de Notas'
-							},
-							tooltip: {
-								callbacks: {
-									label: function (context) {
-										const value = context.raw as number;
-										return `${context.label}: ${value.toFixed(2)}%`;
-									}
-								}
-							}
-						}
-					}
-				});
+				scoreDistributionChart = new Chart(ctx, config);
 				resolve();
 			} catch (error) {
 				console.error('Error rendering score distribution chart:', error);

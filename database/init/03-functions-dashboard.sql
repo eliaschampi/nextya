@@ -95,7 +95,7 @@ END;
 $$;
 
 -- Course dashboard functions
-CREATE OR REPLACE FUNCTION public.get_level_course_scores (p_level_code TEXT, p_group_name TEXT) 
+CREATE OR REPLACE FUNCTION public.get_level_course_scores (p_level_code TEXT, p_group_name TEXT)
 RETURNS TABLE (
   course_code TEXT,
   course_name VARCHAR,
@@ -276,5 +276,62 @@ BEGIN
         course_averages ca
     ORDER BY
         ca.course_name;
+END;
+$$;
+
+-- Score distribution by course function
+CREATE OR REPLACE FUNCTION public.get_course_score_distribution (
+  p_level_code TEXT,
+  p_group_name TEXT,
+  p_course_code TEXT
+) RETURNS TABLE (
+  approved NUMERIC,
+  middle NUMERIC,
+  failed NUMERIC,
+  approved_count INTEGER,
+  middle_count INTEGER,
+  failed_count INTEGER,
+  total_count INTEGER
+) LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    RETURN QUERY
+    WITH score_ranges AS (
+        SELECT
+            COUNT(CASE WHEN er.score >= 14 THEN 1 END) AS approved_count,
+            COUNT(CASE WHEN er.score >= 10 AND er.score < 14 THEN 1 END) AS middle_count,
+            COUNT(CASE WHEN er.score < 10 THEN 1 END) AS failed_count,
+            COUNT(*) AS total_count
+        FROM
+            public.eval_results er
+            JOIN public.eval_sections es ON er.section_code = es.code
+            JOIN public.registers r ON er.register_code = r.code
+        WHERE
+            r.level_code = p_level_code::UUID
+            AND r.group_name = p_group_name
+            AND es.course_code = p_course_code::UUID
+            AND er.section_code IS NOT NULL
+    )
+    SELECT
+        CASE
+            WHEN sr.total_count > 0 THEN
+                ROUND((sr.approved_count::NUMERIC / sr.total_count) * 100, 2)
+            ELSE 0
+        END AS approved,
+        CASE
+            WHEN sr.total_count > 0 THEN
+                ROUND((sr.middle_count::NUMERIC / sr.total_count) * 100, 2)
+            ELSE 0
+        END AS middle,
+        CASE
+            WHEN sr.total_count > 0 THEN
+                ROUND((sr.failed_count::NUMERIC / sr.total_count) * 100, 2)
+            ELSE 0
+        END AS failed,
+        sr.approved_count::INTEGER,
+        sr.middle_count::INTEGER,
+        sr.failed_count::INTEGER,
+        sr.total_count::INTEGER
+    FROM
+        score_ranges sr;
 END;
 $$;
