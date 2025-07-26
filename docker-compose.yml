@@ -14,13 +14,11 @@ services:
       JWT_SECRET: your-super-secret-jwt-key-change-in-production-2024
       JWT_EXPIRES_IN: 8h
     volumes:
-      - .:/app:Z
+      - .:/app
       - node_modules:/app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
-    stdin_open: true
-    tty: true
 
   postgres:
     container_name: nextya_postgres

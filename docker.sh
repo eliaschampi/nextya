@@ -78,6 +78,25 @@ cmd_npm() {
     docker exec -it "${PROJECT_NAME}_app" npm "$@"
 }
 
+cmd_sync() {
+    print_header "Syncing node_modules"
+    print_info "Copying node_modules from volume to host for VS Code..."
+
+    # Create temp container to access the volume
+    docker run --rm -d --name temp_sync -v nextya_node_modules:/app/node_modules alpine:latest sleep 30
+
+    # Remove existing node_modules if present
+    [ -d "./node_modules" ] && sudo rm -rf ./node_modules
+
+    # Copy from volume and fix permissions
+    docker cp temp_sync:/app/node_modules ./ && sudo chown -R $(id -u):$(id -g) ./node_modules
+
+    # Cleanup
+    docker stop temp_sync >/dev/null 2>&1 || true
+
+    print_success "node_modules synced for VS Code IntelliSense"
+}
+
 cmd_db_shell() {
     print_header "Database Shell"
     print_info "Connecting to PostgreSQL"
@@ -248,6 +267,7 @@ main() {
         "status")       cmd_status ;;
         "shell")        cmd_shell ;;
         "npm")          cmd_npm "$@" ;;
+        "sync")         cmd_sync ;;
         "setup")        cmd_setup ;;
         "setup:reset")  cmd_setup_reset ;;
         "db:shell")     cmd_db_shell ;;
