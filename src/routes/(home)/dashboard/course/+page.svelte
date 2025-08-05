@@ -50,9 +50,7 @@
 					label: function (context: { dataset: { label?: string }; label?: string; raw: unknown }) {
 						const label = context.dataset.label || context.label || '';
 						const value = context.raw;
-						return value !== null && typeof value === 'number'
-							? `${label}: ${value.toFixed(2)}`
-							: `${label}: Sin datos`;
+						return !!value ? `${label}: ${Number(value).toFixed(2)}` : `${label}: Sin datos`;
 					}
 				}
 			}
@@ -62,12 +60,15 @@
 	// Derived values for chart data
 	const evalChartData = $derived(prepareEvalChartData(evalScores));
 
+	// Single course selection check - eliminates redundant selectedCourseCode !== '' checks
+	const hasCourseSelected = $derived(selectedCourseCode !== '');
+
 	// Track chart data changes and render charts when data is available
 	const shouldRenderEvalChart = $derived(
-		evalScores !== null && !isLoadingEvals && selectedCourseCode !== ''
+		hasCourseSelected && evalScores !== null && !isLoadingEvals
 	);
 	const shouldRenderDistributionChart = $derived(
-		scoreDistribution !== null && !isLoadingDistribution && selectedCourseCode !== ''
+		hasCourseSelected && scoreDistribution !== null && !isLoadingDistribution
 	);
 
 	// Render charts manually when data is loaded - safer than $effect
@@ -89,17 +90,21 @@
 	});
 
 	/**
+	 * Helper function to safely destroy a chart - reduces repetitive code
+	 */
+	function destroyChart(chart: Chart | null): null {
+		if (chart) {
+			chart.destroy();
+		}
+		return null;
+	}
+
+	/**
 	 * Destroys charts to prevent memory leaks
 	 */
 	function destroyCharts() {
-		if (evalScoresChart) {
-			evalScoresChart.destroy();
-			evalScoresChart = null;
-		}
-		if (scoreDistributionByCourseChart) {
-			scoreDistributionByCourseChart.destroy();
-			scoreDistributionByCourseChart = null;
-		}
+		evalScoresChart = destroyChart(evalScoresChart);
+		scoreDistributionByCourseChart = destroyChart(scoreDistributionByCourseChart);
 	}
 
 	/**
@@ -168,10 +173,7 @@
 		isLoadingEvals = true;
 		evalScores = null;
 
-		if (evalScoresChart) {
-			evalScoresChart.destroy();
-			evalScoresChart = null;
-		}
+		evalScoresChart = destroyChart(evalScoresChart);
 
 		try {
 			const url = `/api/dashboard/course/evals/${levelCode}/${courseCode}?group_name=${encodeURIComponent(groupName)}`;
@@ -220,10 +222,7 @@
 		isLoadingDistribution = true;
 		scoreDistribution = null;
 
-		if (scoreDistributionByCourseChart) {
-			scoreDistributionByCourseChart.destroy();
-			scoreDistributionByCourseChart = null;
-		}
+		scoreDistributionByCourseChart = destroyChart(scoreDistributionByCourseChart);
 
 		try {
 			const url = `/api/dashboard/course/distribution/${levelCode}/${courseCode}?group_name=${encodeURIComponent(groupName)}`;
@@ -288,10 +287,7 @@
 			if (!ctx) return;
 
 			// Destroy existing chart if it exists
-			if (evalScoresChart) {
-				evalScoresChart.destroy();
-				evalScoresChart = null;
-			}
+			evalScoresChart = destroyChart(evalScoresChart);
 
 			try {
 				evalScoresChart = new Chart(ctx, {
@@ -363,10 +359,7 @@
 			if (!ctx || !scoreDistribution) return;
 
 			// Destroy existing chart if it exists
-			if (scoreDistributionByCourseChart) {
-				scoreDistributionByCourseChart.destroy();
-				scoreDistributionByCourseChart = null;
-			}
+			scoreDistributionByCourseChart = destroyChart(scoreDistributionByCourseChart);
 
 			try {
 				const config = createScoreDistributionConfig({
@@ -408,14 +401,9 @@
 		// Clear eval and distribution data
 		evalScores = null;
 		scoreDistribution = null;
-		if (evalScoresChart) {
-			evalScoresChart.destroy();
-			evalScoresChart = null;
-		}
-		if (scoreDistributionByCourseChart) {
-			scoreDistributionByCourseChart.destroy();
-			scoreDistributionByCourseChart = null;
-		}
+
+		evalScoresChart = destroyChart(evalScoresChart);
+		scoreDistributionByCourseChart = destroyChart(scoreDistributionByCourseChart);
 
 		// Load data only if course is selected
 		if (selectedCourseCode) {
@@ -439,6 +427,8 @@
 			loadCourseScoresData(selectedLevelCode, selectedGroupName);
 		}
 	}
+
+
 
 	/**
 	 * Handle refresh button click - improved UX
@@ -577,61 +567,59 @@
 		</div>
 	{:else}
 		<!-- Dashboard Content -->
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-			<!-- Eval Scores Chart -->
-			<div
-				class="card bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-xl overflow-hidden"
-			>
-				<div class="card-body p-5">
-					<div class="flex items-center gap-3 mb-3">
-						<div
-							class="w-8 h-8 flex items-center justify-center rounded-lg bg-secondary/15 text-secondary"
-						>
-							<Activity class="h-5 w-5" />
-						</div>
-						<h3 class="text-lg font-medium">
-							{#if selectedCourseCode && courseScores}
-								{#each courseScores as course (course.course_code)}
-									{#if course.course_code === selectedCourseCode}
-										Evolución: {course.course_name}
-									{/if}
-								{/each}
-							{:else}
-								Evolución de Puntajes
-							{/if}
-						</h3>
+		{#if !selectedCourseCode}
+			<!-- Single "Select Course" message for both charts -->
+			<div class="card bg-gradient-to-br from-base-200 to-base-100 border border-base-300/30 rounded-xl overflow-hidden">
+				<div class="card-body p-8 text-center">
+					<div class="w-20 h-20 mx-auto bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4">
+						<Activity class="w-10 h-10" />
 					</div>
-					<div class="divider my-0"></div>
-					{#if !selectedCourseCode}
-						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
-							<div class="text-4xl mb-4">📈</div>
-							<p class="text-lg font-medium">Selecciona un curso</p>
-							<p class="text-sm mt-2">Para visualizar la evolución de puntajes</p>
-						</div>
-					{:else if isLoadingEvals}
-						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
-							<div class="loading loading-spinner loading-lg text-secondary mb-4"></div>
-							<p class="text-lg font-medium">Cargando evaluaciones...</p>
-							<p class="text-sm mt-2">Obteniendo evolución de puntajes</p>
-						</div>
-					{:else if !evalScores || evalScores.length === 0}
-						<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
-							<div class="text-4xl mb-4">🔍</div>
-							<p class="text-lg font-medium">No hay datos disponibles</p>
-							<p class="text-sm mt-2">
-								No se encontraron evaluaciones para este curso en el grupo {selectedGroupName}
-							</p>
-						</div>
-					{:else}
-						<div class="h-80 relative mt-2">
-							<canvas id="evalScoresChart"></canvas>
-						</div>
-					{/if}
+					<h2 class="text-2xl font-semibold">Selecciona un Curso</h2>
+					<p class="text-base-content/70 text-lg mt-2 max-w-md mx-auto">
+						Elige un curso para visualizar la evolución de puntajes y distribución de notas
+					</p>
 				</div>
 			</div>
+		{:else}
+			<!-- Both charts shown together when course is selected -->
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+				<!-- Eval Scores Chart -->
+				<div
+					class="card bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-xl overflow-hidden"
+				>
+					<div class="card-body p-5">
+						<div class="flex items-center gap-3 mb-3">
+							<div
+								class="w-8 h-8 flex items-center justify-center rounded-lg bg-secondary/15 text-secondary"
+							>
+								<Activity class="h-5 w-5" />
+							</div>
+							<h3 class="text-lg font-medium">
+								{#if courseScores}
+									{#each courseScores as course (course.course_code)}
+										{#if course.course_code === selectedCourseCode}
+											Evolución: {course.course_name}
+										{/if}
+									{/each}
+								{:else}
+									Evolución de Puntajes
+								{/if}
+							</h3>
+						</div>
+						<div class="divider my-0"></div>
+						{@render chartState(
+							isLoadingEvals,
+							evalScores && evalScores.length > 0,
+							'evalScoresChart',
+							'text-secondary',
+							'Cargando evaluaciones...',
+							'🔍',
+							'No se encontraron evaluaciones para este curso'
+						)}
+					</div>
+				</div>
 
-			<!-- Score Distribution Chart -->
-			{#if selectedCourseCode}
+				<!-- Score Distribution Chart -->
 				<div
 					class="card bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl overflow-hidden"
 				>
@@ -655,28 +643,40 @@
 							</h3>
 						</div>
 						<div class="divider my-0"></div>
-						{#if isLoadingDistribution}
-							<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
-								<div class="loading loading-spinner loading-lg text-primary mb-4"></div>
-								<p class="text-lg font-medium">Cargando distribución...</p>
-								<p class="text-sm mt-2">Analizando puntajes del curso</p>
-							</div>
-						{:else if !scoreDistribution || scoreDistribution.totalCount === 0}
-							<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
-								<div class="text-4xl mb-4">📊</div>
-								<p class="text-lg font-medium">No hay datos disponibles</p>
-								<p class="text-sm mt-2">
-									No se encontraron puntajes para este curso en el grupo {selectedGroupName}
-								</p>
-							</div>
-						{:else}
-							<div class="h-80 relative mt-2">
-								<canvas id="scoreDistributionByCourseChart"></canvas>
-							</div>
-						{/if}
+						{@render chartState(
+							isLoadingDistribution,
+							scoreDistribution && scoreDistribution.totalCount > 0,
+							'scoreDistributionByCourseChart',
+							'text-primary',
+							'Cargando distribución...',
+							'📊',
+							'No se encontraron puntajes para este curso'
+						)}
 					</div>
 				</div>
-			{/if}
-		</div>
+			</div>
+		{/if}
 	{/if}
 </main>
+
+{#snippet chartState(isLoading, hasData, canvasId, colorClass, loadingText, emptyIcon, emptyText)}
+	{#if isLoading}
+		<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
+			<div class="loading loading-spinner loading-lg {colorClass} mb-4"></div>
+			<p class="text-lg font-medium">{loadingText}</p>
+			<p class="text-sm mt-2">Procesando información del curso</p>
+		</div>
+	{:else if !hasData}
+		<div class="flex flex-col justify-center items-center h-80 text-base-content/70">
+			<div class="text-4xl mb-4">{emptyIcon}</div>
+			<p class="text-lg font-medium">No hay datos disponibles</p>
+			<p class="text-sm mt-2">
+				{emptyText} en el grupo {selectedGroupName}
+			</p>
+		</div>
+	{:else}
+		<div class="h-80 relative mt-2">
+			<canvas id={canvasId}></canvas>
+		</div>
+	{/if}
+{/snippet}
